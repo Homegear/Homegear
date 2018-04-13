@@ -28,10 +28,10 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSCLIENT_H_
-#define FLOWSCLIENT_H_
+#ifndef NODEBLUECLIENT_H_
+#define NODEBLUECLIENT_H_
 
-#include "FlowsResponseClient.h"
+#include "NodeBlueResponseClient.h"
 #include "FlowInfoClient.h"
 #include "NodeManager.h"
 
@@ -45,14 +45,14 @@
 #include <mutex>
 #include <string>
 
-namespace Flows
+namespace NodeBlue
 {
 
-class FlowsClient : public BaseLib::IQueue
+class NodeBlueClient : public BaseLib::IQueue
 {
 public:
-	FlowsClient();
-	virtual ~FlowsClient();
+	NodeBlueClient();
+	virtual ~NodeBlueClient();
 	void dispose();
 
 	void start();
@@ -89,7 +89,7 @@ private:
 		//}}}
 
 		//{{{ Node output
-			PNodeInfo nodeInfo;
+			Flows::PNodeInfo nodeInfo;
 			uint32_t targetPort = 0;
 			Flows::PVariable message;
 		//}}}
@@ -112,7 +112,7 @@ private:
 	std::atomic_bool _stopped;
 	std::mutex _sendMutex;
 	std::mutex _rpcResponsesMutex;
-	std::map<int64_t, std::map<int32_t, PFlowsResponseClient>> _rpcResponses;
+	std::map<int64_t, std::map<int32_t, PNodeBlueResponseClient>> _rpcResponses;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
@@ -138,7 +138,7 @@ private:
 	std::unordered_map<int32_t, PFlowInfoClient> _flows;
 
 	std::mutex _nodesMutex;
-	std::unordered_map<std::string, PNodeInfo> _nodes;
+	std::unordered_map<std::string, Flows::PNodeInfo> _nodes;
 
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;

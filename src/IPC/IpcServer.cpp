@@ -45,7 +45,12 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
-	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+	_dummyClientInfo->ipcServer = true;
+	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+	std::vector<uint64_t> groups{ 3 };
+	_dummyClientInfo->acls->fromGroups(groups);
+	_dummyClientInfo->user = "SYSTEM (3)";
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -53,6 +58,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodHelp(GD::rpcServers[0].getServer())));
 	_rpcMethods.emplace("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodSignature(GD::rpcServers[0].getServer())));
 	_rpcMethods.emplace("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall(GD::rpcServers[0].getServer())));
+	_rpcMethods.emplace("acknowledgeGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAcknowledgeGlobalServiceMessage()));
 	_rpcMethods.emplace("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset()));
 	_rpcMethods.emplace("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
 	_rpcMethods.emplace("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice()));
@@ -121,6 +127,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
 	_rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
 	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
+    _rpcMethods.emplace("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalServiceMessage()));
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
 	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
@@ -142,25 +149,68 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
-	//{{{ Rooms
+	{ // Stories
+		_rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
+		_rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
+		_rpcMethods.emplace("deleteStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteStory()));
+		_rpcMethods.emplace("getRoomsInStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomsInStory()));
+		_rpcMethods.emplace("getStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStoryMetadata()));
+		_rpcMethods.emplace("getStories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStories()));
+		_rpcMethods.emplace("removeRoomFromStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveRoomFromStory()));
+		_rpcMethods.emplace("setStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetStoryMetadata()));
+		_rpcMethods.emplace("updateStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateStory()));
+	}
+
+	{ // Rooms
+		_rpcMethods.emplace("addChannelToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddChannelToRoom()));
 		_rpcMethods.emplace("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDeviceToRoom()));
+		_rpcMethods.emplace("addSystemVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddSystemVariableToRoom()));
+		_rpcMethods.emplace("addVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddVariableToRoom()));
 		_rpcMethods.emplace("createRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateRoom()));
 		_rpcMethods.emplace("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteRoom()));
+		_rpcMethods.emplace("getChannelsInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetChannelsInRoom()));
 		_rpcMethods.emplace("getDevicesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInRoom()));
+		_rpcMethods.emplace("getRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomMetadata()));
+		_rpcMethods.emplace("getSystemVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariablesInRoom()));
+		_rpcMethods.emplace("getVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVariablesInRoom()));
 		_rpcMethods.emplace("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRooms()));
+		_rpcMethods.emplace("removeChannelFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveChannelFromRoom()));
 		_rpcMethods.emplace("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveDeviceFromRoom()));
+		_rpcMethods.emplace("removeSystemVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveSystemVariableFromRoom()));
+		_rpcMethods.emplace("removeVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveVariableFromRoom()));
+		_rpcMethods.emplace("setRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetRoomMetadata()));
 		_rpcMethods.emplace("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateRoom()));
-	//}}}
+	}
 
-	//{{{ Categories
+	{ // Categories
+		_rpcMethods.emplace("addCategoryToChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToChannel()));
 		_rpcMethods.emplace("addCategoryToDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToDevice()));
+		_rpcMethods.emplace("addCategoryToSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToSystemVariable()));
+		_rpcMethods.emplace("addCategoryToVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToVariable()));
 		_rpcMethods.emplace("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateCategory()));
 		_rpcMethods.emplace("deleteCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteCategory()));
 		_rpcMethods.emplace("getCategories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategories()));
+		_rpcMethods.emplace("getCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryMetadata()));
+		_rpcMethods.emplace("getChannelsInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetChannelsInCategory()));
 		_rpcMethods.emplace("getDevicesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInCategory()));
+		_rpcMethods.emplace("getSystemVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariablesInCategory()));
+		_rpcMethods.emplace("getVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVariablesInCategory()));
+		_rpcMethods.emplace("removeCategoryFromChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromChannel()));
 		_rpcMethods.emplace("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromDevice()));
+		_rpcMethods.emplace("removeCategoryFromSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromSystemVariable()));
+		_rpcMethods.emplace("removeCategoryFromVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromVariable()));
+		_rpcMethods.emplace("setCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetCategoryMetadata()));
 		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
-	//}}}
+	}
+
+    { // UI
+		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
+		_rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
+		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
+		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
+		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
+		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+    }
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
@@ -339,6 +389,49 @@ void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std
 	try
 	{
 		if(_shuttingDown) return;
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+        if(_dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet())
+        {
+            std::shared_ptr<BaseLib::Systems::Peer> peer;
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central) peer = central->getPeer(id);
+                if(peer) break;
+            }
+
+            if(!peer) return;
+
+            std::shared_ptr<std::vector<std::string>> newVariables;
+            BaseLib::PArray newValues;
+            newVariables->reserve(variables->size());
+            newValues->reserve(values->size());
+            for(int32_t i = 0; i < (int32_t)variables->size(); i++)
+            {
+                if(id == 0)
+                {
+					if(_dummyClientInfo->acls->variablesRoomsCategoriesReadSet())
+					{
+						auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+						if(systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
+						{
+							newVariables->push_back(variables->at(i));
+							newValues->push_back(values->at(i));
+						}
+					}
+                }
+                else if(peer && _dummyClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
+                {
+                    newVariables->push_back(variables->at(i));
+                    newValues->push_back(values->at(i));
+                }
+            }
+            variables = newVariables;
+            values = newValues;
+        }
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -370,11 +463,30 @@ void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std
     }
 }
 
-void IpcServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
 		if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+				{
+					for(auto id : ids)
+					{
+						auto peer = central->getPeer((uint64_t)id);
+						if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+					}
+				}
+			}
+		}
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -411,6 +523,9 @@ void IpcServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 	try
 	{
 		if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("deleteDevices")) return;
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -447,6 +562,20 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 	try
 	{
 		if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
+        if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+        {
+            std::shared_ptr<BaseLib::Systems::Peer> peer;
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central) peer = central->getPeer(id);
+                if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+            }
+        }
+
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -510,10 +639,12 @@ void IpcServer::closeClientConnection(PIpcClientData client)
     }
 }
 
-BaseLib::PVariable IpcServer::callRpcMethod(std::string& methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters)
 {
 	try
 	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
 		PIpcClientData clientData;
 		{
 			std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
@@ -597,7 +728,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 				auto methodIterator = _rpcMethods.find(methodName);
 				if(methodIterator == _rpcMethods.end())
 				{
-					BaseLib::PVariable result = callRpcMethod(methodName, parameters->at(2)->arrayValue);
+					BaseLib::PVariable result = callRpcMethod(_dummyClientInfo, methodName, parameters->at(2)->arrayValue);
 					sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
 					return;
 				}

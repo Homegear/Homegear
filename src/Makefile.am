@@ -20,7 +20,7 @@ endif
 
 
 bin_PROGRAMS = homegear
-homegear_SOURCES = main.cpp Monitor.cpp CLI/CLIClient.cpp CLI/CLIServer.cpp Database/SQLite3.cpp Events/EventHandler.cpp Flows/FlowsClient.cpp Flows/FlowsClientData.cpp Flows/FlowsProcess.cpp Flows/FlowsServer.cpp Flows/NodeManager.cpp Flows/SimplePhpNode.cpp Flows/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RPCServer.cpp RPC/Server.cpp WebServer/WebServer.cpp Systems/DatabaseController.cpp Systems/FamilyController.cpp UPnP/UPnP.cpp User/User.cpp
+homegear_SOURCES = main.cpp Monitor.cpp CLI/CLIClient.cpp CLI/CLIServer.cpp Database/SQLite3.cpp Events/EventHandler.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RPCServer.cpp RPC/Server.cpp WebServer/WebServer.cpp Systems/DatabaseController.cpp Systems/FamilyController.cpp Systems/UiController.cpp UPnP/UPnP.cpp User/User.cpp
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomegear-node -lgpg-error -lsqlite3
 
 if BSDSYSTEM

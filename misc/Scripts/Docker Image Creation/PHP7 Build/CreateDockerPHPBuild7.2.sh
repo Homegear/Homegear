@@ -58,7 +58,7 @@ if [ "$dist" == "Ubuntu" ]; then
 elif [ "$dist" == "Debian" ]; then
 	repository="http://ftp.debian.org/debian"
 elif [ "$dist" == "Raspbian" ]; then
-	repository="http://mirrordirector.raspbian.org/raspbian/"
+	repository="http://archive.raspbian.org/raspbian/"
 else
 	echo "Unknown distribution."
 	print_usage
@@ -85,7 +85,7 @@ if [ "$dist" == "Ubuntu" ]; then
 elif [ "$dist" == "Debian" ]; then
 	echo "deb http://ftp.debian.org/debian $distver main contrib" > $rootfs/etc/apt/sources.list
 elif [ "$dist" == "Raspbian" ]; then
-	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib" > $rootfs/etc/apt/sources.list
+	echo "deb http://archive.raspbian.org/raspbian/ $distver main contrib" > $rootfs/etc/apt/sources.list
 fi
 
 if [ "$distver" == "bionic" ]; then
@@ -130,6 +130,11 @@ EOF
 if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+fi
+
+if [ "$distver" == "bionic" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y install gnupg
 fi
 
 cat > "$rootfs/php-gpg.key" <<'EOF'

@@ -526,7 +526,7 @@ void ScriptEngineClient::sendScriptFinished(int32_t exitCode)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptFinished");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(exitCode))});
-		sendRequest(globals->id, methodName, parameters, false);
+		sendRequest(globals->id, globals->user, methodName, parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -746,7 +746,7 @@ void ScriptEngineClient::sendOutput(std::string output)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptOutput");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(output))});
-		sendRequest(globals->id, methodName, parameters, true);
+		sendRequest(globals->id, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -769,7 +769,7 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
 		BaseLib::PArray parameters(new BaseLib::Array{headers});
-		sendRequest(globals->id, methodName, parameters, true);
+		sendRequest(globals->id, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -791,7 +791,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 	{
 		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
-		return sendRequest(globals->id, std::move(methodName), parameters->arrayValue, wait);
+		return sendRequest(globals->id, globals->user, methodName, parameters->arrayValue, wait);
 	}
 	catch(const std::exception& ex)
     {
@@ -841,7 +841,7 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -863,7 +863,10 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		}
 		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
 		array->reserve(4);
-		array->push_back(std::make_shared<BaseLib::Variable>(scriptId));
+		auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(scriptId));
+		scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(user));
+		array->push_back(scriptInfo);
 		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
 		array->push_back(std::make_shared<BaseLib::Variable>(wait));
 		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
@@ -952,7 +955,10 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		}
 		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
 		array->reserve(4);
-		array->push_back(std::make_shared<BaseLib::Variable>(0));
+        auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(0));
+        scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(std::string()));
+        array->push_back(scriptInfo);
 		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
 		array->push_back(std::make_shared<BaseLib::Variable>(true));
 		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
@@ -1207,7 +1213,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			{
 				globals->webRequest = true;
 				globals->commandLine = false;
-				globals->cookiesParsed = !scriptInfo->script.empty();
+				globals->cookiesParsed = false;
 				globals->http = scriptInfo->http;
 				serverInfo = scriptInfo->serverInfo;
 			}
@@ -1262,7 +1268,8 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				if (!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
 				SG(request_info).request_method = globals->http.getHeader().method.c_str();
 				SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
-				std::string uri = globals->http.getHeader().path + globals->http.getHeader().pathInfo;
+				std::string redirectUrl = globals->http.getRedirectUrl();
+				std::string uri = (redirectUrl.empty() ? globals->http.getHeader().path : redirectUrl) + globals->http.getHeader().pathInfo;
 				if (!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
 				if (!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
 				if (!uri.empty()) SG(request_info).request_uri = estrndup(uri.data(), uri.size());
@@ -1564,9 +1571,9 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
     }
 }
 
-void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* result)
+void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string* result)
 {
-	*result = false;
+	*result = "";
 	std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> serverInfo(new BaseLib::Rpc::ServerInfo::Info());
 
 	{
@@ -1636,7 +1643,15 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, bool* resul
 				zval* token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
 				if(token != nullptr)
 				{
-					*result = (Z_TYPE_P(token) == IS_TRUE);
+					if(Z_TYPE_P(token) == IS_TRUE)
+					{
+						zval* token2 = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "user", sizeof("user") - 1);
+						if(token2 != nullptr && Z_STRLEN_P(token2) > 0)
+						{
+							*result = std::string(Z_STRVAL_P(token2), Z_STRLEN_P(token2));
+							BaseLib::HelperFunctions::toLower(*result);
+						}
+					}
 				}
 			}
         }
@@ -1842,7 +1857,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		else if(type == ScriptInfo::ScriptType::web)
 		{
 			if(parameters->at(2)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
-			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4), parameters->at(5)));
+			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5), parameters->at(6)));
 
 			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->fullPath))
 			{
@@ -2040,7 +2055,7 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
 		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Session ID is empty.");
 
-		bool result = false;
+		std::string result = "";
 		std::lock_guard<std::mutex> maintenanceThreadGuard(_maintenanceThreadMutex);
 		if(_maintenanceThread.joinable()) _maintenanceThread.join();
 		_maintenanceThread = std::thread(&ScriptEngineClient::checkSessionIdThread, this, parameters->at(0)->stringValue, &result);

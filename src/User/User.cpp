@@ -71,6 +71,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 {
 	try
 	{
+		if(password.empty()) return false;
 		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getPassword(userName);
 		if(rows->empty() || rows->at(0).empty() || rows->at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
@@ -93,10 +94,16 @@ bool User::verify(const std::string& userName, const std::string& password)
 	return false;
 }
 
-uint64_t User::getID(const std::string& userName)
+uint64_t User::getId(const std::string& userName)
 {
-	uint64_t userID = GD::bl->db->getUserID(userName);
-	return userID;
+	uint64_t userId = GD::bl->db->getUserId(userName);
+	return userId;
+}
+
+std::vector<uint64_t> User::getGroups(const std::string& userName)
+{
+	uint64_t userId = GD::bl->db->getUserId(userName);
+	return GD::bl->db->getUsersGroups(userId);
 }
 
 bool User::exists(const std::string& userName)
@@ -108,33 +115,33 @@ bool User::remove(const std::string& userName)
 {
 	try
 	{
-		uint64_t userID = GD::bl->db->getUserID(userName);
-		if(userID == 0) return false;
+		uint64_t userId = GD::bl->db->getUserId(userName);
+		if(userId == 0) return false;
 
-		if(GD::bl->db->deleteUser(userID)) return true;
+		if(GD::bl->db->deleteUser(userId)) return true;
 		return false;
 	}
 	catch(std::exception& ex)
 	{
-		GD::out.printError("Error creating user: " + std::string(ex.what()));
+		GD::out.printError("Error removing user: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		GD::out.printError("Unknown error creating user.");
+		GD::out.printError("Unknown error removing user.");
 	}
 	return false;
 }
 
-bool User::create(const std::string& userName, const std::string& password)
+bool User::create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups)
 {
 	try
 	{
 		if(exists(userName)) return false;
 
 		std::vector<uint8_t> salt;
-		std::vector<uint8_t> passwordHash = generateWHIRLPOOL(password, salt);
+		std::vector<uint8_t> passwordHash = password.empty() ? std::vector<uint8_t>() : generateWHIRLPOOL(password, salt);
 
-		if(GD::bl->db->createUser(userName, passwordHash, salt)) return true;
+		if(GD::bl->db->createUser(userName, passwordHash, salt, groups)) return true;
 	}
 	catch(std::exception& ex)
 	{
@@ -149,38 +156,88 @@ bool User::create(const std::string& userName, const std::string& password)
 
 bool User::update(const std::string& userName, const std::string& password)
 {
+    try
+    {
+        std::vector<uint64_t> groups;
+        return update(userName, password, groups);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return false;
+}
+
+bool User::update(const std::string& userName, const std::vector<uint64_t>& groups)
+{
+    try
+    {
+        std::string password;
+        return update(userName, password, groups);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return false;
+}
+
+bool User::update(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups)
+{
 	try
 	{
-		uint64_t userID = GD::bl->db->getUserID(userName);
-		if(userID == 0) return false;
+		uint64_t userId = GD::bl->db->getUserId(userName);
+		if(userId == 0) return false;
 
 		std::vector<uint8_t> salt;
-		std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
+		std::vector<uint8_t> passwordHash = password.empty() ? std::vector<uint8_t>() : User::generateWHIRLPOOL(password, salt);
 
-		if(GD::bl->db->updateUser(userID, passwordHash, salt)) return true;
+		if(GD::bl->db->updateUser(userId, passwordHash, salt, groups)) return true;
 	}
 	catch(std::exception& ex)
 	{
-		GD::out.printError("Error creating user: " + std::string(ex.what()));
+		GD::out.printError("Error updating user: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		GD::out.printError("Unknown error creating user.");
+		GD::out.printError("Unknown error updating user.");
 	}
 	return false;
 }
 
-bool User::getAll(std::map<uint64_t, std::string>& users)
+bool User::getAll(std::map<uint64_t, UserInfo>& users)
 {
 	try
 	{
 		users.clear();
+
+        BaseLib::Rpc::RpcDecoder decoder(GD::bl.get(), false, false);
+
 		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getUsers();
 		if(rows->size() == 0) return true;
 
 		for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)
 		{
-			users[i->second.at(0)->intValue] = i->second.at(1)->textValue;
+            UserInfo info;
+
+            info.name = i->second.at(1)->textValue;
+            info.metadata = decoder.decodeResponse(*i->second.at(3)->binaryValue);
+            auto groups = decoder.decodeResponse(*i->second.at(2)->binaryValue);
+            info.groups.reserve(groups->arrayValue->size());
+            for(auto& group : *groups->arrayValue)
+            {
+                info.groups.push_back(group->integerValue64);
+            }
+
+			users[i->second.at(0)->intValue] = std::move(info);
 		}
 		return true;
 	}
@@ -193,4 +250,46 @@ bool User::getAll(std::map<uint64_t, std::string>& users)
 		GD::out.printError("Unknown error creating user.");
 	}
 	return false;
+}
+
+BaseLib::PVariable User::getMetadata(const std::string& userName)
+{
+    try
+    {
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return BaseLib::Variable::createError(-1, "Unknown user ID.");
+
+        return GD::bl->db->getUserMetadata(userId);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
+{
+    try
+    {
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return false;
+
+        auto result = GD::bl->db->setUserMetadata(userId, metadata);
+
+        if(!result->errorStruct) return true;
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error updating user: " + std::string(ex.what()));
+    }
+    catch(...)
+    {
+        GD::out.printError("Unknown error updating user.");
+    }
+    return false;
 }

@@ -214,6 +214,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
 			{
 				if(!server->second->nodeEvents) continue;
 				if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+                if(!server->second->clientInfo->acls->checkEventServerMethodAccess("nodeEvent")) continue;
 				if(server->second->webSocket || server->second->json)
 				{
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
@@ -272,24 +273,53 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			_lifetick1.first = BaseLib::HelperFunctions::getTime();
 			_lifetick1.second = false;
 		}
-		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(id, channel, *valueKeys, *values);
+
+		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(id, channel, *valueKeys, *values); //ACL check is in MQTT
 		std::string methodName("event");
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(server->second->removed || (!server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
 			if((!server->second->initialized && valueKeys->at(0) != "PONG") || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("event")) continue;
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
+
+            bool checkAcls = server->second->clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+            std::shared_ptr<BaseLib::Systems::Peer> peer;
+            if(checkAcls)
+            {
+                std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+                for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+                {
+                    std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                    if(central) peer = central->getPeer(id);
+                    if(peer) break;
+                }
+            }
+
 			if(server->second->webSocket || server->second->json)
 			{
 				//No system.multicall
-				for(uint32_t i = 0; i < valueKeys->size(); i++)
+				for(int32_t i = 0; i < (int32_t)valueKeys->size(); i++)
 				{
+					if(checkAcls)
+					{
+						if(id == 0)
+						{
+							if(server->second->clientInfo->acls->variablesRoomsCategoriesReadSet())
+							{
+								auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
+								if(!systemVariable || !server->second->clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+							}
+						}
+						else if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
+					}
+
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
 					parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
 					if(server->second->newFormat)
 					{
-						parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t)id));
+						parameters->push_back(std::make_shared<BaseLib::Variable>(id));
 						parameters->push_back(std::make_shared<BaseLib::Variable>(channel));
 					}
 					else parameters->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
@@ -303,8 +333,21 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 				std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
 				BaseLib::PVariable array = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 				BaseLib::PVariable method;
-				for(uint32_t i = 0; i < valueKeys->size(); i++)
+				for(int32_t i = 0; i < (int32_t)valueKeys->size(); i++)
 				{
+                    if(checkAcls)
+                    {
+                        if(id == 0)
+                        {
+							if(server->second->clientInfo->acls->variablesRoomsCategoriesReadSet())
+							{
+								auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
+								if(!systemVariable || !server->second->clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+							}
+                        }
+                        else if(!peer || !server->second->clientInfo->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i))) continue;
+                    }
+
 					method.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 					array->arrayValue->push_back(method);
 					method->structValue->insert(BaseLib::StructElement("methodName", std::make_shared<BaseLib::Variable>(methodName)));
@@ -420,6 +463,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
+        if(!server->clientInfo->acls->checkEventServerMethodAccess("listDevices")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> { BaseLib::PVariable(new BaseLib::Variable(server->id)) });
 		BaseLib::PVariable result = _client->invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
@@ -487,14 +531,17 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
+        if(!server->clientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+
+		bool checkAcls = server->clientInfo->acls->roomsCategoriesDevicesReadSet();
+
 		BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(!central) continue;
-			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			BaseLib::PVariable result = central->listDevices(nullptr, true, std::map<std::string, bool>(), server->knownDevices);
+			BaseLib::PVariable result = central->listDevices(server->clientInfo, true, std::map<std::string, bool>(), server->knownDevices, checkAcls);
 			if(!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 		if(devices->arrayValue->empty()) return;
@@ -529,6 +576,7 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end()) return;
+        if(!server->clientInfo->acls->checkEventServerMethodAccess("error")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->id)));
 		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
@@ -557,6 +605,7 @@ void Client::broadcastError(int32_t level, std::string message)
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
+			if(!server->second->clientInfo->acls->checkEventServerMethodAccess("error")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
@@ -582,19 +631,55 @@ void Client::broadcastError(int32_t level, std::string message)
     }
 }
 
-void Client::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
-		if(!deviceDescriptions) return;
+		if(!deviceDescriptions || ids.empty()) return;
+		GD::nodeBlueServer->broadcastNewDevices(ids, deviceDescriptions);
 #ifndef NO_SCRIPTENGINE
-		GD::scriptEngineServer->broadcastNewDevices(deviceDescriptions);
+		GD::scriptEngineServer->broadcastNewDevices(ids, deviceDescriptions);
 #endif
+        GD::ipcServer->broadcastNewDevices(ids, deviceDescriptions);
+
+        std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers;
+        peers.reserve(ids.size());
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+            {
+                for(auto id : ids)
+                {
+                    auto peer = central->getPeer((uint64_t)id);
+                    if(!peer) return;
+                    peers.push_back(peer);
+                }
+            }
+        }
+        if(peers.size() != ids.size()) return;
+
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		std::string methodName("newDevices");
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newDevices") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess(methodName)) continue;
+            if(server->second->clientInfo->acls->roomsCategoriesDevicesReadSet())
+            {
+                bool abort = false;
+                for(auto& peer : peers)
+                {
+                    if(!server->second->clientInfo->acls->checkDeviceReadAccess(peer))
+                    {
+                        abort = true;
+                        break;
+                    }
+                }
+                if(abort) continue;
+            }
+
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(deviceDescriptions);
@@ -624,6 +709,7 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("newEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(eventDescription);
@@ -644,18 +730,23 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
     }
 }
 
-void Client::broadcastDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
+void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
 {
 	try
 	{
 		if(!deviceAddresses || !deviceInfo) return;
+		GD::nodeBlueServer->broadcastDeleteDevices(deviceInfo);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastDeleteDevices(deviceInfo);
 #endif
+        GD::ipcServer->broadcastDeleteDevices(deviceInfo);
+
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteDevices") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("deleteDevices")) continue;
+
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			if(server->second->newFormat) parameters->push_back(deviceInfo);
@@ -686,6 +777,7 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("deleteEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
@@ -715,14 +807,34 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 	try
 	{
 		if(id == 0 || address.empty()) return;
+		GD::nodeBlueServer->broadcastUpdateDevice(id, channel, hint);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastUpdateDevice(id, channel, hint);
 #endif
+        GD::ipcServer->broadcastUpdateDevice(id, channel, hint);
+
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateDevice") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("updateDevice")) continue;
+            bool checkAcls = server->second->clientInfo->acls->devicesReadSet();
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
+
+            if(server->second->clientInfo->acls->roomsCategoriesDevicesReadSet())
+            {
+                std::shared_ptr<BaseLib::Systems::Peer> peer;
+                std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+                for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+                {
+                    std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                    if(central) peer = central->getPeer(id);
+                    if(peer) break;
+                }
+
+                if(checkAcls && (!peer || !server->second->clientInfo->acls->checkDeviceReadAccess(peer))) continue;
+            }
+
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			if(server->second->newFormat)
@@ -758,6 +870,7 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->clientInfo->acls->checkEventServerMethodAccess("updateEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
@@ -837,7 +950,7 @@ void Client::collectGarbage()
 				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
 				nodeClientsEmpty = _nodeClients.empty();
 			}
-			if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->disableNodeEvents();
+			if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->disableNodeEvents();
 		}
 	}
 	catch(const std::exception& ex)
@@ -905,7 +1018,7 @@ std::string Client::getIPAddress(std::string address)
     return "";
 }
 
-std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::string> address, std::string path, std::string id)
+std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string path, std::string id)
 {
 	try
 	{
@@ -920,6 +1033,7 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
 		GD::out.printInfo("Info: Adding server \"" + address.first + "\".");
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
+		server->clientInfo = clientInfo;
 		server->address = address;
 		server->hostname = getIPAddress(server->address.first);
 		server->path = path;
@@ -945,7 +1059,7 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRpcServer>(new RemoteRpcServer(_client));
 }
 
-std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, std::string address, bool nodeEvents)
+std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, BaseLib::PRpcClientInfo clientInfo, std::string address, bool nodeEvents)
 {
 	try
 	{
@@ -961,6 +1075,7 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		}
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
+		server->clientInfo = clientInfo;
 		server->address.first = clientId;
 		server->hostname = address;
 		server->uid = _serverId++;
@@ -980,7 +1095,7 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 				std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
 				nodeClientsEmpty = _nodeClients.empty();
 			}
-			if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->enableNodeEvents();
+			if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->enableNodeEvents();
 			std::lock_guard<std::mutex> nodeClientsGuard(_nodeClientsMutex);
 			_nodeClients.emplace(server->uid);
 		}
@@ -1033,7 +1148,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 						_nodeClients.erase(server->uid);
 						nodeClientsEmpty = _nodeClients.empty();
 					}
-					if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->disableNodeEvents();
+					if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->disableNodeEvents();
 				}
 				return;
 			}
@@ -1107,7 +1222,7 @@ void Client::removeServer(int32_t uid)
 				_nodeClients.erase(server->uid);
 				nodeClientsEmpty = _nodeClients.empty();
 			}
-			if(nodeClientsEmpty && GD::flowsServer) GD::flowsServer->disableNodeEvents();
+			if(nodeClientsEmpty && GD::nodeBlueServer) GD::nodeBlueServer->disableNodeEvents();
 		}
 	}
 	catch(const std::exception& ex)

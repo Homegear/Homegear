@@ -88,6 +88,13 @@ void Mqtt::start()
 		if(_started) return;
 		_started = true;
 
+        _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+        _dummyClientInfo->mqttClient = true;
+        _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+        std::vector<uint64_t> groups{ 6 };
+        _dummyClientInfo->acls->fromGroups(groups);
+        _dummyClientInfo->user = "SYSTEM (6)";
+
 		startQueue(0, false, 1, 0, SCHED_OTHER);
 		startQueue(1, false, _settings.processingThreadCount(), 0, SCHED_OTHER);
 
@@ -390,12 +397,13 @@ void Mqtt::listen()
 					bytesReceived = _socket->proofread(&buffer[0], bufferMax);
 					if(bytesReceived > 0)
 					{
-						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + bytesReceived);
+						data.insert(data.end(), buffer.data(), buffer.data() + bytesReceived);
 						if(data.size() > 1000000)
 						{
 							_out.printError("Could not read packet: Too much data.");
 							break;
 						}
+						if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: MQTT packet received: " + BaseLib::HelperFunctions::getHexString(data));
 					}
 					if(length == 0)
 					{
@@ -637,7 +645,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->reserve(2);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setSystemVariable", parameters);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "setSystemVariable", parameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -647,7 +655,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setMetadata", parameters);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "setMetadata", parameters);
 			}
 			else
 			{
@@ -658,7 +666,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("setValue", parameters);
+				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "setValue", parameters);
 			}
 		}
 		else if(parts.size() == _prefixParts + 5 && parts.at(_prefixParts + 1) == "config")
@@ -682,7 +690,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				return;
 			}
 			if(value) parameters->arrayValue->push_back(value);
-			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod("putParamset", parameters);
+			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "putParamset", parameters);
 		}
 		else if(parts.size() == _prefixParts + 2 && parts.at(_prefixParts + 1) == "rpc")
 		{
@@ -719,7 +727,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				return;
 			}
 			GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
-			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(methodName, parameters);
+			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, methodName, parameters);
 			std::shared_ptr<MqttMessage> responseData(new MqttMessage());
 			_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->message);
 			responseData->topic = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";
@@ -1240,6 +1248,8 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 	{
 		if(keys.empty() || keys.size() != values.size()) return;
 
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
 		std::shared_ptr<MqttMessage> messageJson2;
 		BaseLib::PVariable jsonObj;
 		if(_settings.bmxTopic())
@@ -1247,23 +1257,49 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 			//Topic has to be set to: id/deviceName/evt/eventName/fmt/json
 			messageJson2.reset(new MqttMessage());
 			messageJson2->topic = "id/" + std::to_string(peerId) + "/evt/ch-" + std::to_string(channel) + "/fmt/json";
-			jsonObj.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+			jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		}
         else if(_settings.jsonobjTopic())
 		{
 			messageJson2.reset(new MqttMessage());
 			messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel);
-			jsonObj.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+            jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		}
+
+        bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+        std::shared_ptr<BaseLib::Systems::Peer> peer;
+        if(checkAcls && peerId != 0)
+        {
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central) peer = central->getPeer(peerId);
+                if(peer) break;
+            }
+        }
 
 		for(int32_t i = 0; i < (signed)keys.size(); i++)
 		{
+			if(checkAcls)
+			{
+				if(peerId == 0)
+				{
+					if(_dummyClientInfo->acls->variablesRoomsCategoriesReadSet())
+					{
+						auto systemVariable = GD::bl->db->getSystemVariableInternal(keys.at(i));
+						if(!systemVariable || !_dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+					}
+				}
+				else if(!peer || !_dummyClientInfo->acls->checkVariableReadAccess(peer, channel, keys.at(i))) continue;
+			}
+
 			bool retain = keys.at(i).compare(0, 5, "PRESS") != 0;
 
 			std::shared_ptr<MqttMessage> messageJson1;
 			if(_settings.bmxTopic())
             {
-				jsonObj->structValue->insert(BaseLib::StructElement(keys.at(i), values.at(i)));
+				jsonObj->structValue->emplace(keys.at(i), values.at(i));
 				if(!retain) messageJson2->retain = false;
 			}
             else
@@ -1295,13 +1331,13 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::strin
 
 				if(_settings.jsonobjTopic())
 				{
-					jsonObj->structValue->insert(BaseLib::StructElement(keys.at(i), values.at(i)));
+					jsonObj->structValue->emplace(keys.at(i), values.at(i));
 					if(!retain) messageJson2->retain = false;
 				}
 			}
 		}
 
-		if(_settings.jsonobjTopic() || _settings.bmxTopic())
+		if((_settings.jsonobjTopic() || _settings.bmxTopic()) && !jsonObj->structValue->empty())
 		{
 			_jsonEncoder->encode(jsonObj, messageJson2->message);
 			queueMessage(messageJson2);

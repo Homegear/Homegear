@@ -22,6 +22,7 @@ class User
         if(hg_auth($username, $password) === true)
         {
             $_SESSION["authorized"] = true;
+            $_SESSION["user"] = $username;
             return true;
         }
         return false;
@@ -40,4 +41,3 @@ class User
         session_destroy();
     }
 }
-?>

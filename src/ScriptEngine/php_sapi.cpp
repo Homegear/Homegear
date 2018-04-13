@@ -65,7 +65,7 @@ static zend_class_entry* homegear_i2c_class_entry = nullptr;
 #endif
 
 static char* ini_path_override = nullptr;
-static char* ini_entries = nullptr;
+static char* sapi_ini_entries = nullptr;
 static const char HARDCODED_INI[] =
 	"register_argc_argv=1\n"
 	"max_execution_time=0\n"
@@ -105,6 +105,9 @@ ZEND_FUNCTION(hg_reload_module);
 ZEND_FUNCTION(hg_auth);
 ZEND_FUNCTION(hg_create_user);
 ZEND_FUNCTION(hg_delete_user);
+ZEND_FUNCTION(hg_get_user_metadata);
+ZEND_FUNCTION(hg_set_user_metadata);
+ZEND_FUNCTION(hg_set_user_privileges);
 ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
@@ -152,6 +155,9 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_auth, NULL)
 	ZEND_FE(hg_create_user, NULL)
 	ZEND_FE(hg_delete_user, NULL)
+    ZEND_FE(hg_get_user_metadata, NULL)
+    ZEND_FE(hg_set_user_metadata, NULL)
+	ZEND_FE(hg_set_user_privileges, NULL)
 	ZEND_FE(hg_update_user, NULL)
 	ZEND_FE(hg_user_exists, NULL)
 	ZEND_FE(hg_users, NULL)
@@ -546,10 +552,8 @@ static void php_homegear_register_variables(zval* track_vars_array)
 			else php_register_variable_safe((char*)"HTTPS", (char*)"", 0, track_vars_array);
 			std::string connection = (header.connection & BaseLib::Http::Connection::keepAlive) ? "keep-alive" : "close";
 			php_register_variable_safe((char*)"HTTP_CONNECTION", (char*)connection.c_str(), connection.size(), track_vars_array);
-			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)server->contentPath.c_str(), server->contentPath.size(), track_vars_array);
-			std::string filename = server->contentPath;
-			filename += (!scriptInfo->relativePath.empty() && scriptInfo->relativePath.front() == '/') ? scriptInfo->relativePath.substr(1) : scriptInfo->relativePath;
-			php_register_variable_safe((char*)"SCRIPT_FILENAME", (char*)filename.c_str(), filename.size(), track_vars_array);
+			php_register_variable_safe((char*)"DOCUMENT_ROOT", (char*)scriptInfo->contentPath.c_str(), scriptInfo->contentPath.size(), track_vars_array);
+			php_register_variable_safe((char*)"SCRIPT_FILENAME", (char*)scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size(), track_vars_array);
 			php_register_variable_safe((char*)"SERVER_NAME", (char*)server->name.c_str(), server->name.size(), track_vars_array);
 			php_register_variable_safe((char*)"SERVER_ADDR", (char*)server->address.c_str(), server->address.size(), track_vars_array);
 			ZVAL_LONG(&value, server->port);
@@ -572,6 +576,15 @@ static void php_homegear_register_variables(zval* track_vars_array)
 		}
 		php_register_variable_safe((char*)"HTTP_HOST", (char*)header.host.c_str(), header.host.size(), track_vars_array);
 		php_register_variable_safe((char*)"QUERY_STRING", (char*)header.args.c_str(), header.args.size(), track_vars_array);
+        std::string redirectQueryString = http->getRedirectQueryString();
+        if(!redirectQueryString.empty()) php_register_variable_safe((char*)"REDIRECT_QUERY_STRING", (char*)redirectQueryString.c_str(), redirectQueryString.size(), track_vars_array);
+        std::string redirectUrl = http->getRedirectUrl();
+        if(!redirectUrl.empty()) php_register_variable_safe((char*)"REDIRECT_URL", (char*)redirectUrl.c_str(), redirectUrl.size(), track_vars_array);
+		if(http->getRedirectStatus() != -1)
+        {
+            ZVAL_LONG(&value, http->getRedirectStatus());
+            php_register_variable_ex((char*) "REDIRECT_STATUS", &value, track_vars_array);
+        }
 		php_register_variable_safe((char*)"SERVER_PROTOCOL", (char*)"HTTP/1.1", 8, track_vars_array);
 		php_register_variable_safe((char*)"REMOTE_ADDR", (char*)header.remoteAddress.c_str(), header.remoteAddress.size(), track_vars_array);
 		ZVAL_LONG(&value, header.remotePort);
@@ -826,8 +839,11 @@ ZEND_FUNCTION(hg_register_thread)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 		std::string name;
 		std::string password;
-		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
-		else if(argc == 2)
+		BaseLib::PVariable groups;
+        BaseLib::PVariable metadata;
+
+		if(argc > 4) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::createUser().");
+		else if(argc > 3)
 		{
 			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
 			else
@@ -840,13 +856,31 @@ ZEND_FUNCTION(hg_register_thread)
 			{
 				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
 			}
+
+			if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type array.");
+			else
+			{
+				groups = PhpVariableConverter::getVariable(&args[2]);
+			}
 		}
-		if(name.empty() || password.empty()) RETURN_FALSE;
+        if(argc == 4)
+        {
+            if(Z_TYPE(args[3]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "metadata is not of type array.");
+            else
+            {
+                metadata = PhpVariableConverter::getVariable(&args[3]);
+            }
+        }
+
+		if(name.empty() || password.empty() || !groups || groups->arrayValue->empty()) RETURN_FALSE;
 
 		std::string methodName("createUser");
-		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
+		BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		parameters->arrayValue->reserve(metadata ? 4 : 3);
+		parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+		parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(password));
+		parameters->arrayValue->push_back(groups);
+        if(metadata) parameters->arrayValue->push_back(metadata);
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
 
@@ -874,6 +908,87 @@ ZEND_FUNCTION(hg_register_thread)
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
 
+    ZEND_FUNCTION(hg_get_user_metadata)
+    {
+        if(_disposed) RETURN_NULL();
+        int argc = 0;
+        zval* args = nullptr;
+        if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+        std::string name;
+
+        if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::getUserMetadata().");
+        else if(argc == 1)
+        {
+            if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+            else
+            {
+                if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+            }
+        }
+        if(name.empty()) RETURN_FALSE;
+
+        std::string methodName("getUserMetadata");
+        BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+        php_homegear_invoke_rpc(methodName, parameters, return_value, true);
+    }
+
+    ZEND_FUNCTION(hg_set_user_metadata)
+    {
+        if(_disposed) RETURN_NULL();
+        int argc = 0;
+        zval* args = nullptr;
+        if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+        std::string name;
+        BaseLib::PVariable metadata;
+
+        if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setUserMetadata().");
+        else if(argc == 2)
+        {
+            if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+            else
+            {
+                if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+            }
+
+            if(Z_TYPE(args[1]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "metadata is not of type string.");
+            else
+            {
+                metadata = PhpVariableConverter::getVariable(&args[1]);
+            }
+        }
+        if(name.empty() || !metadata) RETURN_FALSE;
+
+        std::string methodName("setUserMetadata");
+        BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        parameters->arrayValue->reserve(2);
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+        parameters->arrayValue->push_back(metadata);
+        php_homegear_invoke_rpc(methodName, parameters, return_value, true);
+    }
+
+	ZEND_FUNCTION(hg_set_user_privileges)
+	{
+		if(_disposed) RETURN_NULL();
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string user;
+
+		if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setUserPrivileges().");
+		else if(argc == 1)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "user is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) user = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+		}
+		if(user.empty()) RETURN_FALSE;
+
+		SEG(user) = user;
+	}
+
 	ZEND_FUNCTION(hg_update_user)
 	{
 		if(_disposed) RETURN_NULL();
@@ -882,7 +997,8 @@ ZEND_FUNCTION(hg_register_thread)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 		std::string name;
 		std::string password;
-		if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::updateUser().");
+        BaseLib::PVariable groups;
+		if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::updateUser().");
 		else if(argc == 2)
 		{
 			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
@@ -897,12 +1013,34 @@ ZEND_FUNCTION(hg_register_thread)
 				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
 			}
 		}
+		else if(argc == 3)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "name is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) name = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+
+			if(Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[1]) > 0) password = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
+			}
+
+            if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type array.");
+            else
+            {
+                groups = PhpVariableConverter::getVariable(&args[2]);
+            }
+		}
 		if(name.empty() || password.empty()) RETURN_FALSE;
 
 		std::string methodName("updateUser");
-		BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(name)));
-		parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(password)));
+        BaseLib::PVariable parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        parameters->arrayValue->reserve(groups ? 3 : 2);
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(name));
+        parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(password));
+        if(groups) parameters->arrayValue->push_back(groups);
 		php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 	}
 
@@ -945,6 +1083,11 @@ ZEND_FUNCTION(hg_poll_event)
 	if(SEG(id) == 0)
 	{
 		zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
+		RETURN_FALSE
+	}
+	if(!SEG(user).empty())
+	{
+		zend_throw_exception(homegear_exception_class_entry, "Can't poll events when user privileges are set.", -1);
 		RETURN_FALSE
 	}
 	int argc = 0;
@@ -1892,7 +2035,7 @@ ZEND_METHOD(Homegear, __call)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
-	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
+	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
@@ -1903,7 +2046,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
-	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args);
+	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
@@ -1922,6 +2065,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -1985,9 +2129,9 @@ int php_homegear_init()
 	php_homegear_sapi_module.php_ini_ignore_cwd = 1;
 	sapi_startup(&php_homegear_sapi_module);
 
-	ini_entries = (char*)malloc(sizeof(HARDCODED_INI));
-	memcpy(ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
-	php_homegear_sapi_module.ini_entries = ini_entries;
+	sapi_ini_entries = (char*)malloc(sizeof(HARDCODED_INI));
+	memcpy(sapi_ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
+	php_homegear_sapi_module.ini_entries = sapi_ini_entries;
 
 	sapi_module.startup(&php_homegear_sapi_module);
 
@@ -2005,7 +2149,7 @@ void php_homegear_shutdown()
 
 	tsrm_shutdown(); //Needs to be called once for the entire process (see TSRM.c)
 	if(ini_path_override) free(ini_path_override);
-	if(ini_entries) free(ini_entries);
+	if(sapi_ini_entries) free(sapi_ini_entries);
 	if(_superglobals.http)
 	{
 		delete(_superglobals.http);

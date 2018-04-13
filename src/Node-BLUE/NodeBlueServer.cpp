@@ -28,7 +28,7 @@
  * files in the program, then also delete it here.
 */
 
-#include "FlowsServer.h"
+#include "NodeBlueServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
@@ -36,13 +36,13 @@ pid_t _manualClientCurrentProcessId = 1;
 std::mutex _unconnectedProcessesMutex;
 std::queue<pid_t> _unconnectedProcesses;
 
-namespace Flows
+namespace NodeBlue
 {
 
-FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
+NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 {
 	_out.init(GD::bl.get());
-	_out.setPrefix("Flows Engine Server: ");
+	_out.setPrefix("Node-BLUE Server: ");
 
 	_shuttingDown = false;
 	_stopServer = false;
@@ -55,8 +55,12 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
 	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
-	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
+	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
 	_dummyClientInfo->flowsServer = true;
+	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+	std::vector<uint64_t> groups{ 4 };
+	_dummyClientInfo->acls->fromGroups(groups);
+	_dummyClientInfo->user = "SYSTEM (4)";
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -64,6 +68,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodHelp(GD::rpcServers[0].getServer())));
 	_rpcMethods.emplace("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodSignature(GD::rpcServers[0].getServer())));
 	_rpcMethods.emplace("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall(GD::rpcServers[0].getServer())));
+    _rpcMethods.emplace("acknowledgeGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAcknowledgeGlobalServiceMessage()));
 	_rpcMethods.emplace("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset()));
 	_rpcMethods.emplace("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
 	_rpcMethods.emplace("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice()));
@@ -131,6 +136,7 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
     _rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
 	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
+    _rpcMethods.emplace("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalServiceMessage()));
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
 	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
@@ -152,50 +158,93 @@ FlowsServer::FlowsServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
-	//{{{ Rooms
+	{ // Stories
+		_rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
+		_rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
+		_rpcMethods.emplace("deleteStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteStory()));
+		_rpcMethods.emplace("getRoomsInStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomsInStory()));
+		_rpcMethods.emplace("getStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStoryMetadata()));
+		_rpcMethods.emplace("getStories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStories()));
+		_rpcMethods.emplace("removeRoomFromStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveRoomFromStory()));
+		_rpcMethods.emplace("setStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetStoryMetadata()));
+		_rpcMethods.emplace("updateStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateStory()));
+	}
+
+	{ // Rooms
+		_rpcMethods.emplace("addChannelToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddChannelToRoom()));
 		_rpcMethods.emplace("addDeviceToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDeviceToRoom()));
+		_rpcMethods.emplace("addSystemVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddSystemVariableToRoom()));
+		_rpcMethods.emplace("addVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddVariableToRoom()));
 		_rpcMethods.emplace("createRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateRoom()));
 		_rpcMethods.emplace("deleteRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteRoom()));
+		_rpcMethods.emplace("getChannelsInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetChannelsInRoom()));
 		_rpcMethods.emplace("getDevicesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInRoom()));
+		_rpcMethods.emplace("getRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomMetadata()));
+		_rpcMethods.emplace("getSystemVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariablesInRoom()));
+		_rpcMethods.emplace("getVariablesInRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVariablesInRoom()));
 		_rpcMethods.emplace("getRooms", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRooms()));
+		_rpcMethods.emplace("removeChannelFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveChannelFromRoom()));
 		_rpcMethods.emplace("removeDeviceFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveDeviceFromRoom()));
+		_rpcMethods.emplace("removeSystemVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveSystemVariableFromRoom()));
+		_rpcMethods.emplace("removeVariableFromRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveVariableFromRoom()));
+		_rpcMethods.emplace("setRoomMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetRoomMetadata()));
 		_rpcMethods.emplace("updateRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateRoom()));
-	//}}}
+	}
 
-	//{{{ Categories
+	{ // Categories
+		_rpcMethods.emplace("addCategoryToChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToChannel()));
 		_rpcMethods.emplace("addCategoryToDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToDevice()));
+		_rpcMethods.emplace("addCategoryToSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToSystemVariable()));
+		_rpcMethods.emplace("addCategoryToVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddCategoryToVariable()));
 		_rpcMethods.emplace("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateCategory()));
 		_rpcMethods.emplace("deleteCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteCategory()));
 		_rpcMethods.emplace("getCategories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategories()));
+		_rpcMethods.emplace("getCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryMetadata()));
+		_rpcMethods.emplace("getChannelsInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetChannelsInCategory()));
 		_rpcMethods.emplace("getDevicesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDevicesInCategory()));
+		_rpcMethods.emplace("getSystemVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariablesInCategory()));
+		_rpcMethods.emplace("getVariablesInCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVariablesInCategory()));
+		_rpcMethods.emplace("removeCategoryFromChannel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromChannel()));
 		_rpcMethods.emplace("removeCategoryFromDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromDevice()));
+		_rpcMethods.emplace("removeCategoryFromSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromSystemVariable()));
+		_rpcMethods.emplace("removeCategoryFromVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromVariable()));
+		_rpcMethods.emplace("setCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetCategoryMetadata()));
 		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
-	//}}}
+	}
+
+    { // UI
+		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
+        _rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
+		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
+		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
+		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
+		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+    }
 
 #ifndef NO_SCRIPTENGINE
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&FlowsServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&FlowsServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&NodeBlueServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&NodeBlueServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 #endif
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&FlowsServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
-	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>("nodeEvent", std::bind(&FlowsServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&NodeBlueServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("nodeEvent", std::bind(&NodeBlueServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
-FlowsServer::~FlowsServer()
+NodeBlueServer::~NodeBlueServer()
 {
 	if(!_stopServer) stop();
 	GD::bl->threadManager.join(_maintenanceThread);
 }
 
-void FlowsServer::collectGarbage()
+void NodeBlueServer::collectGarbage()
 {
 	try
 	{
 		_lastGarbageCollection = GD::bl->hf.getTime();
-		std::vector<PFlowsProcess> processesToShutdown;
+		std::vector<PNodeBlueProcess> processesToShutdown;
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			bool emptyProcess = false;
-			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
+			for(std::map<pid_t, PNodeBlueProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
 				if(i->second->flowCount() == 0 && BaseLib::HelperFunctions::getTime() - i->second->lastExecution > 60000 && i->second->getClientData() && !i->second->getClientData()->closed)
 				{
@@ -205,12 +254,12 @@ void FlowsServer::collectGarbage()
 			}
 		}
 
-		std::vector<PFlowsClientData> clientsToRemove;
+		std::vector<PNodeBlueClientData> clientsToRemove;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			try
 			{
-				for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->closed) clientsToRemove.push_back(i->second);
 				}
@@ -224,7 +273,7 @@ void FlowsServer::collectGarbage()
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
-		for(std::vector<PFlowsClientData>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -247,7 +296,7 @@ void FlowsServer::collectGarbage()
     }
 }
 
-void FlowsServer::getMaxThreadCounts()
+void NodeBlueServer::getMaxThreadCounts()
 {
 	try
 	{
@@ -272,7 +321,7 @@ void FlowsServer::getMaxThreadCounts()
     }
 }
 
-bool FlowsServer::checkIntegrity(std::string flowsFile)
+bool NodeBlueServer::checkIntegrity(std::string flowsFile)
 {
 	try
 	{
@@ -297,14 +346,14 @@ bool FlowsServer::checkIntegrity(std::string flowsFile)
     return false;
 }
 
-void FlowsServer::backupFlows()
+void NodeBlueServer::backupFlows()
 {
 	try
 	{
 		int32_t maxBackups = 20;
 		std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-		std::string flowsFile = GD::bl->settings.flowsDataPath() + "flows.json";
-		std::string flowsBackupFile = GD::bl->settings.flowsDataPath() + "flows.json.bak";
+		std::string flowsFile = GD::bl->settings.nodeBlueDataPath() + "flows.json";
+		std::string flowsBackupFile = GD::bl->settings.nodeBlueDataPath() + "flows.json.bak";
 		if(GD::bl->io.fileExists(flowsFile))
 		{
 			if(!checkIntegrity(flowsFile))
@@ -379,7 +428,7 @@ void FlowsServer::backupFlows()
     }
 }
 
-bool FlowsServer::start()
+bool NodeBlueServer::start()
 {
 	try
 	{
@@ -389,14 +438,14 @@ bool FlowsServer::start()
 		_shuttingDown = false;
 		_stopServer = false;
 		if(!getFileDescriptor(true)) return false;
-		_webroot = GD::bl->settings.flowsPath() + "www/";
+		_webroot = GD::bl->settings.nodeBluePath() + "www/";
 		getMaxThreadCounts();
-		uint32_t flowsProcessingThreadCountServer = GD::bl->settings.flowsProcessingThreadCountServer();
+		uint32_t flowsProcessingThreadCountServer = GD::bl->settings.nodeBlueProcessingThreadCountServer();
 		if(flowsProcessingThreadCountServer < 5) flowsProcessingThreadCountServer = 5;
 		startQueue(0, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
 		startQueue(1, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
 		startQueue(2, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
-		GD::bl->threadManager.start(_mainThread, true, &FlowsServer::mainThread, this);
+		GD::bl->threadManager.start(_mainThread, true, &NodeBlueServer::mainThread, this);
 		startFlows();
 		return true;
 	}
@@ -415,7 +464,7 @@ bool FlowsServer::start()
     return false;
 }
 
-void FlowsServer::stop()
+void NodeBlueServer::stop()
 {
 	try
 	{
@@ -443,7 +492,7 @@ void FlowsServer::stop()
 	}
 }
 
-void FlowsServer::homegearShuttingDown()
+void NodeBlueServer::homegearShuttingDown()
 {
 	try
 	{
@@ -465,20 +514,20 @@ void FlowsServer::homegearShuttingDown()
     }
 }
 
-void FlowsServer::homegearReloading()
+void NodeBlueServer::homegearReloading()
 {
 	try
 	{
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
 			sendRequest(*i, "reload", parameters, false);
@@ -498,15 +547,15 @@ void FlowsServer::homegearReloading()
     }
 }
 
-void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
+void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
 {
 	try
 	{
-		std::shared_ptr<FlowsProcess> process;
+		std::shared_ptr<NodeBlueProcess> process;
 
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
+			std::map<pid_t, PNodeBlueProcess>::iterator processIterator = _processes.find(pid);
 			if(processIterator != _processes.end())
 			{
 				process = processIterator->second;
@@ -526,7 +575,7 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
 			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown)
 			{
 				_out.printError("Error: Restarting flows, because client was killed unexpectedly. Signal was: " + std::to_string(signal) + ", exit code was: " + std::to_string(exitCode));
-				GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
+				GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
 			}
 		}
 	}
@@ -544,11 +593,11 @@ void FlowsServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, boo
     }
 }
 
-void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous)
+void NodeBlueServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous)
 {
 	try
 	{
-		PFlowsClientData clientData;
+		PNodeBlueClientData clientData;
 		int32_t clientId = 0;
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -585,11 +634,11 @@ void FlowsServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVaria
     }
 }
 
-BaseLib::PVariable FlowsServer::getNodeVariable(std::string nodeId, std::string topic)
+BaseLib::PVariable NodeBlueServer::getNodeVariable(std::string nodeId, std::string topic)
 {
 	try
 	{
-		PFlowsClientData clientData;
+		PNodeBlueClientData clientData;
 		int32_t clientId = 0;
 		bool isFlow = false;
 		{
@@ -632,11 +681,11 @@ BaseLib::PVariable FlowsServer::getNodeVariable(std::string nodeId, std::string 
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value)
+void NodeBlueServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value)
 {
 	try
 	{
-		PFlowsClientData clientData;
+		PNodeBlueClientData clientData;
 		int32_t clientId = 0;
         bool isFlow = false;
 		{
@@ -679,24 +728,24 @@ void FlowsServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib
     }
 }
 
-void FlowsServer::enableNodeEvents()
+void NodeBlueServer::enableNodeEvents()
 {
 	try
 	{
 		if(_shuttingDown) return;
 		_out.printInfo("Info: Enabling node events...");
 		_nodeEventsEnabled = true;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
 			sendRequest(*i, "enableNodeEvents", parameters, false);
@@ -716,24 +765,24 @@ void FlowsServer::enableNodeEvents()
     }
 }
 
-void FlowsServer::disableNodeEvents()
+void NodeBlueServer::disableNodeEvents()
 {
 	try
 	{
 		if(_shuttingDown) return;
 		_out.printInfo("Info: Disabling node events...");
 		_nodeEventsEnabled = false;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
 			sendRequest(*i, "disableNodeEvents", parameters, false);
@@ -753,7 +802,7 @@ void FlowsServer::disableNodeEvents()
     }
 }
 
-std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds)
+std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds)
 {
 	try
 	{
@@ -970,7 +1019,7 @@ std::set<std::string> FlowsServer::insertSubflows(BaseLib::PVariable& subflowNod
     return std::set<std::string>();
 }
 
-void FlowsServer::startFlows()
+void NodeBlueServer::startFlows()
 {
 	try
 	{
@@ -978,7 +1027,7 @@ void FlowsServer::startFlows()
 
 		{
 			std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-			std::string flowsFile = GD::bl->settings.flowsDataPath() + "flows.json";
+			std::string flowsFile = GD::bl->settings.nodeBlueDataPath() + "flows.json";
 			if(!GD::bl->io.fileExists(flowsFile)) return;
 			rawFlows = GD::bl->io.getFileContent(flowsFile);
 			if(BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
@@ -1130,10 +1179,10 @@ void FlowsServer::startFlows()
 			}
 		}
 
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
@@ -1182,20 +1231,20 @@ void FlowsServer::startFlows()
     }
 }
 
-void FlowsServer::sendShutdown()
+void NodeBlueServer::sendShutdown()
 {
 	try
 	{
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
 			sendRequest(*i, "shutdown", parameters, false);
@@ -1226,21 +1275,21 @@ void FlowsServer::sendShutdown()
     }
 }
 
-bool FlowsServer::sendReset()
+bool NodeBlueServer::sendReset()
 {
 	try
 	{
         _out.printInfo("Info: Resetting flows client process.");
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
             auto result = sendRequest(*i, "reset", parameters, true);
@@ -1252,7 +1301,7 @@ bool FlowsServer::sendReset()
             else
             {
                 std::lock_guard<std::mutex> processGuard(_processMutex);
-                std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find((*i)->pid);
+                std::map<pid_t, PNodeBlueProcess>::iterator processIterator = _processes.find((*i)->pid);
                 if(processIterator != _processes.end()) processIterator->second->reset();
             }
 		}
@@ -1277,19 +1326,19 @@ bool FlowsServer::sendReset()
     return false;
 }
 
-void FlowsServer::closeClientConnections()
+void NodeBlueServer::closeClientConnections()
 {
 	try
 	{
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				clients.push_back(i->second);
 				closeClientConnection(i->second);
 				std::lock_guard<std::mutex> processGuard(_processMutex);
-				std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(i->second->pid);
+				std::map<pid_t, PNodeBlueProcess>::iterator processIterator = _processes.find(i->second->pid);
 				if(processIterator != _processes.end())
 				{
 					processIterator->second->invokeFlowFinished(-32501);
@@ -1300,7 +1349,7 @@ void FlowsServer::closeClientConnections()
 
 		while(_clients.size() > 0)
 		{
-			for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+			for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 			{
 				std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
 				waitLock.unlock();
@@ -1328,15 +1377,15 @@ void FlowsServer::closeClientConnections()
     }
 }
 
-void FlowsServer::stopNodes()
+void NodeBlueServer::stopNodes()
 {
 	try
 	{
 		_out.printInfo("Info: Stopping nodes.");
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
@@ -1362,7 +1411,7 @@ void FlowsServer::stopNodes()
     }
 }
 
-void FlowsServer::restartFlows()
+void NodeBlueServer::restartFlows()
 {
 	try
 	{
@@ -1396,16 +1445,16 @@ void FlowsServer::restartFlows()
     _flowsRestarting = false;
 }
 
-std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
+std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
 	try
 	{
 		bool sessionValid = false;
 		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-		if(sessionId != http.getHeader().cookies.end()) sessionValid = GD::scriptEngineServer->checkSessionId(sessionId->second);
+		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
 
 		std::string contentString;
-		if(path == "flows/locales/nodes")
+		if(path == "node-blue/locales/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string language = "en-US";
@@ -1422,7 +1471,7 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 			contentString = NodeManager::getNodeLocales(language);
 			responseEncoding = "application/json";
 		}
-		else if(path.compare(0, 14, "flows/locales/") == 0)
+		else if(path.compare(0, 18, "node-blue/locales/") == 0)
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string localePath = _webroot + "static/locales/";
@@ -1437,15 +1486,15 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 					break;
 				}
 			}
-			path = path.substr(13);
+			path = path.substr(17);
 			path = localePath + language + path;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if (path == "flows/flows")
+		else if (path == "node-blue/flows")
 		{
 			if(!sessionValid) return "unauthorized";
-			std::string flowsFile = _bl->settings.flowsDataPath() + "flows.json";
+			std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
 			std::vector<char> fileContent;
 
 			{
@@ -1474,24 +1523,24 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 			_jsonEncoder->encode(responseJson, contentString);
 			responseEncoding = "application/json";
 		}
-		else if(path == "flows/settings" || path == "flows/library/flows" || path == "flows/icons" || path == "flows/debug/view/debug-utils.js")
+		else if(path == "node-blue/settings" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js")
 		{
 			if(!sessionValid) return "unauthorized";
-			path = _webroot + "static/" + path.substr(6);
+			path = _webroot + "static/" + path.substr(10);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-        else if(path == "flows/settings/user")
+        else if(path == "node-blue/settings/user")
         {
             if(!sessionValid) return "unauthorized";
-            path = _webroot + "static/" + path.substr(15);
+            path = _webroot + "static/" + path.substr(19);
             if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
             responseEncoding = "application/json";
         }
-		else if(path == "flows/nodes")
+		else if(path == "node-blue/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
-			path = _webroot + "static/" + path.substr(6);
+			path = _webroot + "static/" + path.substr(10);
 
 			std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
 			if(http.getHeader().fields["accept"] == "text/html")
@@ -1521,11 +1570,11 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 				_jsonEncoder->encode(frontendNodeList, contentString);
 			}
 		}
-		else if(path.compare(0, 12, "flows/icons/") == 0)
+		else if(path.compare(0, 16, "node-blue/icons/") == 0)
 		{
 			if(!sessionValid) return "unauthorized";
-			auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(12), '/');
-			std::string path = _bl->settings.flowsPath() + "nodes/" + pathPair.first + "/" + pathPair.second;
+			auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(16), '/');
+			std::string path = _bl->settings.nodeBluePath() + "nodes/" + pathPair.first + "/" + pathPair.second;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			else
 			{
@@ -1533,9 +1582,9 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
 				if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			}
 		}
-		else if(path.compare(0, 6, "flows/") == 0 && path != "flows/index.php" && path != "flows/signin.php")
+		else if(path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php")
 		{
-			path = _webroot + path.substr(6);
+			path = _webroot + path.substr(10);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 
 			std::string ending = "";
@@ -1562,15 +1611,15 @@ std::string FlowsServer::handleGet(std::string& path, BaseLib::Http& http, std::
     return "";
 }
 
-std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
+std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
 	try
 	{
 		bool sessionValid = false;
 		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-		if(sessionId != http.getHeader().cookies.end()) sessionValid = GD::scriptEngineServer->checkSessionId(sessionId->second);
+		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
 
-		if (path == "flows/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
+		if (path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
 			if(!sessionValid) return "unauthorized";
 			_out.printInfo("Info: Deploying (1)...");
@@ -1587,7 +1636,7 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-				std::string filename = _bl->settings.flowsDataPath() + "flows.json";
+				std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
 				_bl->io.writeFile(filename, flows, flows.size());
 			}
 
@@ -1598,7 +1647,7 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 			BaseLib::HelperFunctions::toLower(md5String);
 
 			_out.printInfo("Info: Deploying (3)...");
-			GD::bl->threadManager.start(_maintenanceThread, true, &FlowsServer::restartFlows, this);
+			GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
 
 			return "{\"rev\": \"" + md5String + "\"}";
 		}
@@ -1618,15 +1667,15 @@ std::string FlowsServer::handlePost(std::string& path, BaseLib::Http& http, std:
 	return "";
 }
 
-uint32_t FlowsServer::flowCount()
+uint32_t NodeBlueServer::flowCount()
 {
 	try
 	{
 		if(_shuttingDown) return 0;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
@@ -1634,7 +1683,7 @@ uint32_t FlowsServer::flowCount()
 		}
 
 		uint32_t count = 0;
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array());
 			BaseLib::PVariable response = sendRequest(*i, "flowCount", parameters, true);
@@ -1657,22 +1706,66 @@ uint32_t FlowsServer::flowCount()
     return 0;
 }
 
-void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
+void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
 {
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
-		std::vector<PFlowsClientData> clients;
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+		bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
+		if(checkAcls)
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central) peer = central->getPeer(id);
+				if(peer) break;
+			}
+
+			if(!peer) return;
+
+			std::shared_ptr<std::vector<std::string>> newVariables;
+			BaseLib::PArray newValues;
+			newVariables->reserve(variables->size());
+			newValues->reserve(values->size());
+			for(int32_t i = 0; i < (int32_t)variables->size(); i++)
+			{
+				if(id == 0)
+				{
+					if(_dummyClientInfo->acls->variablesRoomsCategoriesReadSet())
+					{
+						auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+						if(systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
+						{
+							newVariables->push_back(variables->at(i));
+							newValues->push_back(values->at(i));
+						}
+					}
+				}
+				else if(peer && _dummyClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
+				{
+					newVariables->push_back(variables->at(i));
+					newValues->push_back(values->at(i));
+				}
+			}
+			variables = newVariables;
+			values = newValues;
+		}
+
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
@@ -1693,22 +1786,41 @@ void FlowsServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<s
     }
 }
 
-void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
+void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
-		std::vector<PFlowsClientData> clients;
+
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+				{
+					for(auto id : ids)
+					{
+						auto peer = central->getPeer((uint64_t)id);
+						if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+					}
+				}
+			}
+		}
+
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastNewDevices", parameters);
@@ -1729,22 +1841,22 @@ void FlowsServer::broadcastNewDevices(BaseLib::PVariable deviceDescriptions)
     }
 }
 
-void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
+void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 {
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
-		std::vector<PFlowsClientData> clients;
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastDeleteDevices", parameters);
@@ -1765,22 +1877,36 @@ void FlowsServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
     }
 }
 
-void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
+void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
 {
 	try
 	{
 		if(_shuttingDown || _flowsRestarting) return;
-		std::vector<PFlowsClientData> clients;
+
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
+		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		{
+			std::shared_ptr<BaseLib::Systems::Peer> peer;
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central) peer = central->getPeer(id);
+				if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+			}
+		}
+
+		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
 				clients.push_back(i->second);
 			}
 		}
 
-		for(std::vector<PFlowsClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(hint))});
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastUpdateDevice", parameters);
@@ -1801,7 +1927,7 @@ void FlowsServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hi
     }
 }
 
-void FlowsServer::closeClientConnection(PFlowsClientData client)
+void NodeBlueServer::closeClientConnection(PNodeBlueClientData client)
 {
 	try
 	{
@@ -1823,7 +1949,7 @@ void FlowsServer::closeClientConnection(PFlowsClientData client)
     }
 }
 
-void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
+void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
 {
 	try
 	{
@@ -1839,12 +1965,12 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				return;
 			}
 
-			std::map<std::string, std::function<BaseLib::PVariable(PFlowsClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+			std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
 			{
 				if(GD::bl->debugLevel >= 4)
 				{
-					if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "nodeEvent") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "nodeEvent")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1867,14 +1993,14 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 			std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(queueEntry->methodName);
 			if(methodIterator == _rpcMethods.end())
 			{
-				BaseLib::PVariable result = GD::ipcServer->callRpcMethod(queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
+				BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
 				if(queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
 				return;
 			}
 
 			if(GD::bl->debugLevel >= 4)
 			{
-				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+				if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "setNodeData" && queueEntry->methodName != "getNodeData")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 				if(GD::bl->debugLevel >= 5)
 				{
 					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1902,7 +2028,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
 				auto responseIterator = queueEntry->clientData->rpcResponses.find(packetId);
 				if(responseIterator != queueEntry->clientData->rpcResponses.end())
 				{
-					PFlowsResponseServer element = responseIterator->second;
+					PNodeBlueResponseServer element = responseIterator->second;
 					if(element)
 					{
 						element->response = response;
@@ -1934,7 +2060,7 @@ void FlowsServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQue
     }
 }
 
-BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<char>& data)
+BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::vector<char>& data)
 {
 	try
 	{
@@ -1967,7 +2093,7 @@ BaseLib::PVariable FlowsServer::send(PFlowsClientData& clientData, std::vector<c
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -1984,12 +2110,12 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
 		std::vector<char> data;
 		_rpcEncoder->encodeRequest(methodName, array, data);
 
-		PFlowsResponseServer response;
+		PNodeBlueResponseServer response;
 		if(wait)
 		{
 			{
 				std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
-				auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<FlowsResponseServer>());
+				auto result = clientData->rpcResponses.emplace(packetId, std::make_shared<NodeBlueResponseServer>());
 				if(result.second) response = result.first->second;
 			}
 			if(!response)
@@ -2051,7 +2177,7 @@ BaseLib::PVariable FlowsServer::sendRequest(PFlowsClientData& clientData, std::s
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void FlowsServer::sendResponse(PFlowsClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
+void NodeBlueServer::sendResponse(PNodeBlueClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
 {
 	try
 	{
@@ -2074,7 +2200,7 @@ void FlowsServer::sendResponse(PFlowsClientData& clientData, BaseLib::PVariable&
     }
 }
 
-void FlowsServer::mainThread()
+void NodeBlueServer::mainThread()
 {
 	try
 	{
@@ -2103,7 +2229,7 @@ void FlowsServer::mainThread()
 
 				{
 					std::lock_guard<std::mutex> stateGuard(_stateMutex);
-					for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+					for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 					{
 						if(i->second->closed) continue;
 						if(i->second->fileDescriptor->descriptor == -1)
@@ -2120,7 +2246,7 @@ void FlowsServer::mainThread()
 			result = select(maxfd + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(result == 0)
 			{
-				if(GD::bl->hf.getTime() - _lastGarbageCollection > 60000 || _clients.size() > GD::bl->settings.flowsServerMaxConnections() * 100 / 112) collectGarbage();
+				if(GD::bl->hf.getTime() - _lastGarbageCollection > 60000 || _clients.size() > GD::bl->settings.nodeBlueServerMaxConnections() * 100 / 112) collectGarbage();
 				continue;
 			}
 			else if(result == -1)
@@ -2138,10 +2264,10 @@ void FlowsServer::mainThread()
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
 
-				if(_clients.size() > GD::bl->settings.flowsServerMaxConnections())
+				if(_clients.size() > GD::bl->settings.nodeBlueServerMaxConnections())
 				{
 					collectGarbage();
-					if(_clients.size() > GD::bl->settings.flowsServerMaxConnections())
+					if(_clients.size() > GD::bl->settings.nodeBlueServerMaxConnections())
 					{
 						_out.printError("Error: There are too many clients connected to me. Closing connection. You can increase the number of allowed connections in main.conf.");
 						GD::bl->fileDescriptorManager.close(clientFileDescriptor);
@@ -2155,16 +2281,16 @@ void FlowsServer::mainThread()
 					GD::bl->fileDescriptorManager.close(clientFileDescriptor);
 					continue;
 				}
-				PFlowsClientData clientData = PFlowsClientData(new FlowsClientData(clientFileDescriptor));
+				PNodeBlueClientData clientData = PNodeBlueClientData(new NodeBlueClientData(clientFileDescriptor));
 				clientData->id = _currentClientId++;
 				_clients[clientData->id] = clientData;
 				continue;
 			}
 
-			PFlowsClientData clientData;
+			PNodeBlueClientData clientData;
 			{
 				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				for(std::map<int32_t, PFlowsClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+				for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->fileDescriptor->descriptor == -1)
 					{
@@ -2197,20 +2323,20 @@ void FlowsServer::mainThread()
     }
 }
 
-PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
+PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 {
 	try
 	{
 		if(GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
 		{
 			GD::out.printError("Error: Could not get flow process, because maximum number of threads in flow is greater than the number of threads allowed per flow process.");
-			return PFlowsProcess();
+			return PNodeBlueProcess();
 		}
 
 		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
-			for(std::map<pid_t, PFlowsProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
+			for(std::map<pid_t, PNodeBlueProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
 				if(i->second->getClientData()->closed) continue;
 				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
@@ -2221,9 +2347,9 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 			}
 		}
 		_out.printInfo("Info: Spawning new flows process.");
-		PFlowsProcess process(new FlowsProcess());
+		PNodeBlueProcess process(new NodeBlueProcess());
 		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
-        if(GD::bl->settings.flowsManualClientStart())
+        if(GD::bl->settings.nodeBlueManualClientStart())
         {
             pid_t currentProcessId = _manualClientCurrentProcessId++;
             process->setPid(currentProcessId);
@@ -2251,7 +2377,7 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
 				std::lock_guard<std::mutex> processGuard(_processMutex);
 				_processes.erase(process->getPid());
 				_out.printError("Error: Could not start new flows process.");
-				return PFlowsProcess();
+				return PNodeBlueProcess();
 			}
 			_out.printInfo("Info: Flows process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			if(_nodeEventsEnabled)
@@ -2274,10 +2400,10 @@ PFlowsProcess FlowsServer::getFreeProcess(uint32_t maxThreadCount)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return PFlowsProcess();
+    return PNodeBlueProcess();
 }
 
-void FlowsServer::readClient(PFlowsClientData& clientData)
+void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
 {
 	try
 	{
@@ -2346,7 +2472,7 @@ void FlowsServer::readClient(PFlowsClientData& clientData)
     }
 }
 
-bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
+bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
 {
 	try
 	{
@@ -2427,12 +2553,12 @@ bool FlowsServer::getFileDescriptor(bool deleteOldSocket)
     return false;
 }
 
-void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes)
+void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes)
 {
 	try
 	{
 		if(_shuttingDown) return;
-		PFlowsProcess process = getFreeProcess(flowInfo->maxThreadCount);
+		PNodeBlueProcess process = getFreeProcess(flowInfo->maxThreadCount);
 		if(!process)
 		{
 			_out.printError("Error: Could not get free process. Not executing flow.");
@@ -2448,7 +2574,7 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& no
 		_out.printInfo("Info: Starting flow with id " + std::to_string(flowInfo->id) + ".");
 		process->registerFlow(flowInfo->id, flowInfo);
 
-		PFlowsClientData clientData = process->getClientData();
+		PNodeBlueClientData clientData = process->getClientData();
 
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -2501,11 +2627,11 @@ void FlowsServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& no
     }
 }
 
-BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parameters)
+BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& parameters)
 {
 	try
 	{
-		PFlowsClientData clientData;
+		PNodeBlueClientData clientData;
 		int32_t clientId = 0;
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -2539,12 +2665,12 @@ BaseLib::PVariable FlowsServer::executePhpNodeBaseMethod(BaseLib::PArray& parame
 }
 
 // {{{ RPC methods
-BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData, BaseLib::PArray& parameters)
+BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{
 		pid_t pid = parameters->at(0)->integerValue;
-		if(GD::bl->settings.flowsManualClientStart())
+		if(GD::bl->settings.nodeBlueManualClientStart())
         {
             std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
             if (!_unconnectedProcesses.empty())
@@ -2553,10 +2679,10 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
                 _unconnectedProcesses.pop();
             }
         }
-		PFlowsProcess process;
+		PNodeBlueProcess process;
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, PFlowsProcess>::iterator processIterator = _processes.find(pid);
+			std::map<pid_t, PNodeBlueProcess>::iterator processIterator = _processes.find(pid);
 			if(processIterator == _processes.end())
 			{
 				_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
@@ -2593,7 +2719,7 @@ BaseLib::PVariable FlowsServer::registerFlowsClient(PFlowsClientData& clientData
 }
 
 #ifndef NO_SCRIPTENGINE
-BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, BaseLib::PArray& parameters)
+BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{
@@ -2642,7 +2768,7 @@ BaseLib::PVariable FlowsServer::executePhpNode(PFlowsClientData& clientData, Bas
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsServer::executePhpNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters)
+BaseLib::PVariable NodeBlueServer::executePhpNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{
@@ -2666,13 +2792,13 @@ BaseLib::PVariable FlowsServer::executePhpNodeMethod(PFlowsClientData& clientDat
 }
 #endif
 
-BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, BaseLib::PArray& parameters)
+BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{
 		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
-		PFlowsClientData clientData;
+		PNodeBlueClientData clientData;
 		int32_t clientId = 0;
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -2705,7 +2831,7 @@ BaseLib::PVariable FlowsServer::invokeNodeMethod(PFlowsClientData& clientData, B
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable FlowsServer::nodeEvent(PFlowsClientData& clientData, BaseLib::PArray& parameters)
+BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
 	{

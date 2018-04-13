@@ -88,7 +88,24 @@ case $1 in
 			fi
 		fi
 
-		systemctl enable homegear.service
+		sed -i -e 's/\/var\/lib\/homegear\/flows/\/var\/lib\/homegear\/node-blue/g' /etc/homegear/main.conf
+
+		pidof systemd
+		if [ $? -eq 0 ]; then
+			systemctl enable homegear.service
+		else
+			result=`ps -A | grep -c ' systemd$'`
+			command -v systemctl > /dev/null 2>&1
+			if [ $? -ne 0 ] || [ $result -eq 0 ]; then
+				if test -f /usr/lib/insserv/insserv; then
+					/usr/lib/insserv/insserv homegear
+				else
+					insserv homegear
+				fi
+			else
+				systemctl enable homegear.service
+			fi
+		fi
 		;;
 
 	# Back out of an attempt to upgrade this package FROM THIS VERSION

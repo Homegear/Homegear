@@ -31,7 +31,7 @@
 #ifndef DATABASECONTROLLER_H_
 #define DATABASECONTROLLER_H_
 
-#include "homegear-base/BaseLib.h"
+#include <homegear-base/BaseLib.h>
 #include "../Database/SQLite3.h"
 
 #include <thread>
@@ -79,20 +79,44 @@ public:
 		virtual BaseLib::PVariable deleteData(std::string& component, std::string& key);
 	// }}}
 
+	// {{{ UI
+		virtual uint64_t addUiElement(std::string& elementId, BaseLib::PVariable data);
+        virtual std::shared_ptr<BaseLib::Database::DataTable> getUiElements();
+		virtual void removeUiElement(uint64_t databaseId);
+	// }}}
+
+	// {{{ Stories
+        virtual BaseLib::PVariable addRoomToStory(uint64_t storyId, uint64_t roomId);
+        virtual BaseLib::PVariable createStory(BaseLib::PVariable translations, BaseLib::PVariable metadata);
+        virtual BaseLib::PVariable deleteStory(uint64_t storyId);
+        virtual BaseLib::PVariable getRoomsInStory(BaseLib::PRpcClientInfo clientInfo, uint64_t storyId, bool checkAcls);
+        virtual BaseLib::PVariable getStoryMetadata(uint64_t storyId);
+        virtual BaseLib::PVariable getStories(std::string languageCode);
+        virtual BaseLib::PVariable removeRoomFromStories(uint64_t roomId);
+        virtual BaseLib::PVariable removeRoomFromStory(uint64_t storyId, uint64_t roomId);
+        virtual bool storyExists(uint64_t storyId);
+        virtual BaseLib::PVariable setStoryMetadata(uint64_t storyId, BaseLib::PVariable metadata);
+        virtual BaseLib::PVariable updateStory(uint64_t storyId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	// }}}
+
 	// {{{ Rooms
-		virtual BaseLib::PVariable createRoom(BaseLib::PVariable translations);
+		virtual BaseLib::PVariable createRoom(BaseLib::PVariable translations, BaseLib::PVariable metadata);
 		virtual BaseLib::PVariable deleteRoom(uint64_t roomId);
-		virtual BaseLib::PVariable getRooms(std::string languageCode);
+		virtual BaseLib::PVariable getRoomMetadata(uint64_t roomId);
+		virtual BaseLib::PVariable getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls);
 		virtual bool roomExists(uint64_t roomId);
-		virtual BaseLib::PVariable updateRoom(uint64_t roomId, BaseLib::PVariable translations);
+		virtual BaseLib::PVariable setRoomMetadata(uint64_t roomId, BaseLib::PVariable metadata);
+		virtual BaseLib::PVariable updateRoom(uint64_t roomId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
 	// }}}
 
 	// {{{ Categories
-		virtual BaseLib::PVariable createCategory(BaseLib::PVariable translations);
+		virtual BaseLib::PVariable createCategory(BaseLib::PVariable translations, BaseLib::PVariable metadata);
 		virtual BaseLib::PVariable deleteCategory(uint64_t categoryId);
-		virtual BaseLib::PVariable getCategories(std::string languageCode);
+		virtual BaseLib::PVariable getCategories(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls);
+		virtual BaseLib::PVariable getCategoryMetadata(uint64_t categoryId);
 		virtual bool categoryExists(uint64_t categoryId);
-		virtual BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations);
+		virtual BaseLib::PVariable setCategoryMetadata(uint64_t categoryId, BaseLib::PVariable metadata);
+		virtual BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
 	// }}}
 
 	// {{{ Node data
@@ -103,27 +127,52 @@ public:
 	// }}}
 
 	// {{{ Metadata
-		virtual BaseLib::PVariable setMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID, BaseLib::PVariable& metadata);
-		virtual BaseLib::PVariable getMetadata(uint64_t peerID, std::string& dataID);
-		virtual BaseLib::PVariable getAllMetadata(uint64_t peerID);
-		virtual BaseLib::PVariable deleteMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID);
+		virtual BaseLib::PVariable setMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata);
+		virtual BaseLib::PVariable getMetadata(uint64_t peerId, std::string& dataId);
+		virtual BaseLib::PVariable getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls);
+		virtual BaseLib::PVariable deleteMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId);
 	// }}}
 
 	// {{{ System variables
-		virtual BaseLib::PVariable setSystemVariable(std::string& variableID, BaseLib::PVariable& value);
-		virtual BaseLib::PVariable getSystemVariable(std::string& variableID);
-		virtual BaseLib::PVariable getAllSystemVariables();
-		virtual BaseLib::PVariable deleteSystemVariable(std::string& variableID);
+        virtual BaseLib::PVariable deleteSystemVariable(std::string& variableId);
+        virtual BaseLib::PVariable getSystemVariable(std::string& variableId);
+		virtual BaseLib::Database::PSystemVariable getSystemVariableInternal(std::string& variableId);
+        virtual BaseLib::PVariable getSystemVariableCategories(std::string& variableId);
+        virtual std::set<uint64_t> getSystemVariableCategoriesInternal(std::string& variableId);
+        virtual BaseLib::PVariable getSystemVariableRoom(std::string& variableId);
+		virtual BaseLib::PVariable getSystemVariablesInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, bool checkAcls);
+		virtual BaseLib::PVariable getSystemVariablesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
+        virtual uint64_t getSystemVariableRoomInternal(std::string& variableId);
+        virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsAndCategories, bool checkAcls);
+        virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
+        virtual void removeRoomFromSystemVariables(uint64_t roomId);
+        virtual BaseLib::PVariable setSystemVariable(std::string& variableId, BaseLib::PVariable& value);
+        virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categories);
+        virtual BaseLib::PVariable setSystemVariableRoom(std::string& variableId, uint64_t room);
+        virtual bool systemVariableHasCategory(std::string& variableId, uint64_t categoryId);
 	// }}}
 
 	// {{{ Users
-		virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
-		virtual bool userNameExists(const std::string& name);
-		virtual uint64_t getUserID(const std::string& name);
-		virtual bool createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt);
-		virtual bool updateUser(uint64_t id, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt);
-		virtual bool deleteUser(uint64_t id);
+		virtual bool createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
+		virtual bool deleteUser(uint64_t userId);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPassword(const std::string& name);
+		virtual uint64_t getUserId(const std::string& name);
+        virtual BaseLib::PVariable getUserMetadata(uint64_t userId);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
+		virtual std::vector<uint64_t> getUsersGroups(uint64_t userId);
+		virtual bool updateUser(uint64_t userId, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
+        virtual BaseLib::PVariable setUserMetadata(uint64_t userId, BaseLib::PVariable metadata);
+		virtual bool userNameExists(const std::string& name);
+	// }}}
+
+	// {{{ Groups
+		virtual BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl);
+		virtual BaseLib::PVariable deleteGroup(uint64_t groupId);
+		virtual BaseLib::PVariable getAcl(uint64_t groupId);
+		virtual BaseLib::PVariable getGroup(uint64_t groupId, std::string languageCode);
+		virtual BaseLib::PVariable getGroups(std::string languageCode);
+		virtual bool groupExists(uint64_t groupId);
+		virtual BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl);
 	// }}}
 
 	// {{{ Events
@@ -152,8 +201,10 @@ public:
 	// {{{ Peer
 		virtual void deletePeer(uint64_t id);
 		virtual uint64_t savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type);
-		virtual void savePeerParameterAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual void savePeerVariableAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data);
+		virtual void savePeerParameterAsynchronous(BaseLib::Database::DataRow& data);
+		virtual void savePeerParameterRoomAsynchronous(BaseLib::Database::DataRow& data);
+		virtual void savePeerParameterCategoriesAsynchronous(BaseLib::Database::DataRow& data);
+		virtual void savePeerVariableAsynchronous(BaseLib::Database::DataRow& data);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID);
 		virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data);
@@ -167,9 +218,11 @@ public:
 	// }}}
 
 	// {{{ Service messages
-		virtual std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerID);
-		virtual void saveServiceMessageAsynchronous(uint64_t peerID, BaseLib::Database::DataRow& data);
-		virtual void deleteServiceMessage(uint64_t databaseID);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerId);
+		virtual void saveServiceMessageAsynchronous(uint64_t peerId, BaseLib::Database::DataRow& data);
+        virtual void saveGlobalServiceMessageAsynchronous(BaseLib::Database::DataRow& data);
+		virtual void deleteServiceMessage(uint64_t databaseId);
+		virtual void deleteGlobalServiceMessage(int32_t familyId, int32_t messageId, std::string& message);
 	// }}}
 
 	// {{{ License modules
@@ -186,7 +239,7 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	std::mutex _systemVariableMutex;
-	std::map<std::string, BaseLib::PVariable> _systemVariables;
+	std::map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
 
 	std::mutex _dataMutex;
 	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;

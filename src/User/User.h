@@ -38,20 +38,33 @@
 #include <map>
 
 #include <gcrypt.h>
+#include <homegear-base/Variable.h>
 
 class User
 {
 public:
+    struct UserInfo
+    {
+        std::string name;
+        std::vector<uint64_t> groups;
+        BaseLib::PVariable metadata;
+    };
+
 	User() {}
 	virtual ~User() {}
 	static std::vector<unsigned char> generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt);
-	static uint64_t getID(const std::string& userName);
+	static uint64_t getId(const std::string& userName);
+	static std::vector<uint64_t> getGroups(const std::string& userName);
 	static bool verify(const std::string& userName, const std::string& password);
 	static bool exists(const std::string& userName);
-	static bool create(const std::string& userName, const std::string& password);
-	static bool update(const std::string& userName, const std::string& password);
+	static bool create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
+    static bool update(const std::string& userName, const std::string& password);
+    static bool update(const std::string& userName, const std::vector<uint64_t>& groups);
+	static bool update(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
 	static bool remove(const std::string& userName);
-	static bool getAll(std::map<uint64_t, std::string>& users);
+    static BaseLib::PVariable getMetadata(const std::string& userName);
+    static bool setMetadata(const std::string& userName, BaseLib::PVariable metadata);
+	static bool getAll(std::map<uint64_t, UserInfo>& users);
 };
 
 #endif

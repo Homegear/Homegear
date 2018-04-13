@@ -239,11 +239,11 @@ void FamilyController::onRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 	}
 }
 
-void FamilyController::onRPCNewDevices(BaseLib::PVariable deviceDescriptions)
+void FamilyController::onRPCNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
 	{
-		GD::rpcClient->broadcastNewDevices(deviceDescriptions);
+		GD::rpcClient->broadcastNewDevices(ids, deviceDescriptions);
 	}
 	catch(const std::exception& ex)
 	{
@@ -259,11 +259,11 @@ void FamilyController::onRPCNewDevices(BaseLib::PVariable deviceDescriptions)
 	}
 }
 
-void FamilyController::onRPCDeleteDevices(BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
+void FamilyController::onRPCDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo)
 {
 	try
 	{
-		GD::rpcClient->broadcastDeleteDevices(deviceAddresses, deviceInfo);
+		GD::rpcClient->broadcastDeleteDevices(ids, deviceAddresses, deviceInfo);
 	}
 	catch(const std::exception& ex)
 	{
@@ -283,8 +283,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 {
 	try
 	{
-		if(GD::flowsServer) GD::flowsServer->broadcastEvent(peerID, channel, variables, values);
-		if(GD::ipcServer) GD::ipcServer->broadcastEvent(peerID, channel, variables, values);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(peerID, channel, variables, values);
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
@@ -333,7 +332,7 @@ BaseLib::PVariable FamilyController::onInvokeRpc(std::string& methodName, BaseLi
 {
 	try
 	{
-		return GD::rpcServers.begin()->second.callMethod(methodName, std::make_shared<BaseLib::Variable>(parameters));
+		return GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, methodName, std::make_shared<BaseLib::Variable>(parameters));
 	}
 	catch(const std::exception& ex)
 	{
@@ -381,7 +380,7 @@ uint64_t FamilyController::onGetRoomIdByName(std::string& name)
 {
 	try
 	{
-		BaseLib::PVariable rooms = GD::bl->db->getRooms("");
+		BaseLib::PVariable rooms = GD::bl->db->getRooms(_dummyClientInfo, "", _dummyClientInfo->acls->roomsReadSet());
 		for(auto& room : *rooms->arrayValue)
 		{
 			auto idIterator = room->structValue->find("ID");
@@ -721,6 +720,31 @@ int32_t FamilyController::reloadModule(std::string filename)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
+}
+
+void FamilyController::init()
+{
+	try
+	{
+		_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+		_dummyClientInfo->familyModule = true;
+		_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+		std::vector<uint64_t> groups{ 7 };
+		_dummyClientInfo->acls->fromGroups(groups);
+		_dummyClientInfo->user = "SYSTEM (7)";
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void FamilyController::loadModules()

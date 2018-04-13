@@ -61,9 +61,18 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		std::vector<char> content;
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
+		if(GD::bl->settings.enableNodeBlue() && (path.compare(0, 6, "flows/") == 0 || path == "flows"))
+		{
+			path = "/node-blue/";
+			std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
+			getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
+			send(socket, content);
+			return;
+		}
+
 		bool isDirectory = false;
 		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-		if(isDirectory || path == "flows" || path == "flows/")
+		if(isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/")
 		{
 			if(!path.empty() && path.back() != '/')
 			{
@@ -73,7 +82,9 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				send(socket, content);
 				return;
 			}
-			if(path == "flows/") path = "flows/index.php";
+			if(path == "node-blue/") path = "node-blue/index.php";
+            else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+            else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -88,11 +99,11 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 		}
 
-		if(GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
+		if(GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
 			std::string responseEncoding;
-			std::string contentString = GD::flowsServer->handleGet(path, http, responseEncoding);
+			std::string contentString = GD::nodeBlueServer->handleGet(path, http, responseEncoding);
 			if(contentString == "unauthorized")
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
@@ -110,7 +121,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 		}
 
-		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php" && path != "flows/signin.php")
+		if(!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0)
 		{
 			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
@@ -121,20 +132,115 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
-			std::string ending = "";
+
+            if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
+            {
+                if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+                    {
+                        http.setRedirectUrl('/' + path);
+                        http.setRedirectQueryString(http.getHeader().args);
+                        http.setRedirectStatus(200);
+
+                        if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+                        else path = "ui/index.hgs";
+                    }
+                }
+            }
+            else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
+            {
+                if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+                    {
+                        http.setRedirectUrl('/' + path);
+                        http.setRedirectQueryString(http.getHeader().args);
+                        http.setRedirectStatus(200);
+
+                        if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+                        else path = "admin/index.hgs";
+                    }
+                }
+            }
+
+			std::string ending;
 			int32_t pos = path.find_last_of('.');
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			std::string contentString;
+            std::string contentPath = _serverInfo->contentPath;
+            std::string fullPath;
+            std::string relativePath = '/' + path;
+
+            if(path == "node-blue/index.php")
+            {
+                fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+                contentPath = GD::bl->settings.nodeBluePath();
+            }
+            else if(path == "node-blue/signin.php")
+            {
+                fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
+                contentPath = GD::bl->settings.nodeBluePath();
+            }
+            else if(path.compare(0, 6, "admin/") == 0)
+            {
+                if(path == "admin/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php"))
+                    {
+                        fullPath = GD::bl->settings.adminUiPath() + "index.php";
+                        relativePath += "index.php";
+                        ending = "php";
+                    }
+                    else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+                    {
+                        fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
+                        relativePath += "index.hgs";
+                        ending = "hgs";
+                    }
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
+                contentPath = GD::bl->settings.adminUiPath();
+            }
+            else if(path.compare(0, 3, "ui/") == 0)
+            {
+                if(path == "ui/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+                    {
+                        fullPath = GD::bl->settings.uiPath() + "index.php";
+                        relativePath += "index.php";
+                        ending = "php";
+                    }
+                    else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+                    {
+                        fullPath = GD::bl->settings.uiPath() + "index.hgs";
+                        relativePath += "index.hgs";
+                        ending = "hgs";
+                    }
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.uiPath() + path.substr(3);
+                contentPath = GD::bl->settings.uiPath();
+            }
+            else fullPath = _serverInfo->contentPath + path;
+
 #ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				std::string fullPath;
-				if(path == "flows/index.php") fullPath = GD::bl->settings.flowsPath() + "www/index.php";
-				else if(path == "flows/signin.php") fullPath = GD::bl->settings.flowsPath() + "www/signin.php";
-				else fullPath = _serverInfo->contentPath + path;
-				std::string relativePath = '/' + path;
-				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
 				scriptInfo->socket = socket;
 				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 				GD::scriptEngineServer->executeScript(scriptInfo, true);
@@ -145,7 +251,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			std::string contentType = _http.getMimeType(ending);
 			if(contentType.empty()) contentType = "application/octet-stream";
 			//Don't return content when method is "HEAD"
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(_serverInfo->contentPath + path);
+			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(fullPath);
 			std::string header;
 			_http.constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
 			content.insert(content.end(), header.begin(), header.end());
@@ -221,7 +327,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 
 		bool isDirectory = false;
 		BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-		if (isDirectory || path == "flows" || path == "flows/")
+		if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/")
 		{
 			if(!path.empty() && path.back() != '/')
 			{
@@ -231,7 +337,9 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				send(socket, content);
 				return;
 			}
-			if (path == "flows/") path = "flows/index.php";
+			if (path == "node-blue/") path = "node-blue/index.php";
+            else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+            else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
 			else if (GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
 			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -244,11 +352,11 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if (GD::bl->settings.enableFlows() && path.compare(0, 6, "flows/") == 0)
+		if (GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
 			std::string responseEncoding;
-			std::string contentString = GD::flowsServer->handlePost(path, http, responseEncoding);
+			std::string contentString = GD::nodeBlueServer->handlePost(path, http, responseEncoding);
 			if(contentString == "unauthorized")
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
@@ -267,7 +375,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			}
 		}
 
-		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "flows/index.php" && path != "flows/signin.php")
+		if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0)
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
@@ -275,15 +383,95 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		}
 
 #ifndef NO_SCRIPTENGINE
+		if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
+		{
+			if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+			{
+				if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+				{
+					http.setRedirectUrl('/' + path);
+					http.setRedirectQueryString(http.getHeader().args);
+					http.setRedirectStatus(200);
+
+					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+					else path = "ui/index.hgs";
+				}
+			}
+		}
+		else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
+		{
+			if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+			{
+				if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+				{
+					http.setRedirectUrl('/' + path);
+					http.setRedirectQueryString(http.getHeader().args);
+					http.setRedirectStatus(200);
+
+					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+					else path = "admin/index.hgs";
+				}
+			}
+		}
+
 		try
 		{
 			_out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to: \"" + _serverInfo->contentPath + path + "\", method: POST)");
 			std::string fullPath;
-			if(path == "flows/index.php") fullPath = GD::bl->settings.flowsPath() + "www/index.php";
-			else if(path == "flows/signin.php") fullPath = GD::bl->settings.flowsPath() + "www/signin.php";
+            std::string contentPath = _serverInfo->contentPath;
+            std::string relativePath = '/' + path;
+            if(path == "node-blue/index.php")
+            {
+                fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
+                contentPath = GD::bl->settings.nodeBluePath();
+            }
+            else if(path == "node-blue/signin.php")
+            {
+                fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
+                contentPath = GD::bl->settings.nodeBluePath();
+            }
+            else if(path.compare(0, 6, "admin/") == 0)
+            {
+                if(path == "admin/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
+                    else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
+                contentPath = GD::bl->settings.adminUiPath();
+            }
+            else if(path.compare(0, 3, "ui/") == 0)
+            {
+                if(path == "ui/")
+                {
+                    if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+                    {
+                        fullPath = GD::bl->settings.uiPath() + "index.php";
+                        relativePath += "index.php";
+                    }
+                    else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+                    {
+                        fullPath = GD::bl->settings.uiPath() + "index.hgs";
+                        relativePath += "index.hgs";
+                    }
+                    else
+                    {
+                        getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                        send(socket, content);
+                        return;
+                    }
+                }
+                else fullPath = GD::bl->settings.uiPath() + path.substr(3);
+                contentPath = GD::bl->settings.uiPath();
+            }
 			else fullPath = _serverInfo->contentPath + path;
-			std::string relativePath = '/' + path;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, fullPath, relativePath, http, _serverInfo));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
 			scriptInfo->socket = socket;
 			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 			GD::scriptEngineServer->executeScript(scriptInfo, true);

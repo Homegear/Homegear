@@ -83,7 +83,7 @@ namespace Rpc
 			void registerMethod(std::string methodName, std::shared_ptr<BaseLib::Rpc::RpcMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
-			BaseLib::PVariable callMethod(std::string& methodName, BaseLib::PVariable& parameters);
+			BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters);
 
 			BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 			void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
@@ -120,7 +120,6 @@ namespace Rpc
 			std::pair<int64_t, bool> _lifetick1;
 			std::mutex _lifetick2Mutex;
 			std::pair<int64_t, bool> _lifetick2;
-			std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 
 			void collectGarbage();
 			void getSocketDescriptor();

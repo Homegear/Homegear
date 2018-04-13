@@ -28,29 +28,36 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef FLOWSRESPONSESERVER_H_
-#define FLOWSRESPONSESERVER_H_
+#ifndef NODEBLUECLIENTDATA_H_
+#define NODEBLUECLIENTDATA_H_
 
+#include "NodeBlueResponseServer.h"
 #include <homegear-base/BaseLib.h>
 
-namespace Flows
+namespace NodeBlue
 {
 
-class FlowsResponseServer
+class NodeBlueClientData
 {
 public:
-	std::atomic_bool finished;
-	int32_t packetId = 0;
-	BaseLib::PVariable response;
+	NodeBlueClientData();
+	NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+	virtual ~NodeBlueClientData();
 
-	FlowsResponseServer()
-	{
-		finished = false;
-	}
+	int32_t id = 0;
+	pid_t pid = 0;
+	bool closed = false;
+	std::vector<char> buffer;
+	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
+	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+	std::mutex sendMutex;
+	std::mutex waitMutex;
+	std::mutex rpcResponsesMutex;
+	std::map<int32_t, PNodeBlueResponseServer> rpcResponses;
+	std::condition_variable requestConditionVariable;
 };
 
-typedef std::shared_ptr<FlowsResponseServer> PFlowsResponseServer;
+typedef std::shared_ptr<NodeBlueClientData> PNodeBlueClientData;
 
 }
-
 #endif

@@ -53,7 +53,7 @@ if [ "$dist" == "Ubuntu" ]; then
 elif [ "$dist" == "Debian" ]; then
 	repository="http://ftp.debian.org/debian"
 elif [ "$dist" == "Raspbian" ]; then
-	repository="http://mirrordirector.raspbian.org/raspbian/"
+	repository="http://archive.raspbian.org/raspbian/"
 else
 	echo "Unknown distribution."
 	print_usage
@@ -82,7 +82,7 @@ elif [ "$dist" == "Debian" ]; then
 	echo "deb http://ftp.debian.org/debian $distver main contrib
 	" > $rootfs/etc/apt/sources.list
 elif [ "$dist" == "Raspbian" ]; then
-	echo "deb http://mirrordirector.raspbian.org/raspbian/ $distver main contrib
+	echo "deb http://archive.raspbian.org/raspbian/ $distver main contrib
 	" > $rootfs/etc/apt/sources.list
 fi
 
@@ -129,6 +129,11 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
+if [ "$distver" == "bionic" ]; then
+	chroot $rootfs apt-get update
+	chroot $rootfs apt-get -y install gnupg
+fi
+
 chroot $rootfs apt-get update
 if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
@@ -146,7 +151,7 @@ rm $rootfs/Release.key
 chroot $rootfs umount /proc
 
 chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 insserv libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev
 
 if [ "$distver" == "stretch" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr

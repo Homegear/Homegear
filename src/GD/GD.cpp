@@ -52,6 +52,7 @@ Rpc::ClientSettings GD::clientSettings;
 std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingModules;
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<Mqtt> GD::mqtt;
+std::unique_ptr<UiController> GD::uiController;
 #ifdef EVENTHANDLER
 std::unique_ptr<EventHandler> GD::eventHandler;
 #endif
@@ -59,4 +60,4 @@ std::unique_ptr<EventHandler> GD::eventHandler;
 std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
 #endif
 std::unique_ptr<Ipc::IpcServer> GD::ipcServer;
-std::unique_ptr<Flows::FlowsServer> GD::flowsServer;
+std::unique_ptr<NodeBlue::NodeBlueServer> GD::nodeBlueServer;

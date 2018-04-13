@@ -182,7 +182,7 @@ private:
 	void sendOutput(std::string output);
 	void sendHeaders(BaseLib::PVariable headers);
 	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait);
-	BaseLib::PVariable sendRequest(int32_t scriptId, std::string methodName, BaseLib::PArray& parameters, bool wait);
+	BaseLib::PVariable sendRequest(int32_t scriptId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendScriptFinished(int32_t exitCode);
@@ -194,7 +194,7 @@ private:
 	void runScript(int32_t id, PScriptInfo scriptInfo);
 	void runNode(int32_t id, PScriptInfo scriptInfo);
 	void runDevice(int32_t id, PScriptInfo scriptInfo);
-	void checkSessionIdThread(std::string sessionId, bool* result);
+	void checkSessionIdThread(std::string sessionId, std::string* result);
 	BaseLib::PVariable send(std::vector<char>& data);
 
 #ifdef DEBUGSESOCKET

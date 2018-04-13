@@ -6,6 +6,7 @@ case "$1" in
 
     upgrade|abort-upgrade)
     	service homegear stop
+	mv /var/lib/homegear/flows /var/lib/homegear/node-blue 2>/dev/null
     	rm -f /usr/share/homegear/firmware/GetFirmwareUpdates.sh
     	rm -f /usr/share/homegear/modules/mod_miscellaneous.so
         ;;

@@ -31,6 +31,7 @@
 #include "CLIServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
+#include <homegear-base/Security/Acl.h>
 
 namespace CLI {
 
@@ -471,17 +472,52 @@ std::string Server::handleUserCommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command.compare(0, 10, "users help") == 0 || command.compare(0, 2, "uh") == 0)
+		std::vector<std::string> arguments;
+		bool showHelp = false;
+		if(BaseLib::HelperFunctions::checkCliCommand(command, "users help", "uh", "", 0, arguments, showHelp))
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "users list (ul)\t\tLists all users." << std::endl;
-			stringStream << "users create (uc)\tCreate a new user." << std::endl;
-			stringStream << "users update (uu)\tChange the password of an existing user." << std::endl;
-			stringStream << "users delete (ud)\tDelete an existing user." << std::endl;
+            stringStream << "groups list (gl)  Lists all groups." << std::endl;
+			stringStream << "users list (ul)   Lists all users." << std::endl;
+			stringStream << "users create (uc) Create a new user." << std::endl;
+			stringStream << "users update (uu) Change the password of an existing user." << std::endl;
+			stringStream << "users delete (ud) Delete an existing user." << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0 || command.compare(0, 2, "ls") == 0)
+        if(BaseLib::HelperFunctions::checkCliCommand(command, "groups list", "gl", "", 0, arguments, showHelp))
+        {
+            if(showHelp)
+            {
+                stringStream << "Description: This command lists all known groups." << std::endl;
+                stringStream << "Usage: groups list" << std::endl << std::endl;
+                return stringStream.str();
+            }
+
+            auto groups = GD::bl->db->getGroups("en-US");
+            for(auto& group : *groups->arrayValue)
+            {
+                auto nameIterator = group->structValue->find("NAME");
+                if(nameIterator == group->structValue->end()) continue;
+
+                auto idIterator = group->structValue->find("ID");
+                if(idIterator == group->structValue->end()) continue;
+
+                auto aclIterator = group->structValue->find("ACL");
+                if(aclIterator == group->structValue->end()) continue;
+
+				BaseLib::Security::Acl acl;
+				acl.fromVariable(aclIterator->second);
+
+                stringStream << nameIterator->second->stringValue << ":" << std::endl;
+                stringStream << "  ID: " << (uint64_t)idIterator->second->integerValue64 << std::endl;
+                stringStream << "  ACL: " << std::endl;
+				stringStream << acl.toString(4) << std::endl;
+            }
+
+            return stringStream.str();
+        }
+		else if(command.compare(0, 10, "users list") == 0 || command.compare(0, 2, "ul") == 0 || command.compare(0, 2, "ls") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
@@ -510,150 +546,150 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::map<uint64_t, std::string> users;
+			std::map<uint64_t, User::UserInfo> users;
 			User::getAll(users);
 			if(users.size() == 0) return "No users exist.\n";
 
-			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(std::map<uint64_t, std::string>::iterator i = users.begin(); i != users.end(); ++i)
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(100) << "Name" << "Groups" << std::endl;
+			for(auto& user : users)
 			{
-				if(i->second.size() < 2 || !i->second.at(0) || !i->second.at(1)) continue;
-				stringStream << std::setw(6) << i->first << std::setw(30) << i->second << std::endl;
+				stringStream << std::setw(6) << user.first << std::setw(100) << user.second.name;
+                for(auto& group : user.second.groups)
+                {
+                    stringStream << group << " ";
+                }
+                stringStream << std::endl;
 			}
 
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "users create") == 0 || command.compare(0, 2, "uc") == 0)
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "users create", "uc", "", 3, arguments, showHelp))
 		{
-			std::string userName;
-			std::string password;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					else
-					{
-						userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(element));
-						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
-						{
-							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
-							return stringStream.str();
-						}
-					}
-				}
-				else if(index == 2 + offset)
-				{
-					password = BaseLib::HelperFunctions::trim(element);
-
-					if(password.front() == '"' && password.back() == '"')
-					{
-						password = password.substr(1, password.size() - 2);
-						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
-						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
-					}
-					if(password.size() < 8)
-					{
-						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
-						return stringStream.str();
-					}
-				}
-				index++;
-			}
-			if(index < 3 + offset)
+			if(showHelp)
 			{
 				stringStream << "Description: This command creates a new user." << std::endl;
-				stringStream << "Usage: users create USERNAME \"PASSWORD\"" << std::endl << std::endl;
+				stringStream << "Usage: users create USERNAME \"PASSWORD\" \"GROUPS\"" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  USERNAME:\tThe user name of the new user to create. It may contain alphanumeric characters, \"_\"" << std::endl;
-				stringStream << "           \tand \"-\". Example: foo" << std::endl;
-				stringStream << "  PASSWORD:\tThe password for the new user. All characters are allowed. If the password contains spaces," << std::endl;
-				stringStream << "           \twrap it in double quotes." << std::endl;
-				stringStream << "           \tExample: MyPassword" << std::endl;
-				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				stringStream << "  USERNAME: The user name of the new user to create. It may contain alphanumeric characters, \"_\"" << std::endl;
+				stringStream << "            and \"-\". Example: foo" << std::endl;
+				stringStream << "  PASSWORD: The password for the new user. All characters are allowed. If the password contains spaces," << std::endl;
+				stringStream << "            wrap it in double quotes." << std::endl;
+				stringStream << "            Example: MyPassword" << std::endl;
+				stringStream << "            Example with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				stringStream << "  GROUPS:   Comma seperated list of group IDs that should be assigned to the user. The list needs to be wrapped in double quotes." << std::endl;
+				stringStream << "            Example: \"1,7\"" << std::endl;
 				return stringStream.str();
 			}
 
+			std::string userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(arguments.at(0)));
+			if(userName.empty() || userName == "\"\"")
+			{
+				stringStream << "No user name supplied." << std::endl;
+				return stringStream.str();
+			}
+
+            if(userName.size() > 2 && userName.front() == '"' && userName.back() == '"')
+            {
+                userName = userName.substr(1, userName.size() - 2);
+                BaseLib::HelperFunctions::stringReplace(userName, "\\\"", "\"");
+                BaseLib::HelperFunctions::stringReplace(userName, "\\\\", "\\");
+            }
+
+			std::string password = BaseLib::HelperFunctions::trim(arguments.at(1));
+			if(password.size() > 2 && password.front() == '"' && password.back() == '"')
+			{
+				password = password.substr(1, password.size() - 2);
+				BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
+				BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
+			}
+			if(!password.empty() && password != "\"\"" && password.size() < 8)
+			{
+				stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
+				return stringStream.str();
+			}
+
+			std::vector<uint64_t> groups;
+			std::string groupString = arguments.at(2);
+			if(groupString.front() == '"' && groupString.back() == '"')
+			{
+				groupString = groupString.substr(1, groupString.size() - 2);
+				std::vector<std::string> splitGroupString = BaseLib::HelperFunctions::splitAll(groupString, ',');
+				groups.reserve(splitGroupString.size());
+				for(auto& element : splitGroupString)
+				{
+					BaseLib::HelperFunctions::trim(element);
+					uint64_t id = BaseLib::Math::getNumber64(element, false);
+					if(id != 0) groups.push_back(id);
+				}
+			}
+
+			if(groups.empty()) return "No groups specified.\n";
+
 			if(User::exists(userName)) return "A user with that name already exists.\n";
 
-			if(User::create(userName, password)) stringStream << "User successfully created." << std::endl;
+			if(User::create(userName, password, groups)) stringStream << "User successfully created." << std::endl;
 			else stringStream << "Error creating user. See log for more details." << std::endl;
 
 			return stringStream.str();
 		}
-		else if(command.compare(0, 12, "users update") == 0 || command.compare(0, 2, "uu") == 0)
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "users update", "uu", "", 2, arguments, showHelp))
 		{
-			std::string userName;
-			std::string password;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'u') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					else
-					{
-						userName = BaseLib::HelperFunctions::trim(element);
-						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
-						{
-							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
-							return stringStream.str();
-						}
-					}
-				}
-				else if(index == 2 + offset)
-				{
-					password = BaseLib::HelperFunctions::trim(element);
-
-					if(password.front() == '"' && password.back() == '"')
-					{
-						password = password.substr(1, password.size() - 2);
-						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
-						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
-					}
-					if(password.size() < 8)
-					{
-						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
-						return stringStream.str();
-					}
-				}
-				index++;
-			}
-			if(index < 3 + offset)
+			if(showHelp)
 			{
 				stringStream << "Description: This command sets a new password for an existing user." << std::endl;
-				stringStream << "Usage: users update USERNAME \"PASSWORD\"" << std::endl << std::endl;
+				stringStream << "Usage: users update USERNAME \"PASSWORD\" [\"GROUPS\"]" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  USERNAME:\tThe user name of an existing user. Example: foo" << std::endl;
-				stringStream << "  PASSWORD:\tThe new password for the user. All characters are allowed. If the password contains spaces," << std::endl;
-				stringStream << "           \twrap it in double quotes." << std::endl;
-				stringStream << "           \tExample: MyPassword" << std::endl;
-				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				stringStream << "  USERNAME: The user name of an existing user. Example: foo" << std::endl;
+				stringStream << "  PASSWORD: The new password for the user. All characters are allowed. If the password contains spaces," << std::endl;
+				stringStream << "            wrap it in double quotes." << std::endl;
+				stringStream << "            Example: MyPassword" << std::endl;
+				stringStream << "            Example with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				stringStream << "  GROUPS:   Comma seperated list of group IDs that should be assigned to the user. The list needs to be wrapped in double quotes. If not specified, the groups stay unchanged." << std::endl;
+				stringStream << "            Example: \"1,7\"" << std::endl;
 				return stringStream.str();
+			}
+
+			std::string userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(arguments.at(0)));
+			if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
+			{
+				stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+				return stringStream.str();
+			}
+
+			std::string password = BaseLib::HelperFunctions::trim(arguments.at(1));
+			if(password.size() > 2 && password.front() == '"' && password.back() == '"')
+			{
+				password = password.substr(1, password.size() - 2);
+				BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
+				BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
+			}
+			if(!password.empty() && password.size() < 8)
+			{
+				stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
+				return stringStream.str();
+			}
+
+			std::vector<uint64_t> groups;
+			if(arguments.size() > 2)
+			{
+				std::string groupString = arguments.at(2);
+				if(groupString.front() == '"' && groupString.back() == '"')
+				{
+					groupString = groupString.substr(1, groupString.size() - 2);
+					std::vector<std::string> splitGroupString = BaseLib::HelperFunctions::splitAll(groupString, ',');
+					groups.reserve(splitGroupString.size());
+					for(auto& element : splitGroupString)
+					{
+						BaseLib::HelperFunctions::trim(element);
+						uint64_t id = BaseLib::Math::getNumber64(element, false);
+						if(id != 0) groups.push_back(id);
+					}
+				}
 			}
 
 			if(!User::exists(userName)) return "The user doesn't exist.\n";
 
-			if(User::update(userName, password)) stringStream << "User successfully updated." << std::endl;
+			if(User::update(userName, password, groups)) stringStream << "User successfully updated." << std::endl;
 			else stringStream << "Error updating user. See log for more details." << std::endl;
 
 			return stringStream.str();
@@ -968,7 +1004,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "scriptcount (sc)     Returns the number of currently running scripts" << std::endl;
 			stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
 #endif
-			if(GD::bl->settings.enableFlows())
+			if(GD::bl->settings.enableNodeBlue())
 			{
 				stringStream << "flowcount (fc)     Restarts the number of currently running flows" << std::endl;
 				stringStream << "flowsrestart (fr)    Restarts all flows" << std::endl;
@@ -1150,7 +1186,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			if(GD::flowsServer) stringStream << std::dec << GD::flowsServer->flowCount() << std::endl;
+			if(GD::nodeBlueServer) stringStream << std::dec << GD::nodeBlueServer->flowCount() << std::endl;
 			return stringStream.str();
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "flowsrestart", "fr", "", 0, arguments, showHelp))
@@ -1162,7 +1198,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			if(GD::flowsServer) GD::flowsServer->restartFlows();
+			if(GD::nodeBlueServer) GD::nodeBlueServer->restartFlows();
 
 			stringStream << "Flows restarted." << std::endl;
 
@@ -1428,7 +1464,7 @@ std::string Server::handleCommand(std::string& command)
 		if(response.empty())
 		{
 			//User commands can be executed when family is selected
-			if(command.compare(0, 5, "users") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected())) response = handleUserCommand(command);
+			if(command.compare(0, 5, "users") == 0 || command.compare(0, 6, "groups") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected()) || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'g' && !GD::familyController->familySelected())) response = handleUserCommand(command);
 			//Do not execute module commands when family is selected
 			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
 			else response = GD::familyController->handleCliCommand(command);

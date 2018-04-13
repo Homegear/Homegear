@@ -1,5 +1,11 @@
 <?php
 
+if(file_exists('/var/lib/homegear/ui/index.php') || file_exists('/var/lib/homegear/ui/index.hgs'))
+{
+	header('Location: /ui/');
+	exit(0);
+}
+
 $hgDevices = [];
 $hgVersion = '-';
 $hgError = false;
@@ -17,19 +23,19 @@ try {
         $familyNames[$value["ID"]] = $value["NAME"];
     }
 
-    $rawDevices = $hg->listDevices(false, ["FAMILY", "ID", "ADDRESS", "TYPE", "FIRMWARE"]);
+    $rawDevices = $hg->listDevices(false, ["FAMILY", "ID", "ADDRESS", "TYPE", "FIRMWARE", "NAME"]);
 
     foreach ($rawDevices as $item) {
 
-        $info = $hg->getDeviceInfo($item["ID"], ["NAME", "INTERFACE"]);
+        $info = $hg->getDeviceInfo($item["ID"], ["INTERFACE"]);
 
         $hgDevices[] = [
-            'name' => $info["NAME"],
+            'name' => $item["NAME"],
             'family' => $familyNames[$item["FAMILY"]],
             'id' => ($item["ID"] > 999999 ? "0x" . dechex($item["ID"]) : $item["ID"]),
             'address' => $item["ADDRESS"],
             'type' => $item["TYPE"],
-            'interface' => (array_key_exists("INTERFACE", $info) ? $info["INTERFACE"] : "&nbsp;"),
+            'interface' => (array_key_exists("INTERFACE", $info) ? $info["INTERFACE"] : " "),
             'firmware' => $item["FIRMWARE"]
         ];
     }

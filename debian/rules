@@ -13,12 +13,16 @@ override_dh_auto_install:
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/*.sh
 
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/254
-	cp $(CURDIR)/homegear-miscellaneous/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear/etc/homegear/devices/254
+	cp -R $(CURDIR)/homegear-miscellaneous/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear/etc/homegear/devices/254
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/254
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/254/*
 
 	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
 
+	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
+	cp $(CURDIR)/misc/System\ Config/homegear.init $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
 	mkdir -p $(CURDIR)/debian/homegear/lib/systemd/system
 	cp $(CURDIR)/misc/System\ Config/homegear.service $(CURDIR)/debian/homegear/lib/systemd/system/
 	chown root:root $(CURDIR)/debian/homegear/lib/systemd/system/homegear.service
@@ -37,12 +41,13 @@ override_dh_auto_install:
 	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 
 	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/flows/data
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/data
 	mkdir $(CURDIR)/debian/homegear/var/lib/homegear/phpinclude
 	cp -R $(CURDIR)/misc/State\ Directory/* $(CURDIR)/debian/homegear/var/lib/homegear
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear
 	find $(CURDIR)/debian/homegear/var/lib/homegear -type d -exec chmod 550 {} \;
 	find $(CURDIR)/debian/homegear/var/lib/homegear -type f -exec chmod 440 {} \;
+	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/scripts/*.sh
 
 	mkdir -p $(CURDIR)/debian/homegear/usr/share/homegear
 	chown -R root:root $(CURDIR)/debian/homegear/usr/share/homegear
