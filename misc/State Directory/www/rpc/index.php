@@ -1,5 +1,11 @@
 <?php
 
+if(file_exists('/var/lib/homegear/ui/index.php') || file_exists('/var/lib/homegear/ui/index.hgs'))
+{
+	header('Location: /ui/');
+	exit(0);
+}
+
 $hgDevices = [];
 $hgVersion = '-';
 $hgError = false;
