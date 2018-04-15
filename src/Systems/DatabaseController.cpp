@@ -417,7 +417,7 @@ bool DatabaseController::convertDatabase()
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
 		if(version == "0.7.3") return false; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0" && version != "0.7.1" || version != "0.7.2")
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0" && version != "0.7.1" && version != "0.7.2")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
