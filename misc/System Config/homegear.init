@@ -46,8 +46,14 @@ unlock_homegear() {
         fi
 }
 
-RUNASUSER=homegear
-RUNASGROUP=homegear
+if [ ! -z $HOMEGEARUSER ] && [ ! -z $HOMEGEARGROUP ]; then
+	RUNASUSER=$HOMEGEARUSER
+	RUNASGROUP=$HOMEGEARGROUP
+
+else
+	RUNASUSER=homegear
+	RUNASGROUP=homegear
+fi
 
 case $1 in
         start)
