@@ -416,8 +416,8 @@ bool DatabaseController::convertDatabase()
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.7.2") return false; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0" && version != "0.7.1")
+		if(version == "0.7.3") return false; //Up to date
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0" && version != "0.7.1" && version != "0.7.2")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
@@ -624,37 +624,21 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 		}
-		if(version == "0.7.1")
+		if(version == "0.7.1" || version == "0.7.2")
 		{
-			GD::out.printMessage("Converting database from version " + version + " to version 0.7.2...");
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.3...");
 
-			_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages2 (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-			std::shared_ptr<BaseLib::Database::DataTable> serviceMessagesRows = _db.executeCommand("SELECT * FROM serviceMessages");
-			for(BaseLib::Database::DataTable::iterator i = serviceMessagesRows->begin(); i != serviceMessagesRows->end(); ++i)
-			{
-				if(i->second.size() < 6) continue;
-				data.clear();
-				data.push_back(i->second.at(0));
-				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-				data.push_back(i->second.at(1));
-				data.push_back(i->second.at(2));
-				data.push_back(i->second.at(3));
-				data.push_back(i->second.at(4));
-				data.push_back(i->second.at(5));
-				_db.executeCommand("INSERT OR REPLACE INTO serviceMessages2(variableID, familyID, peerID, variableIndex, integerValue, stringValue, binaryValue) VALUES(?, ?, ?, ?, ?, ?, ?)", data);
-			}
 			_db.executeCommand("DROP INDEX serviceMessagesIndex");
 			_db.executeCommand("DROP TABLE serviceMessages");
-			_db.executeCommand("ALTER TABLE serviceMessages2 RENAME TO serviceMessages");
-			_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
-
+            _db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+            _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
 
 			data.clear();
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.2")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.3")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 		}
