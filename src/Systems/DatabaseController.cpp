@@ -486,6 +486,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.4.3";
 		}
 		if(version == "0.4.3")
 		{
@@ -501,6 +503,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.0")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.5.0";
 		}
 		if(version == "0.5.0")
 		{
@@ -522,6 +526,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.5.1";
 		}
 		if(version == "0.5.1")
 		{
@@ -540,6 +546,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.0")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.6.0";
 		}
 		if(version == "0.6.0")
 		{
@@ -555,6 +563,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.6.1";
 		}
         if(version == "0.6.1")
         {
@@ -580,6 +590,8 @@ bool DatabaseController::convertDatabase()
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.0")));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
             _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.7.0";
         }
 		if(version == "0.7.0")
 		{
@@ -623,6 +635,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.7.1";
 		}
 		if(version == "0.7.1" || version == "0.7.2")
 		{
@@ -641,6 +655,8 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.3")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.7.3";
 		}
 		return false;
 	}
