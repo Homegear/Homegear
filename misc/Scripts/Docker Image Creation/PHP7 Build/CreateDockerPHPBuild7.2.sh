@@ -155,6 +155,24 @@ EOF
 chroot $rootfs apt-key add /php-gpg.key
 rm $rootfs/php-gpg.key
 
+cat > "$rootfs/php-gpg.key" <<'EOF'
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: SKS 1.1.6
+Comment: Hostname: keyserver.ubuntu.com
+
+mI0ESX35nAEEALKDCUDVXvmW9n+T/+3G1DnTpoWh9/1xNaz/RrUH6fQKhHr568F8hfnZP/2C
+GYVYkW9hxP9LVW9IDvzcmnhgIwK+ddeaPZqh3T/FM4OTA7Q78HSvR81mJpf2iMLm/Zvh89Zs
+mP2sIgZuARiaHo8lxoTSLtmKXsM3FsJVlusyewHfABEBAAG0H0xhdW5jaHBhZCBQUEEgZm9y
+IE9uZMWZZWogU3Vyw72ItgQTAQIAIAUCSX35nAIbAwYLCQgHAwIEFQIIAwQWAgMBAh4BAheA
+AAoJEE9OoKrlJnpsQjYD/jW1NlIFAlT6EvF2xfVbkhERii9MapjaUsSso4XLCEmZdEGX54GQ
+01svXnrivwnd/kmhKvyxCqiNLDY/dOaK8MK//bDI6mqdKmG8XbP2vsdsxhifNC+GH/OwaDPv
+n1TyYB653kwyruCGFjEnCreZTcRUu2oBQyolORDl+BmF4DjL
+=R5tk
+-----END PGP PUBLIC KEY BLOCK-----
+EOF
+chroot $rootfs apt-key add /php-gpg.key
+rm $rootfs/php-gpg.key
+
 chroot $rootfs apt-get update
 if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
