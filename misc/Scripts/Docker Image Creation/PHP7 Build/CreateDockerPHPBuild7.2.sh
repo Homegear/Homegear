@@ -80,6 +80,8 @@ elif [ "$arch" == "mips" ]; then
 fi
 LANG=C chroot $rootfs /debootstrap/debootstrap --second-stage
 
+chroot $rootfs mount proc /proc -t proc
+
 if [ "$dist" == "Ubuntu" ]; then
 	echo "deb $repository $distver main restricted universe multiverse" > $rootfs/etc/apt/sources.list
 elif [ "$dist" == "Debian" ]; then
@@ -137,7 +139,6 @@ if [ "$distver" == "bionic" ]; then
 	chroot $rootfs apt-get -y install gnupg
 fi
 
-chroot $rootfs mount proc /proc -t proc
 cat > "$rootfs/php-gpg.key" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
@@ -155,7 +156,6 @@ FjEnCreZTcRUu2oBQyolORDl+BmF4DjL
 EOF
 chroot $rootfs apt-key add /php-gpg.key
 rm $rootfs/php-gpg.key
-chroot $rootfs umount /proc
 
 chroot $rootfs apt-get update
 if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
@@ -171,7 +171,7 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
@@ -408,6 +408,7 @@ sed -i "s/<DIST>/${dist}/g" $rootfs/FirstStart.sh
 #read -p "Copy additional files into ${rootfs} and check that all packages were installed ok then hit [Enter] to continue..."
 
 chroot $rootfs apt-get clean
+chroot $rootfs umount /proc
 rm -Rf $rootfs/var/lib/apt/lists/*
 rm -Rf $rootfs/dev
 rm -Rf $rootfs/proc
