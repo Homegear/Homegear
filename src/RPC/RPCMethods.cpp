@@ -690,7 +690,7 @@ BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, Base
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central) result = central->addDevice(clientInfo, serialNumber);
-			if(result && !result->errorStruct) returnResult = result;
+			if(result) returnResult = result;
 		}
 		if(returnResult) return returnResult;
 		return BaseLib::Variable::createError(-2, "Device not found.");
