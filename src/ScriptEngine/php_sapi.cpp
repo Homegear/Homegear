@@ -1670,10 +1670,12 @@ ZEND_FUNCTION(hg_serial_open)
 		long baudrate = 38400;
 		bool evenParity = false;
 		bool oddParity = false;
+        BaseLib::SerialReaderWriter::CharacterSize characterSize = BaseLib::SerialReaderWriter::CharacterSize::Eight;
+        bool twoStopBits = false;
 		int argc = 0;
 		zval* args = nullptr;
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
-		if(argc > 4) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearSerial::open().");
+		if(argc > 6) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearSerial::open().");
 		else if(argc >= 1)
 		{
 			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "device is not of type string.");
@@ -1695,13 +1697,32 @@ ZEND_FUNCTION(hg_serial_open)
 						evenParity = Z_TYPE(args[1]) == IS_TRUE;
 					}
 
-					if(argc == 4)
+					if(argc >= 4)
 					{
 						if(Z_TYPE(args[3]) != IS_TRUE && Z_TYPE(args[3]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "oddParity is not of type boolean.");
 						else
 						{
 							oddParity = Z_TYPE(args[3]) == IS_TRUE;
 						}
+
+                        if(argc >= 5)
+                        {
+                            if(Z_TYPE(args[4]) != IS_LONG) php_error_docref(NULL, E_WARNING, "characterSize is not of type integer.");
+                            else if(Z_LVAL(args[4]) < 5 || Z_LVAL(args[4]) > 8) php_error_docref(NULL, E_WARNING, "Value for characterSize is invalid.");
+                            else
+                            {
+                                characterSize = (BaseLib::SerialReaderWriter::CharacterSize)Z_LVAL(args[4]);
+                            }
+
+                            if(argc == 6)
+                            {
+                                if(Z_TYPE(args[5]) != IS_TRUE && Z_TYPE(args[5]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "twoStopBits is not of type boolean.");
+                                else
+                                {
+                                    twoStopBits = Z_TYPE(args[5]) == IS_TRUE;
+                                }
+                            }
+                        }
 					}
 				}
 			}
@@ -1709,7 +1730,7 @@ ZEND_FUNCTION(hg_serial_open)
 		if(device.empty()) RETURN_FALSE;
 
 		std::shared_ptr<BaseLib::SerialReaderWriter> serialDevice(new BaseLib::SerialReaderWriter(GD::bl.get(), device, baudrate, 0, true, -1));
-		serialDevice->openDevice(evenParity, oddParity, false);
+		serialDevice->openDevice(evenParity, oddParity, false, characterSize, twoStopBits);
 		if(serialDevice->isOpen())
 		{
 			int32_t descriptor = serialDevice->fileDescriptor()->descriptor;

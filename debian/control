@@ -8,7 +8,7 @@ Homepage: https://homegear.eu
 
 Package: homegear
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libhomegear-base (= <BASELIBVER>), libhomegear-node, wget, libsqlite3-0 (>= 3.7.13), libreadline7 | libreadline6, adduser (>= 3.113), libgcrypt20, libgnutlsxx28, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), procps, insserv, libxslt1.1, libedit2, libenchant1c2a, libqdbm14, libltdl7, zlib1g, libtinfo5, libgmp10, libxml2, libssl1.1 | libssl1.0.0, openssl, ntp, libcurl3-gnutls, libmariadbclient20 | libmariadbclient18 | libmysqlclient20 | libmysqlclient18
+Depends: ${shlibs:Depends}, ${misc:Depends}, libhomegear-base (= <BASELIBVER>), libhomegear-node, wget, libsqlite3-0 (>= 3.7.13), libreadline7 | libreadline6, adduser (>= 3.113), libgcrypt20, libgnutlsxx28, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), procps, libxslt1.1, libedit2, libenchant1c2a, libqdbm14, libltdl7, zlib1g, libtinfo5, libgmp10, libxml2, libssl1.1 | libssl1.0.0, openssl, libcurl3-gnutls, libmariadbclient20 | libmariadbclient18 | libmysqlclient20 | libmysqlclient18
 Replaces: homegear (<< 0.6)
 Breaks: homegear (<< 0.6)
 Description: Interface program to your smart home devices
