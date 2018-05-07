@@ -100,7 +100,10 @@ case $1 in
 				if test -f /usr/lib/insserv/insserv; then
 					/usr/lib/insserv/insserv homegear
 				else
-					insserv homegear
+					command -v systemctl > /dev/null 2>&1
+					if [ $? -eq 0 ]; then
+						insserv homegear
+					fi
 				fi
 			else
 				systemctl enable homegear.service
