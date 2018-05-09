@@ -4,7 +4,11 @@
 		<id>254.100.Refresh</id>
 		<type>simple</type>
 		<control>button</control>
-		<icon>refresh</icon>
+		<icons>
+			<icon>
+				<name>refresh</name>
+			</icon>
+		</icons>
 		<variableOutputs>
 			<variable>
 				<familyId>254</familyId>
@@ -17,7 +21,11 @@
 	<homegearUiElement>
 		<id>254.100.OpenWeatherMap</id>
 		<type>complex</type>
-		<icon>weather</icon>
+		<icons>
+			<icon>
+				<name>weather</name>
+			</icon>
+		</icons>
 		<width>3</width>
 		<height>3</height>
 		<cols>1</cols>

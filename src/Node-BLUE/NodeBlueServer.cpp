@@ -2150,7 +2150,7 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 
 		if(!response->finished || response->response->arrayValue->size() != 2 || response->packetId != packetId)
 		{
-			_out.printError("Error: No or invalid response received to RPC request. Method: " + methodName);
+			_out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + ". Response was: " + response->response->print(false, false, true));
 			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
 		else result = response->response->arrayValue->at(1);

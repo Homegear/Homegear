@@ -5,7 +5,14 @@
 		<type>simple</type>
 		<control>knob</control>
 		<unit>°C</unit>
-		<icon>thermometer</icon>
+		<icons>
+			<icon>
+				<name>thermometer</name>
+				<!--<conditionOperator>e</conditionOperator> (operators: e, g, ge, l, le, not)-->
+				<!--<conditionValue>0</conditionValue>-->
+			</icon>
+			<!--<icon></icon>-->
+		</icons>
 		<texts>
 			<text id="heading">Temperature</text>
 			<!--<text></text>-->
@@ -28,7 +35,11 @@
 		<type>simple</type>
 		<control>knob</control>
 		<unit>%</unit>
-		<icon>waterdrop</icon>
+		<icons>
+			<icon>
+				<name>waterdrop</name>
+			</icon>
+		</icons>
 		<texts>
 			<text id="heading">Humidity</text>
 			<!--<text></text>-->
