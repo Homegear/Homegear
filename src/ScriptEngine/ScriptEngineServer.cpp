@@ -1398,9 +1398,9 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 			}
 		}
 
-		if(!response->finished || response->response->arrayValue->size() != 2 || response->packetId != packetId)
+		if(!response->finished || (response->response && response->response->arrayValue->size() != 2) || response->packetId != packetId)
 		{
-			_out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + ". Response was: " + response->response->print(false, false, true));
+            _out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + "." + (response->response ? " Response was: " + response->response->print(false, false, true) : ""));
 			 result = BaseLib::Variable::createError(-1, "No response received.");
 		}
 		else result = response->response->arrayValue->at(1);
@@ -1884,7 +1884,7 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
 			process->invokeScriptFinished(id, exitCode);
 			process->unregisterScript(id);
 		}
-		if(exitCode != 0 && process->isNodeProcess() && !_shuttingDown) GD::nodeBlueServer->restartFlows();
+		if(exitCode != 0 && process->isNodeProcess() && !_shuttingDown && !GD::bl->shuttingDown) GD::nodeBlueServer->restartFlows();
 	}
 	catch(const std::exception& ex)
 	{
