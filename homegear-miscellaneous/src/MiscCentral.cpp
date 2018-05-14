@@ -124,7 +124,7 @@ void MiscCentral::deletePeer(uint64_t id)
 		std::shared_ptr<MiscPeer> peer(getPeer(id));
 		if(!peer) return;
 		peer->deleting = true;
-		peer->stopScript();
+
 		PVariable deviceAddresses(new Variable(VariableType::tArray));
 		deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber())));
 
@@ -156,7 +156,10 @@ void MiscCentral::deletePeer(uint64_t id)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             i++;
         }
+
         if(i == 600) GD::out.printError("Error: Peer deletion took too long.");
+
+		peer->stopScript();
 
 		peer->deleteFromDatabase();
 
