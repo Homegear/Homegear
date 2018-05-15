@@ -8,12 +8,13 @@ class User
 
     public function checkAuth($redirectToLogin)
     {
-        $authorized = (isset($_SESSION["authorized"]) && $_SESSION["authorized"] === true);
+        $authorized = (isset($_SESSION["authorized"]) && $_SESSION["authorized"] === true && isset($_SESSION["user"]));
         if(!$authorized && $redirectToLogin)
         {
             header("Location: signin.php");
             die("unauthorized");
         }
+        hg_set_user_privileges($_SESSION["user"]);
         return $authorized;
     }
 
@@ -21,11 +22,13 @@ class User
     {
         if(hg_auth($username, $password) === true)
         {
+            hg_set_user_privileges($username);
+            if(\Homegear\Homegear::checkServiceAccess("node-blue") !== true) return -2;
             $_SESSION["authorized"] = true;
             $_SESSION["user"] = $username;
-            return true;
+            return 0;
         }
-        return false;
+        return -1;
     }
 
     public function logout()

@@ -975,16 +975,16 @@ ZEND_FUNCTION(hg_register_thread)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 		std::string user;
 
-		if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setUserPrivileges().");
+		if(argc > 1) php_error_docref(NULL, E_ERROR, "Too many arguments passed to Homegear::setUserPrivileges().");
 		else if(argc == 1)
 		{
-			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "user is not of type string.");
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_ERROR, "user is not of type string.");
 			else
 			{
 				if(Z_STRLEN(args[0]) > 0) user = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
 			}
 		}
-		if(user.empty()) RETURN_FALSE;
+		if(user.empty()) php_error_docref(NULL, E_ERROR, "user is empty.");
 
 		SEG(user) = user;
 	}

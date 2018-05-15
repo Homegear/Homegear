@@ -1,7 +1,7 @@
 <?php
 require_once("user.php");
 
-$loginFailed = false;
+$loginResult = -1;
 if(isset($_GET["logout"]))
 {
   $user = new User();
@@ -12,11 +12,11 @@ else
   if(isset($_POST["username"]) && isset($_POST["password"]) && $_POST["username"] && $_POST["password"])
   {
     $user = new User();
-    if($user->login($_POST["username"], urldecode($_POST["password"])))
+    $loginResult = $user->login($_POST["username"], urldecode($_POST["password"]));
+    if($loginResult === 0)
     {
       header("Location: index.php");
     }
-    else $loginFailed = true;
   }
 }
 ?>
@@ -102,7 +102,10 @@ p.footer {
         <input type="hidden" name="url" value="<?php if(isset($_GET['url'])) print $_GET['url']; ?>" />
         <input type="user" id="inputUser" name="username" class="inputtop" placeholder="Username" required autofocus />
         <input type="password" id="inputPassword" name="password" class="inputbottom" placeholder="Password" required />
-        <?php if($loginFailed) print "<div class=\"alert alert-danger\" role=\"alert\">Wrong username or password.</div>"; ?>
+        <?php
+          if($loginResult === -1) print "<div class=\"alert alert-danger\" role=\"alert\">Wrong username or password.</div>"; 
+          else if($loginResult === -2) print "<div class=\"alert alert-danger\" role=\"alert\">No access permission.</div>";
+        ?>
         <button type="submit">Sign in</button>
       </form>
       <p class="footer">Node-BLUE</p>

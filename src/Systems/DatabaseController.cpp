@@ -131,10 +131,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -154,10 +155,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -177,10 +179,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -200,10 +203,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -223,10 +227,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -246,10 +251,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -269,10 +275,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -292,10 +299,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -315,10 +323,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
-                acl->structValue->emplace("methods", methods);
-                acl->structValue->emplace("eventServerMethods", methods);
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", grantAll);
+                acl->structValue->emplace("eventServerMethods", grantAll);
+                acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 

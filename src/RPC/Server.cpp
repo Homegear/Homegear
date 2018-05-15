@@ -75,6 +75,7 @@ void Server::registerMethods()
 		_server->registerMethod("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddRoomToStory()));
         _server->registerMethod("addSystemVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddSystemVariableToRoom()));
         _server->registerMethod("addVariableToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCAddVariableToRoom()));
+		_server->registerMethod("checkServiceAccess", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCheckServiceAccess()));
 		_server->registerMethod("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCopyConfig()));
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCClientServerInitialized()));
 		_server->registerMethod("createCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RPCCreateCategory()));
