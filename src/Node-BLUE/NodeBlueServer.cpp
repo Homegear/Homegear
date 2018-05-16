@@ -571,7 +571,7 @@ void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, 
 			else if(exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 			else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
-			if(signal != -1) exitCode = -32500;
+			if(signal != -1 && signal != 15) exitCode = -32500;
 			process->invokeFlowFinished(exitCode);
 			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown)
 			{
