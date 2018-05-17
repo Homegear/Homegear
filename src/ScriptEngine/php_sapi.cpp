@@ -115,6 +115,7 @@ ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_FUNCTION(hg_get_http_contents);
 ZEND_FUNCTION(hg_download);
+ZEND_FUNCTION(hg_ssdp_search);
 ZEND_FUNCTION(hg_check_license);
 ZEND_FUNCTION(hg_remove_license);
 ZEND_FUNCTION(hg_get_license_states);
@@ -165,6 +166,7 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_set_script_log_level, NULL)
 	ZEND_FE(hg_get_http_contents, NULL)
 	ZEND_FE(hg_download, NULL)
+    ZEND_FE(hg_ssdp_search, NULL)
 	ZEND_FE(hg_check_license, NULL)
 	ZEND_FE(hg_remove_license, NULL)
 	ZEND_FE(hg_get_license_states, NULL)
@@ -1496,6 +1498,67 @@ ZEND_FUNCTION(hg_download)
 	RETURN_TRUE;
 }
 
+ZEND_FUNCTION(hg_ssdp_search)
+{
+    if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string stHeader;
+    int32_t searchTime = -1;
+    if(argc != 2) php_error_docref(NULL, E_WARNING, "Wrong number of arguments passed to Homegear::ssdpSearch().");
+    else if(argc == 2)
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "stHeader is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) stHeader = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+
+        if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "searchTime is not of type integer.");
+        else
+        {
+            searchTime = Z_LVAL(args[1]);
+        }
+    }
+    if(stHeader.empty() || searchTime < 1 || searchTime > 120000) RETURN_FALSE;
+
+	auto result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    try
+    {
+		BaseLib::Ssdp ssdp(GD::bl.get());
+		std::vector<BaseLib::SsdpInfo> searchResult;
+        ssdp.searchDevices(stHeader, searchTime, searchResult);
+		result->arrayValue->reserve(searchResult.size());
+
+		for(auto& resultElement : searchResult)
+		{
+			auto info = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			info->structValue->emplace("ip", std::make_shared<BaseLib::Variable>(resultElement.ip()));
+			info->structValue->emplace("location", std::make_shared<BaseLib::Variable>(resultElement.location()));
+			info->structValue->emplace("port", std::make_shared<BaseLib::Variable>(resultElement.port()));
+
+			auto fieldInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			auto fields = resultElement.getFields();
+			for(auto& field : fields)
+			{
+				fieldInfo->structValue->emplace(field.first, std::make_shared<BaseLib::Variable>(field.second));
+			}
+			info->structValue->emplace("additionalFields", fieldInfo);
+            if(resultElement.info()) info->structValue->emplace("additionalInfo", resultElement.info());
+
+			result->arrayValue->push_back(info);
+		}
+
+		PhpVariableConverter::getPHPVariable(result, return_value);
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printError("Error searching devices: " + ex.what());
+        RETURN_FALSE;
+    }
+}
+
 ZEND_FUNCTION(hg_check_license)
 {
 	if(_disposed) RETURN_NULL();
@@ -2055,7 +2118,7 @@ ZEND_METHOD(Homegear, __call)
 	zval* zMethodName = nullptr;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
-	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
+	std::string methodName(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
@@ -2066,7 +2129,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	zval* zMethodName = nullptr;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
-	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
+	std::string methodName(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
@@ -2085,6 +2148,7 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(setScriptLogLevel, hg_set_script_log_level, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(ssdpSearch, hg_ssdp_search, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
