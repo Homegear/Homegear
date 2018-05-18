@@ -1572,8 +1572,9 @@ ZEND_FUNCTION(hg_configure_gateway)
     std::string caCert;
     std::string gatewayCert;
     std::string gatewayKey;
-    if(argc != 5) php_error_docref(NULL, E_WARNING, "Wrong number of arguments passed to Homegear::configureGateway().");
-    else if(argc == 5)
+	std::string password;
+    if(argc != 6) php_error_docref(NULL, E_WARNING, "Wrong number of arguments passed to Homegear::configureGateway().");
+    else if(argc == 6)
     {
         if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "host is not of type string.");
         else
@@ -1604,20 +1605,18 @@ ZEND_FUNCTION(hg_configure_gateway)
         {
             if(Z_STRLEN(args[4]) > 0) gatewayKey = std::string(Z_STRVAL(args[4]), Z_STRLEN(args[4]));
         }
+
+		if(Z_TYPE(args[5]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[5]) > 0) password = std::string(Z_STRVAL(args[5]), Z_STRLEN(args[5]));
+		}
     }
-    if(host.empty() || port < 1 || port > 65535 || caCert.empty() || gatewayCert.empty() || gatewayKey.empty()) RETURN_FALSE;
+    if(host.empty() || port < 1 || port > 65535 || caCert.empty() || gatewayCert.empty() || gatewayKey.empty() || password.empty()) RETURN_FALSE;
 
     try
     {
-        BaseLib::TcpSocket socket(GD::bl.get(), host, std::to_string(port));
-        socket.open();
-        if(!socket.connected())
-        {
-            zend_throw_exception(homegear_exception_class_entry, "Could not connect to gateway.", -1);
-            RETURN_NULL()
-        }
-
-        BaseLib::Rpc::RpcEncoder rpcEncoder(GD::bl.get(), true, true);
+		BaseLib::Rpc::RpcEncoder rpcEncoder(GD::bl.get(), true, true);
         BaseLib::Rpc::RpcDecoder rpcDecoder(GD::bl.get(), false, false);
 
         auto parameters = std::make_shared<BaseLib::Array>();
@@ -1632,8 +1631,19 @@ ZEND_FUNCTION(hg_configure_gateway)
         dataStruct.reset();
 
         BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
+
         std::vector<uint8_t> iv = BaseLib::HelperFunctions::getRandomBytes(32);
         aes.setIv(iv);
+
+		std::vector<uint8_t> key;
+		if(!BaseLib::Security::Hash::sha256(GD::bl->hf.getUBinary(password), key) || key.empty())
+		{
+			zend_throw_exception(homegear_exception_class_entry, "Could not encrypt data.", -1);
+			RETURN_NULL()
+		}
+		aes.setKey(key);
+        password.clear();
+        key.clear();
 
         std::vector<uint8_t> encryptedData;
         aes.encrypt(encryptedData, encodedData);
@@ -1644,6 +1654,13 @@ ZEND_FUNCTION(hg_configure_gateway)
         std::vector<char> encodedRequest;
         rpcEncoder.encodeRequest("configure", parameters, encodedRequest);
 
+		BaseLib::TcpSocket socket(GD::bl.get(), host, std::to_string(port));
+		socket.open();
+		if(!socket.connected())
+		{
+			zend_throw_exception(homegear_exception_class_entry, "Could not connect to gateway.", -1);
+			RETURN_NULL()
+		}
         socket.proofwrite(encodedRequest);
 
         //{{{ Receive response
