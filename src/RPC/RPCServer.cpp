@@ -153,20 +153,21 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 		if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
 		_out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 
-		if(!_info->ssl)
+		if(!_info->ssl && _info->interface != "::1" && _info->interface != "127.0.0.1")
 		{
 			_out.printWarning("Warning: SSL is not enabled for this RPC server. It is strongly recommended to disable all unencrypted RPC servers when the connected clients support it.");
 		}
 
-		if((_info->xmlrpcServer || _info->jsonrpcServer || _info->restServer) && _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+		if((_info->xmlrpcServer || _info->jsonrpcServer || _info->restServer) && _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none && _info->interface != "::1" && _info->interface != "127.0.0.1")
 		{
 			_out.printWarning("Warning: RPC server has no authorization enabled. Everybody on your local network can login into this installation. It is strongly recommended to enable authorization on all RPC servers when the connected clients support it.");
 		}
 
-		if(_info->webSocket && _info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+		if(_info->webSocket && _info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none && _info->interface != "::1" && _info->interface != "127.0.0.1")
 		{
 			_out.printWarning("Warning: RPC server has no WebSocket authorization enabled. This is very dangerous as every webpage opened in a browser (also remote one's!!!) can control this installation.");
 		}
+
 		if(_info->ssl)
 		{
 			int32_t result = 0;
