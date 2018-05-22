@@ -131,18 +131,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-<<<<<<< HEAD
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
-=======
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
->>>>>>> dev
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -153,7 +146,6 @@ void DatabaseController::initializeDatabase()
 				_db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
 			}
 
-<<<<<<< HEAD
 			if(_db.executeCommand("SELECT id FROM groups WHERE id=2")->empty())
 			{ //Script engine (2)
 				BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -163,10 +155,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -186,10 +179,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -209,10 +203,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -232,10 +227,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -255,10 +251,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -278,10 +275,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -301,10 +299,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -324,10 +323,11 @@ void DatabaseController::initializeDatabase()
 				_rpcEncoder->encodeResponse(translations, translationsBlob);
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				BaseLib::PVariable methods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-				methods->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
-				acl->structValue->emplace("methods", methods);
-				acl->structValue->emplace("eventServerMethods", methods);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				acl->structValue->emplace("methods", grantAll);
+				acl->structValue->emplace("eventServerMethods", grantAll);
+				acl->structValue->emplace("services", grantAll);
 				std::vector<char> aclBlob;
 				_rpcEncoder->encodeResponse(acl, aclBlob);
 
@@ -337,199 +337,6 @@ void DatabaseController::initializeDatabase()
 				data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
 				_db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
 			}
-=======
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=2")->empty())
-            { //Script engine (2)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Script Engine"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Skriptengine"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(2));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=3")->empty())
-            { //IPC (3)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("IPC"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("IPC"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(3));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=4")->empty())
-            { //Node-BLUE (4)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Node-BLUE"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Node-BLUE"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(4));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=5")->empty())
-            { //Event handler (5)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Event Handler"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Ereignisverarbeitung"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(5));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=6")->empty())
-            { //MQTT (6)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("MQTT"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("MQTT"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(6));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=7")->empty())
-            { //Family Module (7)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Family Modules"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Familienmodule"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(7));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=8")->empty())
-            { //No User (8)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("No User"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Kein Benutzer"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(8));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
-
-            if(_db.executeCommand("SELECT id FROM groups WHERE id=9")->empty())
-            { //Unauthorized (9)
-                BaseLib::PVariable translations = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                translations->structValue->emplace("en-US", std::make_shared<BaseLib::Variable>("Unauthorized"));
-                translations->structValue->emplace("de-DE", std::make_shared<BaseLib::Variable>("Unauthorisiert"));
-                std::vector<char> translationsBlob;
-                _rpcEncoder->encodeResponse(translations, translationsBlob);
-
-                BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
-                std::vector<char> aclBlob;
-                _rpcEncoder->encodeResponse(acl, aclBlob);
-
-                BaseLib::Database::DataRow data;
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(9));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
-                data.push_back(std::make_shared<BaseLib::Database::DataColumn>(aclBlob));
-                _db.executeCommand("INSERT INTO groups VALUES(?, ?, ?)", data);
-            }
->>>>>>> dev
 		}
 		//}}}
 
@@ -685,7 +492,7 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.4.3";
+			version = "0.4.3";
 		}
 		if(version == "0.4.3")
 		{
@@ -702,7 +509,7 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.5.0";
+			version = "0.5.0";
 		}
 		if(version == "0.5.0")
 		{
@@ -725,7 +532,7 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.5.1";
+			version = "0.5.1";
 		}
 		if(version == "0.5.1")
 		{
@@ -745,7 +552,7 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.6.0";
+			version = "0.6.0";
 		}
 		if(version == "0.6.0")
 		{
@@ -762,7 +569,7 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.6.1";
+			version = "0.6.1";
 		}
 		if(version == "0.6.1")
 		{
@@ -773,24 +580,24 @@ bool DatabaseController::convertDatabase()
 			std::vector<char> groupBlob;
 			_rpcEncoder->encodeResponse(groups, groupBlob);
 
-            BaseLib::PVariable metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-            std::vector<char> metadataBlob;
-            _rpcEncoder->encodeResponse(metadata, metadataBlob);
+			BaseLib::PVariable metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			std::vector<char> metadataBlob;
+			_rpcEncoder->encodeResponse(metadata, metadataBlob);
 
-            _db.executeCommand("ALTER TABLE users ADD COLUMN groups BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(groupBlob) + "'");
-            _db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'");
+			_db.executeCommand("ALTER TABLE users ADD COLUMN groups BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(groupBlob) + "'");
+			_db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'");
 
-            data.clear();
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-            //Don't forget to set new version in initializeDatabase!!!
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.0")));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-            _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.0")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.7.0";
-        }
+			version = "0.7.0";
+		}
 		if(version == "0.7.0")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.7.1...");
@@ -834,7 +641,7 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.7.1";
+			version = "0.7.1";
 		}
 		if(version == "0.7.1" || version == "0.7.2")
 		{
@@ -842,8 +649,8 @@ bool DatabaseController::convertDatabase()
 
 			_db.executeCommand("DROP INDEX serviceMessagesIndex");
 			_db.executeCommand("DROP TABLE serviceMessages");
-            _db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-            _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
+			_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+			_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
 
 			data.clear();
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
@@ -854,41 +661,41 @@ bool DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.7.3";
+			version = "0.7.3";
 		}
-        if(version == "0.7.3")
-        {
-            GD::out.printMessage("Converting database from version " + version + " to version 0.7.4...");
+		if(version == "0.7.3")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.4...");
 
-            for(int32_t i = 1; i <= 9; i++)
-            {
-                auto aclStruct = getAcl(i);
-                if(!aclStruct || aclStruct->errorStruct) continue;
+			for(int32_t i = 1; i <= 9; i++)
+			{
+				auto aclStruct = getAcl(i);
+				if(!aclStruct || aclStruct->errorStruct) continue;
 
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                aclStruct->structValue->emplace("services", grantAll);
+				BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+				aclStruct->structValue->emplace("services", grantAll);
 
-                updateGroup(i, BaseLib::PVariable(), aclStruct);
-            }
+				updateGroup(i, BaseLib::PVariable(), aclStruct);
+			}
 
-            data.clear();
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-            //Don't forget to set new version in initializeDatabase!!!
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.4")));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-            _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.4")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-            version = "0.7.4";
-        }
+			version = "0.7.4";
+		}
 
-        if(version != "0.7.4")
-        {
-            GD::out.printCritical("Critical: Unknown database version: " + version);
-            return true; //Don't know, what to do
-        }
+		if(version != "0.7.4")
+		{
+			GD::out.printCritical("Critical: Unknown database version: " + version);
+			return true; //Don't know, what to do
+		}
 
 		return false;
 	}
@@ -3839,8 +3646,8 @@ BaseLib::PVariable DatabaseController::updateGroup(uint64_t groupId, BaseLib::PV
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupId));
 		if(_db.executeCommand("SELECT id FROM groups WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown group.");
 
-        std::vector<char> translationsBlob;
-        if(translations && !translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
+		std::vector<char> translationsBlob;
+		if(translations && !translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
 
 		try
 		{
