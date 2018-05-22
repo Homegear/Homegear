@@ -402,13 +402,12 @@ static char* php_homegear_read_cookies()
 static size_t php_homegear_ub_write_string(std::string& string)
 {
 	if(string.empty() || _disposed) return 0;
-	zend_homegear_globals* globals = php_homegear_get_globals();
 	if(string.size() > 2 && string.at(string.size() - 1) == '\n')
 	{
 		if(string.at(string.size() - 2) == '\r') string.resize(string.size() - 2);
 		else string.resize(string.size() - 1);
 	}
-	if(globals->outputCallback) globals->outputCallback(string);
+	if(SEG(outputCallback)) SEG(outputCallback)(string, false);
 	else
 	{
 		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + string);
@@ -426,8 +425,7 @@ static size_t php_homegear_ub_write(const char* str, size_t length)
 		else length -= 1;
 	}
 	std::string output(str, length);
-	zend_homegear_globals* globals = php_homegear_get_globals();
-	if(globals->outputCallback) globals->outputCallback(output);
+	if(SEG(outputCallback)) SEG(outputCallback)(output, false);
 	else
 	{
 		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + output);
@@ -521,9 +519,15 @@ static void php_homegear_log_message(char* message)
 #endif
 {
 	if(_disposed) return;
-	std::string pathTranslated;
-	if(SG(request_info).path_translated) pathTranslated = SG(request_info).path_translated;
-	GD::out.printError("Scriptengine" + (SG(request_info).path_translated ? std::string(" (") + std::string(SG(request_info).path_translated) + "): " : ": ") + std::string(message));
+    std::string additionalInfo;
+	if(SG(request_info).path_translated) additionalInfo += std::string(SG(request_info).path_translated);
+    if(!SEG(nodeId).empty()) additionalInfo += (additionalInfo.empty() ? "" : ", ") + SEG(nodeId);
+    std::string messageString(message);
+    if(SEG(scriptInfo)->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli && SEG(outputCallback) && PG(display_errors) == 0)
+    {
+        SEG(outputCallback)(messageString, true);
+    }
+	GD::out.printError("Script engine" + (!additionalInfo.empty() ? std::string(" (") + additionalInfo + "): " : ": ") + messageString);
 }
 
 static void php_homegear_register_variables(zval* track_vars_array)

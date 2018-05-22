@@ -2259,12 +2259,12 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+			if(parameters->size() < 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 			std::lock_guard<std::mutex> processGuard(_processMutex);
 			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
 			if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-			processIterator->second->invokeScriptOutput(scriptInfo->scriptId, parameters->at(0)->stringValue);
+			processIterator->second->invokeScriptOutput(scriptInfo->scriptId, parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
 		catch(const std::exception& ex)

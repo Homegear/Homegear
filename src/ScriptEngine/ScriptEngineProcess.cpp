@@ -75,7 +75,7 @@ uint32_t ScriptEngineProcess::nodeThreadCount()
 	return _nodeThreadCount;
 }
 
-void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output)
+void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output, bool error)
 {
 	try
 	{
@@ -105,7 +105,7 @@ void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output)
 					scriptsIterator->second->socket->close();
 				}
 			}
-			if(scriptsIterator->second->scriptOutputCallback) scriptsIterator->second->scriptOutputCallback(scriptsIterator->second, output);
+			if(scriptsIterator->second->scriptOutputCallback) scriptsIterator->second->scriptOutputCallback(scriptsIterator->second, output, error);
 			if(scriptsIterator->second->returnOutput)
 			{
 				if(scriptsIterator->second->output.size() + output.size() > scriptsIterator->second->output.capacity()) scriptsIterator->second->output.reserve(scriptsIterator->second->output.capacity() + (((output.size() / 1024) + 1) * 1024));
