@@ -1632,14 +1632,14 @@ int main(int argc, char* argv[])
     		else if(arg == "-v")
     		{
     			std::cout << "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (c) 2013-2017 Sathya Laufer" << std::endl << std::endl;
+    			std::cout << "Copyright (c) 2013-2018 Homegear GmbH" << std::endl << std::endl;
     			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
     			std::cout << "Git branch of libhomegear-base:     " << GITBRANCHBASE << std::endl;
     			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl;
     			std::cout << "Git branch of Homegear:             " << GITBRANCHHOMEGEAR << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999-2017 The PHP Group. All rights reserved." << std::endl << std::endl;
+    			std::cout << "Copyright (c) 1999-2018 The PHP Group. All rights reserved." << std::endl << std::endl;
 
     			exit(0);
     		}

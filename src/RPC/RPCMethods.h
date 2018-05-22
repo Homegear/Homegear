@@ -288,6 +288,16 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCCheckServiceAccess : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCCheckServiceAccess()
+	{
+		addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCCopyConfig : public BaseLib::Rpc::RpcMethod
 {
 public:

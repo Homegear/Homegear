@@ -74,6 +74,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice()));
 	_rpcMethods.emplace("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddEvent()));
 	_rpcMethods.emplace("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddLink()));
+	_rpcMethods.emplace("checkServiceAccess", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCheckServiceAccess()));
 	_rpcMethods.emplace("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCopyConfig()));
 	_rpcMethods.emplace("clientServerInitialized", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCClientServerInitialized()));
 	_rpcMethods.emplace("createDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateDevice()));
@@ -570,7 +571,7 @@ void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, 
 			else if(exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 			else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
-			if(signal != -1) exitCode = -32500;
+			if(signal != -1 && signal != 15) exitCode = -32500;
 			process->invokeFlowFinished(exitCode);
 			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown)
 			{
@@ -2148,9 +2149,9 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 			}
 		}
 
-		if(!response->finished || response->response->arrayValue->size() != 2 || response->packetId != packetId)
+		if(!response->finished || (response->response && response->response->arrayValue->size() != 2) || response->packetId != packetId)
 		{
-			_out.printError("Error: No or invalid response received to RPC request. Method: " + methodName);
+			_out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + "." + (response->response ? " Response was: " + response->response->print(false, false, true) : ""));
 			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
 		else result = response->response->arrayValue->at(1);

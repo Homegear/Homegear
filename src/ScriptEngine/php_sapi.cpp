@@ -115,6 +115,8 @@ ZEND_FUNCTION(hg_log);
 ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_FUNCTION(hg_get_http_contents);
 ZEND_FUNCTION(hg_download);
+ZEND_FUNCTION(hg_ssdp_search);
+ZEND_FUNCTION(hg_configure_gateway);
 ZEND_FUNCTION(hg_check_license);
 ZEND_FUNCTION(hg_remove_license);
 ZEND_FUNCTION(hg_get_license_states);
@@ -165,6 +167,8 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_set_script_log_level, NULL)
 	ZEND_FE(hg_get_http_contents, NULL)
 	ZEND_FE(hg_download, NULL)
+    ZEND_FE(hg_ssdp_search, NULL)
+    ZEND_FE(hg_configure_gateway, NULL)
 	ZEND_FE(hg_check_license, NULL)
 	ZEND_FE(hg_remove_license, NULL)
 	ZEND_FE(hg_get_license_states, NULL)
@@ -975,16 +979,16 @@ ZEND_FUNCTION(hg_register_thread)
 		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
 		std::string user;
 
-		if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::setUserPrivileges().");
+		if(argc > 1) php_error_docref(NULL, E_ERROR, "Too many arguments passed to Homegear::setUserPrivileges().");
 		else if(argc == 1)
 		{
-			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "user is not of type string.");
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_ERROR, "user is not of type string.");
 			else
 			{
 				if(Z_STRLEN(args[0]) > 0) user = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
 			}
 		}
-		if(user.empty()) RETURN_FALSE;
+		if(user.empty()) php_error_docref(NULL, E_ERROR, "user is empty.");
 
 		SEG(user) = user;
 	}
@@ -1494,6 +1498,239 @@ ZEND_FUNCTION(hg_download)
 	}
 
 	RETURN_TRUE;
+}
+
+ZEND_FUNCTION(hg_ssdp_search)
+{
+    if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string stHeader;
+    int32_t searchTime = -1;
+    if(argc != 2) php_error_docref(NULL, E_WARNING, "Wrong number of arguments passed to Homegear::ssdpSearch().");
+    else if(argc == 2)
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "stHeader is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) stHeader = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+
+        if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "searchTime is not of type integer.");
+        else
+        {
+            searchTime = Z_LVAL(args[1]);
+        }
+    }
+    if(stHeader.empty() || searchTime < 1 || searchTime > 120000) RETURN_FALSE;
+
+	auto result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    try
+    {
+		BaseLib::Ssdp ssdp(GD::bl.get());
+		std::vector<BaseLib::SsdpInfo> searchResult;
+        ssdp.searchDevices(stHeader, searchTime, searchResult);
+		result->arrayValue->reserve(searchResult.size());
+
+		for(auto& resultElement : searchResult)
+		{
+			auto info = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			info->structValue->emplace("ip", std::make_shared<BaseLib::Variable>(resultElement.ip()));
+			info->structValue->emplace("location", std::make_shared<BaseLib::Variable>(resultElement.location()));
+			info->structValue->emplace("port", std::make_shared<BaseLib::Variable>(resultElement.port()));
+
+			auto fieldInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			auto fields = resultElement.getFields();
+			for(auto& field : fields)
+			{
+				fieldInfo->structValue->emplace(field.first, std::make_shared<BaseLib::Variable>(field.second));
+			}
+			info->structValue->emplace("additionalFields", fieldInfo);
+            if(resultElement.info()) info->structValue->emplace("additionalInfo", resultElement.info());
+
+			result->arrayValue->push_back(info);
+		}
+
+		PhpVariableConverter::getPHPVariable(result, return_value);
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printError("Error searching devices: " + ex.what());
+        RETURN_FALSE;
+    }
+}
+
+ZEND_FUNCTION(hg_configure_gateway)
+{
+    if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string host;
+    int32_t port = -1;
+    std::string caCert;
+    std::string gatewayCert;
+    std::string gatewayKey;
+	std::string password;
+    if(argc != 6) php_error_docref(NULL, E_WARNING, "Wrong number of arguments passed to Homegear::configureGateway().");
+    else if(argc == 6)
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "host is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) host = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+
+        if(Z_TYPE(args[1]) != IS_LONG) php_error_docref(NULL, E_WARNING, "port is not of type integer.");
+        else
+        {
+            port = Z_LVAL(args[1]);
+        }
+
+        if(Z_TYPE(args[2]) != IS_STRING) php_error_docref(NULL, E_WARNING, "caCert is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[2]) > 0) caCert = std::string(Z_STRVAL(args[2]), Z_STRLEN(args[2]));
+        }
+
+        if(Z_TYPE(args[3]) != IS_STRING) php_error_docref(NULL, E_WARNING, "gatewayCert is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[3]) > 0) gatewayCert = std::string(Z_STRVAL(args[3]), Z_STRLEN(args[3]));
+        }
+
+        if(Z_TYPE(args[4]) != IS_STRING) php_error_docref(NULL, E_WARNING, "gatewayKey is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[4]) > 0) gatewayKey = std::string(Z_STRVAL(args[4]), Z_STRLEN(args[4]));
+        }
+
+		if(Z_TYPE(args[5]) != IS_STRING) php_error_docref(NULL, E_WARNING, "password is not of type string.");
+		else
+		{
+			if(Z_STRLEN(args[5]) > 0) password = std::string(Z_STRVAL(args[5]), Z_STRLEN(args[5]));
+		}
+    }
+    if(host.empty() || port < 1 || port > 65535 || caCert.empty() || gatewayCert.empty() || gatewayKey.empty() || password.empty()) RETURN_FALSE;
+
+    try
+    {
+		BaseLib::Rpc::RpcEncoder rpcEncoder(GD::bl.get(), true, true);
+        BaseLib::Rpc::RpcDecoder rpcDecoder(GD::bl.get(), false, false);
+
+        auto parameters = std::make_shared<BaseLib::Array>();
+
+        auto dataStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        dataStruct->structValue->emplace("caCert", std::make_shared<BaseLib::Variable>(caCert));
+        dataStruct->structValue->emplace("gatewayCert", std::make_shared<BaseLib::Variable>(gatewayCert));
+        dataStruct->structValue->emplace("gatewayKey", std::make_shared<BaseLib::Variable>(gatewayKey));
+
+        std::vector<uint8_t> encodedData;
+        rpcEncoder.encodeResponse(dataStruct, encodedData);
+        dataStruct.reset();
+
+        BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
+
+        std::vector<uint8_t> iv = BaseLib::HelperFunctions::getRandomBytes(32);
+        aes.setIv(iv);
+
+		std::vector<uint8_t> key;
+		if(!BaseLib::Security::Hash::sha256(GD::bl->hf.getUBinary(password), key) || key.empty())
+		{
+			zend_throw_exception(homegear_exception_class_entry, "Could not encrypt data.", -1);
+			RETURN_NULL()
+		}
+		aes.setKey(key);
+        password.clear();
+        key.clear();
+
+        std::vector<uint8_t> encryptedData;
+        aes.encrypt(encryptedData, encodedData);
+        encodedData.clear();
+
+        parameters->emplace_back(std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getHexString(iv) + BaseLib::HelperFunctions::getHexString(encryptedData)));
+
+        std::vector<char> encodedRequest;
+        rpcEncoder.encodeRequest("configure", parameters, encodedRequest);
+
+		BaseLib::TcpSocket socket(GD::bl.get(), host, std::to_string(port));
+		socket.open();
+		if(!socket.connected())
+		{
+			zend_throw_exception(homegear_exception_class_entry, "Could not connect to gateway.", -1);
+			RETURN_NULL()
+		}
+        socket.proofwrite(encodedRequest);
+
+        //{{{ Receive response
+            ssize_t receivedBytes = 0;
+            const int32_t bufferSize = 1024;
+            std::array<char, bufferSize + 1> buffer;
+
+            BaseLib::Rpc::BinaryRpc binaryRpc(GD::bl.get());
+
+            while(!binaryRpc.isFinished())
+            {
+                try
+                {
+                    receivedBytes = socket.proofread(buffer.data(), bufferSize);
+                    //Some clients send only one byte in the first packet
+                    if(receivedBytes == 1 && !binaryRpc.processingStarted()) receivedBytes += socket.proofread(buffer.data() + 1, bufferSize - 1);
+                }
+                catch(const BaseLib::SocketTimeOutException& ex)
+                {
+                    zend_throw_exception(homegear_exception_class_entry, "Reading from gateway timed out", -2);
+                    RETURN_NULL();
+                }
+                catch(const BaseLib::SocketClosedException& ex)
+                {
+                    zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+                    RETURN_NULL();
+                }
+                catch(const BaseLib::SocketOperationException& ex)
+                {
+                    zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+                    RETURN_NULL();
+                }
+
+                //We are using string functions to process the buffer. So just to make sure,
+                //they don't do something in the memory after buffer, we add '\0'
+                buffer[receivedBytes] = '\0';
+
+                try
+                {
+                    int32_t processedBytes = binaryRpc.process(buffer.data(), receivedBytes);
+                    if(processedBytes < receivedBytes)
+                    {
+                        zend_throw_exception(homegear_exception_class_entry, ("Received more bytes (" + std::to_string(receivedBytes) + ") than binary packet size (" + std::to_string(processedBytes) + ")").c_str(), -1);
+                        RETURN_NULL();
+                    }
+                }
+                catch(BaseLib::Rpc::BinaryRpcException& ex)
+                {
+                    zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+                    RETURN_NULL();
+                }
+            }
+
+            auto result = rpcDecoder.decodeResponse(binaryRpc.getData());
+			if(result->errorStruct)
+			{
+				zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
+				RETURN_NULL();
+			}
+        //}}}
+
+        socket.close();
+
+        PhpVariableConverter::getPHPVariable(result, return_value);
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+        RETURN_NULL()
+    }
 }
 
 ZEND_FUNCTION(hg_check_license)
@@ -2055,7 +2292,7 @@ ZEND_METHOD(Homegear, __call)
 	zval* zMethodName = nullptr;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
-	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
+	std::string methodName(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
@@ -2066,7 +2303,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	zval* zMethodName = nullptr;
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
-	std::string methodName(std::string(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName)));
+	std::string methodName(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName));
 	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
@@ -2085,6 +2322,8 @@ static const zend_function_entry homegear_methods[] = {
 	ZEND_ME_MAPPING(setScriptLogLevel, hg_set_script_log_level, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(ssdpSearch, hg_ssdp_search, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(configureGateway, hg_configure_gateway, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

@@ -690,10 +690,10 @@ BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, Base
 		{
 			std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 			if(central) result = central->addDevice(clientInfo, serialNumber);
-			if(result) returnResult = result;
+			if(result && !result->errorStruct) returnResult = result;
 		}
 		if(returnResult) return returnResult;
-		return BaseLib::Variable::createError(-2, "Device not found.");
+		return BaseLib::Variable::createError(-2, "No device was paired.");
 	}
 	catch(const std::exception& ex)
     {
@@ -1015,6 +1015,34 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
         }
 
         return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCCheckServiceAccess::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("checkServiceAccess")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString })
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        return std::make_shared<BaseLib::Variable>(clientInfo->acls->checkServiceAccess(parameters->at(0)->stringValue));
     }
     catch(const std::exception& ex)
     {
