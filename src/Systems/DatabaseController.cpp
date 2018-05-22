@@ -132,7 +132,7 @@ void DatabaseController::initializeDatabase()
 
 				BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -156,7 +156,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -180,7 +180,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -204,7 +204,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -228,7 +228,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -252,7 +252,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -276,7 +276,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -300,7 +300,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -324,7 +324,7 @@ void DatabaseController::initializeDatabase()
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
                 acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
@@ -425,12 +425,8 @@ bool DatabaseController::convertDatabase()
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.7.3") return false; //Up to date
-		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0" && version != "0.5.1" && version != "0.6.0" && version != "0.6.1" && version != "0.7.0" && version != "0.7.1" && version != "0.7.2")
-		{
-			GD::out.printCritical("Critical: Unknown database version: " + version);
-			return true; //Don't know, what to do
-		}
+
+		if(version == "0.7.4") return false; //Up to date
 		/*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -667,6 +663,40 @@ bool DatabaseController::convertDatabase()
 
             version = "0.7.3";
 		}
+        if(version == "0.7.3")
+        {
+            GD::out.printMessage("Converting database from version " + version + " to version 0.7.4...");
+
+            for(int32_t i = 1; i <= 9; i++)
+            {
+                auto aclStruct = getAcl(i);
+                if(!aclStruct || aclStruct->errorStruct) continue;
+
+                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+                aclStruct->structValue->emplace("services", grantAll);
+
+                updateGroup(i, BaseLib::PVariable(), aclStruct);
+            }
+
+            data.clear();
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+            //Don't forget to set new version in initializeDatabase!!!
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.4")));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+            _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.7.4";
+        }
+
+        if(version != "0.7.4")
+        {
+            GD::out.printCritical("Critical: Unknown database version: " + version);
+            return true; //Don't know, what to do
+        }
+
 		return false;
 	}
 	catch(const std::exception& ex)
@@ -3617,7 +3647,7 @@ BaseLib::PVariable DatabaseController::updateGroup(uint64_t groupId, BaseLib::PV
         if(_db.executeCommand("SELECT id FROM groups WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown group.");
 
         std::vector<char> translationsBlob;
-        if(!translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
+        if(translations && !translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
 
 		try
 		{
