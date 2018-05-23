@@ -1,7 +1,7 @@
 <?php
 require_once("user.php");
 
-$loginResult = -1;
+$loginResult = -3;
 if(isset($_GET["logout"]))
 {
   $user = new User();
