@@ -323,11 +323,11 @@ void DatabaseController::initializeDatabase()
                 _rpcEncoder->encodeResponse(translations, translationsBlob);
 
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", grantAll);
-                acl->structValue->emplace("services", grantAll);
+                BaseLib::PVariable denyAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                denyAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+                acl->structValue->emplace("methods", denyAll);
+                acl->structValue->emplace("eventServerMethods", denyAll);
+                acl->structValue->emplace("services", denyAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);
 
