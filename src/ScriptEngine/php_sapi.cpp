@@ -2370,7 +2370,7 @@ static const zend_function_entry homegear_i2c_methods[] = {
 int php_homegear_init()
 {
 	_superglobals.http = new BaseLib::Http();
-	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get());
+	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get(), GD::bl->settings.gpioPath());
 	_disposed = false;
 	pthread_key_create(php_homegear_get_pthread_key(), pthread_data_destructor);
 	int32_t maxScriptsPerProcess = GD::bl->settings.scriptEngineMaxScriptsPerProcess();

@@ -907,8 +907,9 @@ void startUp()
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
 			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
-			BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-			gpio.setup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
+			BaseLib::LowLevel::Gpio gpio(GD::bl.get(), GD::bl->settings.gpioPath());
+            auto gpiosToExport = GD::bl->settings.exportGpios();
+			gpio.setup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions(), gpiosToExport);
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
 
 			int result = -1;
@@ -1315,8 +1316,9 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				GD::familyController->physicalInterfaceSetup(userId, groupId, GD::bl->settings.setDevicePermissions());
-    				BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-    				gpio.setup(userId, groupId, GD::bl->settings.setDevicePermissions());
+    				BaseLib::LowLevel::Gpio gpio(GD::bl.get(), GD::bl->settings.gpioPath());
+                    auto gpiosToExport = GD::bl->settings.exportGpios();
+    				gpio.setup(userId, groupId, GD::bl->settings.setDevicePermissions(), gpiosToExport);
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
     				exit(0);
