@@ -87,7 +87,6 @@ MiscPeer::~MiscPeer()
 		std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
 		if(_scriptInfo)
 		{
-			_scriptInfo->scriptFinishedCallback = nullptr;
 			int32_t i = 0;
 			while(!_scriptInfo->finished && i < 30)
 			{
@@ -96,6 +95,7 @@ MiscPeer::~MiscPeer()
 				i++;
 			}
 			if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+            _scriptInfo->scriptFinishedCallback = nullptr;
 		}
 		if(_programPID != -1)
 		{
