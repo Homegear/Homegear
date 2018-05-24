@@ -523,7 +523,7 @@ static void php_homegear_log_message(char* message)
 	if(SG(request_info).path_translated) additionalInfo += std::string(SG(request_info).path_translated);
     if(!SEG(nodeId).empty()) additionalInfo += (additionalInfo.empty() ? "" : ", ") + SEG(nodeId);
     std::string messageString(message);
-    if(SEG(scriptInfo)->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli && SEG(outputCallback) && PG(display_errors) == 0)
+    if(SEG(scriptInfo) && SEG(scriptInfo)->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli && SEG(outputCallback) && PG(display_errors) == 0)
     {
         SEG(outputCallback)(messageString, true);
     }
@@ -1636,18 +1636,22 @@ ZEND_FUNCTION(hg_configure_gateway)
 
         BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
 
-        std::vector<uint8_t> iv = BaseLib::HelperFunctions::getRandomBytes(32);
+        std::vector<uint8_t> key;
+        if(!BaseLib::Security::Hash::sha256(GD::bl->hf.getUBinary(password), key) || key.empty())
+        {
+            zend_throw_exception(homegear_exception_class_entry, "Could not encrypt data.", -1);
+            RETURN_NULL()
+        }
+        aes.setKey(key);
+
+        std::vector<uint8_t> iv = BaseLib::HelperFunctions::getRandomBytes(12);
         aes.setIv(iv);
 
-		std::vector<uint8_t> key;
-		if(!BaseLib::Security::Hash::sha256(GD::bl->hf.getUBinary(password), key) || key.empty())
-		{
-			zend_throw_exception(homegear_exception_class_entry, "Could not encrypt data.", -1);
-			RETURN_NULL()
-		}
-		aes.setKey(key);
         password.clear();
         key.clear();
+
+		std::vector<uint8_t> counter(16);
+		aes.setCounter(counter);
 
         std::vector<uint8_t> encryptedData;
         aes.encrypt(encryptedData, encodedData);

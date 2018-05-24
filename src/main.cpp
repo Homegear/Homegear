@@ -1126,8 +1126,9 @@ void startUp()
 
         //Wait for all interfaces to connect before setting booting to false
         {
-			for(int32_t i = 0; i < 300; i++)
+			for(int32_t i = 0; i < 180; i++)
 			{
+                if(GD::bl->debugLevel >= 4 && i % 10 == 0) GD::out.printInfo("Info: Waiting for physical interfaces to connect (" + std::to_string(i) + " of 180s" + ").");
 				if(GD::familyController->physicalInterfaceIsOpen())
 				{
 					GD::out.printMessage("All physical interfaces are connected now.");
