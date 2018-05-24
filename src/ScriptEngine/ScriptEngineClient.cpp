@@ -2126,7 +2126,15 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 			}
 		}
 
-		return nodeInfo->response ? nodeInfo->response : std::make_shared<BaseLib::Variable>();
+		auto response = nodeInfo->response;
+
+		if(parameters->at(1)->stringValue == "waitForStop")
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			_nodeInfo.erase(nodeId);
+		}
+
+		return response ? response : std::make_shared<BaseLib::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -2188,7 +2196,14 @@ BaseLib::PVariable ScriptEngineClient::executeDeviceMethod(BaseLib::PArray& para
 			}
 		}
 
-		return deviceInfo->response ? deviceInfo->response : std::make_shared<BaseLib::Variable>();
+		auto response = deviceInfo->response;
+		if(parameters->at(1)->stringValue == "waitForStop")
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			_deviceInfo.erase(peerId);
+		}
+
+		return response ? response : std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
 	{
