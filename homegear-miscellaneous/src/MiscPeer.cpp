@@ -126,7 +126,7 @@ void MiscPeer::homegearShuttingDown()
 		_shuttingDown = true;
 		Peer::homegearShuttingDown();
 
-        stopScript(false);
+        stopScript(!GD::bl->shuttingDown);
 	}
 	catch(const std::exception& ex)
 	{
@@ -153,7 +153,7 @@ void MiscPeer::stopScript(bool callStop)
 
         int32_t i = 0;
         _stopRunProgramThread = true;
-        if(!(!_rpcDevice->runProgram->script2.empty() && _shuttingDown))
+        if(!(!_rpcDevice->runProgram->script2.empty() && _shuttingDown && !GD::bl->shuttingDown))
         {
             while(_scriptRunning && i < 30)
             {
@@ -407,6 +407,7 @@ void MiscPeer::runScript(int32_t delay)
 
 		std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
 		if(_shuttingDown) return;
+        if(_scriptInfo) _scriptInfo->scriptFinishedCallback = nullptr;
 		_scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(!_rpcDevice->runProgram->script2.empty() ? BaseLib::ScriptEngine::ScriptInfo::ScriptType::device2 : BaseLib::ScriptEngine::ScriptInfo::ScriptType::device, path, path, script, args, _peerID);
 		if(_rpcDevice->runProgram->startType != RunProgram::StartType::once)
 		{
