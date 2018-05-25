@@ -1240,11 +1240,11 @@ std::string Server::handleGlobalCommand(std::string& command)
 			int32_t websocketWidth = 10;
 
 			//Safe to use without mutex
-			for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			for(auto& server : GD::rpcServers)
 			{
-				if(!i->second.isRunning()) continue;
-				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
-				const std::vector<BaseLib::PRpcClientInfo> clients = i->second.getClientInfo();
+				if(!server.second->isRunning()) continue;
+				const BaseLib::Rpc::PServerInfo settings = server.second->getInfo();
+				const std::vector<BaseLib::PRpcClientInfo> clients = server.second->getClientInfo();
 
 				stringStream << "Server " << settings->name << " (Port: " << std::to_string(settings->port) << "):" << std::endl;
 
@@ -1358,10 +1358,10 @@ std::string Server::handleGlobalCommand(std::string& command)
 				<< std::endl;
 
 			//Safe to use without mutex
-			for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+			for(auto& server : GD::rpcServers)
 			{
-				if(!i->second.isRunning()) continue;
-				const BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
+				if(!server.second->isRunning()) continue;
+				const BaseLib::Rpc::PServerInfo settings = server.second->getInfo();
 				std::string name = settings->name;
 				if(name.size() > (unsigned)nameWidth)
 				{
@@ -1404,14 +1404,14 @@ std::string Server::handleGlobalCommand(std::string& command)
 					exitCode = 1;
 				}
 				else stringStream << "RPC Client: OK" << std::endl;
-				for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+				for(auto& server : GD::rpcServers)
 				{
-					if(!i->second.lifetick())
+					if(!server.second->lifetick())
 					{
-						stringStream << "RPC Server (Port " << i->second.getInfo()->port << "): Failed" << std::endl;
+						stringStream << "RPC Server (Port " << server.second->getInfo()->port << "): Failed" << std::endl;
 						exitCode = 2;
 					}
-					else stringStream << "RPC Server (Port " << i->second.getInfo()->port << "): OK" << std::endl;
+					else stringStream << "RPC Server (Port " << server.second->getInfo()->port << "): OK" << std::endl;
 				}
 				if(!GD::familyController->lifetick())
 				{

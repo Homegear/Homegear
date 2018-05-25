@@ -69,10 +69,8 @@ set(SOURCE_FILES
         src/RPC/RpcClient.h
         src/RPC/RPCMethods.cpp
         src/RPC/RPCMethods.h
-        src/RPC/RPCServer.cpp
-        src/RPC/RPCServer.h
-        src/RPC/Server.cpp
-        src/RPC/Server.h
+        src/RPC/RpcServer.cpp
+        src/RPC/RpcServer.h
         src/ScriptEngine/php_config_fixes.h
         src/ScriptEngine/php_homegear_globals.cpp
         src/ScriptEngine/php_homegear_globals.h

@@ -185,17 +185,17 @@ FamilyController::~FamilyController()
 
 void FamilyController::onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers)
 {
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(auto& server : GD::rpcServers)
 	{
-		eventHandlers[i->first] = i->second.addWebserverEventHandler(eventHandler);
+		eventHandlers[server.first] = server.second->addWebserverEventHandler(eventHandler);
 	}
 }
 
 void FamilyController::onRemoveWebserverEventHandler(std::map<int32_t, BaseLib::PEventHandler>& eventHandlers)
 {
-	for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	for(auto& server : GD::rpcServers)
 	{
-		i->second.removeWebserverEventHandler(eventHandlers[i->first]);
+		server.second->removeWebserverEventHandler(eventHandlers[server.first]);
 	}
 }
 
@@ -332,7 +332,8 @@ BaseLib::PVariable FamilyController::onInvokeRpc(std::string& methodName, BaseLi
 {
 	try
 	{
-		return GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, methodName, std::make_shared<BaseLib::Variable>(parameters));
+		auto parameterVariable = std::make_shared<BaseLib::Variable>(parameters);
+		return GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameterVariable);
 	}
 	catch(const std::exception& ex)
 	{

@@ -35,7 +35,6 @@
 
 #ifdef EVENTHANDLER
 #include <homegear-base/BaseLib.h>
-#include "../RPC/Server.h"
 
 #include <memory>
 #include <string>

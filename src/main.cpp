@@ -123,7 +123,8 @@ void startRPCServers()
 		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
 		info += "...";
 		GD::out.printInfo(info);
-		GD::rpcServers[i].start(settings);
+		if(!GD::rpcServers[i]) GD::rpcServers[i] = std::make_shared<Rpc::RpcServer>();
+		GD::rpcServers[i]->start(settings);
 	}
 	if(GD::rpcServers.empty())
 	{
@@ -138,8 +139,8 @@ void stopRPCServers(bool dispose)
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
 	for(auto i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
-		i->second.stop();
-		if(dispose) i->second.dispose();
+		i->second->stop();
+		if(dispose) i->second->dispose();
 	}
 	GD::bl->rpcPort = 0;
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!

@@ -115,10 +115,10 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
 		BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
-		for(std::map<std::string, std::shared_ptr<RpcMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
+		auto methods = GD::rpcServers.begin()->second->getMethods();
+		for(auto& method : *methods)
 		{
-			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->first)));
+			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
 		}
 		std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
 		for (auto& method : ipcMethods)
@@ -153,7 +153,7 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
 
 		BaseLib::PVariable help;
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		auto methods = GD::rpcServers.begin()->second->getMethods();
 		auto methodIterator = methods->find(parameters->at(0)->stringValue);
 		if (methodIterator == methods->end())
 		{
@@ -193,7 +193,7 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 
 		BaseLib::PVariable signature;
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = GD::rpcServers.begin()->second->getMethods();
 		auto methodIterator = methods->find(parameters->at(0)->stringValue);
 		if (methodIterator == methods->end())
 		{
@@ -202,7 +202,7 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 			if (methodIterator2 == ipcMethods.end()) return BaseLib::Variable::createError(-32602, "Method not found.");
 			signature = methodIterator2->second->getSignature();
 		}
-		else signature = _server->getMethods()->at(parameters->at(0)->stringValue)->getSignature();
+		else signature = methodIterator->second->getSignature();
 
 		if(!signature) signature.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 
@@ -237,7 +237,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		auto methods = GD::rpcServers.begin()->second->getMethods();
 		BaseLib::PVariable returns(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{
@@ -265,8 +265,12 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 			BaseLib::PArray parameters = (*i)->structValue->at("params")->arrayValue;
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
-			else if(methods->find(methodName) == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
-			else returns->arrayValue->push_back(methods->at(methodName)->invoke(clientInfo, parameters));
+			else
+			{
+				auto methodIterator = methods->find(methodName);
+				if(methodIterator == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
+				else returns->arrayValue->push_back(methodIterator->second->invoke(clientInfo, parameters));
+			}
 		}
 
 		return returns;
@@ -4255,7 +4259,8 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 			{
 				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getSystemVariable", requestParameters);
+                std::string methodName = "getSystemVariable";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -4263,7 +4268,8 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getMetadata", requestParameters);
+                std::string methodName = "getMetadata";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 		}
 
@@ -6888,7 +6894,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setSystemVariable", requestParameters);
+                std::string methodName = "setSystemVariable";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -6897,7 +6904,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setMetadata", requestParameters);
+                std::string methodName = "setMetadata";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 		}
 

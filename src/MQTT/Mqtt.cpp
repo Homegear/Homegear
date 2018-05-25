@@ -645,7 +645,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->reserve(2);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "setSystemVariable", parameters);
+				std::string methodName = "setSystemVariable";
+				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -655,7 +656,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "setMetadata", parameters);
+				std::string methodName = "setMetadata";
+				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameters);
 			}
 			else
 			{
@@ -666,7 +668,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "setValue", parameters);
+				std::string methodName = "setValue";
+				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameters);
 			}
 		}
 		else if(parts.size() == _prefixParts + 5 && parts.at(_prefixParts + 1) == "config")
@@ -690,7 +693,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 				return;
 			}
 			if(value) parameters->arrayValue->push_back(value);
-			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, "putParamset", parameters);
+			std::string methodName = "putParamset";
+			BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameters);
 		}
 		else if(parts.size() == _prefixParts + 2 && parts.at(_prefixParts + 1) == "rpc")
 		{
@@ -727,7 +731,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				return;
 			}
 			GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
-			BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(_dummyClientInfo, methodName, parameters);
+			BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameters);
 			std::shared_ptr<MqttMessage> responseData(new MqttMessage());
 			_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->message);
 			responseData->topic = (!clientId.empty()) ? clientId + "/rpcResult" : "rpcResult";

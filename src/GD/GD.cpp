@@ -43,7 +43,7 @@ std::string GD::executableFile = "";
 int64_t GD::startingTime = BaseLib::HelperFunctions::getTime();
 std::unique_ptr<FamilyController> GD::familyController;
 std::unique_ptr<LicensingController> GD::licensingController;
-std::map<int32_t, Rpc::Server> GD::rpcServers;
+std::map<int32_t, std::shared_ptr<Rpc::RpcServer>> GD::rpcServers;
 std::unique_ptr<Rpc::Client> GD::rpcClient;
 std::unique_ptr<CLI::Server> GD::cliServer;
 int32_t GD::rpcLogLevel = 1;

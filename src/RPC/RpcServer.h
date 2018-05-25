@@ -32,10 +32,11 @@
 #define RPCSERVER_H_
 
 #include "../../config.h"
-#include <homegear-base/BaseLib.h>
+#include "RPCMethods.h"
 #include "Auth.h"
 #include "RestServer.h"
 #include "../WebServer/WebServer.h"
+#include <homegear-base/BaseLib.h>
 
 #include <thread>
 #include <string>
@@ -48,7 +49,8 @@
 
 namespace Rpc
 {
-	class RPCServer {
+	class RpcServer
+	{
 		public:
 			class Client : public BaseLib::RpcClientInfo
 			{
@@ -70,8 +72,8 @@ namespace Rpc
 				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse, jsonRequest, jsonResponse, webSocketRequest, webSocketResponse };
 			};
 
-			RPCServer();
-			virtual ~RPCServer();
+			RpcServer();
+			virtual ~RpcServer();
 
 			void dispose();
 			const std::vector<BaseLib::PRpcClientInfo> getClientInfo();
@@ -80,9 +82,8 @@ namespace Rpc
 			bool isRunning() { return !_stopped; }
 			void start(BaseLib::Rpc::PServerInfo& settings);
 			void stop();
-			void registerMethod(std::string methodName, std::shared_ptr<BaseLib::Rpc::RpcMethod> method);
-			std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
+            std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; };
 			BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters);
 
 			BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
