@@ -39,8 +39,9 @@ int32_t RpcServer::_currentClientID = 0;
 
 RpcServer::Client::Client()
 {
-	 socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
-	 socketDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
+	socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
+    socketDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
+    waitForResponse = false;
 }
 
 RpcServer::Client::~Client()
@@ -474,18 +475,21 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 void RpcServer::stop()
 {
 	try
-	{
-		if(_stopped) return;
-		_stopped = true;
-		_stopServer = true;
-		GD::bl->threadManager.join(_mainThread);
-		_out.printInfo("Info: Waiting for threads to finish.");
-		_stateMutex.lock();
-		for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-		{
-			closeClientConnection(i->second);
-		}
-		_stateMutex.unlock();
+    {
+        if(_stopped) return;
+        _stopped = true;
+        _stopServer = true;
+        GD::bl->threadManager.join(_mainThread);
+        _out.printInfo("Info: Waiting for threads to finish.");
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                closeClientConnection(i->second);
+            }
+        }
+
 		while(_clients.size() > 0)
 		{
 			collectGarbage();
@@ -527,9 +531,8 @@ uint32_t RpcServer::connectionCount()
 {
 	try
 	{
-		_stateMutex.lock();
+		std::lock_guard<std::mutex> stateGuard(_stateMutex);
 		uint32_t connectionCount = _clients.size();
-		_stateMutex.unlock();
 		return connectionCount;
 	}
 	catch(const std::exception& ex)
@@ -544,7 +547,6 @@ uint32_t RpcServer::connectionCount()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _stateMutex.unlock();
     return 0;
 }
 
@@ -696,7 +698,7 @@ bool RpcServer::clientValid(std::shared_ptr<Client>& client)
 {
 	try
 	{
-		if(client->socketDescriptor->descriptor < 0) return false;
+		if(client->socketDescriptor->descriptor == -1) return false;
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -711,7 +713,6 @@ bool RpcServer::clientValid(std::shared_ptr<Client>& client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _stateMutex.unlock();
     return false;
 }
 
@@ -1026,19 +1027,22 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
 	try
 	{
 		if(_stopped) return;
-		BaseLib::PVariable response;
+        std::unique_lock<std::mutex> requestLock(client->requestMutex);
 		if(packetType == PacketType::Enum::binaryResponse)
 		{
-			if(client->clientType == BaseLib::RpcClientType::ccu2) response = _rpcDecoderAnsi->decodeResponse(packet);
-			else response = _rpcDecoder->decodeResponse(packet);
+			if(client->clientType == BaseLib::RpcClientType::ccu2) client->rpcResponse = _rpcDecoderAnsi->decodeResponse(packet);
+			else client->rpcResponse = _rpcDecoder->decodeResponse(packet);
 		}
-		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder->decodeResponse(packet);
-		if(!response) return;
-		if(GD::bl->debugLevel >= 3)
-		{
-			_out.printWarning("Warning: RPC server received RPC response. This shouldn't happen. Response data: ");
-			response->print(true, false);
-		}
+		else if(packetType == PacketType::Enum::xmlResponse)
+        {
+            client->rpcResponse = _xmlRpcDecoder->decodeResponse(packet);
+        }
+        else if(packetType == PacketType::Enum::jsonResponse)
+        {
+            client->rpcResponse = _jsonDecoder->decode(packet);
+        }
+        requestLock.unlock();
+        client->requestConditionVariable.notify_all();
 	}
 	catch(const std::exception& ex)
     {
@@ -1059,7 +1063,7 @@ void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
 	try
 	{
 		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest || packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest) analyzeRPC(client, packet, packetType, keepAlive);
-		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
+		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse || packetType == PacketType::Enum::jsonResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
 	}
     catch(const std::exception& ex)
     {
@@ -1078,9 +1082,9 @@ void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
 const std::vector<BaseLib::PRpcClientInfo> RpcServer::getClientInfo()
 {
 	std::vector<BaseLib::PRpcClientInfo> clients;
-	_stateMutex.lock();
 	try
 	{
+        std::lock_guard<std::mutex> stateGuard(_stateMutex);
 		for(std::map<int32_t, std::shared_ptr<Client>>::const_iterator i = _clients.begin(); i != _clients.end(); i++)
 		{
 			if(i->second->closed) continue;
@@ -1099,7 +1103,6 @@ const std::vector<BaseLib::PRpcClientInfo> RpcServer::getClientInfo()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_stateMutex.unlock();
 	return clients;
 }
 
@@ -1116,46 +1119,30 @@ void RpcServer::removeWebserverEventHandler(BaseLib::PEventHandler eventHandler)
 
 void RpcServer::collectGarbage()
 {
-	_garbageCollectionMutex.lock();
 	try
 	{
+        std::lock_guard<std::mutex> garbageCollectionGuard(_garbageCollectionMutex);
 		_lastGargabeCollection = GD::bl->hf.getTime();
 		std::vector<std::shared_ptr<Client>> clientsToRemove;
-		_stateMutex.lock();
-		try
+
 		{
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) clientsToRemove.push_back(i->second);
 			}
 		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		_stateMutex.unlock();
+
 		for(std::vector<std::shared_ptr<Client>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
 			GD::bl->threadManager.join((*i)->readThread);
-			_stateMutex.lock();
-			try
+
 			{
+                std::lock_guard<std::mutex> stateGuard(_stateMutex);
 				_clients.erase((*i)->id);
 			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_stateMutex.unlock();
+
 			_out.printDebug("Debug: Client " + std::to_string((*i)->id) + " removed.");
 		}
 	}
@@ -1171,7 +1158,6 @@ void RpcServer::collectGarbage()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _garbageCollectionMutex.unlock();
 }
 
 void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http)
@@ -1603,7 +1589,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
 				{
-					if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = PacketType::jsonRequest;
+					if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = packetType == PacketType::xmlRequest ? PacketType::jsonRequest : PacketType::jsonResponse;
 					packetReceived(client, http.getContent(), packetType, http.getHeader().connection & BaseLib::Http::Connection::Enum::keepAlive);
 				}
 				http.reset();

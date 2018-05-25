@@ -4460,6 +4460,8 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		}
 		else
 		{
+            if(server.first.compare(0, 7, "binarye") == 0 || server.first.compare(0, 8, "binaryse") == 0) clientInfo->fullDuplex = true;
+
 			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, parameters->at(1)->stringValue);
 			if(!eventServer)
 			{
@@ -4467,9 +4469,11 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 
-			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
+			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0 || server.first.compare(0, 8, "binaryse") == 0) eventServer->useSSL = true;
 			if(server.first.compare(0, 6, "binary") == 0 ||
+               server.first.compare(0, 7, "binarye") == 0 ||
 			   server.first.compare(0, 7, "binarys") == 0 ||
+               server.first.compare(0, 8, "binaryse") == 0 ||
 			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
 
 			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
@@ -4477,8 +4481,11 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
 					eventServer->reconnectInfinitely = true;
-					eventServer->socket->setReadTimeout(30000000);
-					eventServer->socket->setWriteTimeout(30000000);
+					if(eventServer->socket)
+                    {
+                        eventServer->socket->setReadTimeout(30000000);
+                        eventServer->socket->setWriteTimeout(30000000);
+                    }
 				}
 			// }}}
 			// {{{ Keep connection to IP-Symcon

@@ -422,8 +422,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			else if(server->webSocket) {}
 			else //XML-RPC, JSON-RPC
 			{
-				data.push_back('\r');
-				data.push_back('\n');
 				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
@@ -432,8 +430,10 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 					header += authField.first + ": " + authField.second + "\r\n";
 				}
 				header += "\r\n";
+				data.reserve(data.size() + header.size() + 2);
+				data.push_back('\r');
+				data.push_back('\n');
 				data.insert(data.begin(), header.begin(), header.end());
-
 			}
 		}
 

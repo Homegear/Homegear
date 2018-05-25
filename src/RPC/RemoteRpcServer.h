@@ -80,9 +80,11 @@ public:
 	Auth auth;
 	int32_t lastPacketSent = -1;
 	std::set<uint64_t> subscribedPeers;
-	BaseLib::PRpcClientInfo clientInfo;
 
-	RemoteRpcServer(std::shared_ptr<RpcClient> client);
+    BaseLib::PRpcClientInfo& getServerClientInfo() { return _serverClientInfo; }
+
+    RemoteRpcServer(BaseLib::PRpcClientInfo& serverClientInfo);
+	RemoteRpcServer(std::shared_ptr<RpcClient>& client, BaseLib::PRpcClientInfo& serverClientInfo);
 	virtual ~RemoteRpcServer();
 
 	/**
@@ -93,8 +95,12 @@ public:
 	void queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> method);
 private:
 	std::shared_ptr<RpcClient> _client;
+    BaseLib::PRpcClientInfo _serverClientInfo;
+    std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+    std::shared_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+    std::shared_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
 
-	//Method queue
+	//{{{ Method queue
 	static const int32_t _methodBufferSize = 1000;
 	int32_t _methodBufferHead = 0;
 	int32_t _methodBufferTail = 0;
@@ -107,8 +113,10 @@ private:
 
 	std::atomic<uint32_t> _droppedEntries;
 	std::atomic<int64_t> _lastQueueFullError;
+    //}}}
 
 	void processMethods();
+	BaseLib::PVariable invokeClientMethod(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
 };
 
 }
