@@ -4455,7 +4455,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
             flags = parameters->at(2)->integerValue;
         }
 
-		if(GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end())
+		if(!url.empty() && GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end())
 		{
 			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
 			std::string remoteIP = clientInfo->address;
