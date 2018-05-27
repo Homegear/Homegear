@@ -38,7 +38,7 @@ RemoteRpcServer::RemoteRpcServer(BaseLib::PRpcClientInfo& serverClientInfo)
 {
     _serverClientInfo = serverClientInfo;
 
-    if(_serverClientInfo->fullDuplex)
+    if(_serverClientInfo->sendEventsToRpcServer)
     {
         _rpcEncoder = std::make_shared<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
         _jsonEncoder = std::make_shared<BaseLib::Rpc::JsonEncoder>(GD::bl.get());
@@ -152,7 +152,7 @@ void RemoteRpcServer::processMethods()
 				lock.unlock();
 				if(!removed)
                 {
-                    if(_serverClientInfo->fullDuplex)
+                    if(_serverClientInfo->sendEventsToRpcServer)
                     {
                         invokeClientMethod(message->first, message->second);
                     }

@@ -1031,11 +1031,14 @@ void startUp()
 			}
 		}
 
-		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
+	    if(GD::bl->settings.waitForCorrectTime())
 		{
-            if(_shutdownQueued) exitHomegear(1);
-			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
-			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			while(BaseLib::HelperFunctions::getTime() < 1000000000000)
+			{
+				if(_shutdownQueued) exitHomegear(1);
+				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			}
 		}
 
         GD::bl->globalServiceMessages.load();

@@ -4420,6 +4420,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		if(!clientInfo) return BaseLib::Variable::createError(-32500, "clientInfo is nullptr.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
 		}));
@@ -4427,17 +4428,44 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 
 		if(!clientInfo->address.empty()) GD::out.printInfo("Info: Client with IP " + clientInfo->address + " is calling \"init\".");
 
-		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
+        std::string url;
+        std::string interfaceId;
+        int32_t flags = 0;
+        if(parameters->size() == 1)
+        {
+            url = parameters->at(0)->stringValue;
+        }
+        else if(parameters->size() == 2)
+        {
+            if(parameters->at(1)->type == BaseLib::VariableType::tInteger || parameters->at(1)->type == BaseLib::VariableType::tInteger64)
+            {
+                interfaceId = parameters->at(0)->stringValue;
+                flags = parameters->at(1)->integerValue;
+            }
+            else
+            {
+                url = parameters->at(0)->stringValue;
+                interfaceId = parameters->at(1)->stringValue;
+            }
+        }
+        else
+        {
+            url = parameters->at(0)->stringValue;
+            interfaceId = parameters->at(1)->stringValue;
+            flags = parameters->at(2)->integerValue;
+        }
+
+		if(GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end())
 		{
-			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
+			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
 			std::string remoteIP = clientInfo->address;
 			if(remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");
 			GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
-			GD::out.printInfo("Info: Replacing address " + parameters->at(0)->stringValue + " with " + newAddress);
-			parameters->at(0)->stringValue = newAddress;
+			GD::out.printInfo("Info: Replacing address " + url + " with " + newAddress);
+            url = newAddress;
 		}
 
-		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::splitLast(parameters->at(0)->stringValue, ':');
+		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::splitLast(url, ':');
 		if(server.first.empty() || server.second.empty()) return BaseLib::Variable::createError(-32602, "Server address or port is empty.");
 		if(server.first.size() < 8) return BaseLib::Variable::createError(-32602, "Server address too short.");
 		BaseLib::HelperFunctions::toLower(server.first);
@@ -4454,30 +4482,28 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
 		if(server.second.empty() || server.second == "0") return BaseLib::Variable::createError(-32602, "Port number is invalid.");
 
-		if(parameters->size() == 1 || parameters->at(1)->stringValue.empty())
+		if(interfaceId.empty())
 		{
 			GD::rpcClient->removeServer(server);
 		}
 		else
 		{
-            if(server.first.compare(0, 7, "binarye") == 0 || server.first.compare(0, 8, "binaryse") == 0) clientInfo->fullDuplex = true;
+            if(url.empty()) clientInfo->sendEventsToRpcServer = true;
 
-			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, parameters->at(1)->stringValue);
+			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, interfaceId);
 			if(!eventServer)
 			{
 				GD::out.printError("Error: Could not create event server.");
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 
-			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0 || server.first.compare(0, 8, "binaryse") == 0) eventServer->useSSL = true;
+			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
 			if(server.first.compare(0, 6, "binary") == 0 ||
-               server.first.compare(0, 7, "binarye") == 0 ||
 			   server.first.compare(0, 7, "binarys") == 0 ||
-               server.first.compare(0, 8, "binaryse") == 0 ||
 			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
 
 			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
-				if((BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java")
+				if((BaseLib::Math::isNumber(interfaceId, false) && server.second == "1999") || interfaceId == "Homegear_java")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
 					eventServer->reconnectInfinitely = true;
@@ -4489,18 +4515,17 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 				}
 			// }}}
 			// {{{ Keep connection to IP-Symcon
-				else if(parameters->at(1)->stringValue == "IPS")
+				else if(interfaceId == "IPS")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 					eventServer->reconnectInfinitely = true;
 				}
 			// }}}
 
-			clientInfo->initUrl = parameters->at(0)->stringValue;
-			clientInfo->initInterfaceId = parameters->at(1)->stringValue;
+			clientInfo->initUrl = url;
+			clientInfo->initInterfaceId = interfaceId;
 
-            int32_t flags = parameters->size() >= 3 ? parameters->at(2)->integerValue : 0;
-			if(parameters->size() >= 3)
+			if(flags != 0)
 			{
 				clientInfo->initKeepAlive = flags & 1;
 				clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
@@ -4511,7 +4536,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			}
 
 			eventServer->type = clientInfo->clientType;
-			if(parameters->size() >= 3)
+			if(flags != 0)
 			{
 				eventServer->keepAlive = flags & 1;
 				eventServer->binary = (flags & 2) || eventServer->binary;

@@ -667,7 +667,7 @@ bool DatabaseController::convertDatabase()
         {
             GD::out.printMessage("Converting database from version " + version + " to version 0.7.4...");
 
-            for(int32_t i = 1; i <= 9; i++)
+            for(int32_t i = 1; i <= 8; i++)
             {
                 auto aclStruct = getAcl(i);
                 if(!aclStruct || aclStruct->errorStruct) continue;
@@ -678,6 +678,18 @@ bool DatabaseController::convertDatabase()
 
                 updateGroup(i, BaseLib::PVariable(), aclStruct);
             }
+
+			{
+				auto aclStruct = getAcl(9);
+				if(aclStruct && !aclStruct->errorStruct)
+				{
+					BaseLib::PVariable denyAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+					denyAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+					aclStruct->structValue->emplace("services", denyAll);
+
+					updateGroup(9, BaseLib::PVariable(), aclStruct);
+				}
+			}
 
             data.clear();
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));

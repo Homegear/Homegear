@@ -478,11 +478,12 @@ std::string Server::handleUserCommand(std::string& command)
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-            stringStream << "groups list (gl)  Lists all groups." << std::endl;
-			stringStream << "users list (ul)   Lists all users." << std::endl;
-			stringStream << "users create (uc) Create a new user." << std::endl;
-			stringStream << "users update (uu) Change the password of an existing user." << std::endl;
-			stringStream << "users delete (ud) Delete an existing user." << std::endl;
+            stringStream << "groups list (gl)     Lists all groups." << std::endl;
+            stringStream << "groups restore       Factory resets all system groups." << std::endl;
+			stringStream << "users list (ul)      Lists all users." << std::endl;
+			stringStream << "users create (uc)    Create a new user." << std::endl;
+			stringStream << "users update (uu)    Change the password of an existing user." << std::endl;
+			stringStream << "users delete (ud)    Delete an existing user." << std::endl;
 			return stringStream.str();
 		}
         if(BaseLib::HelperFunctions::checkCliCommand(command, "groups list", "gl", "", 0, arguments, showHelp))
@@ -514,6 +515,64 @@ std::string Server::handleUserCommand(std::string& command)
                 stringStream << "  ACL: " << std::endl;
 				stringStream << acl.toString(4) << std::endl;
             }
+
+            return stringStream.str();
+        }
+        else if(BaseLib::HelperFunctions::checkCliCommand(command, "groups restore", "", "", 0, arguments, showHelp))
+        {
+            if(showHelp)
+            {
+                stringStream << "Description: This command factory resets all system groups." << std::endl;
+                stringStream << "Usage: groups restore" << std::endl << std::endl;
+                return stringStream.str();
+            }
+
+            BaseLib::PVariable denyAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            denyAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(false));
+
+            BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
+
+            auto grantStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            grantStruct->structValue->emplace("methods", grantAll);
+            grantStruct->structValue->emplace("eventServerMethods", grantAll);
+            grantStruct->structValue->emplace("services", grantAll);
+
+            auto denyStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            denyStruct->structValue->emplace("methods", denyAll);
+            denyStruct->structValue->emplace("eventServerMethods", denyAll);
+            denyStruct->structValue->emplace("services", denyAll);
+
+            bool error = false;
+            for(int32_t i = 1; i <= 8; i++)
+            {
+                auto aclStruct = GD::bl->db->getAcl(i);
+                if(!aclStruct || aclStruct->errorStruct)
+                {
+                    error = true;
+                    GD::out.printError("Error getting system group " + std::to_string(i) + ". It seems, your database is broken.");
+                }
+                else
+                {
+                    GD::bl->db->updateGroup(i, BaseLib::PVariable(), grantStruct);
+                }
+            }
+
+            {
+                auto aclStruct = GD::bl->db->getAcl(9);
+                if(aclStruct && !aclStruct->errorStruct)
+                {
+                    GD::bl->db->updateGroup(9, BaseLib::PVariable(), denyStruct);
+                }
+                else
+                {
+                    error = true;
+                    GD::out.printError("Error getting system group 9. It seems, your database is broken.");
+                }
+            }
+
+            if(error) stringStream << "Error reading one or more system groups from database. It seems, your database is broken." << std::endl;
+            else stringStream << "System groups successfully restored." << std::endl;
 
             return stringStream.str();
         }
@@ -1281,7 +1340,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 					}
 					else address.resize(addressWidth, ' ');
 
-					std::string url = (*j)->initUrl;
+					std::string url = (*j)->sendEventsToRpcServer ? "Single connection" : (*j)->initUrl;
 					if(url.size() > (unsigned)urlWidth)
 					{
 						url.resize(urlWidth - 3);
