@@ -237,6 +237,8 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
         _serverClientInfo->waitForResponse = false;
 		if(i == 10 || !_serverClientInfo->rpcResponse) return BaseLib::Variable::createError(-32500, "No RPC response received.");
 
+        if(_serverClientInfo->closed) removed = true;
+
 		return _serverClientInfo->rpcResponse;
 	}
 	catch(const std::exception& ex)
