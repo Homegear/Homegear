@@ -102,7 +102,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server is nullptr." << std::endl;
 			return;
 		}
-		server->sendMutex.lock();
+        std::unique_lock<std::mutex> sendGuard(server->sendMutex);
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Debug: Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
@@ -136,11 +136,7 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			else sendRequest(server, requestData, responseData, false, retry);
 			if(!retry || server->removed || !server->autoConnect) break;
 		}
-		if(server->removed)
-		{
-			server->sendMutex.unlock();
-			return;
-		}
+		if(server->removed) return;
 		if(retry && !server->reconnectInfinitely)
 		{
 			if(!server->webSocket)
@@ -149,7 +145,6 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 				std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server \"" << server->id << "\" after trying to send a packet " + std::to_string(retries) + " times. Server has to send \"init\" again." << std::endl;
 			}
 			server->removed = true;
-			server->sendMutex.unlock();
 			return;
 		}
 		if(responseData.empty())
@@ -157,12 +152,12 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
 			if(server->webSocket)
 			{
 				server->removed = true;
-				server->sendMutex.unlock();
+				sendGuard.unlock();
 				_out.printInfo("Info: Connection to server closed. Host: " + server->hostname);
 			}
 			else
 			{
-				server->sendMutex.unlock();
+                sendGuard.unlock();
 				std::cout << BaseLib::Output::getTimeString() << " " << "Warning: Response is empty. RPC method: " << methodName << " Server: " << server->hostname << std::endl;
 				std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: Response is empty. RPC method: " << methodName << " Server: " << server->hostname << std::endl;
 			}
@@ -203,21 +198,16 @@ void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName,
     	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
 		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
     }
-    server->sendMutex.unlock();
 }
 
-BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters)
+BaseLib::PVariable RpcClient::invoke(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters)
 {
 	try
 	{
 		if(methodName.empty()) return BaseLib::Variable::createError(-32601, "Method name is empty");
 		if(!server) return BaseLib::Variable::createError(-32500, "Could not send packet. Pointer to server is nullptr.");
-		server->sendMutex.lock();
-		if(server->removed)
-		{
-			server->sendMutex.unlock();
-			return BaseLib::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
-		}
+		std::unique_lock<std::mutex> sendGuard(server->sendMutex);
+		if(server->removed) return BaseLib::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");;
 		if(GD::bl->debugLevel >= 5)
 		{
 			_out.printDebug("Debug: Calling RPC method \"" + methodName + "\" on server " + (server->hostname.empty() ? server->address.first : server->hostname) + ".");
@@ -246,15 +236,11 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 		for(uint32_t i = 0; i < retries; ++i)
 		{
 			retry = false;
-			if(i == 0) sendRequest(server.get(), requestData, responseData, true, retry);
-			else sendRequest(server.get(), requestData, responseData, false, retry);
+			if(i == 0) sendRequest(server, requestData, responseData, true, retry);
+			else sendRequest(server, requestData, responseData, false, retry);
 			if(!retry || server->removed || !server->autoConnect) break;
 		}
-		if(server->removed)
-		{
-			server->sendMutex.unlock();
-			return BaseLib::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");
-		}
+		if(server->removed) return BaseLib::Variable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		if(retry && !server->reconnectInfinitely)
 		{
 			if(!server->webSocket)
@@ -263,7 +249,6 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 				std::cerr << BaseLib::Output::getTimeString() << " " << "Removing server \"" << server->id << "\" after trying to send a packet " + std::to_string(retries) + " times. Server has to send \"init\" again." << std::endl;
 			}
 			server->removed = true;
-			server->sendMutex.unlock();
 			return BaseLib::Variable::createError(-32300, "Request timed out.");
 		}
 		if(responseData.empty())
@@ -271,10 +256,9 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 			if(server->webSocket)
 			{
 				server->removed = true;
-				server->sendMutex.unlock();
+				sendGuard.unlock();
 				_out.printInfo("Info: Connection to server closed. Host: " + server->hostname);
 			}
-			else server->sendMutex.unlock();
 			return BaseLib::Variable::createError(-32700, "No response data.");
 		}
 		BaseLib::PVariable returnValue;
@@ -296,7 +280,6 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
 			server->lastPacketSent = BaseLib::HelperFunctions::getTimeSeconds();
 		}
 
-		server->sendMutex.unlock();
 		return returnValue;
 	}
     catch(const std::exception& ex)
@@ -314,7 +297,6 @@ BaseLib::PVariable RpcClient::invoke(std::shared_ptr<RemoteRpcServer> server, st
     	std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
 		std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ <<  " line " << __LINE__ << " in function " <<  __PRETTY_FUNCTION__ << "." << std::endl;
     }
-    server->sendMutex.unlock();
     return BaseLib::Variable::createError(-32700, "No response data.");
 }
 

@@ -180,6 +180,17 @@ void RemoteRpcServer::processMethods()
 	}
 }
 
+BaseLib::PVariable RemoteRpcServer::invoke(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
+{
+	if(_serverClientInfo->sendEventsToRpcServer) return invokeClientMethod(methodName, parameters);
+	else if(_client) return _client->invoke(this, methodName, parameters);
+	else
+	{
+		removed = true;
+		return BaseLib::Variable::createError(-32501, "Client was removed.");
+	}
+}
+
 BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters)
 {
 	try

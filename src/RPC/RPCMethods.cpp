@@ -4493,73 +4493,103 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		}
 		else
 		{
-            if(url.empty()) clientInfo->sendEventsToRpcServer = true;
-
-			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, interfaceId);
-			if(!eventServer)
+            if(url.empty()) //Send events over connection to server
 			{
-				GD::out.printError("Error: Could not create event server.");
-				return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				clientInfo->sendEventsToRpcServer = true;
+
+				std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addSingleConnectionServer(clientInfo, interfaceId);
+				if(!eventServer)
+				{
+					GD::out.printError("Error: Could not create event server.");
+					return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				}
+
+				clientInfo->initInterfaceId = interfaceId;
+
+				if(flags != 0)
+				{
+					clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
+					clientInfo->initNewFormat = true;
+					clientInfo->initSubscribePeers = flags & 8;
+					clientInfo->initJsonMode = flags & 0x10;
+					clientInfo->initSendNewDevices = false;
+				}
+
+				eventServer->type = clientInfo->clientType;
+				if(flags != 0)
+				{
+					eventServer->binary = (flags & 2) || eventServer->binary;
+					eventServer->newFormat = true;
+					eventServer->subscribePeers = flags & 8;
+					eventServer->json = flags & 0x10;
+					eventServer->sendNewDevices = false;
+				}
 			}
+			else //Send events over seperate connection to a client's server
+			{
+				std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, interfaceId);
+				if(!eventServer)
+				{
+					GD::out.printError("Error: Could not create event server.");
+					return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				}
 
-			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
-			if(server.first.compare(0, 6, "binary") == 0 ||
-			   server.first.compare(0, 7, "binarys") == 0 ||
-			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
+				if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
+				if(server.first.compare(0, 6, "binary") == 0 ||
+				   server.first.compare(0, 7, "binarys") == 0 ||
+				   server.first.compare(0, 10, "xmlrpc_bin") == 0)
+					eventServer->binary = true;
 
-			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
+				// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
 				if((BaseLib::Math::isNumber(interfaceId, false) && server.second == "1999") || interfaceId == "Homegear_java")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
 					eventServer->reconnectInfinitely = true;
 					if(eventServer->socket)
-                    {
-                        eventServer->socket->setReadTimeout(30000000);
-                        eventServer->socket->setWriteTimeout(30000000);
-                    }
+					{
+						eventServer->socket->setReadTimeout(30000000);
+						eventServer->socket->setWriteTimeout(30000000);
+					}
 				}
-			// }}}
-			// {{{ Keep connection to IP-Symcon
+					// }}}
+					// {{{ Keep connection to IP-Symcon
 				else if(interfaceId == "IPS")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 					eventServer->reconnectInfinitely = true;
 				}
-			// }}}
+				// }}}
 
-			clientInfo->initUrl = url;
-			clientInfo->initInterfaceId = interfaceId;
+				clientInfo->initUrl = url;
+				clientInfo->initInterfaceId = interfaceId;
 
-			if(flags != 0)
-			{
-				clientInfo->initKeepAlive = flags & 1;
-				clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
-				clientInfo->initNewFormat = flags & 4;
-				clientInfo->initSubscribePeers = flags & 8;
-				clientInfo->initJsonMode = flags & 0x10;
-                clientInfo->initSendNewDevices = !(flags & 0x20);
+				if(flags != 0)
+				{
+					clientInfo->initKeepAlive = flags & 1;
+					clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
+					clientInfo->initNewFormat = flags & 4;
+					clientInfo->initSubscribePeers = flags & 8;
+					clientInfo->initJsonMode = flags & 0x10;
+					clientInfo->initSendNewDevices = !(flags & 0x20);
+				}
+
+				eventServer->type = clientInfo->clientType;
+				if(flags != 0)
+				{
+					eventServer->keepAlive = flags & 1;
+					eventServer->binary = (flags & 2) || eventServer->binary;
+					eventServer->newFormat = flags & 4;
+					eventServer->subscribePeers = flags & 8;
+					eventServer->json = flags & 0x10;
+					eventServer->sendNewDevices = !(flags & 0x20);
+					if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (flags & 128);
+				}
 			}
 
-			eventServer->type = clientInfo->clientType;
-			if(flags != 0)
-			{
-				eventServer->keepAlive = flags & 1;
-				eventServer->binary = (flags & 2) || eventServer->binary;
-				eventServer->newFormat = flags & 4;
-				eventServer->subscribePeers = flags & 8;
-				eventServer->json = flags & 0x10;
-                eventServer->sendNewDevices = !(flags & 0x20);
-				if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (flags & 128);
-			}
-
-			_initServerThreadMutex.lock();
+            std::lock_guard<std::mutex> initServerThreadGuard(_initServerThreadMutex);
 			try
 			{
-				if(_disposing)
-				{
-					_initServerThreadMutex.unlock();
-					return BaseLib::Variable::createError(-32500, "I'm disposing.");
-				}
+				if(_disposing) return BaseLib::Variable::createError(-32500, "I'm disposing.");
 				GD::bl->threadManager.join(_initServerThread);
 				GD::bl->threadManager.start(_initServerThread, false, &Rpc::Client::initServerMethods, GD::rpcClient.get(), server);
 			}
@@ -4571,7 +4601,6 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-			_initServerThreadMutex.unlock();
 		}
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));

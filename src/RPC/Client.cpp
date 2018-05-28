@@ -410,7 +410,8 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> {});
-		BaseLib::PVariable result = _client->invoke(server, "system.listMethods", parameters);
+		std::string methodName = "system.listMethods";
+		BaseLib::PVariable result = server->invoke(methodName, parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed || (!server->socket->connected() && server->keepAlive && !server->reconnectInfinitely)) return;
@@ -465,7 +466,8 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("listDevices")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> { BaseLib::PVariable(new BaseLib::Variable(server->id)) });
-		BaseLib::PVariable result = _client->invoke(server, "listDevices", parameters);
+		std::string methodName = "listDevices";
+		BaseLib::PVariable result = server->invoke(methodName, parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed || (!server->socket->connected() && server->keepAlive && !server->reconnectInfinitely)) return;
@@ -546,7 +548,8 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		}
 		if(devices->arrayValue->empty()) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(server->id)), devices });
-		BaseLib::PVariable result = _client->invoke(server, "newDevices", parameters);
+		std::string methodName = "newDevices";
+		BaseLib::PVariable result = server->invoke(methodName, parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -1056,6 +1059,41 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::make_shared<RemoteRpcServer>(_client, clientInfo);
+}
+
+std::shared_ptr<RemoteRpcServer> Client::addSingleConnectionServer(BaseLib::PRpcClientInfo clientInfo, std::string id)
+{
+	try
+	{
+		auto server = std::make_shared<RemoteRpcServer>(_client, clientInfo);
+		auto address = std::make_pair(clientInfo->address, std::to_string(clientInfo->port));
+		removeServer(address);
+		collectGarbage();
+		GD::out.printInfo("Info: Adding server \"" + address.first + "\".");
+		std::lock_guard<std::mutex> serversGuard(_serversMutex);
+		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
+		server->address = address;
+		server->hostname = address.first;
+		server->id = id;
+		server->uid = _serverId++;
+		server->settings = GD::clientSettings.get(server->hostname);
+		_servers[server->uid] = server;
+		if(server->settings) GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
+		return server;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::make_shared<RemoteRpcServer>(_client, clientInfo);
 }
 
 std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, BaseLib::PRpcClientInfo clientInfo, std::string address, bool nodeEvents)

@@ -93,6 +93,14 @@ public:
 	 * @param method The method to queue. The first part of the pair is the method name, the second part the parameters.
 	 */
 	void queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> method);
+
+    /**
+     * Invokes a client RPC method.
+     * @param methodName
+     * @param parameters
+     * @return Returns the result of the method call.
+     */
+    BaseLib::PVariable invoke(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
 private:
 	std::shared_ptr<RpcClient> _client;
     BaseLib::PRpcClientInfo _serverClientInfo;
