@@ -4497,7 +4497,9 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			{
 				clientInfo->sendEventsToRpcServer = true;
 
-				std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addSingleConnectionServer(clientInfo, interfaceId);
+				server = std::make_pair(clientInfo->address, std::to_string(clientInfo->port));
+
+				std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addSingleConnectionServer(server, clientInfo, interfaceId);
 				if(!eventServer)
 				{
 					GD::out.printError("Error: Could not create event server.");

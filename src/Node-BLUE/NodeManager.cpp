@@ -169,6 +169,7 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 		{
 			std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.nodeBluePath() + "nodes/" + directory);
 			if (files.empty()) continue;
+			if(nodeInfoVector.size() + files.size() > nodeInfoVector.capacity()) nodeInfoVector.reserve(nodeInfoVector.capacity() + 100);
 			for(auto& file : files)
 			{
 				std::string path = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/" + file;
