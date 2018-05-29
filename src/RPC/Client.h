@@ -82,6 +82,7 @@ public:
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	void sendError(std::pair<std::string, std::string> address, int32_t level, std::string message);
 	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string path, std::string id);
+	std::shared_ptr<RemoteRpcServer> addSingleConnectionServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string id);
 	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, BaseLib::PRpcClientInfo clientInfo, std::string address, bool nodeEvents);
 	void removeServer(std::pair<std::string, std::string> address);
 	void removeServer(int32_t uid);

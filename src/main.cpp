@@ -123,7 +123,8 @@ void startRPCServers()
 		if(settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
 		info += "...";
 		GD::out.printInfo(info);
-		GD::rpcServers[i].start(settings);
+		if(!GD::rpcServers[i]) GD::rpcServers[i] = std::make_shared<Rpc::RpcServer>();
+		GD::rpcServers[i]->start(settings);
 	}
 	if(GD::rpcServers.empty())
 	{
@@ -138,8 +139,8 @@ void stopRPCServers(bool dispose)
 	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
 	for(auto i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
-		i->second.stop();
-		if(dispose) i->second.dispose();
+		i->second->stop();
+		if(dispose) i->second->dispose();
 	}
 	GD::bl->rpcPort = 0;
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
@@ -907,8 +908,9 @@ void startUp()
 			}
 			GD::out.printInfo("Info: Setting up physical interfaces and GPIOs...");
 			if(GD::familyController) GD::familyController->physicalInterfaceSetup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
-			BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-			gpio.setup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions());
+			BaseLib::LowLevel::Gpio gpio(GD::bl.get(), GD::bl->settings.gpioPath());
+            auto gpiosToExport = GD::bl->settings.exportGpios();
+			gpio.setup(GD::bl->userId, GD::bl->groupId, GD::bl->settings.setDevicePermissions(), gpiosToExport);
 			GD::out.printInfo("Info: Dropping privileges to user " + GD::runAsUser + " (" + std::to_string(GD::bl->userId) + ") and group " + GD::runAsGroup + " (" + std::to_string(GD::bl->groupId) + ")");
 
 			int result = -1;
@@ -1029,11 +1031,14 @@ void startUp()
 			}
 		}
 
-		while(BaseLib::HelperFunctions::getTime() < 1000000000000)
+	    if(GD::bl->settings.waitForCorrectTime())
 		{
-            if(_shutdownQueued) exitHomegear(1);
-			GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
-			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			while(BaseLib::HelperFunctions::getTime() < 1000000000000)
+			{
+				if(_shutdownQueued) exitHomegear(1);
+				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			}
 		}
 
         GD::bl->globalServiceMessages.load();
@@ -1125,8 +1130,9 @@ void startUp()
 
         //Wait for all interfaces to connect before setting booting to false
         {
-			for(int32_t i = 0; i < 300; i++)
+			for(int32_t i = 0; i < 180; i++)
 			{
+                if(GD::bl->debugLevel >= 4 && i % 10 == 0) GD::out.printInfo("Info: Waiting for physical interfaces to connect (" + std::to_string(i) + " of 180s" + ").");
 				if(GD::familyController->physicalInterfaceIsOpen())
 				{
 					GD::out.printMessage("All physical interfaces are connected now.");
@@ -1315,8 +1321,9 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				GD::familyController->physicalInterfaceSetup(userId, groupId, GD::bl->settings.setDevicePermissions());
-    				BaseLib::LowLevel::Gpio gpio(GD::bl.get());
-    				gpio.setup(userId, groupId, GD::bl->settings.setDevicePermissions());
+    				BaseLib::LowLevel::Gpio gpio(GD::bl.get(), GD::bl->settings.gpioPath());
+                    auto gpiosToExport = GD::bl->settings.exportGpios();
+    				gpio.setup(userId, groupId, GD::bl->settings.setDevicePermissions(), gpiosToExport);
     				GD::familyController->dispose();
     				GD::licensingController->dispose();
     				exit(0);

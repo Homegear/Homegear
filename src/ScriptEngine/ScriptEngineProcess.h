@@ -76,7 +76,7 @@ public:
 	void setUnregisterDevice(std::function<void(uint64_t)> value) { _unregisterDevice.swap(value); }
 	bool isNodeProcess() { return _nodeProcess; }
 
-	void invokeScriptOutput(int32_t id, std::string& output);
+	void invokeScriptOutput(int32_t id, std::string& output, bool error);
 	void invokeScriptHeaders(int32_t id, BaseLib::PVariable& headers);
 	void invokeScriptFinished(int32_t exitCode);
 	void invokeScriptFinished(int32_t id, int32_t exitCode);

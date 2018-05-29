@@ -31,9 +31,7 @@
 #ifndef RPCMETHODS_H_
 #define RPCMETHODS_H_
 
-#include "RPCServer.h"
 #include <homegear-base/BaseLib.h>
-#include "../Events/EventHandler.h"
 
 #include <vector>
 #include <memory>
@@ -41,6 +39,9 @@
 
 namespace Rpc
 {
+
+class RpcServer;
+
 class RPCDevTest : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -66,57 +67,45 @@ public:
 class RPCSystemListMethods : public BaseLib::Rpc::RpcMethod
 {
 public:
-	RPCSystemListMethods(std::shared_ptr<RPCServer> server)
+	RPCSystemListMethods()
 	{
-		_server = server;
 		setHelp("Lists all RPC methods.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-private:
-	std::shared_ptr<RPCServer> _server;
 };
 
 class RPCSystemMethodHelp : public BaseLib::Rpc::RpcMethod
 {
 public:
-	RPCSystemMethodHelp(std::shared_ptr<RPCServer> server)
+	RPCSystemMethodHelp()
 	{
-		_server = server;
 		setHelp("Returns a description of a RPC method.");
 		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-private:
-	std::shared_ptr<RPCServer> _server;
 };
 
 class RPCSystemMethodSignature : public BaseLib::Rpc::RpcMethod
 {
 public:
-	RPCSystemMethodSignature(std::shared_ptr<RPCServer> server)
+	RPCSystemMethodSignature()
 	{
-		_server = server;
 		setHelp("Returns the method's signature.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-private:
-	std::shared_ptr<RPCServer> _server;
 };
 
 class RPCSystemMulticall : public BaseLib::Rpc::RpcMethod
 {
 public:
-	RPCSystemMulticall(std::shared_ptr<RPCServer> server)
+	RPCSystemMulticall()
 	{
-		_server = server;
 		setHelp("Calls multiple RPC methods at once to reduce traffic.");
 		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
 	}
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-private:
-	std::shared_ptr<RPCServer> _server;
 };
 
 class RPCAbortEventReset : public BaseLib::Rpc::RpcMethod

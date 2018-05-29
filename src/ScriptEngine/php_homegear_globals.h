@@ -45,7 +45,7 @@ __attribute__((unused)) static zend_class_entry* homegear_device_base_class_entr
 
 typedef struct _zend_homegear_globals
 {
-	std::function<void(std::string output)> outputCallback;
+	std::function<void(std::string output, bool error)> outputCallback;
 	std::function<void(BaseLib::PVariable headers)> sendHeadersCallback;
 	std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> rpcCallback;
 	BaseLib::Http http;

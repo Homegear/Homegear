@@ -739,13 +739,16 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     }
 }
 
-void ScriptEngineClient::sendOutput(std::string output)
+void ScriptEngineClient::sendOutput(std::string output, bool error)
 {
 	try
 	{
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptOutput");
-		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(output))});
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->reserve(2);
+		parameters->emplace_back(std::make_shared<BaseLib::Variable>(output));
+		parameters->emplace_back(std::make_shared<BaseLib::Variable>(error));
 		sendRequest(globals->id, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
@@ -1331,7 +1334,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
     }
     SG(server_context) = nullptr;
     std::string error("Error executing script. Check Homegear log for more details.");
-    sendOutput(error);
+    sendOutput(error, true);
 }
 
 void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
@@ -1502,7 +1505,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		globals->scriptInfo = scriptInfo;
 		if(sendOutput)
 		{
-			globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1);
+			globals->outputCallback = std::bind(&ScriptEngineClient::sendOutput, this, std::placeholders::_1, std::placeholders::_2);
 			globals->sendHeadersCallback = std::bind(&ScriptEngineClient::sendHeaders, this, std::placeholders::_1);
 		}
 		globals->rpcCallback = std::bind(&ScriptEngineClient::callMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -2123,7 +2126,15 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 			}
 		}
 
-		return nodeInfo->response ? nodeInfo->response : std::make_shared<BaseLib::Variable>();
+		auto response = nodeInfo->response;
+
+		if(parameters->at(1)->stringValue == "waitForStop")
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			_nodeInfo.erase(nodeId);
+		}
+
+		return response ? response : std::make_shared<BaseLib::Variable>();
 	}
     catch(const std::exception& ex)
     {
@@ -2185,7 +2196,14 @@ BaseLib::PVariable ScriptEngineClient::executeDeviceMethod(BaseLib::PArray& para
 			}
 		}
 
-		return deviceInfo->response ? deviceInfo->response : std::make_shared<BaseLib::Variable>();
+		auto response = deviceInfo->response;
+		if(parameters->at(1)->stringValue == "waitForStop")
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			_deviceInfo.erase(peerId);
+		}
+
+		return response ? response : std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
 	{

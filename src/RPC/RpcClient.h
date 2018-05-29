@@ -62,7 +62,7 @@ public:
 	virtual ~RpcClient();
 
 	void invokeBroadcast(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
-	BaseLib::PVariable invoke(std::shared_ptr<RemoteRpcServer> server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
+	BaseLib::PVariable invoke(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
 
 	void reset();
 protected:

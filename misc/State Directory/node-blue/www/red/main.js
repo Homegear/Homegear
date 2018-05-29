@@ -18,6 +18,25 @@
 (function() {
     var firstHomegearReady = true;
 
+    function appendNodeConfig(nodeConfig) {
+        var m = /<!-- --- \[red-module:(\S+)\] --- -->/.exec(nodeConfig.trim());
+        var moduleId;
+        if (m) {
+            moduleId = m[1];
+        } else {
+            moduleId = "unknown";
+        }
+        try {
+            $("body").append(nodeConfig);
+        } catch(err) {
+            RED.notify(RED._("notification.errors.failedToAppendNode",{module:moduleId, error:err.toString()}),{
+                type: "error",
+                timeout: 10000
+            });
+            console.log("["+moduleId+"] "+err.toString());
+        }
+    }
+
     function loadNodeList() {
         $.ajax({
             headers: {
@@ -58,7 +77,11 @@
             cache: false,
             url: 'nodes',
             success: function(data) {
-                $("body").append(data);
+                var configs = data.trim().split(/(?=<!-- --- \[red-module:\S+\] --- -->)/);
+                configs.forEach(function(data) {
+                    appendNodeConfig(data);
+                });
+
                 $("body").i18n();
                 $("#palette > .palette-spinner").hide();
                 $(".palette-scroll").removeClass("hide");
@@ -70,6 +93,7 @@
                             if (!activeProject) {
                                 // Projects enabled but no active project
                                 RED.menu.setDisabled('menu-item-projects-open',true);
+                                RED.menu.setDisabled('menu-item-projects-settings',true);
                                 if (activeProject === false) {
                                     // User previously decline the migration to projects.
                                 } else { // null/undefined
@@ -133,11 +157,12 @@
                         var project = RED.projects.getActiveProject();
                         var message = {
                             "change-branch":"Change to local branch '"+project.git.branches.local+"'",
-                            "abort-merge":"Git merge aborted",
+                            "merge-abort":"Git merge aborted",
                             "loaded":"Project '"+msg.project+"' loaded",
                             "updated":"Project '"+msg.project+"' updated",
                             "pull":"Project '"+msg.project+"' reloaded",
-                            "revert": "Project '"+msg.project+"' reloaded"
+                            "revert": "Project '"+msg.project+"' reloaded",
+                            "merge-complete":"Git merge completed"
                         }[msg.action];
                         RED.notify("<p>"+message+"</p>");
                         RED.sidebar.info.refresh()
@@ -180,13 +205,25 @@
                             ]
                         }
                     } else if (msg.error === "credentials_load_failed") {
-                        if (RED.user.hasPermission("projects.write")) {
+                        if (RED.settings.theme("projects.enabled",false)) {
+                            // projects enabled
+                            if (RED.user.hasPermission("projects.write")) {
+                                options.buttons = [
+                                    {
+                                        text: "Setup credentials",
+                                        click: function() {
+                                            persistentNotifications[notificationId].hideNotification();
+                                            RED.projects.showCredentialsPrompt();
+                                        }
+                                    }
+                                ]
+                            }
+                        } else {
                             options.buttons = [
                                 {
-                                    text: "Setup credentials",
+                                    text: "Close",
                                     click: function() {
                                         persistentNotifications[notificationId].hideNotification();
-                                        RED.projects.showCredentialsPrompt();
                                     }
                                 }
                             ]
@@ -199,6 +236,18 @@
                                     click: function() {
                                         persistentNotifications[notificationId].hideNotification();
                                         RED.projects.showFilesPrompt();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "missing_package_file") {
+                        if (RED.user.hasPermission("projects.write")) {
+                            options.buttons = [
+                                {
+                                    text: "Create default package file",
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.projects.createDefaultPackageFile();
                                     }
                                 }
                             ]
@@ -217,6 +266,20 @@
                                     click: function() {
                                         persistentNotifications[notificationId].hideNotification();
                                         RED.projects.createDefaultFileSet();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "git_merge_conflict") {
+                        RED.nodes.clear();
+                        RED.sidebar.versionControl.refresh(true);
+                        if (RED.user.hasPermission("projects.write")) {
+                            options.buttons = [
+                                {
+                                    text: "Show merge conflicts",
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.sidebar.versionControl.showLocalChanges();
                                     }
                                 }
                             ]
@@ -323,7 +386,7 @@
                     addedTypes = addedTypes.concat(m.types);
                     RED.i18n.loadCatalog(id, function() {
                         $.get('nodes/'+id, function(data) {
-                            $("body").append(data);
+                            appendNodeConfig(data);
                         });
                     });
                 });
@@ -352,7 +415,7 @@
                         RED.notify(RED._("palette.event.nodeEnabled", {count:msg.types.length})+typeList,"success");
                     } else {
                         $.get('nodes/'+msg.id, function(data) {
-                            $("body").append(data);
+                            appendNodeConfig(data);
                             typeList = "<ul><li>"+msg.types.join("</li><li>")+"</li></ul>";
                             RED.notify(RED._("palette.event.nodeAdded", {count:msg.types.length})+typeList,"success");
                         });
@@ -398,8 +461,9 @@
         var menuOptions = [];
         if (RED.settings.theme("projects.enabled",false)) {
             menuOptions.push({id:"menu-item-projects-menu",label:"Projects",options:[
-                {id:"menu-item-projects-new",label:"New...",disabled:false,onselect:"core:new-project"},
-                {id:"menu-item-projects-open",label:"Open...",disabled:false,onselect:"core:open-project"}
+                {id:"menu-item-projects-new",label:"New",disabled:false,onselect:"core:new-project"},
+                {id:"menu-item-projects-open",label:"Open",disabled:false,onselect:"core:open-project"},
+                {id:"menu-item-projects-settings",label:"Project Settings",disabled:false,onselect:"core:show-project-settings"}
             ]});
         }
 

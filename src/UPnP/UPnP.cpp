@@ -114,9 +114,9 @@ void UPnP::stop()
 		GD::bl->threadManager.join(_listenThread);
 		sendByebye();
 		_packets.clear();
-		for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		for(auto& server : GD::rpcServers)
 		{
-			i->second.removeWebserverEventHandler(_webserverEventHandler);
+			server.second->removeWebserverEventHandler(_webserverEventHandler);
 		}
 	}
 	catch(const std::exception& ex)
@@ -352,11 +352,11 @@ void UPnP::registerServers()
 			return;
 		}
 
-		for(std::map<int32_t, Rpc::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+		for(auto& server : GD::rpcServers)
 		{
-			BaseLib::Rpc::PServerInfo settings = i->second.getInfo();
+			BaseLib::Rpc::PServerInfo settings = server.second->getInfo();
 			if(settings->ssl || settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none || !settings->webServer) continue;
-			_webserverEventHandler = i->second.addWebserverEventHandler(this);
+			_webserverEventHandler = server.second->addWebserverEventHandler(this);
 
 			Packets* packet = &_packets[settings->port];
 			std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + std::string(VERSION) + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\n";

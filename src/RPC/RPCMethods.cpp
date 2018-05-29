@@ -115,10 +115,10 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
 		BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
-		for(std::map<std::string, std::shared_ptr<RpcMethod>>::iterator i = methods->begin(); i != methods->end(); ++i)
+		auto methods = GD::rpcServers.begin()->second->getMethods();
+		for(auto& method : *methods)
 		{
-			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(i->first)));
+			methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
 		}
 		std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
 		for (auto& method : ipcMethods)
@@ -153,7 +153,7 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
 
 		BaseLib::PVariable help;
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		auto methods = GD::rpcServers.begin()->second->getMethods();
 		auto methodIterator = methods->find(parameters->at(0)->stringValue);
 		if (methodIterator == methods->end())
 		{
@@ -193,7 +193,7 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 
 		BaseLib::PVariable signature;
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = GD::rpcServers.begin()->second->getMethods();
 		auto methodIterator = methods->find(parameters->at(0)->stringValue);
 		if (methodIterator == methods->end())
 		{
@@ -202,7 +202,7 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
 			if (methodIterator2 == ipcMethods.end()) return BaseLib::Variable::createError(-32602, "Method not found.");
 			signature = methodIterator2->second->getSignature();
 		}
-		else signature = _server->getMethods()->at(parameters->at(0)->stringValue)->getSignature();
+		else signature = methodIterator->second->getSignature();
 
 		if(!signature) signature.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 
@@ -237,7 +237,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<std::map<std::string, std::shared_ptr<RpcMethod>>> methods = _server->getMethods();
+		auto methods = GD::rpcServers.begin()->second->getMethods();
 		BaseLib::PVariable returns(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{
@@ -265,8 +265,12 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 			BaseLib::PArray parameters = (*i)->structValue->at("params")->arrayValue;
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
-			else if(methods->find(methodName) == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
-			else returns->arrayValue->push_back(methods->at(methodName)->invoke(clientInfo, parameters));
+			else
+			{
+				auto methodIterator = methods->find(methodName);
+				if(methodIterator == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
+				else returns->arrayValue->push_back(methodIterator->second->invoke(clientInfo, parameters));
+			}
 		}
 
 		return returns;
@@ -4255,7 +4259,8 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 			{
 				BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getSystemVariable", requestParameters);
+                std::string methodName = "getSystemVariable";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -4263,7 +4268,8 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "getMetadata", requestParameters);
+                std::string methodName = "getMetadata";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 		}
 
@@ -4414,6 +4420,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		if(!clientInfo) return BaseLib::Variable::createError(-32500, "clientInfo is nullptr.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }),
+                std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tInteger }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger })
 		}));
@@ -4421,102 +4428,170 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 
 		if(!clientInfo->address.empty()) GD::out.printInfo("Info: Client with IP " + clientInfo->address + " is calling \"init\".");
 
-		if(GD::bl->settings.clientAddressesToReplace().find(parameters->at(0)->stringValue) != GD::bl->settings.clientAddressesToReplace().end())
+        std::string url;
+        std::string interfaceId;
+        int32_t flags = 0;
+        if(parameters->size() == 1)
+        {
+            url = parameters->at(0)->stringValue;
+        }
+        else if(parameters->size() == 2)
+        {
+            if(parameters->at(1)->type == BaseLib::VariableType::tInteger || parameters->at(1)->type == BaseLib::VariableType::tInteger64)
+            {
+                interfaceId = parameters->at(0)->stringValue;
+                flags = parameters->at(1)->integerValue;
+            }
+            else
+            {
+                url = parameters->at(0)->stringValue;
+                interfaceId = parameters->at(1)->stringValue;
+            }
+        }
+        else
+        {
+            url = parameters->at(0)->stringValue;
+            interfaceId = parameters->at(1)->stringValue;
+            flags = parameters->at(2)->integerValue;
+        }
+
+		if(!url.empty() && GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end())
 		{
-			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(parameters->at(0)->stringValue);
+			std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
 			std::string remoteIP = clientInfo->address;
 			if(remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");
 			GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
-			GD::out.printInfo("Info: Replacing address " + parameters->at(0)->stringValue + " with " + newAddress);
-			parameters->at(0)->stringValue = newAddress;
+			GD::out.printInfo("Info: Replacing address " + url + " with " + newAddress);
+            url = newAddress;
 		}
 
-		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::splitLast(parameters->at(0)->stringValue, ':');
-		if(server.first.empty() || server.second.empty()) return BaseLib::Variable::createError(-32602, "Server address or port is empty.");
-		if(server.first.size() < 8) return BaseLib::Variable::createError(-32602, "Server address too short.");
-		BaseLib::HelperFunctions::toLower(server.first);
-
-		std::string path = "/RPC2";
-		int32_t pos = server.second.find_first_of('/');
-		if(pos > 0)
+		std::pair<std::string, std::string> server;
+		std::string path;
+		if(!url.empty())
 		{
-			path = server.second.substr(pos);
-			GD::out.printDebug("Debug: Server path set to: " + path);
-			server.second = server.second.substr(0, pos);
-			GD::out.printDebug("Debug: Server port set to: " + server.second);
-		}
-		server.second = std::to_string(BaseLib::Math::getNumber(server.second));
-		if(server.second.empty() || server.second == "0") return BaseLib::Variable::createError(-32602, "Port number is invalid.");
+			server = BaseLib::HelperFunctions::splitLast(url, ':');
+			if(server.first.empty() || server.second.empty()) return BaseLib::Variable::createError(-32602, "Server address or port is empty.");
+			if(server.first.size() < 8) return BaseLib::Variable::createError(-32602, "Server address too short.");
+			BaseLib::HelperFunctions::toLower(server.first);
 
-		if(parameters->size() == 1 || parameters->at(1)->stringValue.empty())
+			path = "/RPC2";
+			int32_t pos = server.second.find_first_of('/');
+			if(pos > 0)
+			{
+				path = server.second.substr(pos);
+				GD::out.printDebug("Debug: Server path set to: " + path);
+				server.second = server.second.substr(0, pos);
+				GD::out.printDebug("Debug: Server port set to: " + server.second);
+			}
+			server.second = std::to_string(BaseLib::Math::getNumber(server.second));
+			if(server.second.empty() || server.second == "0") return BaseLib::Variable::createError(-32602, "Port number is invalid.");
+		}
+
+		if(interfaceId.empty())
 		{
 			GD::rpcClient->removeServer(server);
 		}
 		else
 		{
-			std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, parameters->at(1)->stringValue);
-			if(!eventServer)
+            if(url.empty()) //Send events over connection to server
 			{
-				GD::out.printError("Error: Could not create event server.");
-				return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				clientInfo->sendEventsToRpcServer = true;
+
+				server = std::make_pair(clientInfo->address, std::to_string(clientInfo->port));
+
+				std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addSingleConnectionServer(server, clientInfo, interfaceId);
+				if(!eventServer)
+				{
+					GD::out.printError("Error: Could not create event server.");
+					return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				}
+
+				clientInfo->initInterfaceId = interfaceId;
+
+				if(flags != 0)
+				{
+					clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
+					clientInfo->initNewFormat = true;
+					clientInfo->initSubscribePeers = flags & 8;
+					clientInfo->initJsonMode = flags & 0x10;
+					clientInfo->initSendNewDevices = false;
+				}
+
+				eventServer->type = clientInfo->clientType;
+				if(flags != 0)
+				{
+					eventServer->binary = (flags & 2) || eventServer->binary;
+					eventServer->newFormat = true;
+					eventServer->subscribePeers = flags & 8;
+					eventServer->json = flags & 0x10;
+					eventServer->sendNewDevices = false;
+				}
 			}
+			else //Send events over seperate connection to a client's server
+			{
+				std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->addServer(server, clientInfo, path, interfaceId);
+				if(!eventServer)
+				{
+					GD::out.printError("Error: Could not create event server.");
+					return BaseLib::Variable::createError(-32500, "Unknown application error.");
+				}
 
-			if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
-			if(server.first.compare(0, 6, "binary") == 0 ||
-			   server.first.compare(0, 7, "binarys") == 0 ||
-			   server.first.compare(0, 10, "xmlrpc_bin") == 0) eventServer->binary = true;
+				if(server.first.compare(0, 5, "https") == 0 || server.first.compare(0, 7, "binarys") == 0) eventServer->useSSL = true;
+				if(server.first.compare(0, 6, "binary") == 0 ||
+				   server.first.compare(0, 7, "binarys") == 0 ||
+				   server.first.compare(0, 10, "xmlrpc_bin") == 0)
+					eventServer->binary = true;
 
-			// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
-				if((BaseLib::Math::isNumber(parameters->at(1)->stringValue, false) && server.second == "1999") || parameters->at(1)->stringValue == "Homegear_java")
+				// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
+				if((BaseLib::Math::isNumber(interfaceId, false) && server.second == "1999") || interfaceId == "Homegear_java")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
 					eventServer->reconnectInfinitely = true;
-					eventServer->socket->setReadTimeout(30000000);
-					eventServer->socket->setWriteTimeout(30000000);
+					if(eventServer->socket)
+					{
+						eventServer->socket->setReadTimeout(30000000);
+						eventServer->socket->setWriteTimeout(30000000);
+					}
 				}
-			// }}}
-			// {{{ Keep connection to IP-Symcon
-				else if(parameters->at(1)->stringValue == "IPS")
+					// }}}
+					// {{{ Keep connection to IP-Symcon
+				else if(interfaceId == "IPS")
 				{
 					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 					eventServer->reconnectInfinitely = true;
 				}
-			// }}}
+				// }}}
 
-			clientInfo->initUrl = parameters->at(0)->stringValue;
-			clientInfo->initInterfaceId = parameters->at(1)->stringValue;
+				clientInfo->initUrl = url;
+				clientInfo->initInterfaceId = interfaceId;
 
-            int32_t flags = parameters->size() >= 3 ? parameters->at(2)->integerValue : 0;
-			if(parameters->size() >= 3)
-			{
-				clientInfo->initKeepAlive = flags & 1;
-				clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
-				clientInfo->initNewFormat = flags & 4;
-				clientInfo->initSubscribePeers = flags & 8;
-				clientInfo->initJsonMode = flags & 0x10;
-                clientInfo->initSendNewDevices = !(flags & 0x20);
+				if(flags != 0)
+				{
+					clientInfo->initKeepAlive = flags & 1;
+					clientInfo->initBinaryMode = (flags & 2) || eventServer->binary;
+					clientInfo->initNewFormat = flags & 4;
+					clientInfo->initSubscribePeers = flags & 8;
+					clientInfo->initJsonMode = flags & 0x10;
+					clientInfo->initSendNewDevices = !(flags & 0x20);
+				}
+
+				eventServer->type = clientInfo->clientType;
+				if(flags != 0)
+				{
+					eventServer->keepAlive = flags & 1;
+					eventServer->binary = (flags & 2) || eventServer->binary;
+					eventServer->newFormat = flags & 4;
+					eventServer->subscribePeers = flags & 8;
+					eventServer->json = flags & 0x10;
+					eventServer->sendNewDevices = !(flags & 0x20);
+					if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (flags & 128);
+				}
 			}
 
-			eventServer->type = clientInfo->clientType;
-			if(parameters->size() >= 3)
-			{
-				eventServer->keepAlive = flags & 1;
-				eventServer->binary = (flags & 2) || eventServer->binary;
-				eventServer->newFormat = flags & 4;
-				eventServer->subscribePeers = flags & 8;
-				eventServer->json = flags & 0x10;
-                eventServer->sendNewDevices = !(flags & 0x20);
-				if(!eventServer->reconnectInfinitely) eventServer->reconnectInfinitely = (flags & 128);
-			}
-
-			_initServerThreadMutex.lock();
+            std::lock_guard<std::mutex> initServerThreadGuard(_initServerThreadMutex);
 			try
 			{
-				if(_disposing)
-				{
-					_initServerThreadMutex.unlock();
-					return BaseLib::Variable::createError(-32500, "I'm disposing.");
-				}
+				if(_disposing) return BaseLib::Variable::createError(-32500, "I'm disposing.");
 				GD::bl->threadManager.join(_initServerThread);
 				GD::bl->threadManager.start(_initServerThread, false, &Rpc::Client::initServerMethods, GD::rpcClient.get(), server);
 			}
@@ -4528,7 +4603,6 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-			_initServerThreadMutex.unlock();
 		}
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
@@ -6888,7 +6962,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->reserve(2);
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setSystemVariable", requestParameters);
+                std::string methodName = "setSystemVariable";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 			else if(peerId != 0 && channel < 0)
 			{
@@ -6897,7 +6972,8 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
 				requestParameters->arrayValue->push_back(parameters->at(0));
 				requestParameters->arrayValue->push_back(parameters->at(2));
 				requestParameters->arrayValue->push_back(value);
-				return GD::rpcServers.begin()->second.callMethod(clientInfo, "setMetadata", requestParameters);
+                std::string methodName = "setMetadata";
+				return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
 			}
 		}
 

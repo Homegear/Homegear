@@ -28,68 +28,226 @@
  * files in the program, then also delete it here.
 */
 
-#include "RPCServer.h"
+#include "RpcServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <gnutls/gnutls.h>
 
 using namespace Rpc;
 
-int32_t RPCServer::_currentClientID = 0;
+int32_t RpcServer::_currentClientID = 0;
 
-RPCServer::Client::Client()
+RpcServer::Client::Client()
 {
-	 socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
-	 socketDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
+	socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
+    socketDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
+    waitForResponse = false;
 }
 
-RPCServer::Client::~Client()
+RpcServer::Client::~Client()
 {
 	GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
 	GD::bl->threadManager.join(readThread);
 }
 
-RPCServer::RPCServer()
+RpcServer::RpcServer()
 {
-	_out.init(GD::bl.get());
+    _out.init(GD::bl.get());
 
-	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
-	_rpcDecoderAnsi = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), true));
-	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
-	_xmlRpcDecoder = std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder>(new BaseLib::Rpc::XmlrpcDecoder(GD::bl.get()));
-	_xmlRpcEncoder = std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder>(new BaseLib::Rpc::XmlrpcEncoder(GD::bl.get()));
-	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
-	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
+    _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
+    _rpcDecoderAnsi = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), true));
+    _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get()));
+    _xmlRpcDecoder = std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder>(new BaseLib::Rpc::XmlrpcDecoder(GD::bl.get()));
+    _xmlRpcEncoder = std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder>(new BaseLib::Rpc::XmlrpcEncoder(GD::bl.get()));
+    _jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+    _jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
 
-	_info.reset(new BaseLib::Rpc::ServerInfo::Info());
-	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>);
-	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
-	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
-	_threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
+    _info.reset(new BaseLib::Rpc::ServerInfo::Info());
+    _serverFileDescriptor.reset(new BaseLib::FileDescriptor);
+    _threadPriority = GD::bl->settings.rpcServerThreadPriority();
+    _threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
 
-	_stopServer = false;
-	_stopped = true;
+    _stopServer = false;
+    _stopped = true;
 
-	_lifetick1.first = 0;
-	_lifetick1.second = true;
-	_lifetick2.first = 0;
-	_lifetick2.second = true;
+    _lifetick1.first = 0;
+    _lifetick1.second = true;
+    _lifetick2.first = 0;
+    _lifetick2.second = true;
+
+    _rpcMethods = std::make_shared<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>>();
+    _rpcMethods->emplace("devTest", std::make_shared<RPCDevTest>());
+    _rpcMethods->emplace("system.getCapabilities", std::make_shared<RPCSystemGetCapabilities>());
+    _rpcMethods->emplace("system.listMethods", std::make_shared<RPCSystemListMethods>());
+    _rpcMethods->emplace("system.methodHelp", std::make_shared<RPCSystemMethodHelp>());
+    _rpcMethods->emplace("system.methodSignature", std::make_shared<RPCSystemMethodSignature>());
+    _rpcMethods->emplace("system.multicall", std::make_shared<RPCSystemMulticall>());
+    _rpcMethods->emplace("acknowledgeGlobalServiceMessage", std::make_shared<RPCAcknowledgeGlobalServiceMessage>());
+    _rpcMethods->emplace("activateLinkParamset", std::make_shared<RPCActivateLinkParamset>());
+    _rpcMethods->emplace("abortEventReset", std::make_shared<RPCTriggerEvent>());
+    _rpcMethods->emplace("addCategoryToChannel", std::make_shared<RPCAddCategoryToChannel>());
+    _rpcMethods->emplace("addCategoryToDevice", std::make_shared<RPCAddCategoryToDevice>());
+    _rpcMethods->emplace("addCategoryToSystemVariable", std::make_shared<RPCAddCategoryToSystemVariable>());
+    _rpcMethods->emplace("addCategoryToVariable", std::make_shared<RPCAddCategoryToVariable>());
+    _rpcMethods->emplace("addChannelToRoom", std::make_shared<RPCAddChannelToRoom>());
+    _rpcMethods->emplace("addDevice", std::make_shared<RPCAddDevice>());
+    _rpcMethods->emplace("addDeviceToRoom", std::make_shared<RPCAddDeviceToRoom>());
+    _rpcMethods->emplace("addEvent", std::make_shared<RPCAddEvent>());
+    _rpcMethods->emplace("addLink", std::make_shared<RPCAddLink>());
+    _rpcMethods->emplace("addRoomToStory", std::make_shared<RPCAddRoomToStory>());
+    _rpcMethods->emplace("addSystemVariableToRoom", std::make_shared<RPCAddSystemVariableToRoom>());
+    _rpcMethods->emplace("addVariableToRoom", std::make_shared<RPCAddVariableToRoom>());
+    _rpcMethods->emplace("checkServiceAccess", std::make_shared<RPCCheckServiceAccess>());
+    _rpcMethods->emplace("copyConfig", std::make_shared<RPCCopyConfig>());
+    _rpcMethods->emplace("clientServerInitialized", std::make_shared<RPCClientServerInitialized>());
+    _rpcMethods->emplace("createCategory", std::make_shared<RPCCreateCategory>());
+    _rpcMethods->emplace("createDevice", std::make_shared<RPCCreateDevice>());
+    _rpcMethods->emplace("createRoom", std::make_shared<RPCCreateRoom>());
+    _rpcMethods->emplace("createStory", std::make_shared<RPCCreateStory>());
+    _rpcMethods->emplace("deleteCategory", std::make_shared<RPCDeleteCategory>());
+    _rpcMethods->emplace("deleteData", std::make_shared<RPCDeleteData>());
+    _rpcMethods->emplace("deleteDevice", std::make_shared<RPCDeleteDevice>());
+    _rpcMethods->emplace("deleteMetadata", std::make_shared<RPCDeleteMetadata>());
+    _rpcMethods->emplace("deleteNodeData", std::make_shared<RPCDeleteNodeData>());
+    _rpcMethods->emplace("deleteRoom", std::make_shared<RPCDeleteRoom>());
+    _rpcMethods->emplace("deleteStory", std::make_shared<RPCDeleteStory>());
+    _rpcMethods->emplace("deleteSystemVariable", std::make_shared<RPCDeleteSystemVariable>());
+    _rpcMethods->emplace("enableEvent", std::make_shared<RPCEnableEvent>());
+    _rpcMethods->emplace("executeMiscellaneousDeviceMethod", std::make_shared<RPCExecuteMiscellaneousDeviceMethod>());
+    _rpcMethods->emplace("getAllConfig", std::make_shared<RPCGetAllConfig>());
+    _rpcMethods->emplace("getAllMetadata", std::make_shared<RPCGetAllMetadata>());
+    _rpcMethods->emplace("getAllScripts", std::make_shared<RPCGetAllScripts>());
+    _rpcMethods->emplace("getAllSystemVariables", std::make_shared<RPCGetAllSystemVariables>());
+    _rpcMethods->emplace("getAllValues", std::make_shared<RPCGetAllValues>());
+    _rpcMethods->emplace("getCategories", std::make_shared<RPCGetCategories>());
+    _rpcMethods->emplace("getCategoryMetadata", std::make_shared<RPCGetCategoryMetadata>());
+    _rpcMethods->emplace("getChannelsInCategory", std::make_shared<RPCGetChannelsInCategory>());
+    _rpcMethods->emplace("getChannelsInRoom", std::make_shared<RPCGetChannelsInRoom>());
+    _rpcMethods->emplace("getConfigParameter", std::make_shared<RPCGetConfigParameter>());
+    _rpcMethods->emplace("getData", std::make_shared<RPCGetData>());
+    _rpcMethods->emplace("getDeviceDescription", std::make_shared<RPCGetDeviceDescription>());
+    _rpcMethods->emplace("getDeviceInfo", std::make_shared<RPCGetDeviceInfo>());
+    _rpcMethods->emplace("getDevicesInCategory", std::make_shared<RPCGetDevicesInCategory>());
+    _rpcMethods->emplace("getDevicesInRoom", std::make_shared<RPCGetDevicesInRoom>());
+    _rpcMethods->emplace("getEvent", std::make_shared<RPCGetEvent>());
+    _rpcMethods->emplace("getLastEvents", std::make_shared<RPCGetLastEvents>());
+    _rpcMethods->emplace("getInstallMode", std::make_shared<RPCGetInstallMode>());
+    _rpcMethods->emplace("getKeyMismatchDevice", std::make_shared<RPCGetKeyMismatchDevice>());
+    _rpcMethods->emplace("getLinkInfo", std::make_shared<RPCGetLinkInfo>());
+    _rpcMethods->emplace("getLinkPeers", std::make_shared<RPCGetLinkPeers>());
+    _rpcMethods->emplace("getLinks", std::make_shared<RPCGetLinks>());
+    _rpcMethods->emplace("getMetadata", std::make_shared<RPCGetMetadata>());
+    _rpcMethods->emplace("getName", std::make_shared<RPCGetName>());
+    _rpcMethods->emplace("getNodeData", std::make_shared<RPCGetNodeData>());
+    _rpcMethods->emplace("getFlowData", std::make_shared<RPCGetFlowData>());
+    _rpcMethods->emplace("getGlobalData", std::make_shared<RPCGetGlobalData>());
+    _rpcMethods->emplace("getNodeEvents", std::make_shared<RPCGetNodeEvents>());
+    _rpcMethods->emplace("getNodeVariable", std::make_shared<RPCGetNodeVariable>());
+    _rpcMethods->emplace("getPairingInfo", std::make_shared<RPCGetPairingInfo>());
+    _rpcMethods->emplace("getParamset", std::make_shared<RPCGetParamset>());
+    _rpcMethods->emplace("getParamsetDescription", std::make_shared<RPCGetParamsetDescription>());
+    _rpcMethods->emplace("getParamsetId", std::make_shared<RPCGetParamsetId>());
+    _rpcMethods->emplace("getPeerId", std::make_shared<RPCGetPeerId>());
+    _rpcMethods->emplace("getRoomMetadata", std::make_shared<RPCGetRoomMetadata>());
+    _rpcMethods->emplace("getRooms", std::make_shared<RPCGetRooms>());
+    _rpcMethods->emplace("getRoomsInStory", std::make_shared<RPCGetRoomsInStory>());
+    _rpcMethods->emplace("getServiceMessages", std::make_shared<RPCGetServiceMessages>());
+    _rpcMethods->emplace("getSniffedDevices", std::make_shared<RPCGetSniffedDevices>());
+    _rpcMethods->emplace("getStories", std::make_shared<RPCGetStories>());
+    _rpcMethods->emplace("getStoryMetadata", std::make_shared<RPCGetStoryMetadata>());
+    _rpcMethods->emplace("getSystemVariable", std::make_shared<RPCGetSystemVariable>());
+    _rpcMethods->emplace("getUpdateStatus", std::make_shared<RPCGetUpdateStatus>());
+    _rpcMethods->emplace("getValue", std::make_shared<RPCGetValue>());
+    _rpcMethods->emplace("getVariableDescription", std::make_shared<RPCGetVariableDescription>());
+    _rpcMethods->emplace("getSystemVariablesInCategory", std::make_shared<RPCGetSystemVariablesInCategory>());
+    _rpcMethods->emplace("getSystemVariablesInRoom", std::make_shared<RPCGetSystemVariablesInRoom>());
+    _rpcMethods->emplace("getVariablesInCategory", std::make_shared<RPCGetVariablesInCategory>());
+    _rpcMethods->emplace("getVariablesInRoom", std::make_shared<RPCGetVariablesInRoom>());
+    _rpcMethods->emplace("getVersion", std::make_shared<RPCGetVersion>());
+    _rpcMethods->emplace("init", std::make_shared<RPCInit>());
+    _rpcMethods->emplace("listBidcosInterfaces", std::make_shared<RPCListBidcosInterfaces>());
+    _rpcMethods->emplace("listClientServers", std::make_shared<RPCListClientServers>());
+    _rpcMethods->emplace("listDevices", std::make_shared<RPCListDevices>());
+    _rpcMethods->emplace("listEvents", std::make_shared<RPCListEvents>());
+    _rpcMethods->emplace("listFamilies", std::make_shared<RPCListFamilies>());
+    _rpcMethods->emplace("listInterfaces", std::make_shared<RPCListInterfaces>());
+    _rpcMethods->emplace("listKnownDeviceTypes", std::make_shared<RPCListKnownDeviceTypes>());
+    _rpcMethods->emplace("listTeams", std::make_shared<RPCListTeams>());
+    _rpcMethods->emplace("logLevel", std::make_shared<RPCLogLevel>());
+    _rpcMethods->emplace("nodeOutput", std::make_shared<RPCNodeOutput>());
+    _rpcMethods->emplace("ping", std::make_shared<RPCPing>());
+    _rpcMethods->emplace("putParamset", std::make_shared<RPCPutParamset>());
+    _rpcMethods->emplace("removeCategoryFromChannel", std::make_shared<RPCRemoveCategoryFromChannel>());
+    _rpcMethods->emplace("removeCategoryFromDevice", std::make_shared<RPCRemoveCategoryFromDevice>());
+    _rpcMethods->emplace("removeCategoryFromSystemVariable", std::make_shared<RPCRemoveCategoryFromSystemVariable>());
+    _rpcMethods->emplace("removeCategoryFromVariable", std::make_shared<RPCRemoveCategoryFromVariable>());
+    _rpcMethods->emplace("removeChannelFromRoom", std::make_shared<RPCRemoveChannelFromRoom>());
+    _rpcMethods->emplace("removeDeviceFromRoom", std::make_shared<RPCRemoveDeviceFromRoom>());
+    _rpcMethods->emplace("removeRoomFromStory", std::make_shared<RPCRemoveRoomFromStory>());
+    _rpcMethods->emplace("removeSystemVariableFromRoom", std::make_shared<RPCRemoveSystemVariableFromRoom>());
+    _rpcMethods->emplace("removeVariableFromRoom", std::make_shared<RPCRemoveVariableFromRoom>());
+    _rpcMethods->emplace("removeEvent", std::make_shared<RPCRemoveEvent>());
+    _rpcMethods->emplace("removeLink", std::make_shared<RPCRemoveLink>());
+    _rpcMethods->emplace("reportValueUsage", std::make_shared<RPCReportValueUsage>());
+    _rpcMethods->emplace("rssiInfo", std::make_shared<RPCRssiInfo>());
+    _rpcMethods->emplace("runScript", std::make_shared<RPCRunScript>());
+    _rpcMethods->emplace("searchDevices", std::make_shared<RPCSearchDevices>());
+    _rpcMethods->emplace("searchInterfaces", std::make_shared<RPCSearchInterfaces>());
+    _rpcMethods->emplace("setCategoryMetadata", std::make_shared<RPCSetCategoryMetadata>());
+    _rpcMethods->emplace("setData", std::make_shared<RPCSetData>());
+    _rpcMethods->emplace("setGlobalServiceMessage", std::make_shared<RPCSetGlobalServiceMessage>());
+    _rpcMethods->emplace("setId", std::make_shared<RPCSetId>());
+    _rpcMethods->emplace("setInstallMode", std::make_shared<RPCSetInstallMode>());
+    _rpcMethods->emplace("setInterface", std::make_shared<RPCSetInterface>());
+    _rpcMethods->emplace("setLanguage", std::make_shared<RPCSetLanguage>());
+    _rpcMethods->emplace("setLinkInfo", std::make_shared<RPCSetLinkInfo>());
+    _rpcMethods->emplace("setMetadata", std::make_shared<RPCSetMetadata>());
+    _rpcMethods->emplace("setName", std::make_shared<RPCSetName>());
+    _rpcMethods->emplace("setNodeData", std::make_shared<RPCSetNodeData>());
+    _rpcMethods->emplace("setFlowData", std::make_shared<RPCSetFlowData>());
+    _rpcMethods->emplace("setGlobalData", std::make_shared<RPCSetGlobalData>());
+    _rpcMethods->emplace("setNodeVariable", std::make_shared<RPCSetNodeVariable>());
+    _rpcMethods->emplace("setRoomMetadata", std::make_shared<RPCSetRoomMetadata>());
+    _rpcMethods->emplace("setStoryMetadata", std::make_shared<RPCSetStoryMetadata>());
+    _rpcMethods->emplace("setSystemVariable", std::make_shared<RPCSetSystemVariable>());
+    _rpcMethods->emplace("setTeam", std::make_shared<RPCSetTeam>());
+    _rpcMethods->emplace("setValue", std::make_shared<RPCSetValue>());
+    _rpcMethods->emplace("startSniffing", std::make_shared<RPCStartSniffing>());
+    _rpcMethods->emplace("stopSniffing", std::make_shared<RPCStopSniffing>());
+    _rpcMethods->emplace("subscribePeers", std::make_shared<RPCSubscribePeers>());
+    _rpcMethods->emplace("triggerEvent", std::make_shared<RPCTriggerEvent>());
+    _rpcMethods->emplace("triggerRpcEvent", std::make_shared<RPCTriggerRpcEvent>());
+    _rpcMethods->emplace("unsubscribePeers", std::make_shared<RPCUnsubscribePeers>());
+    _rpcMethods->emplace("updateCategory", std::make_shared<RPCUpdateCategory>());
+    _rpcMethods->emplace("updateFirmware", std::make_shared<RPCUpdateFirmware>());
+    _rpcMethods->emplace("updateRoom", std::make_shared<RPCUpdateRoom>());
+    _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
+    _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
+
+    //{{{ UI
+    _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
+    _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
+    _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
+    _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
+    _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
+    _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
+    //}}}
 }
 
-RPCServer::~RPCServer()
+RpcServer::~RpcServer()
 {
 	dispose();
 }
 
-void RPCServer::dispose()
+void RpcServer::dispose()
 {
 	stop();
-	_rpcMethods->clear();
+	if(_rpcMethods) _rpcMethods->clear();
 	_webServer.reset();
 	_restServer.reset();
 }
 
-bool RPCServer::lifetick()
+bool RpcServer::lifetick()
 {
 	try
 	{
@@ -138,7 +296,7 @@ int verifyClientCert(gnutls_session_t tlsSession)
 	return 0;
 }
 
-void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
+void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 {
 	try
 	{
@@ -297,7 +455,7 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
 		}
 		_webServer.reset(new WebServer::WebServer(_info));
 		_restServer.reset(new RestServer(_info));
-		GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RPCServer::mainThread, this);
+		GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RpcServer::mainThread, this);
 		_stopped = false;
 	}
 	catch(const std::exception& ex)
@@ -314,21 +472,24 @@ void RPCServer::start(BaseLib::Rpc::PServerInfo& info)
     }
 }
 
-void RPCServer::stop()
+void RpcServer::stop()
 {
 	try
-	{
-		if(_stopped) return;
-		_stopped = true;
-		_stopServer = true;
-		GD::bl->threadManager.join(_mainThread);
-		_out.printInfo("Info: Waiting for threads to finish.");
-		_stateMutex.lock();
-		for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-		{
-			closeClientConnection(i->second);
-		}
-		_stateMutex.unlock();
+    {
+        if(_stopped) return;
+        _stopped = true;
+        _stopServer = true;
+        GD::bl->threadManager.join(_mainThread);
+        _out.printInfo("Info: Waiting for threads to finish.");
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                closeClientConnection(i->second);
+            }
+        }
+
 		while(_clients.size() > 0)
 		{
 			collectGarbage();
@@ -366,13 +527,12 @@ void RPCServer::stop()
     }
 }
 
-uint32_t RPCServer::connectionCount()
+uint32_t RpcServer::connectionCount()
 {
 	try
 	{
-		_stateMutex.lock();
+		std::lock_guard<std::mutex> stateGuard(_stateMutex);
 		uint32_t connectionCount = _clients.size();
-		_stateMutex.unlock();
 		return connectionCount;
 	}
 	catch(const std::exception& ex)
@@ -387,36 +547,10 @@ uint32_t RPCServer::connectionCount()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _stateMutex.unlock();
     return 0;
 }
 
-void RPCServer::registerMethod(std::string methodName, std::shared_ptr<BaseLib::Rpc::RpcMethod> method)
-{
-	try
-	{
-		if(_rpcMethods->find(methodName) != _rpcMethods->end())
-		{
-			_out.printWarning("Warning: Could not register RPC method \"" + methodName + "\", because a method with this name already exists.");
-			return;
-		}
-		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>(methodName, method));
-	}
-	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
+void RpcServer::closeClientConnection(std::shared_ptr<Client> client)
 {
 	try
 	{
@@ -438,7 +572,7 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
     }
 }
 
-void RPCServer::mainThread()
+void RpcServer::mainThread()
 {
 	try
 	{
@@ -513,7 +647,7 @@ void RPCServer::mainThread()
 					}
 #endif
 
-					GD::bl->threadManager.start(client->readThread, false, _threadPriority, _threadPolicy, &RPCServer::readClient, this, client);
+					GD::bl->threadManager.start(client->readThread, false, _threadPriority, _threadPolicy, &RpcServer::readClient, this, client);
 				}
 				catch(const std::exception& ex)
 				{
@@ -560,11 +694,11 @@ void RPCServer::mainThread()
     GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 }
 
-bool RPCServer::clientValid(std::shared_ptr<Client>& client)
+bool RpcServer::clientValid(std::shared_ptr<Client>& client)
 {
 	try
 	{
-		if(client->socketDescriptor->descriptor < 0) return false;
+		if(client->socketDescriptor->descriptor == -1) return false;
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -579,11 +713,10 @@ bool RPCServer::clientValid(std::shared_ptr<Client>& client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _stateMutex.unlock();
     return false;
 }
 
-void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive)
+void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive)
 {
 	try
 	{
@@ -623,7 +756,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
     }
 }
 
-void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -701,7 +834,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
     }
 }
 
-void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib::PVariable variable, int32_t messageId, PacketType::Enum responseType, bool keepAlive)
+void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib::PVariable variable, int32_t messageId, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -768,7 +901,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
     }
 }
 
-BaseLib::PVariable RPCServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
+BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
 {
 	try
 	{
@@ -817,7 +950,7 @@ BaseLib::PVariable RPCServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
     return BaseLib::Variable::createError(-32500, ": Unknown application error.");
 }
 
-void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive)
+void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -878,7 +1011,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
     }
 }
 
-std::string RPCServer::getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection)
+std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection)
 {
 	std::string header;
 	header.append("HTTP/1.1 200 OK\r\n");
@@ -889,24 +1022,27 @@ std::string RPCServer::getHttpResponseHeader(std::string contentType, uint32_t c
 	return header;
 }
 
-void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
 		if(_stopped) return;
-		BaseLib::PVariable response;
+        std::unique_lock<std::mutex> requestLock(client->requestMutex);
 		if(packetType == PacketType::Enum::binaryResponse)
 		{
-			if(client->clientType == BaseLib::RpcClientType::ccu2) response = _rpcDecoderAnsi->decodeResponse(packet);
-			else response = _rpcDecoder->decodeResponse(packet);
+			if(client->clientType == BaseLib::RpcClientType::ccu2) client->rpcResponse = _rpcDecoderAnsi->decodeResponse(packet);
+			else client->rpcResponse = _rpcDecoder->decodeResponse(packet);
 		}
-		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder->decodeResponse(packet);
-		if(!response) return;
-		if(GD::bl->debugLevel >= 3)
-		{
-			_out.printWarning("Warning: RPC server received RPC response. This shouldn't happen. Response data: ");
-			response->print(true, false);
-		}
+		else if(packetType == PacketType::Enum::xmlResponse)
+        {
+            client->rpcResponse = _xmlRpcDecoder->decodeResponse(packet);
+        }
+        else if(packetType == PacketType::Enum::jsonResponse)
+        {
+            client->rpcResponse = _jsonDecoder->decode(packet);
+        }
+        requestLock.unlock();
+        client->requestConditionVariable.notify_all();
 	}
 	catch(const std::exception& ex)
     {
@@ -922,12 +1058,12 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
     }
 }
 
-void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
 		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest || packetType == PacketType::Enum::jsonRequest || packetType == PacketType::Enum::webSocketRequest) analyzeRPC(client, packet, packetType, keepAlive);
-		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
+		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse || packetType == PacketType::Enum::jsonResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
 	}
     catch(const std::exception& ex)
     {
@@ -943,12 +1079,12 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
     }
 }
 
-const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
+const std::vector<BaseLib::PRpcClientInfo> RpcServer::getClientInfo()
 {
 	std::vector<BaseLib::PRpcClientInfo> clients;
-	_stateMutex.lock();
 	try
 	{
+        std::lock_guard<std::mutex> stateGuard(_stateMutex);
 		for(std::map<int32_t, std::shared_ptr<Client>>::const_iterator i = _clients.begin(); i != _clients.end(); i++)
 		{
 			if(i->second->closed) continue;
@@ -967,63 +1103,46 @@ const std::vector<BaseLib::PRpcClientInfo> RPCServer::getClientInfo()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_stateMutex.unlock();
 	return clients;
 }
 
-BaseLib::PEventHandler RPCServer::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)
+BaseLib::PEventHandler RpcServer::addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler)
 {
 	if(_webServer) return _webServer->addEventHandler(eventHandler);
 	return BaseLib::PEventHandler();
 }
 
-void RPCServer::removeWebserverEventHandler(BaseLib::PEventHandler eventHandler)
+void RpcServer::removeWebserverEventHandler(BaseLib::PEventHandler eventHandler)
 {
 	if(_webServer) _webServer->removeEventHandler(eventHandler);
 }
 
-void RPCServer::collectGarbage()
+void RpcServer::collectGarbage()
 {
-	_garbageCollectionMutex.lock();
 	try
 	{
+        std::lock_guard<std::mutex> garbageCollectionGuard(_garbageCollectionMutex);
 		_lastGargabeCollection = GD::bl->hf.getTime();
 		std::vector<std::shared_ptr<Client>> clientsToRemove;
-		_stateMutex.lock();
-		try
+
 		{
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) clientsToRemove.push_back(i->second);
 			}
 		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		_stateMutex.unlock();
+
 		for(std::vector<std::shared_ptr<Client>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
 		{
 			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
 			GD::bl->threadManager.join((*i)->readThread);
-			_stateMutex.lock();
-			try
+
 			{
+                std::lock_guard<std::mutex> stateGuard(_stateMutex);
 				_clients.erase((*i)->id);
 			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_stateMutex.unlock();
+
 			_out.printDebug("Debug: Client " + std::to_string((*i)->id) + " removed.");
 		}
 	}
@@ -1039,10 +1158,9 @@ void RPCServer::collectGarbage()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _garbageCollectionMutex.unlock();
 }
 
-void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http)
+void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http)
 {
 	try
 	{
@@ -1158,7 +1276,7 @@ void RPCServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
     }
 }
 
-void RPCServer::readClient(std::shared_ptr<Client> client)
+void RpcServer::readClient(std::shared_ptr<Client> client)
 {
 	try
 	{
@@ -1471,7 +1589,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
 				{
-					if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = PacketType::jsonRequest;
+					if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = packetType == PacketType::xmlRequest ? PacketType::jsonRequest : PacketType::jsonResponse;
 					packetReceived(client, http.getContent(), packetType, http.getHeader().connection & BaseLib::Http::Connection::Enum::keepAlive);
 				}
 				http.reset();
@@ -1506,7 +1624,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 	closeClientConnection(client);
 }
 
-std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(std::string& address, int32_t& port)
+std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(std::string& address, int32_t& port)
 {
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	try
@@ -1590,7 +1708,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor(st
     return fileDescriptor;
 }
 
-void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
+void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 {
 	try
 	{
@@ -1705,7 +1823,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
     GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 }
 
-void RPCServer::getSocketDescriptor()
+void RpcServer::getSocketDescriptor()
 {
 	try
 	{

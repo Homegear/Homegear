@@ -2637,7 +2637,7 @@ RED.nodes = (function() {
         RED.nodes.registerType("subflow:"+sf.id, {
             defaults:{name:{value:""}},
             info: sf.info,
-            icon:"subflow.png",
+            icon: function() { return sf.icon||"subflow.png" },
             category: "subflows",
             inputs: sf.in.length,
             outputs: sf.out.length,
@@ -2775,7 +2775,9 @@ RED.nodes = (function() {
             for (var j=0;j<wires.length;j++) {
                 var w = wires[j];
                 if (w.target.type != "subflow") {
-                    node.wires[w.sourcePort].push({"id":w.target.id,"port":w.targetPort});
+                    if (w.sourcePort < node.wires.length) {
+                        node.wires[w.sourcePort].push({"id":w.target.id,"port":w.targetPort});
+                    }
                 }
             }
 
@@ -2785,7 +2787,7 @@ RED.nodes = (function() {
             if (n.outputs > 0 && n.outputLabels && !/^\s*$/.test(n.outputLabels.join(""))) {
                 node.outputLabels = n.outputLabels.slice();
             }
-            if (!n._def.defaults.hasOwnProperty("icon") && n.icon) {
+            if ((!n._def.defaults || !n._def.defaults.hasOwnProperty("icon")) && n.icon) {
                 var defIcon = RED.utils.getDefaultNodeIcon(n._def, n);
                 if (n.icon !== defIcon.module+"/"+defIcon.file) {
                     node.icon = n.icon;
@@ -2835,7 +2837,11 @@ RED.nodes = (function() {
         if (node.out.length > 0 && n.outputLabels && !/^\s*$/.test(n.outputLabels.join(""))) {
             node.outputLabels = n.outputLabels.slice();
         }
-
+        if (n.icon) {
+            if (n.icon !== "node-red/subflow.png") {
+                node.icon = n.icon;
+            }
+        }
 
         return node;
     }
@@ -3034,7 +3040,7 @@ RED.nodes = (function() {
         if (!isInitialLoad && unknownTypes.length > 0) {
             var typeList = "<ul><li>"+unknownTypes.join("</li><li>")+"</li></ul>";
             var type = "type"+(unknownTypes.length > 1?"s":"");
-            RED.notify("<strong>"+RED._("clipboard.importUnrecognised",{count:unknownTypes.length})+"</strong>"+typeList,"error",false,10000);
+            RED.notify("<p>"+RED._("clipboard.importUnrecognised",{count:unknownTypes.length})+"</p>"+typeList,"error",false,10000);
         }
 
         var activeWorkspace = RED.workspaces.active();
@@ -3296,6 +3302,13 @@ RED.nodes = (function() {
                                     set: registry.getNodeSet("node-red/unknown")
                                 };
                                 node.users = [];
+                                // This is a config node, so delete the default
+                                // non-config node properties
+                                delete node.x;
+                                delete node.y;
+                                delete node.wires;
+                                delete node.inputLabels;
+                                delete node.outputLabels;
                             }
                             var orig = {};
                             for (var p in n) {
@@ -3311,6 +3324,11 @@ RED.nodes = (function() {
                         if (node._def.category != "config") {
                             node.inputs = n.inputs||node._def.inputs;
                             node.outputs = n.outputs||node._def.outputs;
+                            // If 'wires' is longer than outputs, clip wires
+                            if (node.hasOwnProperty('wires') && node.wires.length > node.outputs) {
+                                console.log("Warning: node.wires longer than node.outputs - trimming wires:",node.id," wires:",node.wires.length," outputs:",node.outputs);
+                                node.wires = node.wires.slice(0,node.outputs);
+                            }
                             for (d in node._def.defaults) {
                                 if (node._def.defaults.hasOwnProperty(d)) {
                                     node[d] = n[d];
@@ -3332,7 +3350,9 @@ RED.nodes = (function() {
                     addNode(node);
                     RED.editor.validateNode(node);
                     node_map[n.id] = node;
-                    if (node._def.category != "config") {
+                    // If an 'unknown' config node, it will not have been caught by the
+                    // proper config node handling, so needs adding to new_nodes here
+                    if (node.type === "unknown" || node._def.category !== "config") {
                         new_nodes.push(node);
                     }
                 }
@@ -3873,7 +3893,7 @@ RED.history = (function() {
             } else if (ev.t == "edit") {
                 for (i in ev.changes) {
                     if (ev.changes.hasOwnProperty(i)) {
-                        if (ev.node._def.defaults[i] && ev.node._def.defaults[i].type) {
+                        if (ev.node._def.defaults && ev.node._def.defaults[i] && ev.node._def.defaults[i].type) {
                             // This is a config node property
                             var currentConfigNode = RED.nodes.node(ev.node[i]);
                             if (currentConfigNode) {
@@ -3911,10 +3931,12 @@ RED.history = (function() {
                             }
                         });
                     }
+                    RED.editor.validateNode(ev.node);
                     RED.nodes.filterNodes({type:"subflow:"+ev.node.id}).forEach(function(n) {
                         n.inputs = ev.node.in.length;
                         n.outputs = ev.node.out.length;
                         RED.editor.updateNodeProperties(n);
+                        RED.editor.validateNode(n);
                     });
                 } else {
                     var outputMap;
@@ -4062,14 +4084,14 @@ RED.utils = (function() {
     function buildMessageSummaryValue(value) {
         var result;
         if (Array.isArray(value)) {
-            result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').html('array['+value.length+']');
+            result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').text('array['+value.length+']');
         } else if (value === null) {
             result = $('<span class="debug-message-object-value debug-message-type-null">null</span>');
         } else if (typeof value === 'object') {
             if (value.hasOwnProperty('type') && value.type === 'Buffer' && value.hasOwnProperty('data')) {
-                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').html('buffer['+value.length+']');
+                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').text('buffer['+value.length+']');
             } else if (value.hasOwnProperty('type') && value.type === 'array' && value.hasOwnProperty('data')) {
-                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').html('array['+value.length+']');
+                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').text('array['+value.length+']');
             } else {
                 result = $('<span class="debug-message-object-value debug-message-type-meta">object</span>');
             }
@@ -4345,7 +4367,7 @@ RED.utils = (function() {
                 element.addClass('collapsed');
                 $('<i class="fa fa-caret-right debug-message-object-handle"></i> ').prependTo(header);
                 makeExpandable(header, function() {
-                    $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').html(typeHint||'string').appendTo(header);
+                    $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').text(typeHint||'string').appendTo(header);
                     var row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(element);
                     $('<pre class="debug-message-type-string"></pre>').text(obj).appendTo(row);
                 },function(state) {if (ontoggle) { ontoggle(path,state);}}, checkExpanded(strippedKey,expandPaths));
@@ -4399,7 +4421,7 @@ RED.utils = (function() {
                 element.addClass('debug-message-buffer-raw');
             }
             if (key) {
-                headerHead = $('<span class="debug-message-type-meta"></span>').html(typeHint||(type+'['+originalLength+']')).appendTo(entryObj);
+                headerHead = $('<span class="debug-message-type-meta"></span>').text(typeHint||(type+'['+originalLength+']')).appendTo(entryObj);
             } else {
                 headerHead = $('<span class="debug-message-object-header"></span>').appendTo(entryObj);
                 $('<span>[ </span>').appendTo(headerHead);
@@ -4422,7 +4444,7 @@ RED.utils = (function() {
 
                 makeExpandable(header,function() {
                     if (!key) {
-                        headerHead = $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').html(typeHint||(type+'['+originalLength+']')).appendTo(header);
+                        headerHead = $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').text(typeHint||(type+'['+originalLength+']')).appendTo(header);
                     }
                     if (type === 'buffer') {
                         var stringRow = $('<div class="debug-message-string-rows"></div>').appendTo(element);
@@ -4435,7 +4457,7 @@ RED.utils = (function() {
                         }
                         $('<pre class="debug-message-type-string"></pre>').text(stringEncoding).appendTo(sr);
                         var bufferOpts = $('<span class="debug-message-buffer-opts"></span>').appendTo(headerHead);
-                        var switchFormat = $('<a href="#"></a>').addClass('selected').html('raw').appendTo(bufferOpts).click(function(e) {
+                        var switchFormat = $('<a href="#"></a>').addClass('selected').text('raw').appendTo(bufferOpts).click(function(e) {
                             e.preventDefault();
                             e.stopPropagation();
                             formatBuffer(element,$(this),sourceId,path,true);
@@ -4512,12 +4534,12 @@ RED.utils = (function() {
                 $('<i class="fa fa-caret-right debug-message-object-handle"></i> ').prependTo(header);
                 makeExpandable(header, function() {
                     if (!key) {
-                        $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').html('object').appendTo(header);
+                        $('<span class="debug-message-type-meta debug-message-object-type-header"></span>').text('object').appendTo(header);
                     }
                     for (i=0;i<keys.length;i++) {
                         var row = $('<div class="debug-message-object-entry collapsed"></div>').appendTo(element);
                         var newPath = path;
-                        if (newPath) {
+                        if (newPath !== undefined) {
                             if (/^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(keys[i])) {
                                 newPath += (newPath.length > 0?".":"")+keys[i];
                             } else {
@@ -4548,7 +4570,7 @@ RED.utils = (function() {
                 checkExpanded(strippedKey,expandPaths));
             }
             if (key) {
-                $('<span class="debug-message-type-meta"></span>').html('object').appendTo(entryObj);
+                $('<span class="debug-message-type-meta"></span>').text('object').appendTo(entryObj);
             } else {
                 headerHead = $('<span class="debug-message-object-header"></span>').appendTo(entryObj);
                 $('<span>{ </span>').appendTo(headerHead);
@@ -4749,7 +4771,9 @@ RED.utils = (function() {
 
     function getDefaultNodeIcon(def,node) {
         var icon_url;
-        if (typeof def.icon === "function") {
+        if (node && node.type === "subflow") {
+            icon_url = "node-red/subflow.png";
+        } else if (typeof def.icon === "function") {
             try {
                 icon_url = def.icon.call(node);
             } catch(err) {
@@ -4767,6 +4791,16 @@ RED.utils = (function() {
         return iconPath;
     }
 
+    function isIconExists(iconPath) {
+        var iconSets = RED.nodes.getIconSets();
+        var iconFileList = iconSets[iconPath.module];
+        if (iconFileList && iconFileList.indexOf(iconPath.file) !== -1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     function getNodeIcon(def,node) {
         if (def.category === 'config') {
             return "icons/node-red/cog.png"
@@ -4774,18 +4808,19 @@ RED.utils = (function() {
             return "icons/node-red/subflow.png"
         } else if (node && node.type === 'unknown') {
             return "icons/node-red/alert.png"
-        } else if (node && node.type === 'subflow') {
-            return "icons/node-red/subflow.png"
         } else if (node && node.icon) {
             var iconPath = separateIconPath(node.icon);
-            var iconSets = RED.nodes.getIconSets();
-            var iconFileList = iconSets[iconPath.module];
-            if (iconFileList && iconFileList.indexOf(iconPath.file) !== -1) {
+            if (isIconExists(iconPath)) {
                 return "icons/" + node.icon;
             }
         }
 
         var iconPath = getDefaultNodeIcon(def, node);
+        if (def.category === 'subflows') {
+            if (!isIconExists(iconPath)) {
+                return "icons/node-red/subflow.png";
+            }
+        }
         return "icons/"+iconPath.module+"/"+iconPath.file;
     }
 
@@ -6625,7 +6660,9 @@ RED.stack = (function() {
             this.options.types = this.options.types||Object.keys(allOptions);
 
             this.selectTrigger = $('<button tabindex="0"></button>').prependTo(this.uiSelect);
-            $('<i class="fa fa-sort-desc"></i>').appendTo(this.selectTrigger);
+            if (this.options.types.length > 1) {
+                $('<i class="fa fa-sort-desc"></i>').appendTo(this.selectTrigger);
+            }
             this.selectLabel = $('<span></span>').appendTo(this.selectTrigger);
 
             this.types(this.options.types);
@@ -7475,9 +7512,12 @@ RED.deploy = (function() {
                         delete confNode.credentials;
                     }
                 });
+                RED.nodes.eachSubflow(function(subflow) {
+                    subflow.changed = false;
+                });
                 RED.nodes.eachWorkspace(function(ws) {
                     ws.changed = false;
-                })
+                });
                 // Once deployed, cannot undo back to a clean state
                 RED.history.markAllDirty();
                 RED.view.redraw();
@@ -7527,29 +7567,30 @@ RED.deploy = (function() {
         // RED.actions.add("core:show-current-diff",showLocalDiff);
         RED.actions.add("core:show-remote-diff",showRemoteDiff);
         // RED.keyboard.add("*","ctrl-shift-l","core:show-current-diff");
-        RED.keyboard.add("*","ctrl-shift-r","core:show-remote-diff");
+        // RED.keyboard.add("*","ctrl-shift-r","core:show-remote-diff");
 
 
-        RED.actions.add("core:show-test-flow-diff-1",function(){showTestFlowDiff(1)});
-        RED.keyboard.add("*","ctrl-shift-f 1","core:show-test-flow-diff-1");
-
-        RED.actions.add("core:show-test-flow-diff-2",function(){showTestFlowDiff(2)});
-        RED.keyboard.add("*","ctrl-shift-f 2","core:show-test-flow-diff-2");
-        RED.actions.add("core:show-test-flow-diff-3",function(){showTestFlowDiff(3)});
-        RED.keyboard.add("*","ctrl-shift-f 3","core:show-test-flow-diff-3");
+        // RED.actions.add("core:show-test-flow-diff-1",function(){showTestFlowDiff(1)});
+        // RED.keyboard.add("*","ctrl-shift-f 1","core:show-test-flow-diff-1");
+        //
+        // RED.actions.add("core:show-test-flow-diff-2",function(){showTestFlowDiff(2)});
+        // RED.keyboard.add("*","ctrl-shift-f 2","core:show-test-flow-diff-2");
+        // RED.actions.add("core:show-test-flow-diff-3",function(){showTestFlowDiff(3)});
+        // RED.keyboard.add("*","ctrl-shift-f 3","core:show-test-flow-diff-3");
 
     }
-    function createDiffTable(container) {
+    function createDiffTable(container,CurrentDiff) {
         var diffList = $('<ol class="node-dialog-view-diff-diff"></ol>').appendTo(container);
         diffList.editableList({
             addButton: false,
+            height: "auto",
             scrollOnAdd: false,
             addItem: function(container,i,object) {
                 var localDiff = object.diff;
                 var remoteDiff = object.remoteDiff;
                 var tab = object.tab.n;
                 var def = object.def;
-                var conflicts = currentDiff.conflicts;
+                var conflicts = CurrentDiff.conflicts;
 
                 var tabDiv = $('<div>',{class:"node-diff-tab"}).appendTo(container);
                 tabDiv.addClass('collapsed');
@@ -7568,11 +7609,11 @@ RED.deploy = (function() {
                 var tabForLabel = (object.newTab || object.tab).n;
                 var titleSpan = $('<span>',{class:"node-diff-tab-title-meta"}).appendTo(originalCell);
                 if (tabForLabel.type === 'tab') {
-                    titleSpan.html(tabForLabel.label||tabForLabel.id);
+                    titleSpan.text(tabForLabel.label||tabForLabel.id);
                 } else if (tab.type === 'subflow') {
-                    titleSpan.html((tabForLabel.name||tabForLabel.id));
+                    titleSpan.text((tabForLabel.name||tabForLabel.id));
                 } else {
-                    titleSpan.html(RED._("diff.globalNodes"));
+                    titleSpan.text(RED._("diff.globalNodes"));
                 }
                 var flowStats = {
                     local: {
@@ -7648,7 +7689,7 @@ RED.deploy = (function() {
                             }
                         }
                         $('<span class="node-diff-chevron"><i class="fa fa-angle-down"></i></span>').appendTo(originalNodeDiv);
-                        $('<span>').html(RED._("diff.flowProperties")).appendTo(originalNodeDiv);
+                        $('<span>').text(RED._("diff.flowProperties")).appendTo(originalNodeDiv);
 
                         row.click(function(evt) {
                             evt.preventDefault();
@@ -7668,10 +7709,10 @@ RED.deploy = (function() {
                             }
                             div.addClass("node-diff-node-entry-conflict");
                         } else {
-                            selectState = currentDiff.resolutions[tab.id];
+                            selectState = CurrentDiff.resolutions[tab.id];
                         }
                         // Tab properties row
-                        createNodeConflictRadioBoxes(tab,div,localNodeDiv,remoteNodeDiv,true,!conflicts[tab.id],selectState);
+                        createNodeConflictRadioBoxes(tab,div,localNodeDiv,remoteNodeDiv,true,!conflicts[tab.id],selectState,CurrentDiff);
                     }
                 }
                 // var stats = $('<span>',{class:"node-diff-tab-stats"}).appendTo(titleRow);
@@ -7680,14 +7721,14 @@ RED.deploy = (function() {
                 var seen = {};
                 object.tab.nodes.forEach(function(node) {
                     seen[node.id] = true;
-                    createNodeDiffRow(node,flowStats).appendTo(nodesDiv)
+                    createNodeDiffRow(node,flowStats,CurrentDiff).appendTo(nodesDiv)
                 });
                 if (object.newTab) {
                     localNodeCount = object.newTab.nodes.length;
                     object.newTab.nodes.forEach(function(node) {
                         if (!seen[node.id]) {
                             seen[node.id] = true;
-                            createNodeDiffRow(node,flowStats).appendTo(nodesDiv)
+                            createNodeDiffRow(node,flowStats,CurrentDiff).appendTo(nodesDiv)
                         }
                     });
                 }
@@ -7695,7 +7736,7 @@ RED.deploy = (function() {
                     remoteNodeCount = object.remoteTab.nodes.length;
                     object.remoteTab.nodes.forEach(function(node) {
                         if (!seen[node.id]) {
-                            createNodeDiffRow(node,flowStats).appendTo(nodesDiv)
+                            createNodeDiffRow(node,flowStats,CurrentDiff).appendTo(nodesDiv)
                         }
                     });
                 }
@@ -7723,7 +7764,7 @@ RED.deploy = (function() {
                             }
                         }
                         var localStats = $('<span>',{class:"node-diff-tab-stats"}).appendTo(localCell);
-                        $('<span class="node-diff-status"></span>').html(RED._('diff.nodeCount',{count:localNodeCount})).appendTo(localStats);
+                        $('<span class="node-diff-status"></span>').text(RED._('diff.nodeCount',{count:localNodeCount})).appendTo(localStats);
 
                         if (flowStats.conflicts + flowStats.local.addedCount + flowStats.local.changedCount + flowStats.local.deletedCount > 0) {
                             $('<span class="node-diff-status"> [ </span>').appendTo(localStats);
@@ -7762,7 +7803,7 @@ RED.deploy = (function() {
                                 }
                             }
                             var remoteStats = $('<span>',{class:"node-diff-tab-stats"}).appendTo(remoteCell);
-                            $('<span class="node-diff-status"></span>').html(RED._('diff.nodeCount',{count:remoteNodeCount})).appendTo(remoteStats);
+                            $('<span class="node-diff-status"></span>').text(RED._('diff.nodeCount',{count:remoteNodeCount})).appendTo(remoteStats);
                             if (flowStats.conflicts + flowStats.remote.addedCount + flowStats.remote.changedCount + flowStats.remote.deletedCount > 0) {
                                 $('<span class="node-diff-status"> [ </span>').appendTo(remoteStats);
                                 if (flowStats.conflicts > 0) {
@@ -7787,12 +7828,12 @@ RED.deploy = (function() {
                     if (flowStats.conflicts > 0) {
                         titleRow.addClass("node-diff-node-entry-conflict");
                     } else {
-                        selectState = currentDiff.resolutions[tab.id];
+                        selectState = CurrentDiff.resolutions[tab.id];
                     }
                     if (tab.id) {
                         var hide = !(flowStats.conflicts > 0 &&(localDiff.deleted[tab.id] || remoteDiff.deleted[tab.id]));
                         // Tab parent row
-                        createNodeConflictRadioBoxes(tab,titleRow,localCell,remoteCell, false, hide, selectState);
+                        createNodeConflictRadioBoxes(tab,titleRow,localCell,remoteCell, false, hide, selectState, CurrentDiff);
                     }
                 }
 
@@ -7809,11 +7850,8 @@ RED.deploy = (function() {
         var diffHeaders = $('<div class="node-dialog-view-diff-headers"></div>').appendTo(diffPanel);
         if (options.mode === "merge") {
             diffPanel.addClass("node-dialog-view-diff-panel-merge");
-            var toolbar = $('<div class="node-diff-toolbar">'+
-                '<span><span id="node-diff-toolbar-resolved-conflicts"></span></span> '+
-                '</div>').prependTo(diffPanel);
         }
-        var diffList = createDiffTable(diffPanel);
+        var diffList = createDiffTable(diffPanel, diff);
 
         var localDiff = diff.localDiff;
         var remoteDiff = diff.remoteDiff;
@@ -7984,7 +8022,7 @@ RED.deploy = (function() {
         wires.forEach(function(p,i) {
             var port = $("<li>").appendTo(list);
             if (p && p.length > 0) {
-                $("<span>").html(i+1).appendTo(port);
+                $("<span>").text(i+1).appendTo(port);
                 var links = $("<ul>").appendTo(port);
                 p.forEach(function(d) {
                     c++;
@@ -7994,15 +8032,15 @@ RED.deploy = (function() {
                         var def = RED.nodes.getType(node.type)||{};
                         createNode(node,def).appendTo(entry);
                     } else {
-                        entry.html(d);
+                        entry.text(d);
                     }
                 })
             } else {
-                port.html('none');
+                port.text('none');
             }
         })
         if (c === 0) {
-            result.html("none");
+            result.text("none");
         } else {
             list.appendTo(result);
         }
@@ -8027,13 +8065,13 @@ RED.deploy = (function() {
         createNodeIcon(node,def).appendTo(nodeTitleDiv);
         var contentDiv = $('<div>',{class:"node-diff-node-description"}).appendTo(nodeTitleDiv);
         var nodeLabel = node.label || node.name || node.id;
-        $('<span>',{class:"node-diff-node-label"}).html(nodeLabel).appendTo(contentDiv);
+        $('<span>',{class:"node-diff-node-label"}).text(nodeLabel).appendTo(contentDiv);
         return nodeTitleDiv;
     }
-    function createNodeDiffRow(node,stats) {
-        var localDiff = currentDiff.localDiff;
-        var remoteDiff = currentDiff.remoteDiff;
-        var conflicted = currentDiff.conflicts[node.id];
+    function createNodeDiffRow(node,stats,CurrentDiff) {
+        var localDiff = CurrentDiff.localDiff;
+        var remoteDiff = CurrentDiff.remoteDiff;
+        var conflicted = CurrentDiff.conflicts[node.id];
 
         var hasChanges = false; // exists in original and local/remote but with changes
         var unChanged = true; // existing in original,local,remote unchanged
@@ -8221,10 +8259,10 @@ RED.deploy = (function() {
             }
             div.addClass("node-diff-node-entry-conflict");
         } else {
-            selectState = currentDiff.resolutions[node.id];
+            selectState = CurrentDiff.resolutions[node.id];
         }
         // Node row
-        createNodeConflictRadioBoxes(node,div,localNodeDiv,remoteNodeDiv,false,!conflicted,selectState);
+        createNodeConflictRadioBoxes(node,div,localNodeDiv,remoteNodeDiv,false,!conflicted,selectState,CurrentDiff);
         row.click(function(evt) {
             $(this).parent().toggleClass('collapsed');
         });
@@ -8259,7 +8297,7 @@ RED.deploy = (function() {
         var status;
 
         row = $("<tr>").appendTo(nodePropertiesTableBody);
-        $("<td>",{class:"node-diff-property-cell-label"}).html("id").appendTo(row);
+        $("<td>",{class:"node-diff-property-cell-label"}).text("id").appendTo(row);
         localCell = $("<td>",{class:"node-diff-property-cell node-diff-node-local"}).appendTo(row);
         if (localNode) {
             localCell.addClass("node-diff-node-unchanged");
@@ -8302,7 +8340,7 @@ RED.deploy = (function() {
                 conflict = true;
             }
             row = $("<tr>").appendTo(nodePropertiesTableBody);
-            $("<td>",{class:"node-diff-property-cell-label"}).html("position").appendTo(row);
+            $("<td>",{class:"node-diff-property-cell-label"}).text("position").appendTo(row);
             localCell = $("<td>",{class:"node-diff-property-cell node-diff-node-local"}).appendTo(row);
             if (localNode) {
                 localCell.addClass("node-diff-node-"+(localChanged?"changed":"unchanged"));
@@ -8370,7 +8408,7 @@ RED.deploy = (function() {
                 conflict = true;
             }
             row = $("<tr>").appendTo(nodePropertiesTableBody);
-            $("<td>",{class:"node-diff-property-cell-label"}).html("wires").appendTo(row);
+            $("<td>",{class:"node-diff-property-cell-label"}).text("wires").appendTo(row);
             localCell = $("<td>",{class:"node-diff-property-cell node-diff-node-local"}).appendTo(row);
             if (localNode) {
                 if (!conflict) {
@@ -8437,7 +8475,7 @@ RED.deploy = (function() {
             }
 
             row = $("<tr>").appendTo(nodePropertiesTableBody);
-            var propertyNameCell = $("<td>",{class:"node-diff-property-cell-label"}).html(d).appendTo(row);
+            var propertyNameCell = $("<td>",{class:"node-diff-property-cell-label"}).text(d).appendTo(row);
             localCell = $("<td>",{class:"node-diff-property-cell node-diff-node-local"}).appendTo(row);
             if (localNode) {
                 if (!conflict) {
@@ -8500,7 +8538,7 @@ RED.deploy = (function() {
         });
         return nodePropertiesDiv;
     }
-    function createNodeConflictRadioBoxes(node,row,localDiv,remoteDiv,propertiesTable,hide,state) {
+    function createNodeConflictRadioBoxes(node,row,localDiv,remoteDiv,propertiesTable,hide,state,diff) {
         var safeNodeId = "node-diff-selectbox-"+node.id.replace(/\./g,'-')+(propertiesTable?"-props":"");
         var className = "";
         if (node.z||propertiesTable) {
@@ -8537,7 +8575,7 @@ RED.deploy = (function() {
                 row.addClass("node-diff-select-remote");
                 row.removeClass("node-diff-select-local");
             }
-            refreshConflictHeader();
+            refreshConflictHeader(diff);
         }
 
         var localSelectDiv = $('<label>',{class:"node-diff-selectbox",for:safeNodeId+"-local"}).click(function(e) { e.stopPropagation();}).appendTo(localDiv);
@@ -8555,7 +8593,7 @@ RED.deploy = (function() {
         }
 
     }
-    function refreshConflictHeader() {
+    function refreshConflictHeader(currentDiff) {
         var resolutionCount = 0;
         $(".node-diff-selectbox>input:checked").each(function() {
             if (currentDiff.conflicts[$(this).data('node-id')]) {
@@ -8571,6 +8609,7 @@ RED.deploy = (function() {
         }
         if (conflictCount === resolutionCount) {
             $("#node-diff-view-diff-merge").removeClass('disabled');
+            $("#node-diff-view-resolve-diff").removeClass('disabled');
         }
     }
     function getRemoteDiff(callback) {
@@ -8749,7 +8788,7 @@ RED.deploy = (function() {
         var localDiff = diff.localDiff;
         var remoteDiff = diff.remoteDiff;
         var conflicts = diff.conflicts;
-        currentDiff = diff;
+        // currentDiff = diff;
 
         var trayOptions = {
             title: options.title||"Review Changes", //TODO: nls
@@ -8768,7 +8807,11 @@ RED.deploy = (function() {
             },
             open: function(tray) {
                 var trayBody = tray.find('.editor-tray-body');
-                var diffTable = buildDiffPanel(trayBody,diff,options);
+                var toolbar = $('<div class="node-diff-toolbar">'+
+                    '<span><span id="node-diff-toolbar-resolved-conflicts"></span></span> '+
+                    '</div>').prependTo(trayBody);
+                var diffContainer = $('<div class="node-diff-container"></div>').appendTo(trayBody);
+                var diffTable = buildDiffPanel(diffContainer,diff,options);
                 diffTable.list.hide();
                 if (remoteDiff) {
                     $("#node-diff-view-diff-merge").show();
@@ -8780,7 +8823,7 @@ RED.deploy = (function() {
                 } else {
                     $("#node-diff-view-diff-merge").hide();
                 }
-                refreshConflictHeader();
+                refreshConflictHeader(diff);
                 // console.log("--------------");
                 // console.log(localDiff);
                 // console.log(remoteDiff);
@@ -8808,8 +8851,8 @@ RED.deploy = (function() {
                     class: "primary disabled",
                     click: function() {
                         if (!$("#node-diff-view-diff-merge").hasClass('disabled')) {
-                            refreshConflictHeader();
-                            mergeDiff(currentDiff);
+                            refreshConflictHeader(diff);
+                            mergeDiff(diff);
                             RED.tray.close();
                         }
                     }
@@ -8820,7 +8863,7 @@ RED.deploy = (function() {
         RED.tray.show(trayOptions);
     }
 
-    function mergeDiff(diff) {
+    function applyDiff(diff) {
         var currentConfig = diff.localDiff.currentConfig;
         var localDiff = diff.localDiff;
         var remoteDiff = diff.remoteDiff;
@@ -8874,6 +8917,20 @@ RED.deploy = (function() {
                 }
             }
         }
+        return {
+            config: newConfig,
+            nodeChangedStates: nodeChangedStates,
+            localChangedStates: localChangedStates
+        }
+    }
+
+    function mergeDiff(diff) {
+        var appliedDiff = applyDiff(diff);
+
+        var newConfig = appliedDiff.config;
+        var nodeChangedStates = appliedDiff.nodeChangedStates;
+        var localChangedStates = appliedDiff.localChangedStates;
+
         var historyEvent = {
             t:"replace",
             config: RED.nodes.createCompleteNodeSet(),
@@ -8892,7 +8949,7 @@ RED.deploy = (function() {
             }
         })
 
-        RED.nodes.version(remoteDiff.rev);
+        RED.nodes.version(diff.remoteDiff.rev);
 
         RED.view.redraw(true);
         RED.palette.refresh();
@@ -8935,7 +8992,7 @@ RED.deploy = (function() {
                 var trayBody = tray.find('.editor-tray-body');
                 var diffPanel = $('<div class="node-text-diff"></div>').appendTo(trayBody);
 
-                var codeTable = $("<table>").appendTo(diffPanel);
+                var codeTable = $("<table>",{class:"node-text-diff-content"}).appendTo(diffPanel);
                 $('<colgroup><col width="50"><col width="50%"><col width="50"><col width="50%"></colgroup>').appendTo(codeTable);
                 var codeBody = $('<tbody>').appendTo(codeTable);
                 var diffSummary = diffText(textA||"",textB||"");
@@ -9199,7 +9256,7 @@ RED.deploy = (function() {
         files.forEach(function(file) {
             var hunks = file.hunks;
             var isBinary = file.binary;
-            var codeTable = $("<table>").appendTo(diffPanel);
+            var codeTable = $("<table>",{class:"node-text-diff-content"}).appendTo(diffPanel);
             $('<colgroup><col width="50"><col width="50"><col width="100%"></colgroup>').appendTo(codeTable);
             var codeBody = $('<tbody>').appendTo(codeTable);
 
@@ -9218,49 +9275,82 @@ RED.deploy = (function() {
             var unresolvedConflicts = 0;
             var resolvedConflicts = 0;
             var conflictResolutions = {};
+            if (commitOptions.project.files && commitOptions.project.files.flow === file.file) {
+                if (commitOptions.unmerged) {
+                    $('<span style="float: right;"><span id="node-diff-toolbar-resolved-conflicts"></span></span>').appendTo(content);
+                }
+                var diffRow = $('<tr class="node-text-diff-header">').appendTo(codeBody);
+                var flowDiffContent = $('<td class="flow-diff" colspan="3"></td>').appendTo(diffRow);
 
-            if (!commitOptions.unmerged && commitOptions.project.files && commitOptions.project.files.flow === file.file) {
-                var tools = $('<span style="float: right;" class="button-group"></span>').appendTo(content);
-                $('<button class="editor-button editor-button-small">show flow diff</button>').appendTo(tools).click(function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    var projectName = commitOptions.project.name;
-                    var filename = commitOptions.project.files.flow;
-                    var oldVersionUrl = "/projects/"+projectName+"/files/"+commitOptions.oldRev+"/"+filename;
-                    var newVersionUrl = "/projects/"+projectName+"/files/"+commitOptions.newRev+"/"+filename;
-                    $.when($.getJSON(oldVersionUrl),$.getJSON(newVersionUrl)).done(function(oldVersion,newVersion) {
-                        var oldFlow;
-                        var newFlow;
+                var projectName = commitOptions.project.name;
+                var filename = commitOptions.project.files.flow;
+                var commonVersionUrl = "projects/"+projectName+"/files/"+commitOptions.commonRev+"/"+filename;
+                var oldVersionUrl = "projects/"+projectName+"/files/"+commitOptions.oldRev+"/"+filename;
+                var newVersionUrl = "projects/"+projectName+"/files/"+commitOptions.newRev+"/"+filename;
+                var promises = [$.Deferred(),$.Deferred(),$.Deferred()];
+                if (commitOptions.commonRev) {
+                    var commonVersionUrl = "projects/"+projectName+"/files/"+commitOptions.commonRev+"/"+filename;
+                    $.ajax({dataType: "json",url: commonVersionUrl}).then(function(data) { promises[0].resolve(data); }).fail(function() { promises[0].resolve(null);})
+                } else {
+                    promises[0].resolve(null);
+                }
+
+                $.ajax({dataType: "json",url: oldVersionUrl}).then(function(data) { promises[1].resolve(data); }).fail(function() { promises[1].resolve({content:"[]"});})
+                $.ajax({dataType: "json",url: newVersionUrl}).then(function(data) { promises[2].resolve(data); }).fail(function() { promises[2].resolve({content:"[]"});})
+                $.when.apply($,promises).always(function(commonVersion, oldVersion,newVersion) {
+                    var commonFlow;
+                    var oldFlow;
+                    var newFlow;
+                    if (commonVersion) {
                         try {
-                            oldFlow = JSON.parse(oldVersion[0].content||"[]");
+                            commonFlow = JSON.parse(commonVersion.content||"[]");
                         } catch(err) {
-                            console.log("Old Version doesn't contain valid JSON:",oldVersionUrl);
+                            console.log("Common Version doesn't contain valid JSON:",commonVersionUrl);
                             console.log(err);
                             return;
                         }
-                        try {
-                            newFlow = JSON.parse(newVersion[0].content||"[]");
-                        } catch(err) {
-                            console.log("New Version doesn't contain valid JSON:",newFlow);
-                            console.log(err);
-                            return;
-                        }
-                        var localDiff = generateDiff(oldFlow,oldFlow);
-                        var remoteDiff = generateDiff(oldFlow,newFlow);
-                        var diff = resolveDiffs(localDiff,remoteDiff);
-                        showDiff(diff,{
-                            title: filename,
-                            mode: 'view',
-                            oldRevTitle: commitOptions.oldRevTitle,
-                            newRevTitle: commitOptions.newRevTitle
-                        });
-                        // var flowDiffRow = $("<tr>").insertAfter(diffRow);
-                        // var content = $('<td colspan="3"></td>').appendTo(flowDiffRow);
-                        // currentDiff = diff;
-                        // var diffTable = buildDiffPanel(content,diff,{mode:"view"}).finish();
+                    }
+                    try {
+                        oldFlow = JSON.parse(oldVersion.content||"[]");
+                    } catch(err) {
+                        console.log("Old Version doesn't contain valid JSON:",oldVersionUrl);
+                        console.log(err);
+                        return;
+                    }
+                    if (!commonFlow) {
+                        commonFlow = oldFlow;
+                    }
+                    try {
+                        newFlow = JSON.parse(newVersion.content||"[]");
+                    } catch(err) {
+                        console.log("New Version doesn't contain valid JSON:",newFlow);
+                        console.log(err);
+                        return;
+                    }
+                    var localDiff = generateDiff(commonFlow,oldFlow);
+                    var remoteDiff = generateDiff(commonFlow,newFlow);
+                    commitOptions.currentDiff = resolveDiffs(localDiff,remoteDiff);
+                    var diffTable = buildDiffPanel(flowDiffContent,commitOptions.currentDiff,{
+                        title: filename,
+                        mode: commitOptions.commonRev?'merge':'view',
+                        oldRevTitle: commitOptions.oldRevTitle,
+                        newRevTitle: commitOptions.newRevTitle
                     });
-                })
-            }
+                    diffTable.list.hide();
+                    refreshConflictHeader(commitOptions.currentDiff);
+                    setTimeout(function() {
+                        diffTable.finish();
+                        diffTable.list.show();
+                    },300);
+                    // var flowDiffRow = $("<tr>").insertAfter(diffRow);
+                    // var content = $('<td colspan="3"></td>').appendTo(flowDiffRow);
+                    // currentDiff = diff;
+                    // var diffTable = buildDiffPanel(content,diff,{mode:"view"}).finish();
+                });
+
+
+
+            } else
 
             if (isBinary) {
                 var diffBinaryRow = $('<tr class="node-text-diff-header">').appendTo(codeBody);
@@ -9268,6 +9358,9 @@ RED.deploy = (function() {
                 $('<span></span>').text("Cannot show binary file contents").appendTo(binaryContent);
 
             } else {
+                if (commitOptions.unmerged) {
+                    conflictHeader = $('<span style="float: right;"><span>'+resolvedConflicts+'</span> of <span>'+unresolvedConflicts+'</span> conflicts resolved</span>').appendTo(content);
+                }
                 hunks.forEach(function(hunk) {
                     var diffRow = $('<tr class="node-text-diff-header">').appendTo(codeBody);
                     var content = $('<td colspan="3"></td>').appendTo(diffRow);
@@ -9286,7 +9379,7 @@ RED.deploy = (function() {
                         // }
 
                         var actualLineNumber = hunk.diffStart + lineNumber;
-                        var isMergeHeader = isConflict && /^..(<<<<<<<|=======$|>>>>>>>)/.test(lineText);
+                        var isMergeHeader = isConflict && /^\+\+(<<<<<<<|=======$|>>>>>>>)/.test(lineText);
                         var diffRow = $('<tr>').appendTo(codeBody);
                         var localLineNo = $('<td class="lineno">').appendTo(diffRow);
                         var remoteLineNo;
@@ -9345,7 +9438,7 @@ RED.deploy = (function() {
                             $('<span>').text(lineText.substring(prefixEnd)).appendTo(line);
                         } else {
                             diffRow.addClass("mergeHeader");
-                            var isSeparator = /^..(=======$)/.test(lineText);
+                            var isSeparator = /^\+\+=======$/.test(lineText);
                             if (!isSeparator) {
                                 var isOurs = /^..<<<<<<</.test(lineText);
                                 if (isOurs) {
@@ -9404,9 +9497,6 @@ RED.deploy = (function() {
                     });
                 });
             }
-            if (commitOptions.unmerged) {
-                conflictHeader = $('<span style="float: right;"><span>'+resolvedConflicts+'</span> of <span>'+unresolvedConflicts+'</span> conflicts resolved</span>').appendTo(content);
-            }
         });
         return diffPanel;
     }
@@ -9432,7 +9522,7 @@ RED.deploy = (function() {
                 var trayBody = tray.find('.editor-tray-body');
                 var diffPanel = $('<div class="node-text-diff"></div>').appendTo(trayBody);
 
-                var codeTable = $("<table>").appendTo(diffPanel);
+                var codeTable = $("<table>",{class:"node-text-diff-content"}).appendTo(diffPanel);
                 $('<colgroup><col width="50"><col width="50"><col width="100%"></colgroup>').appendTo(codeTable);
                 var codeBody = $('<tbody>').appendTo(codeTable);
 
@@ -9475,7 +9565,6 @@ RED.deploy = (function() {
             }
         }
 
-
         var trayOptions = {
             title: title||"Compare Changes", //TODO: nls
             width: Infinity,
@@ -9514,6 +9603,15 @@ RED.deploy = (function() {
                     class: "primary disabled",
                     click: function() {
                         if (!$("#node-diff-view-resolve-diff").hasClass('disabled')) {
+                            if (options.currentDiff) {
+                                // This is a flow file. Need to apply the diff
+                                // and generate the new flow.
+                                var result = applyDiff(options.currentDiff);
+                                currentResolution = {
+                                    resolutions:{}
+                                };
+                                currentResolution.resolutions[options.project.files.flow] = JSON.stringify(result.config,"",4);
+                            }
                             if (options.onresolve) {
                                 options.onresolve(currentResolution);
                             }
@@ -9565,7 +9663,7 @@ RED.deploy = (function() {
         } else {
             lines = diff.split("\n");
         }
-        var diffHeader = /^diff --git a\/(.*) b\/(.*)$/;
+        var diffHeader = /^diff (?:(?:--git a\/(.*) b\/(.*))|(?:--cc (.*)))$/;
         var fileHeader = /^\+\+\+ b\/(.*)\t?/;
         var binaryFile = /^Binary files /;
         var hunkHeader = /^@@ -((\d+)(,(\d+))?) \+((\d+)(,(\d+))?) @@ ?(.*)$/;
@@ -9584,7 +9682,7 @@ RED.deploy = (function() {
                 }
                 currentHunk = null;
                 currentFile = {
-                    file: diffLine[1],
+                    file: diffLine[1]||diffLine[3],
                     hunks: []
                 }
             } else if (binaryFile.test(line)) {
@@ -10042,6 +10140,7 @@ RED.keyboard = (function() {
                 var currentEditorSettings = RED.settings.get('editor') || {};
                 var userKeymap = currentEditorSettings.keymap || {};
                 userKeymap[object.id] = null;
+                currentEditorSettings.keymap = userKeymap;
                 RED.settings.set('editor',currentEditorSettings);
 
                 var obj = {
@@ -10095,6 +10194,7 @@ RED.keyboard = (function() {
                         var currentEditorSettings = RED.settings.get('editor') || {};
                         var userKeymap = currentEditorSettings.keymap || {};
                         userKeymap[object.id] = RED.keyboard.getShortcut(object.id);
+                        currentEditorSettings.keymap = userKeymap;
                         RED.settings.set('editor',currentEditorSettings);
                     }
                 }
@@ -10247,7 +10347,7 @@ RED.workspaces = (function() {
         return ws;
     }
     function deleteWorkspace(ws) {
-        if (workspace_tabs.count() == 1) {
+        if (workspaceTabCount === 1) {
             return;
         }
         removeWorkspace(ws);
@@ -10269,7 +10369,7 @@ RED.workspaces = (function() {
             buttons: [
                 {
                     id: "node-dialog-delete",
-                    class: 'leftButton'+((workspace_tabs.count() == 1)?" disabled":""),
+                    class: 'leftButton'+((workspaceTabCount === 1)?" disabled":""),
                     text: RED._("common.label.delete"), //'<i class="fa fa-trash"></i>',
                     click: function() {
                         deleteWorkspace(workspace);
@@ -10376,12 +10476,12 @@ RED.workspaces = (function() {
                         i.addClass('fa-toggle-on');
                         i.removeClass('fa-toggle-off');
                         $("#node-input-disabled").prop("checked",false);
-                        $("#node-input-disabled-label").html(RED._("editor:workspace.enabled"));
+                        $("#node-input-disabled-label").text(RED._("editor:workspace.enabled"));
                     } else {
                         i.addClass('fa-toggle-off');
                         i.removeClass('fa-toggle-on');
                         $("#node-input-disabled").prop("checked",true);
-                        $("#node-input-disabled-label").html(RED._("editor:workspace.disabled"));
+                        $("#node-input-disabled-label").text(RED._("editor:workspace.disabled"));
                     }
                 })
 
@@ -10389,13 +10489,13 @@ RED.workspaces = (function() {
                     $("#node-input-disabled").prop("checked",workspace.disabled);
                     if (workspace.disabled) {
                         dialogForm.find("#node-input-disabled-btn i").removeClass('fa-toggle-on').addClass('fa-toggle-off');
-                        $("#node-input-disabled-label").html(RED._("editor:workspace.disabled"));
+                        $("#node-input-disabled-label").text(RED._("editor:workspace.disabled"));
                     } else {
-                        $("#node-input-disabled-label").html(RED._("editor:workspace.enabled"));
+                        $("#node-input-disabled-label").text(RED._("editor:workspace.enabled"));
                     }
                 } else {
                     workspace.disabled = false;
-                    $("#node-input-disabled-label").html(RED._("editor:workspace.enabled"));
+                    $("#node-input-disabled-label").text(RED._("editor:workspace.enabled"));
                 }
 
                 $('<input type="text" style="display: none;" />').prependTo(dialogForm);
@@ -10418,6 +10518,7 @@ RED.workspaces = (function() {
 
 
     var workspace_tabs;
+    var workspaceTabCount = 0;
     function createWorkspaceTabs() {
         workspace_tabs = RED.tabs.create({
             id: "workspace-tabs",
@@ -10445,18 +10546,24 @@ RED.workspaces = (function() {
                 }
             },
             onadd: function(tab) {
+                if (tab.type === "tab") {
+                    workspaceTabCount++;
+                }
                 $('<span class="workspace-disabled-icon"><i class="fa fa-ban"></i> </span>').prependTo("#red-ui-tab-"+(tab.id.replace(".","-"))+" .red-ui-tab-label");
                 if (tab.disabled) {
                     $("#red-ui-tab-"+(tab.id.replace(".","-"))).addClass('workspace-disabled');
                 }
-                RED.menu.setDisabled("menu-item-workspace-delete",workspace_tabs.count() <= 1);
-                if (workspace_tabs.count() === 1) {
+                RED.menu.setDisabled("menu-item-workspace-delete",workspaceTabCount <= 1);
+                if (workspaceTabCount === 1) {
                     showWorkspace();
                 }
             },
             onremove: function(tab) {
-                RED.menu.setDisabled("menu-item-workspace-delete",workspace_tabs.count() <= 1);
-                if (workspace_tabs.count() === 0) {
+                if (tab.type === "tab") {
+                    workspaceTabCount--;
+                }
+                RED.menu.setDisabled("menu-item-workspace-delete",workspaceTabCount <= 1);
+                if (workspaceTabCount === 0) {
                     hideWorkspace();
                 }
             },
@@ -10471,6 +10578,7 @@ RED.workspaces = (function() {
                 addWorkspace();
             }
         });
+        workspaceTabCount = 0;
     }
     function showWorkspace() {
         $("#workspace .red-ui-tabs").show()
@@ -10539,7 +10647,7 @@ RED.workspaces = (function() {
             return workspace_tabs.contains(id);
         },
         count: function() {
-            return workspace_tabs.count();
+            return workspaceTabCount;
         },
         active: function() {
             return activeWorkspace
@@ -11069,6 +11177,7 @@ RED.view = (function() {
             }
         } else {
             var subflow = RED.nodes.subflow(m[1]);
+            nn.name = "";
             nn.inputs = subflow.in.length;
             nn.outputs = subflow.out.length;
         }
@@ -14012,6 +14121,12 @@ RED.palette = (function() {
         el.data('popover').setContent(popOverContent);
     }
 
+    function setIcon(element,sf) {
+        var iconElement = element.find(".palette_icon");
+        var icon_url = RED.utils.getNodeIcon(sf._def,sf);
+        iconElement.attr("style", "background-image: url("+icon_url+")");
+    }
+
     function escapeNodeType(nt) {
         return nt.replace(" ","_").replace(".","_").replace(":","_");
     }
@@ -14116,13 +14231,19 @@ RED.palette = (function() {
             var mouseX;
             var mouseY;
             var spliceTimer;
+            var paletteWidth;
+            var paletteTop;
             $(d).draggable({
                 helper: 'clone',
                 appendTo: 'body',
                 revert: true,
                 revertDuration: 50,
                 containment:'#main-container',
-                start: function() {RED.view.focus();},
+                start: function() {
+                    paletteWidth = $("#palette").width();
+                    paletteTop = $("#palette").parent().position().top + $("#palette-container").position().top;
+                    RED.view.focus();
+                },
                 stop: function() { d3.select('.link_splice').classed('link_splice',false); if (spliceTimer) { clearTimeout(spliceTimer); spliceTimer = null;}},
                 drag: function(e,ui) {
 
@@ -14132,9 +14253,8 @@ RED.palette = (function() {
                     ui.position.left += 17.5;
 
                     if (def.inputs > 0 && def.outputs > 0) {
-                        mouseX = ui.position.left+(ui.helper.width()/2) - chartOffset.left + chart.scrollLeft();
-                        mouseY = ui.position.top+(ui.helper.height()/2) - chartOffset.top + chart.scrollTop();
-
+                        mouseX = ui.position.left-paletteWidth+(ui.helper.width()/2) - chartOffset.left + chart.scrollLeft();
+                        mouseY = ui.position.top-paletteTop+(ui.helper.height()/2) - chartOffset.top + chart.scrollTop();
                         if (!spliceTimer) {
                             spliceTimer = setTimeout(function() {
                                 var nodes = [];
@@ -14156,6 +14276,7 @@ RED.palette = (function() {
                                     mouseY /= RED.view.scale();
                                     nodes = RED.view.getLinksAtPoint(mouseX,mouseY);
                                 }
+
                                 for (var i=0;i<nodes.length;i++) {
                                     if (d3.select(nodes[i]).classed('link_background')) {
                                         var length = nodes[i].getTotalLength();
@@ -14266,6 +14387,7 @@ RED.palette = (function() {
                 portOutput.remove();
             }
             setLabel(sf.type+":"+sf.id,paletteNode,sf.name,marked(sf.info||""),sf.type+":"+sf.id);
+            setIcon(paletteNode,sf);
         });
     }
 
@@ -14554,17 +14676,19 @@ RED.sidebar.info = (function() {
                 $(propRow.children()[1]).text(node.label||node.name||"");
                 if (node.type === "tab") {
                     propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.status")+'</td><td></td></tr>').appendTo(tableBody);
-                    $(propRow.children()[1]).html((!!!node.disabled)?RED._("sidebar.info.enabled"):RED._("sidebar.info.disabled"))
+                    $(propRow.children()[1]).text((!!!node.disabled)?RED._("sidebar.info.enabled"):RED._("sidebar.info.disabled"))
                 }
             } else {
                 propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.node")+"</td><td></td></tr>").appendTo(tableBody);
                 RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
 
                 if (node.type !== "subflow" && node.name) {
-                    $('<tr class="node-info-node-row"><td>'+RED._("common.label.name")+'</td><td><span class="bidiAware" dir="'+RED.text.bidi.resolveBaseTextDir(node.name)+'">'+node.name+'</span></td></tr>').appendTo(tableBody);
+                    propRow = $('<tr class="node-info-node-row"><td>'+RED._("common.label.name")+'</td><td></td></tr>').appendTo(tableBody);
+                    $('<span class="bidiAware" dir="'+RED.text.bidi.resolveBaseTextDir(node.name)+'"></span>').text(node.name).appendTo(propRow.children()[1]);
                 }
                 if (!m) {
-                    $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.type")+"</td><td>"+node.type+"</td></tr>").appendTo(tableBody);
+                    propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.type")+"</td><td></td></tr>").appendTo(tableBody);
+                    $(propRow.children()[1]).text(node.type);
                 }
 
                 if (!m && node.type != "subflow" && node.type != "comment") {
@@ -14592,7 +14716,7 @@ RED.sidebar.info = (function() {
                                         nodeDiv.css({'backgroundColor':colour, "cursor":"pointer"});
                                         var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
                                         $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
-                                        var nodeContainer = $('<span></span>').css({"verticalAlign":"top","marginLeft":"6px"}).html(configLabel).appendTo(container);
+                                        var nodeContainer = $('<span></span>').css({"verticalAlign":"top","marginLeft":"6px"}).text(configLabel).appendTo(container);
 
                                         nodeDiv.on('dblclick',function() {
                                             RED.editor.editConfig("", configNode.type, configNode.id);
@@ -14628,15 +14752,15 @@ RED.sidebar.info = (function() {
                 var helpText = i18n.t((node._def.namespace ? node._def.namespace : node.type) + "/" + node.type + ".hni:" + node.type + ".help")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>');
                 infoText = helpText;
             } else if (node.type === "tab") {
-                infoSection.title.html(RED._("sidebar.info.flowDesc"));
+                infoSection.title.text(RED._("sidebar.info.flowDesc"));
                 infoText = marked(node.info||"")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>');
             }
 
             if (subflowNode) {
                 infoText = infoText + (marked(subflowNode.info||"")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>'));
-                infoSection.title.html(RED._("sidebar.info.subflowDesc"));
+                infoSection.title.text(RED._("sidebar.info.subflowDesc"));
             } else if (node._def && node._def.info) {
-                infoSection.title.html(RED._("sidebar.info.nodeHelp"));
+                infoSection.title.text(RED._("sidebar.info.nodeHelp"));
                 var info = node._def.info;
                 var textInfo = (typeof info === "function" ? info.call(node) : info);
                 // TODO: help
@@ -15337,6 +15461,8 @@ RED.palette.editor = (function() {
             if (nodeEntry) {
                 var activeTypeCount = 0;
                 var typeCount = 0;
+                var errorCount = 0;
+                nodeEntry.errorList.empty();
                 nodeEntries[module].totalUseCount = 0;
                 nodeEntries[module].setUseCount = {};
 
@@ -15345,7 +15471,10 @@ RED.palette.editor = (function() {
                         var inUseCount = 0;
                         var set = moduleInfo.sets[setName];
                         var setElements = nodeEntry.sets[setName];
-
+                        if (set.err) {
+                            errorCount++;
+                            $("<li>").text(set.err).appendTo(nodeEntry.errorList);
+                        }
                         if (set.enabled) {
                             activeTypeCount += set.types.length;
                         }
@@ -15376,16 +15505,23 @@ RED.palette.editor = (function() {
                         } else {
                             setElements.enableButton.removeClass('disabled');
                             if (set.enabled) {
-                                setElements.enableButton.html(RED._('palette.editor.disable'));
+                                setElements.enableButton.text(RED._('palette.editor.disable'));
                             } else {
-                                setElements.enableButton.html(RED._('palette.editor.enable'));
+                                setElements.enableButton.text(RED._('palette.editor.enable'));
                             }
                         }*/
                         setElements.setRow.toggleClass("palette-module-set-disabled",!set.enabled);
                     }
                 }
+
+                if (errorCount === 0) {
+                    nodeEntry.errorRow.hide()
+                } else {
+                    nodeEntry.errorRow.show();
+                }
+
                 var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount;
-                nodeEntry.setCount.html(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
+                nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
 
                 if (nodeEntries[module].totalUseCount > 0) {
                     //nodeEntry.enableButton.html(RED._('palette.editor.inuse'));
@@ -15406,11 +15542,11 @@ RED.palette.editor = (function() {
             }
             if (moduleInfo.pending_version) {
                 nodeEntry.versionSpan.html(moduleInfo.version+' <i class="fa fa-long-arrow-right"></i> '+moduleInfo.pending_version).appendTo(nodeEntry.metaRow)
-                nodeEntry.updateButton.html(RED._('palette.editor.updated')).addClass('disabled').show();
+                nodeEntry.updateButton.text(RED._('palette.editor.updated')).addClass('disabled').show();
             } else if (loadedIndex.hasOwnProperty(module)) {
                 if (semVerCompare(loadedIndex[module].version,moduleInfo.version) === 1) {
                     nodeEntry.updateButton.show();
-                    nodeEntry.updateButton.html(RED._('palette.editor.update',{version:loadedIndex[module].version}));
+                    nodeEntry.updateButton.text(RED._('palette.editor.update',{version:loadedIndex[module].version}));
                 } else {
                     nodeEntry.updateButton.hide();
                 }
@@ -15485,7 +15621,7 @@ RED.palette.editor = (function() {
             packageList.editableList('empty');
 
             $(".palette-module-shade-status").html(RED._('palette.editor.loading'));
-            var catalogues = RED.settings.theme('palette.catalogues')||['https://homegear.eu/node-blue/catalog.json'];
+            var catalogues = RED.settings.theme('palette.catalogues')||['https://apt.node-blue.com/catalog.json'];
             catalogueLoadStatus = [];
             catalogueLoadErrors = false;
             catalogueCount = catalogues.length;
@@ -15590,7 +15726,7 @@ RED.palette.editor = (function() {
                 if (filteredList[i].info.id === ns.module) {
                     var installButton = filteredList[i].elements.installButton;
                     installButton.addClass('disabled');
-                    installButton.html(RED._('palette.editor.installed'));
+                    installButton.text(RED._('palette.editor.installed'));
                     break;
                 }
             }
@@ -15606,7 +15742,7 @@ RED.palette.editor = (function() {
                         if (filteredList[i].info.id === ns.module) {
                             var installButton = filteredList[i].elements.installButton;
                             installButton.removeClass('disabled');
-                            installButton.html(RED._('palette.editor.install'));
+                            installButton.text(RED._('palette.editor.install'));
                             break;
                         }
                     }
@@ -15712,15 +15848,18 @@ RED.palette.editor = (function() {
                 if (entry) {
                     var headerRow = $('<div>',{class:"palette-module-header"}).appendTo(container);
                     var titleRow = $('<div class="palette-module-meta palette-module-name"><i class="fa fa-cube"></i></div>').appendTo(headerRow);
-                    $('<span>').html(entry.name).appendTo(titleRow);
+                    $('<span>').text(entry.name).appendTo(titleRow);
                     var metaRow = $('<div class="palette-module-meta palette-module-version"><i class="fa fa-tag"></i></div>').appendTo(headerRow);
-                    var versionSpan = $('<span>').html(entry.version).appendTo(metaRow);
+                    var versionSpan = $('<span>').text(entry.version).appendTo(metaRow);
+
+                    var errorRow = $('<div class="palette-module-meta palette-module-errors"><i class="fa fa-warning"></i></div>').hide().appendTo(headerRow);
+                    var errorList = $('<ul class="palette-module-error-list"></ul>').appendTo(errorRow);
                     var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
                     var setButton = $('<a href="#" class="editor-button editor-button-small palette-module-set-button"><i class="fa fa-angle-right palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
                     var setCount = $('<span>').appendTo(setButton);
                     var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
 
-                    var updateButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.update')).appendTo(buttonGroup);
+                    var updateButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.update')).appendTo(buttonGroup);
                     updateButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
                     updateButton.click(function(evt) {
                         evt.preventDefault();
@@ -15731,7 +15870,7 @@ RED.palette.editor = (function() {
                     })
 
 
-                    var removeButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.remove')).appendTo(buttonGroup);
+                    var removeButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.remove')).appendTo(buttonGroup);
                     removeButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
                     removeButton.click(function(evt) {
                         evt.preventDefault();
@@ -15740,6 +15879,7 @@ RED.palette.editor = (function() {
                     if (!entry.local) {
                         removeButton.hide();
                     }
+
                     //var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.disableall')).appendTo(buttonGroup);
 
                     var contentRow = $('<div>',{class:"palette-module-content"}).appendTo(container);
@@ -15749,6 +15889,8 @@ RED.palette.editor = (function() {
                         updateButton: updateButton,
                         removeButton: removeButton,
                         //enableButton: enableButton,
+                        errorRow: errorRow,
+                        errorList: errorList,
                         setCount: setCount,
                         container: container,
                         shade: shade,
@@ -15778,7 +15920,7 @@ RED.palette.editor = (function() {
                         set.types.forEach(function(t) {
                             var typeDiv = $('<div>',{class:"palette-module-type"}).appendTo(setRow);
                             typeSwatches[t] = $('<span>',{class:"palette-module-type-swatch"}).appendTo(typeDiv);
-                            $('<span>',{class:"palette-module-type-node"}).html(t).appendTo(typeDiv);
+                            $('<span>',{class:"palette-module-type-node"}).text(t).appendTo(typeDiv);
                         })
 
                         /*var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').appendTo(buttonGroup);
@@ -15818,7 +15960,7 @@ RED.palette.editor = (function() {
                     })*/
                     refreshNodeModule(entry.name);
                 } else {
-                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
+                    $('<div>',{class:"red-ui-search-empty"}).text(RED._('search.empty')).appendTo(container);
                 }
             }
         });
@@ -15858,7 +16000,7 @@ RED.palette.editor = (function() {
             });
 
 
-        $('<span>').html(RED._("palette.editor.sort")+' ').appendTo(toolBar);
+        $('<span>').text(RED._("palette.editor.sort")+' ').appendTo(toolBar);
         var sortGroup = $('<span class="button-group"></span>').appendTo(toolBar);
         var sortAZ = $('<a href="#" class="sidebar-header-button-toggle selected" data-i18n="palette.editor.sortAZ"></a>').appendTo(sortGroup);
         var sortRecent = $('<a href="#" class="sidebar-header-button-toggle" data-i18n="palette.editor.sortRecent"></a>').appendTo(sortGroup);
@@ -15900,13 +16042,13 @@ RED.palette.editor = (function() {
             scrollOnAdd: false,
             addItem: function(container,i,object) {
                 if (object.count) {
-                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('palette.editor.moduleCount',{count:object.count})).appendTo(container);
+                    $('<div>',{class:"red-ui-search-empty"}).text(RED._('palette.editor.moduleCount',{count:object.count})).appendTo(container);
                     return
                 }
                 if (object.more) {
                     container.addClass('palette-module-more');
                     var moreRow = $('<div>',{class:"palette-module-header palette-module"}).appendTo(container);
-                    var moreLink = $('<a href="#"></a>').html(RED._('palette.editor.more',{count:object.more})).appendTo(moreRow);
+                    var moreLink = $('<a href="#"></a>').text(RED._('palette.editor.more',{count:object.more})).appendTo(moreRow);
                     moreLink.click(function(e) {
                         e.preventDefault();
                         packageList.editableList('removeItem',object);
@@ -15923,17 +16065,17 @@ RED.palette.editor = (function() {
                     var entry = object.info;
                     var headerRow = $('<div>',{class:"palette-module-header"}).appendTo(container);
                     var titleRow = $('<div class="palette-module-meta"><i class="fa fa-cube"></i></div>').appendTo(headerRow);
-                    $('<span>',{class:"palette-module-name"}).html(entry.name||entry.id).appendTo(titleRow);
+                    $('<span>',{class:"palette-module-name"}).text(entry.name||entry.id).appendTo(titleRow);
                     $('<a target="_blank" class="palette-module-link"><i class="fa fa-external-link"></i></a>').attr('href',entry.url).appendTo(titleRow);
                     var descRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
-                    $('<div>',{class:"palette-module-description"}).html(entry.description).appendTo(descRow);
+                    $('<div>',{class:"palette-module-description"}).text(entry.description).appendTo(descRow);
 
                     var metaRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
                     $('<span class="palette-module-version"><i class="fa fa-tag"></i> '+entry.version+'</span>').appendTo(metaRow);
                     $('<span class="palette-module-updated"><i class="fa fa-calendar"></i> '+formatUpdatedAt(entry.updated_at)+'</span>').appendTo(metaRow);
                     var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
                     var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
-                    var installButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.install')).appendTo(buttonGroup);
+                    var installButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.install')).appendTo(buttonGroup);
                     installButton.click(function(e) {
                         e.preventDefault();
                         if (!$(this).hasClass('disabled')) {
@@ -15942,14 +16084,14 @@ RED.palette.editor = (function() {
                     })
                     if (nodeEntries.hasOwnProperty(entry.id)) {
                         installButton.addClass('disabled');
-                        installButton.html(RED._('palette.editor.installed'));
+                        installButton.text(RED._('palette.editor.installed'));
                     }
 
                     object.elements = {
                         installButton:installButton
                     }
                 } else {
-                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
+                    $('<div>',{class:"red-ui-search-empty"}).text(RED._('search.empty')).appendTo(container);
                 }
             }
         });
@@ -16130,7 +16272,7 @@ RED.editor = (function() {
                 isValid = validateNode(subflow);
                 hasChanged = subflow.changed;
             }
-            node.valid = isValid;
+            node.valid = isValid && validateNodeProperties(node, node._def.defaults, node);
             node.changed = node.changed || hasChanged;
         } else if (node._def) {
             node.valid = validateNodeProperties(node, node._def.defaults, node);
@@ -16252,6 +16394,10 @@ RED.editor = (function() {
                 }
             }
         }
+        validateIcon(node);
+    }
+
+    function validateIcon(node) {
         if (node._def.hasOwnProperty("defaults") && !node._def.defaults.hasOwnProperty("icon") && node.icon) {
             var iconPath = RED.utils.separateIconPath(node.icon);
             var iconSets = RED.nodes.getIconSets();
@@ -16270,6 +16416,7 @@ RED.editor = (function() {
             }
         }
     }
+
     function validateNodeEditorProperty(node,defaults,property,prefix) {
         var input = $("#"+prefix+"-"+property);
         if (input.length > 0) {
@@ -16750,7 +16897,7 @@ RED.editor = (function() {
                 return A.i-B.i;
             })
             rows.forEach(function(r,i) {
-                r.r.find("label").html((i+1)+".");
+                r.r.find("label").text((i+1)+".");
                 r.r.appendTo(outputsDiv);
             })
             if (rows.length === 0) {
@@ -16786,12 +16933,12 @@ RED.editor = (function() {
     function buildLabelRow(type, index, value, placeHolder) {
         var result = $('<div>',{class:"node-label-form-row"});
         if (type === undefined) {
-            $('<span>').html(RED._("editor.noDefaultLabel")).appendTo(result);
+            $('<span>').text(RED._("editor.noDefaultLabel")).appendTo(result);
             result.addClass("node-label-form-none");
         } else {
             result.addClass("");
             var id = "node-label-form-"+type+"-"+index;
-            $('<label>',{for:id}).html((index+1)+".").appendTo(result);
+            $('<label>',{for:id}).text((index+1)+".").appendTo(result);
             var input = $('<input>',{type:"text",id:id, placeholder: placeHolder}).val(value).appendTo(result);
             var clear = $('<button class="editor-button editor-button-small"><i class="fa fa-times"></i></button>').appendTo(result);
             clear.click(function(evt) {
@@ -16837,7 +16984,7 @@ RED.editor = (function() {
             buildLabelRow().appendTo(outputsDiv);
         }
 
-        if (!node._def.defaults.hasOwnProperty("icon")) {
+        if ((!node._def.defaults || !node._def.defaults.hasOwnProperty("icon"))) {
             $('<div class="form-row"><div id="node-settings-icon"></div></div>').appendTo(dialogForm);
             var iconDiv = $("#node-settings-icon");
             $('<label data-i18n="editor.settingIcon">').appendTo(iconDiv);
@@ -16911,7 +17058,49 @@ RED.editor = (function() {
             });
         }
         selectIconFile.prop("disabled", !iconFileList);
+        selectIconFile.removeClass("input-error");
         selectIconModule.removeClass("input-error");
+    }
+
+    function updateLabels(editing_node, changes, outputMap) {
+        var inputLabels = $("#node-label-form-inputs").children().find("input");
+        var outputLabels = $("#node-label-form-outputs").children().find("input");
+
+        var hasNonBlankLabel = false;
+        var changed = false;
+        var newValue = inputLabels.map(function() {
+            var v = $(this).val();
+            hasNonBlankLabel = hasNonBlankLabel || v!== "";
+            return v;
+        }).toArray().slice(0,editing_node.inputs);
+        if ((editing_node.inputLabels === undefined && hasNonBlankLabel) ||
+            (editing_node.inputLabels !== undefined && JSON.stringify(newValue) !== JSON.stringify(editing_node.inputLabels))) {
+            changes.inputLabels = editing_node.inputLabels;
+            editing_node.inputLabels = newValue;
+            changed = true;
+        }
+        hasNonBlankLabel = false;
+        newValue = new Array(editing_node.outputs);
+        outputLabels.each(function() {
+            var index = $(this).attr('id').substring(23); // node-label-form-output-<index>
+            if (outputMap && outputMap.hasOwnProperty(index)) {
+                index = parseInt(outputMap[index]);
+                if (index === -1) {
+                    return;
+                }
+            }
+            var v = $(this).val();
+            hasNonBlankLabel = hasNonBlankLabel || v!== "";
+            newValue[index] = v;
+        });
+
+        if ((editing_node.outputLabels === undefined && hasNonBlankLabel) ||
+            (editing_node.outputLabels !== undefined && JSON.stringify(newValue) !== JSON.stringify(editing_node.outputLabels))) {
+            changes.outputLabels = editing_node.outputLabels;
+            editing_node.outputLabels = newValue;
+            changed = true;
+        }
+        return changed;
     }
 
     function showEditDialog(node) {
@@ -17166,44 +17355,11 @@ RED.editor = (function() {
                         // }
                         var removedLinks = updateNodeProperties(editing_node,outputMap);
 
-                        var inputLabels = $("#node-label-form-inputs").children().find("input");
-                        var outputLabels = $("#node-label-form-outputs").children().find("input");
-
-                        var hasNonBlankLabel = false;
-                        newValue = inputLabels.map(function() {
-                            var v = $(this).val();
-                            hasNonBlankLabel = hasNonBlankLabel || v!== "";
-                            return v;
-                        }).toArray().slice(0,editing_node.inputs);
-                        if ((editing_node.inputLabels === undefined && hasNonBlankLabel) ||
-                            (editing_node.inputLabels !== undefined && JSON.stringify(newValue) !== JSON.stringify(editing_node.inputLabels))) {
-                            changes.inputLabels = editing_node.inputLabels;
-                            editing_node.inputLabels = newValue;
-                            changed = true;
-                        }
-                        hasNonBlankLabel = false;
-                        newValue = new Array(editing_node.outputs);
-                        outputLabels.each(function() {
-                            var index = $(this).attr('id').substring(23); // node-label-form-output-<index>
-                            if (outputMap && outputMap.hasOwnProperty(index)) {
-                                index = parseInt(outputMap[index]);
-                                if (index === -1) {
-                                    return;
-                                }
-                            }
-                            var v = $(this).val();
-                            hasNonBlankLabel = hasNonBlankLabel || v!== "";
-                            newValue[index] = v;
-                        })
-
-                        if ((editing_node.outputLabels === undefined && hasNonBlankLabel) ||
-                            (editing_node.outputLabels !== undefined && JSON.stringify(newValue) !== JSON.stringify(editing_node.outputLabels))) {
-                            changes.outputLabels = editing_node.outputLabels;
-                            editing_node.outputLabels = newValue;
+                        if (updateLabels(editing_node, changes, outputMap)) {
                             changed = true;
                         }
 
-                        if (!editing_node._def.defaults.hasOwnProperty("icon")) {
+                        if (!editing_node._def.defaults || !editing_node._def.defaults.hasOwnProperty("icon")) {
                             var iconModule = $("#node-settings-icon-module-hidden").val();
                             var iconFile = $("#node-settings-icon-file-hidden").val();
                             var icon = (iconModule && iconFile) ? iconModule+"/"+iconFile : "";
@@ -17484,7 +17640,7 @@ RED.editor = (function() {
 
                     dialogForm.i18n();
                     if (node_def.hasUsers !== false) {
-                        $("#node-config-dialog-user-count").find("span").html(RED._("editor.nodesUse", {count:editing_config_node.users.length})).parent().show();
+                        $("#node-config-dialog-user-count").find("span").text(RED._("editor.nodesUse", {count:editing_config_node.users.length})).parent().show();
                     }
                     done();
                 });
@@ -17807,25 +17963,25 @@ RED.editor = (function() {
                             editing_node.info = newDescription;
                             changed = true;
                         }
-                        var inputLabels = $("#node-label-form-inputs").children().find("input");
-                        var outputLabels = $("#node-label-form-outputs").children().find("input");
-
-                        var newValue = inputLabels.map(function() { return $(this).val();}).toArray().slice(0,editing_node.inputs);
-                        if (JSON.stringify(newValue) !== JSON.stringify(editing_node.inputLabels)) {
-                            changes.inputLabels = editing_node.inputLabels;
-                            editing_node.inputLabels = newValue;
+                        if (updateLabels(editing_node, changes, null)) {
                             changed = true;
                         }
-                        newValue = outputLabels.map(function() { return $(this).val();}).toArray().slice(0,editing_node.outputs);
-                        if (JSON.stringify(newValue) !== JSON.stringify(editing_node.outputLabels)) {
-                            changes.outputLabels = editing_node.outputLabels;
-                            editing_node.outputLabels = newValue;
+                        var iconModule = $("#node-settings-icon-module-hidden").val();
+                        var iconFile = $("#node-settings-icon-file-hidden").val();
+                        var icon = (iconModule && iconFile) ? iconModule+"/"+iconFile : "";
+                        if ((editing_node.icon === undefined && icon !== "node-red/subflow.png") ||
+                            (editing_node.icon !== undefined && editing_node.icon !== icon)) {
+                            changes.icon = editing_node.icon;
+                            editing_node.icon = icon;
                             changed = true;
                         }
 
                         RED.palette.refresh();
 
                         if (changed) {
+                            var wasChanged = editing_node.changed;
+                            editing_node.changed = true;
+                            validateNode(editing_node);
                             var subflowInstances = [];
                             RED.nodes.eachNode(function(n) {
                                 if (n.type == "subflow:"+editing_node.id) {
@@ -17836,10 +17992,9 @@ RED.editor = (function() {
                                     n.changed = true;
                                     n.dirty = true;
                                     updateNodeProperties(n);
+                                    validateNode(n);
                                 }
                             });
-                            var wasChanged = editing_node.changed;
-                            editing_node.changed = true;
                             RED.nodes.dirty(true);
                             var historyEvent = {
                                 t:'edit',
@@ -17915,9 +18070,10 @@ RED.editor = (function() {
                         userCount++;
                     }
                 });
-                $("#subflow-dialog-user-count").html(RED._("subflow.subflowInstances", {count:userCount})).show();
+                $("#subflow-dialog-user-count").text(RED._("subflow.subflowInstances", {count:userCount})).show();
 
                 //buildLabelForm(portLabels.content,subflow);
+                validateIcon(subflow);
                 trayBody.i18n();
             },
             close: function() {
@@ -17971,7 +18127,7 @@ RED.editor = (function() {
                     text: RED._("common.label.done"),
                     class: "primary",
                     click: function() {
-                        $("#node-input-expression-help").html("");
+                        $("#node-input-expression-help").text("");
                         onComplete(expressionEditor.getValue());
                         RED.tray.close();
                     }
@@ -18718,7 +18874,7 @@ RED.tray = (function() {
                     b.attr('id',button.id);
                 }
                 if (button.text) {
-                    b.html(button.text);
+                    b.text(button.text);
                 }
                 if (button.click) {
                     b.click((function(action) {
@@ -19340,8 +19496,8 @@ RED.clipboard = (function() {
  **/
 RED.library = (function() {
 
-
     var exportToLibraryDialog;
+    var elementPrefix = "node-input-";
 
     function loadFlowLibrary() {
         $.getJSON("library/flows",function(data) {
@@ -19363,7 +19519,7 @@ RED.library = (function() {
                             li.className = "dropdown-submenu pull-left";
                             a = document.createElement("a");
                             a.href="#";
-                            var label = i.replace(/^node-red-contrib-/,"").replace(/^node-red-node-/,"").replace(/-/," ").replace(/_/," ");
+                            var label = i.replace(/^@.*\//,"").replace(/^node-red-contrib-/,"").replace(/^node-red-node-/,"").replace(/-/," ").replace(/_/," ");
                             a.innerHTML = label;
                             li.appendChild(a);
                             li.appendChild(buildMenu(data.d[i],root+(root!==""?"/":"")+i));
@@ -19411,6 +19567,7 @@ RED.library = (function() {
         var libraryData = {};
         var selectedLibraryItem = null;
         var libraryEditor = null;
+        elementPrefix = options.elementPrefix || "node-input-";
 
         // Orion editor has set/getText
         // ACE editor has set/getValue
@@ -19482,8 +19639,8 @@ RED.library = (function() {
             return ul;
         }
 
-        $('#node-input-name').css("width","66%").after(
-            '<div class="btn-group" style="margin-left: 5px;">'+
+        $('#'+elementPrefix+"name").css("width","calc(100% - 52px)").after(
+            '<div class="btn-group" style="margin-left:5px;">'+
             '<a id="node-input-'+options.type+'-lookup" class="editor-button" data-toggle="dropdown"><i class="fa fa-book"></i> <i class="fa fa-caret-down"></i></a>'+
             '<ul class="dropdown-menu pull-right" role="menu">'+
             '<li><a id="node-input-'+options.type+'-menu-open-library" tabindex="-1" href="#">'+RED._("library.openLibrary")+'</a></li>'+
@@ -19512,7 +19669,7 @@ RED.library = (function() {
 
         $('#node-input-'+options.type+'-menu-save-library').click(function(e) {
             //var found = false;
-            var name = $("#node-input-name").val().replace(/(^\s*)|(\s*$)/g,"");
+            var name = $("#"+elementPrefix+"name").val().replace(/(^\s*)|(\s*$)/g,"");
 
             //var buildPathList = function(data,root) {
             //    var paths = [];
@@ -19589,7 +19746,7 @@ RED.library = (function() {
                         if (selectedLibraryItem) {
                             for (var i=0; i<options.fields.length; i++) {
                                 var field = options.fields[i];
-                                $("#node-input-"+field).val(selectedLibraryItem[field]);
+                                $("#"+elementPrefix+field).val(selectedLibraryItem[field]);
                             }
                             options.editor.setValue(libraryEditor.getValue(),-1);
                         }
@@ -19611,7 +19768,7 @@ RED.library = (function() {
         });
 
         function saveToLibrary(overwrite) {
-            var name = $("#node-input-name").val().replace(/(^\s*)|(\s*$)/g,"");
+            var name = $("#"+elementPrefix+"name").val().replace(/(^\s*)|(\s*$)/g,"");
             if (name === "") {
                 name = RED._("library.unnamedType",{type:options.type});
             }
@@ -19655,7 +19812,7 @@ RED.library = (function() {
                 if (field == "name") {
                     data.name = name;
                 } else {
-                    data[field] = $("#node-input-"+field).val();
+                    data[field] = $("#"+elementPrefix+field).val();
                 }
             }
 
@@ -19904,6 +20061,9 @@ RED.notifications = (function() {
         }
         n.style.display = "none";
         if (typeof msg === "string") {
+            if (!/<p>/i.test(msg)) {
+                msg = "<p>"+msg+"</p>";
+            }
             n.innerHTML = msg;
         } else {
             $(n).append(msg);
@@ -19911,7 +20071,7 @@ RED.notifications = (function() {
         if (options.buttons) {
             var buttonSet = $('<div style="margin-top: 20px;" class="ui-dialog-buttonset"></div>').appendTo(n)
             options.buttons.forEach(function(buttonDef) {
-                var b = $('<button>').html(buttonDef.text).click(buttonDef.click).appendTo(buttonSet);
+                var b = $('<button>').text(buttonDef.text).click(buttonDef.click).appendTo(buttonSet);
                 if (buttonDef.id) {
                     b.attr('id',buttonDef.id);
                 }
@@ -19971,6 +20131,9 @@ RED.notifications = (function() {
             var nn = n;
             return function(msg,options) {
                 if (typeof msg === "string") {
+                    if (!/<p>/i.test(msg)) {
+                        msg = "<p>"+msg+"</p>";
+                    }
                     nn.innerHTML = msg;
                 } else {
                     $(nn).empty().append(msg);
@@ -19983,7 +20146,7 @@ RED.notifications = (function() {
                     if (options.buttons) {
                         var buttonSet = $('<div style="margin-top: 20px;" class="ui-dialog-buttonset"></div>').appendTo(nn)
                         options.buttons.forEach(function(buttonDef) {
-                            var b = $('<button>').html(buttonDef.text).click(buttonDef.click).appendTo(buttonSet);
+                            var b = $('<button>').text(buttonDef.text).click(buttonDef.click).appendTo(buttonSet);
                             if (buttonDef.id) {
                                 b.attr('id',buttonDef.id);
                             }
@@ -20235,7 +20398,7 @@ RED.search = (function() {
             addItem: function(container,i,object) {
                 var node = object.node;
                 if (node === undefined) {
-                    $('<div>',{class:"red-ui-search-empty"}).html(RED._('search.empty')).appendTo(container);
+                    $('<div>',{class:"red-ui-search-empty"}).text(RED._('search.empty')).appendTo(container);
 
                 } else {
                     var def = node._def;
@@ -20261,12 +20424,12 @@ RED.search = (function() {
                         } else {
                             workspace = "flow:"+workspace.label;
                         }
-                        $('<div>',{class:"red-ui-search-result-node-flow"}).html(workspace).appendTo(contentDiv);
+                        $('<div>',{class:"red-ui-search-result-node-flow"}).text(workspace).appendTo(contentDiv);
                     }
 
-                    $('<div>',{class:"red-ui-search-result-node-label"}).html(object.label || node.id).appendTo(contentDiv);
-                    $('<div>',{class:"red-ui-search-result-node-type"}).html(node.type).appendTo(contentDiv);
-                    $('<div>',{class:"red-ui-search-result-node-id"}).html(node.id).appendTo(contentDiv);
+                    $('<div>',{class:"red-ui-search-result-node-label"}).text(object.label || node.id).appendTo(contentDiv);
+                    $('<div>',{class:"red-ui-search-result-node-type"}).text(node.type).appendTo(contentDiv);
+                    $('<div>',{class:"red-ui-search-result-node-id"}).text(node.id).appendTo(contentDiv);
 
                     div.click(function(evt) {
                         evt.preventDefault();
@@ -20494,7 +20657,7 @@ RED.search = (function() {
                 var label = object.label;
                 object.index += "|"+label.toLowerCase();
 
-                $('<div>',{class:"red-ui-search-result-node-label"}).html(label).appendTo(contentDiv);
+                $('<div>',{class:"red-ui-search-result-node-label"}).text(label).appendTo(contentDiv);
 
                 div.click(function(evt) {
                     evt.preventDefault();
@@ -20834,7 +20997,7 @@ RED.subflow = (function() {
         RED.view.select();
         RED.nodes.dirty(true);
         RED.view.redraw();
-        $("#workspace-subflow-output .spinner-value").html(subflow.out.length);
+        $("#workspace-subflow-output .spinner-value").text(subflow.out.length);
     }
 
     function removeSubflowOutput(removedSubflowOutputs) {
@@ -20911,6 +21074,9 @@ RED.subflow = (function() {
     }
     function refreshToolbar(activeSubflow) {
         if (activeSubflow) {
+            $("#workspace-subflow-input-add").toggleClass("active", activeSubflow.in.length !== 0);
+            $("#workspace-subflow-input-remove").toggleClass("active", activeSubflow.in.length === 0);
+
             $("#workspace-subflow-input .spinner-value").html(activeSubflow.in.length);
             $("#workspace-subflow-output .spinner-value").html(activeSubflow.out.length);
         }
@@ -21588,7 +21754,45 @@ RED.projects = (function() {
     var dialogBody;
 
     var activeProject;
-
+    function reportUnexpectedError(error) {
+        var notification;
+        if (error.error === 'git_missing_user') {
+            notification = RED.notify("<p>You Git client is not configured with a username/email.</p>",{
+                fixed: true,
+                type:'error',
+                buttons: [
+                    {
+                        text: "Cancel",
+                        click: function() {
+                            notification.close();
+                        }
+                    },
+                    {
+                        text: "Configure Git client",
+                        click: function() {
+                            RED.userSettings.show('gitconfig');
+                            notification.close();
+                        }
+                    }
+                ]
+            })
+        } else {
+            console.log(error);
+            notification = RED.notify("<p>An unexpected error occurred:</p><p>"+error.message+"</p><small>code: "+error.error+"</small>",{
+                fixed: true,
+                modal: true,
+                type: 'error',
+                buttons: [
+                    {
+                        text: "Close",
+                        click: function() {
+                            notification.close();
+                        }
+                    }
+                ]
+            })
+        }
+    }
     var screens = {};
     function initScreens() {
         var migrateProjectHeader = $('<div class="projects-dialog-screen-start-hero"></div>');
@@ -21608,8 +21812,28 @@ RED.projects = (function() {
                     var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
                     $('<p>').text("Hello! We have introduced 'projects' to Node-RED.").appendTo(body);
                     $('<p>').text("This is a new way for you to manage your flow files and includes version control of your flows.").appendTo(body);
-                    $('<p>').text("To get started you can create your first project using your current flow files in a few easy steps.").appendTo(body);
-                    $('<p>').text("If you are not sure, you can skip this for now. You will still be able to create your first project from the 'Projects' menu option at any time.").appendTo(body);
+                    $('<p>').text("To get started you can create your first project or clone an existing project from a git repository.").appendTo(body);
+                    $('<p>').text("If you are not sure, you can skip this for now. You will still be able to create your first project from the 'Projects' menu at any time.").appendTo(body);
+
+                    var row = $('<div style="text-align: center"></div>').appendTo(body);
+                    var createAsEmpty = $('<button data-type="empty" class="editor-button projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>Create Project</button>').appendTo(row);
+                    var createAsClone = $('<button data-type="clone" class="editor-button projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>Clone Repository</button>').appendTo(row);
+
+                    createAsEmpty.click(function(e) {
+                        e.preventDefault();
+                        createProjectOptions = {
+                            action: "create"
+                        }
+                        show('git-config');
+                    })
+
+                    createAsClone.click(function(e) {
+                        e.preventDefault();
+                        createProjectOptions = {
+                            action: "clone"
+                        }
+                        show('git-config');
+                    })
 
                     return container;
                 },
@@ -21620,13 +21844,6 @@ RED.projects = (function() {
                         click: function() {
                             createProjectOptions = {};
                             $( this ).dialog( "close" );
-                        }
-                    },
-                    {
-                        text: "Create your first project", // TODO: nls
-                        class: "primary",
-                        click: function() {
-                            show('git-config');
                         }
                     }
                 ]
@@ -21701,7 +21918,11 @@ RED.projects = (function() {
                                 currentGitSettings.user.name = gitUsernameInput.val();
                                 currentGitSettings.user.email = gitEmailInput.val();
                                 RED.settings.set('git', currentGitSettings);
-                                show('project-details');
+                                if (createProjectOptions.action === "create") {
+                                    show('project-details');
+                                } else if (createProjectOptions.action === "clone") {
+                                    show('clone-project');
+                                }
                             }
                         }
                     ]
@@ -21807,7 +22028,7 @@ RED.projects = (function() {
 
                         setTimeout(function() {
                             projectNameInput.focus();
-                            validateForm();
+                            projectNameInput.change();
                         },50);
                         return container;
                     },
@@ -21834,6 +22055,366 @@ RED.projects = (function() {
                     }
                 };
             })(),
+            'clone-project': (function() {
+                var projectNameInput;
+                var projectSummaryInput;
+                var projectFlowFileInput;
+                var projectSecretInput;
+                var projectSecretSelect;
+                var copyProject;
+                var projectRepoInput;
+                var projectCloneSecret;
+                var emptyProjectCredentialInput;
+                var projectRepoUserInput;
+                var projectRepoPasswordInput;
+                var projectNameSublabel;
+                var projectRepoSSHKeySelect;
+                var projectRepoPassphrase;
+                var projectRepoRemoteName
+                var projectRepoBranch;
+                var selectedProject;
+
+                return {
+                    content: function(options) {
+                        var container = $('<div class="projects-dialog-screen-start"></div>');
+                        migrateProjectHeader.appendTo(container);
+                        var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
+                        $('<p>').text("Clone a project").appendTo(body);
+                        $('<p>').text("If you already have a git repository containing a project, you can clone it to get started.").appendTo(body);
+
+                        var projectList = null;
+                        var pendingFormValidation = false;
+                        $.getJSON("projects", function(data) {
+                            projectList = {};
+                            data.projects.forEach(function(p) {
+                                projectList[p] = true;
+                                if (pendingFormValidation) {
+                                    pendingFormValidation = false;
+                                    validateForm();
+                                }
+                            })
+                        });
+
+
+                        var validateForm = function() {
+                            var projectName = projectNameInput.val();
+                            var valid = true;
+                            if (projectNameInputChanged) {
+                                if (projectList === null) {
+                                    pendingFormValidation = true;
+                                    return;
+                                }
+                                projectNameStatus.empty();
+                                if (!/^[a-zA-Z0-9\-_]+$/.test(projectName) || projectList[projectName]) {
+                                    projectNameInput.addClass("input-error");
+                                    $('<i style="margin-top: 8px;" class="fa fa-exclamation-triangle"></i>').appendTo(projectNameStatus);
+                                    projectNameValid = false;
+                                    valid = false;
+                                    if (projectList[projectName]) {
+                                        projectNameSublabel.text("Project already exists");
+                                    } else {
+                                        projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                    }
+                                } else {
+                                    projectNameInput.removeClass("input-error");
+                                    $('<i style="margin-top: 8px;" class="fa fa-check"></i>').appendTo(projectNameStatus);
+                                    projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                    projectNameValid = true;
+                                }
+                                projectNameLastChecked = projectName;
+                            }
+                            valid = projectNameValid;
+
+                            var repo = projectRepoInput.val();
+
+                            // var validRepo = /^(?:file|git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+(?:\/?|\#[\d\w\.\-_]+?)$/.test(repo);
+                            var validRepo = repo.length > 0 && !/\s/.test(repo);
+                            if (/^https?:\/\/[^/]+@/i.test(repo)) {
+                                $("#projects-dialog-screen-create-project-repo-label small").text("Do not include the username/password in the url");
+                                validRepo = false;
+                            }
+                            if (!validRepo) {
+                                if (projectRepoChanged) {
+                                    projectRepoInput.addClass("input-error");
+                                }
+                                valid = false;
+                            } else {
+                                projectRepoInput.removeClass("input-error");
+                            }
+                            if (/^https?:\/\//.test(repo)) {
+                                $(".projects-dialog-screen-create-row-creds").show();
+                                $(".projects-dialog-screen-create-row-sshkey").hide();
+                            } else if (/^(?:ssh|[\S]+?@[\S]+?):(?:\/\/)?/.test(repo)) {
+                                $(".projects-dialog-screen-create-row-creds").hide();
+                                $(".projects-dialog-screen-create-row-sshkey").show();
+                                // if ( !getSelectedSSHKey(projectRepoSSHKeySelect) ) {
+                                //     valid = false;
+                                // }
+                            } else {
+                                $(".projects-dialog-screen-create-row-creds").hide();
+                                $(".projects-dialog-screen-create-row-sshkey").hide();
+                            }
+
+                            $("#projects-dialog-clone-project").prop('disabled',!valid).toggleClass('disabled ui-button-disabled ui-state-disabled',!valid);
+                        }
+
+                        var row;
+
+                        row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty projects-dialog-screen-create-row-clone"></div>').appendTo(body);
+                        $('<label for="projects-dialog-screen-create-project-name">Project name</label>').appendTo(row);
+
+                        var subrow = $('<div style="position:relative;"></div>').appendTo(row);
+                        projectNameInput = $('<input id="projects-dialog-screen-create-project-name" type="text"></input>').appendTo(subrow);
+                        var projectNameStatus = $('<div class="projects-dialog-screen-input-status"></div>').appendTo(subrow);
+
+                        var projectNameInputChanged = false;
+                        var projectNameLastChecked = "";
+                        var projectNameValid;
+                        var checkProjectName;
+                        var autoInsertedName = "";
+
+
+                        projectNameInput.on("change keyup paste",function() {
+                            projectNameInputChanged = (projectNameInput.val() !== projectNameLastChecked);
+                            if (checkProjectName) {
+                                clearTimeout(checkProjectName);
+                            } else if (projectNameInputChanged) {
+                                projectNameStatus.empty();
+                                $('<img src="red/images/spin.svg"/>').appendTo(projectNameStatus);
+                                if (projectNameInput.val() === '') {
+                                    validateForm();
+                                    return;
+                                }
+                            }
+                            checkProjectName = setTimeout(function() {
+                                validateForm();
+                                checkProjectName = null;
+                            },300)
+                        });
+                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
+
+                        row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(body);
+                        $('<label for="projects-dialog-screen-create-project-repo">Git repository URL</label>').appendTo(row);
+                        projectRepoInput = $('<input id="projects-dialog-screen-create-project-repo" type="text" placeholder="https://git.example.com/path/my-project.git"></input>').appendTo(row);
+                        $('<label id="projects-dialog-screen-create-project-repo-label" class="projects-edit-form-sublabel"><small>https://, ssh:// or file://</small></label>').appendTo(row);
+                        var projectRepoChanged = false;
+                        var lastProjectRepo = "";
+                        projectRepoInput.on("change keyup paste",function() {
+                            projectRepoChanged = true;
+                            var repo = $(this).val();
+                            if (lastProjectRepo !== repo) {
+                                $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+                            }
+                            lastProjectRepo = repo;
+
+                            var m = /\/([^/]+?)(?:\.git)?$/.exec(repo);
+                            if (m) {
+                                var projectName = projectNameInput.val();
+                                if (projectName === "" || projectName === autoInsertedName) {
+                                    autoInsertedName = m[1];
+                                    projectNameInput.val(autoInsertedName);
+                                    projectNameInput.change();
+                                }
+                            }
+                            validateForm();
+                        });
+
+                        var cloneAuthRows = $('<div class="projects-dialog-screen-create-row"></div>').appendTo(body);
+                        row = $('<div class="form-row projects-dialog-screen-create-row-auth-error"></div>').hide().appendTo(cloneAuthRows);
+                        $('<div><i class="fa fa-warning"></i> Authentication failed</div>').appendTo(row);
+
+                        // Repo credentials - username/password ----------------
+                        row = $('<div class="hide form-row projects-dialog-screen-create-row-creds"></div>').hide().appendTo(cloneAuthRows);
+
+                        var subrow = $('<div style="width: calc(50% - 10px); display:inline-block;"></div>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-repo-user">Username</label>').appendTo(subrow);
+                        projectRepoUserInput = $('<input id="projects-dialog-screen-create-project-repo-user" type="text"></input>').appendTo(subrow);
+
+                        subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-repo-pass">Password</label>').appendTo(subrow);
+                        projectRepoPasswordInput = $('<input id="projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
+                        // -----------------------------------------------------
+
+                        // Repo credentials - key/passphrase -------------------
+                        row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-sshkey"></div>').hide().appendTo(cloneAuthRows);
+                        subrow = $('<div style="width: calc(50% - 10px); display:inline-block;"></div>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">SSH Key</label>').appendTo(subrow);
+                        projectRepoSSHKeySelect = $("<select>",{style:"width: 100%"}).appendTo(subrow);
+
+                        $.getJSON("settings/user/keys", function(data) {
+                            var count = 0;
+                            data.keys.forEach(function(key) {
+                                projectRepoSSHKeySelect.append($("<option></option>").val(key.name).text(key.name));
+                                count++;
+                            });
+                            if (count === 0) {
+                                projectRepoSSHKeySelect.addClass("input-error");
+                                projectRepoSSHKeySelect.attr("disabled",true);
+                                sshwarningRow.show();
+                            } else {
+                                projectRepoSSHKeySelect.removeClass("input-error");
+                                projectRepoSSHKeySelect.attr("disabled",false);
+                                sshwarningRow.hide();
+                            }
+                        });
+                        subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">Passphrase</label>').appendTo(subrow);
+                        projectRepoPassphrase = $('<input id="projects-dialog-screen-create-project-repo-passphrase" type="password"></input>').appendTo(subrow);
+
+                        subrow = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-sshkey"></div>').appendTo(cloneAuthRows);
+                        var sshwarningRow = $('<div class="projects-dialog-screen-create-row-auth-error-no-keys"></div>').hide().appendTo(subrow);
+                        $('<div class="form-row"><i class="fa fa-warning"></i> Before you can clone a repository over ssh you must add an SSH key to access it.</div>').appendTo(sshwarningRow);
+                        subrow = $('<div style="text-align: center">').appendTo(sshwarningRow);
+                        $('<button class="editor-button">Add an ssh key</button>').appendTo(subrow).click(function(e) {
+                            e.preventDefault();
+                            $('#projects-dialog-cancel').click();
+                            RED.userSettings.show('gitconfig');
+                            setTimeout(function() {
+                                $("#user-settings-gitconfig-add-key").click();
+                            },500);
+                        });
+                        // -----------------------------------------------------
+
+
+                        // Secret - clone
+                        row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(body);
+                        $('<label>Credentials encryption key</label>').appendTo(row);
+                        projectSecretInput = $('<input type="password"></input>').appendTo(row);
+
+
+
+                        return container;
+                    },
+                    buttons: function(options) {
+                        return [
+                            {
+                                text: "Back",
+                                click: function() {
+                                    show('git-config');
+                                }
+                            },
+                            {
+                                id: "projects-dialog-clone-project",
+                                disabled: true,
+                                text: "Clone project", // TODO: nls
+                                class: "primary disabled",
+                                click: function() {
+                                    var projectType = $(".projects-dialog-screen-create-type.selected").data('type');
+                                    var projectData = {
+                                        name: projectNameInput.val(),
+                                    }
+                                    projectData.credentialSecret = projectSecretInput.val();
+                                    var repoUrl = projectRepoInput.val();
+                                    var metaData = {};
+                                    if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(repoUrl)) {
+                                        var selected = projectRepoSSHKeySelect.val();//false;//getSelectedSSHKey(projectRepoSSHKeySelect);
+                                        if ( selected ) {
+                                            projectData.git = {
+                                                remotes: {
+                                                    'origin': {
+                                                        url: repoUrl,
+                                                        keyFile: selected,
+                                                        passphrase: projectRepoPassphrase.val()
+                                                    }
+                                                }
+                                            };
+                                        }
+                                        else {
+                                            console.log("Error! Can't get selected SSH key path.");
+                                            return;
+                                        }
+                                    }
+                                    else {
+                                        projectData.git = {
+                                            remotes: {
+                                                'origin': {
+                                                    url: repoUrl,
+                                                    username: projectRepoUserInput.val(),
+                                                    password: projectRepoPasswordInput.val()
+                                                }
+                                            }
+                                        };
+                                    }
+
+                                    $(".projects-dialog-screen-create-row-auth-error").hide();
+                                    $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+
+                                    projectRepoUserInput.removeClass("input-error");
+                                    projectRepoPasswordInput.removeClass("input-error");
+                                    projectRepoSSHKeySelect.removeClass("input-error");
+                                    projectRepoPassphrase.removeClass("input-error");
+
+                                    RED.deploy.setDeployInflight(true);
+                                    RED.projects.settings.switchProject(projectData.name);
+
+                                    sendRequest({
+                                        url: "projects",
+                                        type: "POST",
+                                        handleAuthFail: false,
+                                        responses: {
+                                            200: function(data) {
+                                                dialog.dialog( "close" );
+                                            },
+                                            400: {
+                                                'project_exists': function(error) {
+                                                    console.log("already exists");
+                                                },
+                                                'git_error': function(error) {
+                                                    console.log("git error",error);
+                                                },
+                                                'git_connection_failed': function(error) {
+                                                    projectRepoInput.addClass("input-error");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Connection failed");
+                                                },
+                                                'git_not_a_repository': function(error) {
+                                                    projectRepoInput.addClass("input-error");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Not a git repository");
+                                                },
+                                                'git_repository_not_found': function(error) {
+                                                    projectRepoInput.addClass("input-error");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Repository not found");
+                                                },
+                                                'git_auth_failed': function(error) {
+                                                    $(".projects-dialog-screen-create-row-auth-error").show();
+
+                                                    projectRepoUserInput.addClass("input-error");
+                                                    projectRepoPasswordInput.addClass("input-error");
+                                                    // getRepoAuthDetails(req);
+                                                    projectRepoSSHKeySelect.addClass("input-error");
+                                                    projectRepoPassphrase.addClass("input-error");
+                                                },
+                                                'missing_flow_file': function(error) {
+                                                    // This is handled via a runtime notification.
+                                                    dialog.dialog("close");
+                                                },
+                                                'project_empty': function(error) {
+                                                    // This is handled via a runtime notification.
+                                                    dialog.dialog("close");
+                                                },
+                                                'credentials_load_failed': function(error) {
+                                                    // This is handled via a runtime notification.
+                                                    dialog.dialog("close");
+                                                },
+                                                '*': function(error) {
+                                                    reportUnexpectedError(error);
+                                                    $( dialog ).dialog( "close" );
+                                                }
+                                            }
+                                        }
+                                    },projectData).then(function() {
+                                        RED.events.emit("project:change", {name:name});
+                                    }).always(function() {
+                                        setTimeout(function() {
+                                            RED.deploy.setDeployInflight(false);
+                                        },500);
+                                    })
+
+                                }
+                            }
+                        ]
+                    }
+                }
+            })(),
             'default-files': (function() {
                 var projectFlowFileInput;
                 var projectCredentialFileInput;
@@ -21844,9 +22425,9 @@ RED.projects = (function() {
                         var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
 
                         $('<p>').text("Create your project files").appendTo(body);
-                        $('<p>').text("A project contains your flow files, a README file, a package.json file and a settings file.").appendTo(body);
+                        $('<p>').text("A project contains your flow files, a README file and a package.json file.").appendTo(body);
                         $('<p>').text("It can contain any other files you want to maintain in the Git repository.").appendTo(body);
-                        if (!options.existingProject) {
+                        if (!options.existingProject && RED.settings.files) {
                             $('<p>').text("Your existing flow and credential files will be copied into the project.").appendTo(body);
                         }
 
@@ -21880,14 +22461,14 @@ RED.projects = (function() {
                         var row = $('<div class="form-row"></div>').appendTo(body);
                         $('<label for="projects-dialog-screen-create-project-file">Flow file</label>').appendTo(row);
                         var subrow = $('<div style="position:relative;"></div>').appendTo(row);
-                        var defaultFlowFile = (createProjectOptions.files &&createProjectOptions.files.flow) || RED.settings.files.flow||"flow.json";
+                        var defaultFlowFile = (createProjectOptions.files &&createProjectOptions.files.flow) || (RED.settings.files && RED.settings.files.flow)||"flow.json";
                         projectFlowFileInput = $('<input id="projects-dialog-screen-create-project-file" type="text">').val(defaultFlowFile)
                             .on("change keyup paste",validateForm)
                             .appendTo(subrow);
                         $('<div class="projects-dialog-screen-input-status"></div>').appendTo(subrow);
                         $('<label class="projects-edit-form-sublabel"><small>*.json</small></label>').appendTo(row);
 
-                        var defaultCredentialsFile = (createProjectOptions.files &&createProjectOptions.files.credentials) || RED.settings.files.credentials||"flow_cred.json";
+                        var defaultCredentialsFile = (createProjectOptions.files &&createProjectOptions.files.credentials) || (RED.settings.files && RED.settings.files.credentials)||"flow_cred.json";
                         row = $('<div class="form-row"></div>').appendTo(body);
                         $('<label for="projects-dialog-screen-create-project-credfile">Credentials file</label>').appendTo(row);
                         subrow = $('<div style="position:relative;"></div>').appendTo(row);
@@ -22115,6 +22696,7 @@ RED.projects = (function() {
                                                 } else {
                                                     show('create-success');
                                                     RED.menu.setDisabled('menu-item-projects-open',false);
+                                                    RED.menu.setDisabled('menu-item-projects-settings',false);
                                                 }
                                             },
                                             400: {
@@ -22133,8 +22715,9 @@ RED.projects = (function() {
                                                     // getRepoAuthDetails(req);
                                                     console.log("git auth error",error);
                                                 },
-                                                'unexpected_error': function(error) {
-                                                    console.log("unexpected_error",error)
+                                                '*': function(error) {
+                                                    reportUnexpectedError(error);
+                                                    $( dialog ).dialog( "close" );
                                                 }
                                             }
                                         }
@@ -22183,6 +22766,7 @@ RED.projects = (function() {
                 var projectSecretSelect;
                 var copyProject;
                 var projectRepoInput;
+                var projectCloneSecret;
                 var emptyProjectCredentialInput;
                 var projectRepoUserInput;
                 var projectRepoPasswordInput;
@@ -22250,7 +22834,12 @@ RED.projects = (function() {
                             } else if (projectType === 'clone') {
                                 var repo = projectRepoInput.val();
 
-                                var validRepo = /^(?:git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+\.git(?:\/?|\#[\d\w\.\-_]+?)$/.test(repo);
+                                // var validRepo = /^(?:file|git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+(?:\/?|\#[\d\w\.\-_]+?)$/.test(repo);
+                                var validRepo = repo.length > 0 && !/\s/.test(repo);
+                                if (/^https?:\/\/[^/]+@/i.test(repo)) {
+                                    $("#projects-dialog-screen-create-project-repo-label small").text("Do not include the username/password in the url");
+                                    validRepo = false;
+                                }
                                 if (!validRepo) {
                                     if (projectRepoChanged) {
                                         projectRepoInput.addClass("input-error");
@@ -22259,17 +22848,17 @@ RED.projects = (function() {
                                 } else {
                                     projectRepoInput.removeClass("input-error");
                                 }
-                                if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(repo)) {
+                                if (/^https?:\/\//.test(repo)) {
+                                    $(".projects-dialog-screen-create-row-creds").show();
+                                    $(".projects-dialog-screen-create-row-sshkey").hide();
+                                } else if (/^(?:ssh|[\S]+?@[\S]+?):(?:\/\/)?/.test(repo)) {
                                     $(".projects-dialog-screen-create-row-creds").hide();
                                     $(".projects-dialog-screen-create-row-sshkey").show();
                                     // if ( !getSelectedSSHKey(projectRepoSSHKeySelect) ) {
                                     //     valid = false;
                                     // }
-                                } else if (/^https?:\/\//.test(repo)) {
-                                    $(".projects-dialog-screen-create-row-creds").show();
-                                    $(".projects-dialog-screen-create-row-sshkey").hide();
                                 } else {
-                                    $(".projects-dialog-screen-create-row-creds").show();
+                                    $(".projects-dialog-screen-create-row-creds").hide();
                                     $(".projects-dialog-screen-create-row-sshkey").hide();
                                 }
 
@@ -22337,7 +22926,11 @@ RED.projects = (function() {
                                 validateForm();
                             },
                             delete: function(project) {
+                                if (projectList) {
+                                    delete projectList[project.name];
+                                }
                                 selectedProject = null;
+
                                 validateForm();
                             }
                         }).appendTo(row);
@@ -22457,13 +23050,19 @@ RED.projects = (function() {
                         row = $('<div class="hide form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(container);
                         $('<label for="projects-dialog-screen-create-project-repo">Git repository URL</label>').appendTo(row);
                         projectRepoInput = $('<input id="projects-dialog-screen-create-project-repo" type="text" placeholder="https://git.example.com/path/my-project.git"></input>').appendTo(row);
-                        $('<label class="projects-edit-form-sublabel"><small>https:// or ssh://</small></label>').appendTo(row);
+                        $('<label id="projects-dialog-screen-create-project-repo-label" class="projects-edit-form-sublabel"><small>https://, ssh:// or file://</small></label>').appendTo(row);
 
                         var projectRepoChanged = false;
+                        var lastProjectRepo = "";
                         projectRepoInput.on("change keyup paste",function() {
                             projectRepoChanged = true;
                             var repo = $(this).val();
-                            var m = /\/([^/]+)\.git/.exec(repo);
+                            if (lastProjectRepo !== repo) {
+                                $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+                            }
+                            lastProjectRepo = repo;
+
+                            var m = /\/([^/]+?)(?:\.git)?$/.exec(repo);
                             if (m) {
                                 var projectName = projectNameInput.val();
                                 if (projectName === "" || projectName === autoInsertedName) {
@@ -22533,10 +23132,12 @@ RED.projects = (function() {
                         // -----------------------------------------------------
 
 
-                        // // Secret - clone
-                        // row = $('<div class="hide form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(container);
-                        // $('<label>Credentials encryption key</label>').appendTo(row);
-                        // projectSecretInput = $('<input type="text"></input>').appendTo(row);
+                        // Secret - clone
+                        row = $('<div class="hide form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(container);
+                        $('<label>Credentials encryption key</label>').appendTo(row);
+                        projectSecretInput = $('<input type="password"></input>').appendTo(row);
+
+
                         switch(options.screen||"empty") {
                             case "empty": createAsEmpty.click(); break;
                             case "open":  openProject.click(); break;
@@ -22584,13 +23185,7 @@ RED.projects = (function() {
                                         };
                                         var encryptionState = $("input[name=projects-encryption-type]:checked").val();
                                         if (encryptionState === 'enabled') {
-                                            var encryptionKeyType = $("input[name=projects-encryption-key]:checked").val();
-                                            if (encryptionKeyType === 'custom') {
-                                                projectData.credentialSecret = emptyProjectCredentialInput.val();
-                                            } else {
-                                                // If 'use default', leave projectData.credentialSecret blank - as that will trigger
-                                                // it to use the default (TODO: if its set...)
-                                            }
+                                            projectData.credentialSecret = emptyProjectCredentialInput.val();
                                         } else {
                                             // Disabled encryption by explicitly setting credSec to false
                                             projectData.credentialSecret = false;
@@ -22600,7 +23195,7 @@ RED.projects = (function() {
                                     } else if (projectType === 'copy') {
                                         projectData.copy = copyProject.name;
                                     } else if (projectType === 'clone') {
-                                        // projectData.credentialSecret = projectSecretInput.val();
+                                        projectData.credentialSecret = projectSecretInput.val();
                                         var repoUrl = projectRepoInput.val();
                                         var metaData = {};
                                         if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(repoUrl)) {
@@ -22643,6 +23238,14 @@ RED.projects = (function() {
                                         })
                                     }
 
+                                    $(".projects-dialog-screen-create-row-auth-error").hide();
+                                    $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+
+                                    projectRepoUserInput.removeClass("input-error");
+                                    projectRepoPasswordInput.removeClass("input-error");
+                                    projectRepoSSHKeySelect.removeClass("input-error");
+                                    projectRepoPassphrase.removeClass("input-error");
+
                                     RED.deploy.setDeployInflight(true);
                                     RED.projects.settings.switchProject(projectData.name);
 
@@ -22663,6 +23266,15 @@ RED.projects = (function() {
                                                 },
                                                 'git_connection_failed': function(error) {
                                                     projectRepoInput.addClass("input-error");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Connection failed");
+                                                },
+                                                'git_not_a_repository': function(error) {
+                                                    projectRepoInput.addClass("input-error");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Not a git repository");
+                                                },
+                                                'git_repository_not_found': function(error) {
+                                                    projectRepoInput.addClass("input-error");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Repository not found");
                                                 },
                                                 'git_auth_failed': function(error) {
                                                     $(".projects-dialog-screen-create-row-auth-error").show();
@@ -22673,6 +23285,10 @@ RED.projects = (function() {
                                                     projectRepoSSHKeySelect.addClass("input-error");
                                                     projectRepoPassphrase.addClass("input-error");
                                                 },
+                                                'missing_flow_file': function(error) {
+                                                    // This is handled via a runtime notification.
+                                                    dialog.dialog("close");
+                                                },
                                                 'project_empty': function(error) {
                                                     // This is handled via a runtime notification.
                                                     dialog.dialog("close");
@@ -22681,8 +23297,9 @@ RED.projects = (function() {
                                                     // This is handled via a runtime notification.
                                                     dialog.dialog("close");
                                                 },
-                                                'unexpected_error': function(error) {
-                                                    console.log("unexpected_error",error)
+                                                '*': function(error) {
+                                                    reportUnexpectedError(error);
+                                                    $( dialog ).dialog( "close" );
                                                 }
                                             }
                                         }
@@ -23060,7 +23677,7 @@ RED.projects = (function() {
                     resultCallbackArgs = {error:responses.statusText};
                     return;
                 } else if (options.handleAuthFail !== false && xhr.responseJSON.error === 'git_auth_failed') {
-                    var url = activeProject.git.remotes[options.remote||'origin'].fetch;
+                    var url = activeProject.git.remotes[xhr.responseJSON.remote||options.remote||'origin'].fetch;
 
                     var message = $('<div>'+
                         '<div class="form-row">Authentication required for repository:</div>'+
@@ -23068,7 +23685,10 @@ RED.projects = (function() {
                         '</div>');
 
                     var isSSH = false;
-                    if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(url)) {
+                    if (/^https?:\/\//.test(url)) {
+                        $('<div class="form-row"><label for="projects-user-auth-username">Username</label><input id="projects-user-auth-username" type="text"></input></div>'+
+                        '<div class="form-row"><label for=projects-user-auth-password">Password</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
+                    } else if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(url)) {
                         isSSH = true;
                         var row = $('<div class="form-row"></div>').appendTo(message);
                         $('<label for="projects-user-auth-key">SSH Key</label>').appendTo(row);
@@ -23086,9 +23706,6 @@ RED.projects = (function() {
                         row = $('<div class="form-row"></div>').appendTo(message);
                         $('<label for="projects-user-auth-passphrase">Passphrase</label>').appendTo(row);
                         $('<input id="projects-user-auth-passphrase" type="password"></input>').appendTo(row);
-                    } else {
-                        $('<div class="form-row"><label for="projects-user-auth-username">Username</label><input id="projects-user-auth-username" type="text"></input></div>'+
-                          '<div class="form-row"><label for=projects-user-auth-password">Password</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
                     }
 
                     var notification = RED.notify(message,{
@@ -23126,7 +23743,7 @@ RED.projects = (function() {
 
                                     }
                                     sendRequest({
-                                        url: "projects/"+activeProject.name+"/remotes/"+(options.remote||'origin'),
+                                        url: "projects/"+activeProject.name+"/remotes/"+(xhr.responseJSON.remote||options.remote||'origin'),
                                         type: "PUT",
                                         responses: {
                                             0: function(error) {
@@ -23289,8 +23906,17 @@ RED.projects = (function() {
                             },Math.max(300-(Date.now() - start),0));
                         },
                         400: {
+                            'git_connection_failed': function(error) {
+                                RED.notify(error.message,'error');
+                            },
+                            'git_not_a_repository': function(error) {
+                                RED.notify(error.message,'error');
+                            },
+                            'git_repository_not_found': function(error) {
+                                RED.notify(error.message,'error');
+                            },
                             'unexpected_error': function(error) {
-                                console.log(error);
+                                reportUnexpectedError(error);
                             }
                         }
                     }
@@ -23333,11 +23959,12 @@ RED.projects = (function() {
 
         RED.actions.add("core:new-project",RED.projects.newProject);
         RED.actions.add("core:open-project",RED.projects.selectProject);
-
+        RED.actions.add("core:show-project-settings",RED.projects.settings.show);
         var projectsAPI = {
             sendRequest:sendRequest,
             createBranchList:createBranchList,
-            addSpinnerOverlay:addSpinnerOverlay
+            addSpinnerOverlay:addSpinnerOverlay,
+            reportUnexpectedError:reportUnexpectedError
         };
         RED.projects.settings.init(projectsAPI);
         RED.projects.userSettings.init(projectsAPI);
@@ -23358,6 +23985,43 @@ RED.projects = (function() {
         }
         createProjectOptions = {};
         show('default-files',{existingProject: true});
+    }
+    function createDefaultPackageFile() {
+        RED.deploy.setDeployInflight(true);
+        RED.projects.settings.switchProject(activeProject.name);
+
+        var method = "PUT";
+        var url = "projects/"+activeProject.name;
+        var createProjectOptions = {
+            initialise: true
+        };
+        sendRequest({
+            url: url,
+            type: method,
+            requireCleanWorkspace: true,
+            handleAuthFail: false,
+            responses: {
+                200: function(data) { },
+                400: {
+                    'git_error': function(error) {
+                        console.log("git error",error);
+                    },
+                    'missing_flow_file': function(error) {
+                        // This is a natural next error - but let the runtime event
+                        // trigger the dialog rather than double-report it.
+                        $( dialog ).dialog( "close" );
+                    },
+                    '*': function(error) {
+                        reportUnexpectedError(error);
+                        $( dialog ).dialog( "close" );
+                    }
+                }
+            }
+        },createProjectOptions).always(function() {
+            setTimeout(function() {
+                RED.deploy.setDeployInflight(false);
+            },500);
+        })
     }
 
     function refresh(done) {
@@ -23438,6 +24102,7 @@ RED.projects = (function() {
             RED.projects.settings.show('deps');
         },
         createDefaultFileSet: createDefaultFileSet,
+        createDefaultPackageFile: createDefaultPackageFile,
         // showSidebar: showSidebar,
         refresh: refresh,
         editProject: function() {
@@ -23499,7 +24164,7 @@ RED.projects.settings = (function() {
         var tabContainer;
 
         var trayOptions = {
-            title: "Project Information",// RED._("menu.label.userSettings"),, // TODO: nls
+            title: "Project Settings",// RED._("menu.label.userSettings"),, // TODO: nls
             buttons: [
                 {
                     id: "node-dialog-ok",
@@ -23593,7 +24258,8 @@ RED.projects.settings = (function() {
                             RED.sidebar.versionControl.refresh(true);
                         },
                         400: {
-                            'unexpected_error': function(error) {
+                            '*': function(error) {
+                                utils.reportUnexpectedError(error);
                                 done(error,null);
                             }
                         },
@@ -23658,7 +24324,8 @@ RED.projects.settings = (function() {
                             done(null,data);
                         },
                         400: {
-                            'unexpected_error': function(error) {
+                            '*': function(error) {
+                                utils.reportUnexpectedError(error);
                                 done(error,null);
                             }
                         },
@@ -23892,9 +24559,9 @@ RED.projects.settings = (function() {
                     }
                     var icon = $('<i class="fa '+iconClass+'"></i>').appendTo(titleRow);
                     entry.icon = icon;
-                    $('<span>').html(entry.id).appendTo(titleRow);
+                    $('<span>').text(entry.id).appendTo(titleRow);
                     var metaRow = $('<div class="palette-module-meta palette-module-version"><i class="fa fa-tag"></i></div>').appendTo(headerRow);
-                    var versionSpan = $('<span>').html(entry.version).appendTo(metaRow);
+                    var versionSpan = $('<span>').text(entry.version).appendTo(metaRow);
                     metaRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
                     var buttons = $('<div class="palette-module-button-group"></div>').appendTo(metaRow);
                     if (RED.user.hasPermission("projects.write")) {
@@ -24412,7 +25079,7 @@ RED.projects.settings = (function() {
                 var done = function(err) {
                     spinner.remove();
                     if (err) {
-                        console.log(err);
+                        utils.reportUnexpectedError(err);
                         return;
                     }
                     flowFileLabelText.text(flowFileInput.val());
@@ -24455,10 +25122,6 @@ RED.projects.settings = (function() {
                             'credentials_load_failed': function(error) {
                                 done(error);
                             },
-                            'unexpected_error': function(error) {
-                                console.log(error);
-                                done(error);
-                            },
                             'missing_current_credential_key':  function(error) {
                                 credentialSecretExistingInput.addClass("input-error");
                                 popover = RED.popover.create({
@@ -24469,11 +25132,16 @@ RED.projects.settings = (function() {
                                     autoClose: 3000
                                 }).open();
                                 done(error);
+                            },
+                            '*': function(error) {
+                                done(error);
                             }
                         },
                     }
                 },payload).always(function() {
-                    RED.deploy.setDeployInflight(false);
+                    setTimeout(function() {
+                        RED.deploy.setDeployInflight(false);
+                    },500);
                 });
             });
         var updateForm = function() {
@@ -24592,8 +25260,8 @@ RED.projects.settings = (function() {
                                                                 ]
                                                             });
                                                         },
-                                                        'unexpected_error': function(error) {
-                                                            console.log(error);
+                                                        '*': function(error) {
+                                                            utils.reportUnexpectedError(error);
                                                             spinner.remove();
                                                         }
                                                     },
@@ -24643,11 +25311,19 @@ RED.projects.settings = (function() {
                 editRepoButton.attr('disabled',true);
                 addRemoteDialog.slideDown(200, function() {
                     addRemoteDialog[0].scrollIntoView();
+                    if (isEmpty) {
+                        remoteNameInput.val('origin');
+                        remoteURLInput.focus();
+                    } else {
+                        remoteNameInput.focus();
+                    }
+                    validateForm();
                 });
             });
 
 
         var emptyItem = { empty: true };
+        var isEmpty = true;
         var row = $('<div class="user-settings-row"></div>').appendTo(repoContainer);
         var addRemoteDialog = $('<div class="projects-dialog-list-dialog"></div>').hide().appendTo(row);
         row = $('<div class="user-settings-row projects-dialog-list"></div>').appendTo(repoContainer);
@@ -24694,6 +25370,14 @@ RED.projects.settings = (function() {
                                         text: 'Delete remote',
                                         click: function() {
                                             notification.close();
+
+                                            if (activeProject.git.branches.remote && activeProject.git.branches.remote.indexOf(entry.name+"/") === 0) {
+                                                delete activeProject.git.branches.remote;
+                                            }
+                                            if (activeProject.git.branches.remoteAlt && activeProject.git.branches.remoteAlt.indexOf(entry.name+"/") === 0) {
+                                                delete activeProject.git.branches.remoteAlt;
+                                            }
+
                                             var url = "projects/"+activeProject.name+"/remotes/"+entry.name;
                                             var options = {
                                                 url: url,
@@ -24703,20 +25387,25 @@ RED.projects.settings = (function() {
                                                         row.fadeOut(200,function() {
                                                             remotesList.editableList('removeItem',entry);
                                                             setTimeout(spinner.remove, 100);
-                                                            activeProject.git.remotes = {};
-                                                            data.remotes.forEach(function(remote) {
-                                                                var name = remote.name;
-                                                                delete remote.name;
-                                                                activeProject.git.remotes[name] = remote;
-                                                            });
                                                             if (data.remotes.length === 0) {
+                                                                delete activeProject.git.remotes;
+                                                                isEmpty = true;
                                                                 remotesList.editableList('addItem',emptyItem);
+                                                            } else {
+                                                                activeProject.git.remotes = {};
+                                                                data.remotes.forEach(function(remote) {
+                                                                    var name = remote.name;
+                                                                    delete remote.name;
+                                                                    activeProject.git.remotes[name] = remote;
+                                                                });
                                                             }
+                                                            delete activeProject.git.branches.remoteAlt;
+                                                            RED.sidebar.versionControl.refresh();
                                                         });
                                                     },
                                                     400: {
-                                                        'unexpected_error': function(error) {
-                                                            console.log(error);
+                                                        '*': function(error) {
+                                                            utils.reportUnexpectedError(error);
                                                             spinner.remove();
                                                         }
                                                     },
@@ -24737,15 +25426,26 @@ RED.projects.settings = (function() {
 
         var validateForm = function() {
             var validName = /^[a-zA-Z0-9\-_]+$/.test(remoteNameInput.val());
-            var validRepo = /^(?:git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+\.git(?:\/?|\#[\d\w\.\-_]+?)$/.test(remoteURLInput.val());
+            var repo = remoteURLInput.val();
+            // var validRepo = /^(?:file|git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+(?:\.git)?(?:\/?|\#[\d\w\.\-_]+?)$/.test(remoteURLInput.val());
+            var validRepo = repo.length > 0 && !/\s/.test(repo);
+            if (/^https?:\/\/[^/]+@/i.test(repo)) {
+                remoteURLLabel.text("Do not include the username/password in the url");
+                validRepo = false;
+            } else {
+                remoteURLLabel.text("https://, ssh:// or file://");
+            }
             saveButton.attr('disabled',(!validName || !validRepo))
             remoteNameInput.toggleClass('input-error',remoteNameInputChanged&&!validName);
+            remoteURLInput.toggleClass('input-error',remoteURLInputChanged&&!validRepo);
             if (popover) {
                 popover.close();
                 popover = null;
             }
         };
         var popover;
+        var remoteNameInputChanged = false;
+        var remoteURLInputChanged = false;
 
         $('<div class="projects-dialog-list-dialog-header">').text('Add remote').appendTo(addRemoteDialog);
 
@@ -24755,11 +25455,14 @@ RED.projects.settings = (function() {
             remoteNameInputChanged = true;
             validateForm();
         });
-        var remoteNameInputChanged = false;
         $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
         row = $('<div class="user-settings-row"></div>').appendTo(addRemoteDialog);
         $('<label for=""></label>').text('URL').appendTo(row);
-        var remoteURLInput = $('<input type="text">').appendTo(row).on("change keyup paste",validateForm);
+        var remoteURLInput = $('<input type="text">').appendTo(row).on("change keyup paste",function() {
+            remoteURLInputChanged = true;
+            validateForm()
+        });
+        var remoteURLLabel = $('<label class="projects-edit-form-sublabel"><small>https://, ssh:// or file://</small></label>').appendTo(row).find("small");
 
         var hideEditForm = function() {
             editRepoButton.attr('disabled',false);
@@ -24813,6 +25516,7 @@ RED.projects.settings = (function() {
                                 activeProject.git.remotes[name] = remote;
                             });
                             updateForm();
+                            RED.sidebar.versionControl.refresh();
                             done();
                         },
                         400: {
@@ -24827,14 +25531,15 @@ RED.projects.settings = (function() {
                                 remoteNameInput.addClass('input-error');
                                 done(error);
                             },
-                            'unexpected_error': function(error) {
-                                console.log(error);
+                            '*': function(error) {
+                                utils.reportUnexpectedError(error);
                                 done(error);
                             }
                         },
                     }
                 },payload);
             });
+
         var updateForm = function() {
             remotesList.editableList('empty');
             var count = 0;
@@ -24846,7 +25551,8 @@ RED.projects.settings = (function() {
                     }
                 }
             }
-            if (count === 0) {
+            isEmpty = (count === 0);
+            if (isEmpty) {
                 remotesList.editableList('addItem',emptyItem);
             }
         }
@@ -25392,7 +26098,6 @@ RED.sidebar.versionControl = (function() {
     var unmergedContent;
     var unmergedChangesList;
     var commitButton;
-    var mergeConflictNotification;
     var localChanges;
 
     var localCommitList;
@@ -25413,10 +26118,6 @@ RED.sidebar.versionControl = (function() {
                     // done(error,null);
                 },
                 200: function(data) {
-                    if (mergeConflictNotification) {
-                        mergeConflictNotification.close();
-                        mergeConflictNotification = null;
-                    }
                     var title;
                     if (state === 'unstaged') {
                         title = 'Unstaged changes : '+entry.file
@@ -25442,6 +26143,11 @@ RED.sidebar.versionControl = (function() {
                         options.oldRev = "@";
                         options.newRev = ":0";
                     } else {
+                        options.oldRevTitle = "Local";
+                        options.newRevTitle = "Remote";
+                        options.commonRev = ":1";
+                        options.oldRev = ":2";
+                        options.newRev = ":3";
                         options.onresolve = function(resolution) {
                             utils.sendRequest({
                                 url: "projects/"+activeProject.name+"/resolve/"+encodeURIComponent(entry.file),
@@ -25464,9 +26170,7 @@ RED.sidebar.versionControl = (function() {
                             },{resolutions:resolution.resolutions[entry.file]});
                         }
                     }
-                    options.oncancel = showMergeConflictNotification;
                     RED.diff.showUnifiedDiff(options);
-                    // console.log(data.diff);
                 },
                 400: {
                     'unexpected_error': function(error) {
@@ -25484,6 +26188,18 @@ RED.sidebar.versionControl = (function() {
         if (entry.label) {
             row.addClass('node-info-none');
             container.text(entry.label);
+            if (entry.button) {
+                container.css({
+                    display: "inline-block",
+                    maxWidth: "300px",
+                    textAlign: "left"
+                })
+                var toolbar = $('<div style="float: right; margin: 5px; height: 50px;"></div>').appendTo(container);
+
+                $('<button class="editor-button editor-button-small"></button>').text(entry.button.label)
+                    .appendTo(toolbar)
+                    .click(entry.button.click);
+            }
             return;
         }
 
@@ -25506,6 +26222,7 @@ RED.sidebar.versionControl = (function() {
                 .appendTo(bg)
                 .click(function(evt) {
                     evt.preventDefault();
+
                     var spinner = utils.addSpinnerOverlay(container).addClass('projects-dialog-spinner-contain');
                     var notification = RED.notify("Are you sure you want to revert the changes to '"+entry.file+"'? This cannot be undone.", {
                         type: "warning",
@@ -25540,7 +26257,12 @@ RED.sidebar.versionControl = (function() {
                                             }
                                         }
                                     }
-                                    utils.sendRequest(options);
+                                    RED.deploy.setDeployInflight(true);
+                                    utils.sendRequest(options).always(function() {
+                                        setTimeout(function() {
+                                            RED.deploy.setDeployInflight(false);
+                                        },500);
+                                    });
                                 }
                             }
 
@@ -25714,6 +26436,7 @@ RED.sidebar.versionControl = (function() {
                 evt.stopPropagation();
                 var spinner = utils.addSpinnerOverlay(unmergedContent);
                 var activeProject = RED.projects.getActiveProject();
+                RED.deploy.setDeployInflight(true);
                 utils.sendRequest({
                     url: "projects/"+activeProject.name+"/merge",
                     type: "DELETE",
@@ -25731,6 +26454,10 @@ RED.sidebar.versionControl = (function() {
                             }
                         },
                     }
+                }).always(function() {
+                    setTimeout(function() {
+                        RED.deploy.setDeployInflight(false);
+                    },500);
                 });
             });
         unmergedChangesList = $("<ol>",{style:"position: absolute; top: 30px; bottom: 0; right:0; left:0;"}).appendTo(unmergedContent);
@@ -25738,6 +26465,16 @@ RED.sidebar.versionControl = (function() {
             addButton: false,
             scrollOnAdd: false,
             addItem: function(row,index,entry) {
+                if (entry === emptyMergedItem) {
+                    entry.button = {
+                        label: 'commit',
+                        click: function(evt) {
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                            showCommitBox();
+                        }
+                    }
+                }
                 createChangeEntry(row,entry,entry.treeStatus,'unmerged');
             },
             sort: function(A,B) {
@@ -25757,28 +26494,32 @@ RED.sidebar.versionControl = (function() {
         header = $('<div class="sidebar-version-control-change-header">Changes to commit</div>').appendTo(stagedContent);
 
         bg = $('<div style="float: right"></div>').appendTo(header);
+        var showCommitBox = function() {
+            commitMessage.val("");
+            submitCommitButton.attr("disabled",true);
+            unstagedContent.css("height","30px");
+            if (unmergedContent.is(":visible")) {
+                unmergedContent.css("height","30px");
+                stagedContent.css("height","calc(100% - 60px - 175px)");
+            } else {
+                stagedContent.css("height","calc(100% - 30px - 175px)");
+            }
+            commitBox.show();
+            setTimeout(function() {
+                commitBox.css("height","175px");
+            },10);
+            stageAllButton.attr("disabled",true);
+            unstageAllButton.attr("disabled",true);
+            commitButton.attr("disabled",true);
+            abortMergeButton.attr("disabled",true);
+            commitMessage.focus();
+        }
         commitButton = $('<button class="editor-button editor-button-small" style="margin-right: 5px;">commit</button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
                 evt.stopPropagation();
-                commitMessage.val("");
-                submitCommitButton.attr("disabled",true);
-                unstagedContent.css("height","30px");
-                if (unmergedContent.is(":visible")) {
-                    unmergedContent.css("height","30px");
-                    stagedContent.css("height","calc(100% - 60px - 175px)");
-                } else {
-                    stagedContent.css("height","calc(100% - 30px - 175px)");
-                }
-                commitBox.show();
-                setTimeout(function() {
-                    commitBox.css("height","175px");
-                },10);
-                stageAllButton.attr("disabled",true);
-                unstageAllButton.attr("disabled",true);
-                commitButton.attr("disabled",true);
-                commitMessage.focus();
+                showCommitBox();
             });
         unstageAllButton = $('<button class="editor-button editor-button-small"><i class="fa fa-minus"></i> all</button>')
             .appendTo(bg)
@@ -25807,7 +26548,7 @@ RED.sidebar.versionControl = (function() {
 
         commitBox = $('<div class="sidebar-version-control-slide-box sidebar-version-control-slide-box-bottom"></div>').hide().appendTo(localChanges.content);
 
-        var commitMessage = $('<textarea>')
+        var commitMessage = $('<textarea placeholder="Enter your commit message"></textarea>')
             .appendTo(commitBox)
             .on("change keyup paste",function() {
                 submitCommitButton.attr('disabled',$(this).val().trim()==="");
@@ -25829,6 +26570,8 @@ RED.sidebar.versionControl = (function() {
                 stageAllButton.attr("disabled",false);
                 unstageAllButton.attr("disabled",false);
                 commitButton.attr("disabled",false);
+                abortMergeButton.attr("disabled",false);
+
             })
         var submitCommitButton = $('<button class="editor-button">Commit</button>')
             .appendTo(commitToolbar)
@@ -25836,6 +26579,7 @@ RED.sidebar.versionControl = (function() {
                 evt.preventDefault();
                 var spinner = utils.addSpinnerOverlay(submitCommitButton).addClass('projects-dialog-spinner-sidebar');
                 var activeProject = RED.projects.getActiveProject();
+                RED.deploy.setDeployInflight(true);
                 utils.sendRequest({
                     url: "projects/"+activeProject.name+"/commit",
                     type: "POST",
@@ -25849,17 +26593,18 @@ RED.sidebar.versionControl = (function() {
                             refresh(true);
                         },
                         400: {
-                            'unexpected_error': function(error) {
-                                console.log(error);
+                            '*': function(error) {
+                                utils.reportUnexpectedError(error);
                             }
                         },
                     }
                 },{
                     message:commitMessage.val()
-                });
-
-
-
+                }).always(function() {
+                    setTimeout(function() {
+                        RED.deploy.setDeployInflight(false);
+                    },500);
+                })
             })
 
 
@@ -25873,7 +26618,7 @@ RED.sidebar.versionControl = (function() {
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
-                refresh(true);
+                refresh(true,true);
             })
 
         var localBranchToolbar = $('<div class="sidebar-version-control-change-header" style="text-align: right;"></div>').appendTo(localHistory.content);
@@ -25915,7 +26660,10 @@ RED.sidebar.versionControl = (function() {
                     closeBranchBox();
                     localCommitListShade.show();
                     $(this).addClass('selected');
+                    var activeProject = RED.projects.getActiveProject();
+                    $("#sidebar-version-control-repo-toolbar-set-upstream-row").toggle(!!activeProject.git.branches.remoteAlt);
                     remoteBox.show();
+
                     setTimeout(function() {
                         remoteBox.css("height","265px");
                     },100);
@@ -26012,10 +26760,10 @@ RED.sidebar.versionControl = (function() {
                             // done(error,null);
                         },
                         200: function(data) {
-                            RED.projects.refresh(function() {
-                                closeBranchBox(function() {
-                                    spinner.remove();
-                                });
+                            // Changing branch will trigger a runtime event
+                            // that leads to a project refresh.
+                            closeBranchBox(function() {
+                                spinner.remove();
                             });
                         },
                         400: {
@@ -26034,7 +26782,9 @@ RED.sidebar.versionControl = (function() {
                         },
                     }
                 },body).always(function(){
-                    RED.deploy.setDeployInflight(false);
+                    setTimeout(function() {
+                        RED.deploy.setDeployInflight(false);
+                    },500);
                 });
             }
         });
@@ -26109,7 +26859,13 @@ RED.sidebar.versionControl = (function() {
                         },
                         400: {
                             'git_connection_failed': function(error) {
-                                RED.notify(error.message);
+                                RED.notify(error.message,'error');
+                            },
+                            'git_not_a_repository': function(error) {
+                                RED.notify(error.message,'error');
+                            },
+                            'git_repository_not_found': function(error) {
+                                RED.notify(error.message,'error');
                             },
                             'unexpected_error': function(error) {
                                 console.log(error);
@@ -26183,7 +26939,8 @@ RED.sidebar.versionControl = (function() {
                 if (activeProject.git.branches.remoteAlt) {
                     url+="/"+activeProject.git.branches.remoteAlt;
                 }
-                if ($("#sidebar-version-control-repo-toolbar-set-upstream").prop('checked')) {
+                var setUpstream = $("#sidebar-version-control-repo-toolbar-set-upstream").prop('checked');
+                if (setUpstream) {
                     url+="?u=true"
                 }
                 utils.sendRequest({
@@ -26195,6 +26952,10 @@ RED.sidebar.versionControl = (function() {
                             // done(error,null);
                         },
                         200: function(data) {
+                            if (setUpstream && activeProject.git.branches.remoteAlt) {
+                                activeProject.git.branches.remote = activeProject.git.branches.remoteAlt;
+                                delete activeProject.git.branches.remoteAlt;
+                            }
                             refresh(true);
                             closeRemoteBox();
                         },
@@ -26214,51 +26975,91 @@ RED.sidebar.versionControl = (function() {
                 });
             });
 
+        var pullRemote = function(options) {
+            options = options || {};
+            var spinner = utils.addSpinnerOverlay(remoteBox).addClass("projects-dialog-spinner-contain");
+            var activeProject = RED.projects.getActiveProject();
+            var url = "projects/"+activeProject.name+"/pull";
+            if (activeProject.git.branches.remoteAlt) {
+                url+="/"+activeProject.git.branches.remoteAlt;
+            }
+            if (options.setUpstream || options.allowUnrelatedHistories) {
+                url+="?";
+            }
+            if (options.setUpstream) {
+                url += "setUpstream=true"
+                if (options.allowUnrelatedHistories) {
+                    url += "&";
+                }
+            }
+            if (options.allowUnrelatedHistories) {
+                url += "allowUnrelatedHistories=true"
+            }
+            utils.sendRequest({
+                url: url,
+                type: "POST",
+                responses: {
+                    0: function(error) {
+                        console.log(error);
+                        // done(error,null);
+                    },
+                    200: function(data) {
+                        if (options.setUpstream && activeProject.git.branches.remoteAlt) {
+                            activeProject.git.branches.remote = activeProject.git.branches.remoteAlt;
+                            delete activeProject.git.branches.remoteAlt;
+                        }
+                        refresh(true);
+                        closeRemoteBox();
+                    },
+                    400: {
+                        'git_local_overwrite': function(err) {
+                            RED.notify("<p>Unable to pull remote changes; your unstaged local changes would be overwritten.</p><p>Commit your changes and try again.</p>"+
+                                '<p><a href="#" onclick="RED.sidebar.versionControl.showLocalChanges(); return false;">'+'Show unstaged changes'+'</a></p>',"error",false,10000000);
+                        },
+                        'git_pull_merge_conflict': function(err) {
+                            refresh(true);
+                            closeRemoteBox();
+                        },
+                        'git_connection_failed': function(err) {
+                            RED.notify("Could not connect to remote repository: "+err.toString(),"warning")
+                        },
+                        'git_pull_unrelated_history': function(error) {
+                            var notification = RED.notify("<p>The remote has an unrelated history of commits.</p><p>Are you sure you want to pull the changes into your local repository?</p>",{
+                                type: 'error',
+                                modal: true,
+                                fixed: true,
+                                buttons: [
+                                    {
+                                        text: RED._("common.label.cancel"),
+                                        click: function() {
+                                            notification.close();
+                                        }
+                                    },{
+                                        text: 'Pull changes',
+                                        click: function() {
+                                            notification.close();
+                                            options.allowUnrelatedHistories = true;
+                                            pullRemote(options)
+                                        }
+                                    }
+                                ]
+                            });
+                        },
+                        '*': function(error) {
+                            utils.reportUnexpectedError(error);
+                        }
+                    },
+                }
+            },{}).always(function() {
+                spinner.remove();
+            });
+        }
         $('<button id="sidebar-version-control-repo-pull" class="sidebar-version-control-repo-sub-action editor-button"><i class="fa fa-long-arrow-down"></i> <span>pull</span></button>')
             .appendTo(row)
             .click(function(e) {
                 e.preventDefault();
-                var spinner = utils.addSpinnerOverlay(remoteBox).addClass("projects-dialog-spinner-contain");
-                var activeProject = RED.projects.getActiveProject();
-                var url = "projects/"+activeProject.name+"/pull";
-                if (activeProject.git.branches.remoteAlt) {
-                    url+="/"+activeProject.git.branches.remoteAlt;
-                }
-                if ($("#sidebar-version-control-repo-toolbar-set-upstream").prop('checked')) {
-                    url+="?u=true"
-                }
-
-                utils.sendRequest({
-                    url: url,
-                    type: "POST",
-                    responses: {
-                        0: function(error) {
-                            console.log(error);
-                            // done(error,null);
-                        },
-                        200: function(data) {
-                            refresh(true);
-                            closeRemoteBox();
-                        },
-                        400: {
-                            'git_local_overwrite': function(err) {
-                                RED.notify("Unable to pull remote changes; your unstaged local changes would be overwritten. Commit your changes and try again."+
-                                    '<p><a href="#" onclick="RED.sidebar.versionControl.showLocalChanges(); return false;">'+'Show unstaged changes'+'</a></p>',"error",false,10000000);
-                            },
-                            'git_pull_merge_conflict': function(err) {
-                                refresh(true);
-                            },
-                            'git_connection_failed': function(err) {
-                                RED.notify("Could not connect to remote repository: "+err.toString(),"warning")
-                            },
-                            'unexpected_error': function(error) {
-                                console.log(error);
-                                // done(error,null);
-                            }
-                        },
-                    }
-                },{}).always(function() {
-                    spinner.remove();
+                pullRemote({
+                    setUpstream: $("#sidebar-version-control-repo-toolbar-set-upstream").prop('checked')
                 });
             });
 
@@ -26396,16 +27197,6 @@ RED.sidebar.versionControl = (function() {
     //     }
     // }
 
-    function showMergeConflictNotification() {
-        if (isMerging) {
-            mergeConflictNotification = RED.notify("NLS: Automatic merging of remote changes failed. Fix the unmerged conflicts then commit the results."+
-                '<p><a href="#" onclick="RED.sidebar.versionControl.showLocalChanges(); return false;">'+'Show merge conflicts'+'</a></p>',"error",true);
-        }
-    }
-
-
-
-
     function refreshFiles(result) {
         var files = result.files;
         if (bulkChangeSpinner) {
@@ -26414,16 +27205,9 @@ RED.sidebar.versionControl = (function() {
         }
         isMerging = !!result.merging;
         if (isMerging) {
-            if (!mergeConflictNotification) {
-                showMergeConflictNotification();
-            }
             sidebarContent.addClass("sidebar-version-control-merging");
             unmergedContent.show();
         } else {
-            if (mergeConflictNotification) {
-                mergeConflictNotification.close();
-                mergeConflictNotification = null;
-            }
             sidebarContent.removeClass("sidebar-version-control-merging");
             unmergedContent.hide();
         }
@@ -26530,7 +27314,7 @@ RED.sidebar.versionControl = (function() {
         }
     }
 
-    function refresh(full) {
+    function refresh(full, includeRemote) {
         if (refreshInProgress) {
             return;
         }
@@ -26550,7 +27334,11 @@ RED.sidebar.versionControl = (function() {
 
         var activeProject = RED.projects.getActiveProject();
         if (activeProject) {
-            $.getJSON("projects/"+activeProject.name+"/status",function(result) {
+            var url = "projects/"+activeProject.name+"/status";
+            if (includeRemote) {
+                url += "?remote=true"
+            }
+            $.getJSON(url,function(result) {
                 refreshFiles(result);
 
                 $('#sidebar-version-control-local-branch').text(result.branches.local);
@@ -26594,6 +27382,8 @@ RED.sidebar.versionControl = (function() {
                 }
                 refreshInProgress = false;
                 $('.sidebar-version-control-shade').hide();
+            }).fail(function() {
+                refreshInProgress = false;
             });
         } else {
             $('.sidebar-version-control-shade').show();

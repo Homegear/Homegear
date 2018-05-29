@@ -118,7 +118,8 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(clientInfo, "getValue", parameters);
+                std::string methodName = "getValue";
+				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 				else
 				{
@@ -162,7 +163,8 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
 					parameters->arrayValue->push_back(structIterator->second);
-					BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(clientInfo, "setValue", parameters);
+                    std::string methodName = "setValue";
+					BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 					if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 					else contentString = "{\"result\":\"success\"}";
 				}
@@ -177,7 +179,8 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
 				BaseLib::PVariable value = structIterator->second;
 				if(value) parameters->arrayValue->push_back(value);
-				BaseLib::PVariable response = GD::rpcServers.begin()->second.callMethod(clientInfo, "putParamset", parameters);
+                std::string methodName = "putParamset";
+				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 				else contentString = "{\"result\":\"success\"}";
 			}

@@ -41,7 +41,7 @@
 #include "../Systems/FamilyController.h"
 #include "../Systems/DatabaseController.h"
 #include "../Systems/UiController.h"
-#include "../RPC/Server.h"
+#include "../RPC/RpcServer.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
@@ -70,7 +70,7 @@ public:
 	static std::unique_ptr<FamilyController> familyController;
 	static std::unique_ptr<LicensingController> licensingController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
-	static std::map<int32_t, Rpc::Server> rpcServers;
+	static std::map<int32_t, std::shared_ptr<Rpc::RpcServer>> rpcServers;
 	static std::unique_ptr<Rpc::Client> rpcClient;
 #ifndef NO_SCRIPTENGINE
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
