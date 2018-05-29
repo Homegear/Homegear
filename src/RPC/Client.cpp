@@ -1111,15 +1111,17 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		}
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		server->creationTime = BaseLib::HelperFunctions::getTimeSeconds();
-		server->getServerClientInfo() = clientInfo;
 		server->address.first = clientId;
 		server->hostname = address;
 		server->uid = _serverId++;
 		server->webSocket = true;
 		server->autoConnect = false;
 		server->initialized = true;
-		server->socket = socket;
-		server->socket->setReadTimeout(15000000);
+        if(!clientInfo->sendEventsToRpcServer)
+        {
+            server->socket = socket;
+            server->socket->setReadTimeout(15000000);
+        }
 		server->keepAlive = true;
 		server->subscribePeers = true;
 		server->nodeEvents = nodeEvents;
@@ -1140,8 +1142,16 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
 		if(server->settings)
 		{
 			GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
-			server->socket->setReadTimeout(server->settings->timeout);
-			server->socket->setWriteTimeout(server->settings->timeout);
+            if(!clientInfo->sendEventsToRpcServer)
+            {
+                server->socket->setReadTimeout(server->settings->timeout);
+                server->socket->setWriteTimeout(server->settings->timeout);
+            }
+            else
+            {
+                clientInfo->socket->setReadTimeout(server->settings->timeout);
+                clientInfo->socket->setWriteTimeout(server->settings->timeout);
+            }
 		}
 		return server;
 	}

@@ -794,14 +794,21 @@ void RpcServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
 					closeClientConnection(client);
 					return;
 				}
-				if(result->structValue->find("id") != result->structValue->end()) messageId = result->structValue->at("id")->integerValue;
-				if(result->structValue->find("method") == result->structValue->end())
+                auto idIterator = result->structValue->find("id");
+				if(idIterator != result->structValue->end()) messageId = idIterator->second->integerValue;
+                auto methodIterator = result->structValue->find("method");
+				if(methodIterator == result->structValue->end())
 				{
-					_out.printWarning("Warning: Could not decode JSON RPC packet:\n" + result->print(false, false));
-					sendRPCResponseToClient(client, BaseLib::Variable::createError(-32500, "Could not decode RPC packet. \"method\" not found in JSON."), messageId, responseType, keepAlive);
-					return;
+                    if(result->structValue->find("result") == result->structValue->end() && !result->structValue->empty())
+                    {
+                        _out.printWarning("Warning: Could not decode JSON RPC packet:\n" + result->print(false, false));
+                        sendRPCResponseToClient(client, BaseLib::Variable::createError(-32500, "Could not decode RPC packet. \"method\" and \"result\" not found in JSON."), messageId, responseType, keepAlive);
+                        return;
+                    }
+                    analyzeRPCResponse(client, packet, PacketType::Enum::webSocketResponse, keepAlive);
+                    return;
 				}
-				methodName = result->structValue->at("method")->stringValue;
+				methodName = methodIterator->second->stringValue;
 				if(result->structValue->find("params") != result->structValue->end()) parameters = result->structValue->at("params")->arrayValue;
 				else parameters.reset(new std::vector<BaseLib::PVariable>());
 			}
@@ -1037,9 +1044,12 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
         {
             client->rpcResponse = _xmlRpcDecoder->decodeResponse(packet);
         }
-        else if(packetType == PacketType::Enum::jsonResponse)
+        else if(packetType == PacketType::Enum::jsonResponse || packetType == PacketType::Enum::webSocketResponse)
         {
-            client->rpcResponse = _jsonDecoder->decode(packet);
+            auto jsonStruct = _jsonDecoder->decode(packet);
+            auto resultIterator = jsonStruct->structValue->find("result");
+            if(resultIterator == jsonStruct->structValue->end()) client->rpcResponse = std::make_shared<BaseLib::Variable>();
+            else client->rpcResponse = resultIterator->second;
         }
         requestLock.unlock();
         client->requestConditionVariable.notify_all();
@@ -1190,7 +1200,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			int32_t pos = http.getHeader().path.find('/', 1);
 			if(http.getHeader().path.size() == 7 || pos == 7) pathProtocol = http.getHeader().path.substr(1, 6);
 			else if(http.getHeader().path.size() == 11 || pos == 11) pathProtocol = http.getHeader().path.substr(1, 10);
-			if(pathProtocol == "client" || pathProtocol == "server")
+			if(pathProtocol == "client" || pathProtocol == "server" || pathProtocol == "server2")
 			{
 				//path starts with "/client/" or "/server/". Both are not part of the client id.
 				if(http.getHeader().path.size() > 8) client->webSocketClientId = http.getHeader().path.substr(8);
@@ -1208,7 +1218,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			}
 			BaseLib::HelperFunctions::toLower(client->webSocketClientId);
 
-			if(protocol == "server" || pathProtocol == "server" || protocol == "nodeserver" || pathProtocol == "nodeserver")
+			if(protocol == "server" || pathProtocol == "server" || protocol == "server2" || pathProtocol == "server2" || protocol == "nodeserver" || pathProtocol == "nodeserver")
 			{
 				client->rpcType = BaseLib::RpcType::websocket;
 				client->initJsonMode = true;
@@ -1225,6 +1235,12 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
+				if(protocol == "server2" || pathProtocol == "server2")
+				{
+					client->sendEventsToRpcServer = true;
+					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to RPC client.");
+					GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client, client->address, client->nodeClient);
+				}
 			}
 			else if(protocol == "client" || pathProtocol == "client" || protocol == "nodeclient" || pathProtocol == "nodeclient")
 			{
@@ -1243,7 +1259,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				sendRPCResponseToClient(client, data, true);
 				if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
 				{
-					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
+					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to RPC client.");
 					auto server = GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client, client->address, client->nodeClient);
 					client->socketDescriptor.reset(new BaseLib::FileDescriptor());
 					client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
@@ -1504,14 +1520,16 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 							client->webSocketAuthorized = true;
 							if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
 							else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
-							if(client->webSocketClient)
+							if(client->webSocketClient || client->sendEventsToRpcServer)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
-								auto server = GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client, client->address, client->nodeClient);
-								client->socketDescriptor.reset(new BaseLib::FileDescriptor());
-								client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
-								client->closed = true;
-								break;
+								GD::rpcClient->addWebSocketServer(client->socket, client->webSocketClientId, client, client->address, client->nodeClient);
+                                if(client->webSocketClient)
+                                {
+                                    client->socketDescriptor.reset(new BaseLib::FileDescriptor());
+                                    client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+                                    client->closed = true;
+                                }
 							}
 						}
 					}

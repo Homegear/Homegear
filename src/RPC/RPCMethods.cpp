@@ -6349,7 +6349,7 @@ BaseLib::PVariable RPCSetLanguage::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 
 		if(clientInfo) clientInfo->language = parameters->at(0)->stringValue;
 
-		return BaseLib::Variable::createError(-2, "Device not found.");
+		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
 	{
