@@ -1199,11 +1199,17 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			std::string pathProtocol;
 			int32_t pos = http.getHeader().path.find('/', 1);
 			if(http.getHeader().path.size() == 7 || pos == 7) pathProtocol = http.getHeader().path.substr(1, 6);
+			else if(http.getHeader().path.size() == 8 || pos == 8) pathProtocol = http.getHeader().path.substr(1, 7);
 			else if(http.getHeader().path.size() == 11 || pos == 11) pathProtocol = http.getHeader().path.substr(1, 10);
-			if(pathProtocol == "client" || pathProtocol == "server" || pathProtocol == "server2")
+			if(pathProtocol == "client" || pathProtocol == "server")
 			{
 				//path starts with "/client/" or "/server/". Both are not part of the client id.
 				if(http.getHeader().path.size() > 8) client->webSocketClientId = http.getHeader().path.substr(8);
+			}
+			else if(pathProtocol == "server2")
+			{
+				//path starts with "/client/" or "/server/". Both are not part of the client id.
+				if(http.getHeader().path.size() > 9) client->webSocketClientId = http.getHeader().path.substr(9);
 			}
 			else if(pathProtocol == "nodeclient" || pathProtocol == "nodeserver")
 			{
@@ -1225,6 +1231,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				client->initKeepAlive = true;
 				client->initNewFormat = true;
 				client->initSubscribePeers = true;
+				if(protocol == "nodeserver" || pathProtocol == "nodeserver") client->nodeClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
@@ -1235,7 +1242,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
-				if(protocol == "server2" || pathProtocol == "server2")
+				if(protocol == "server2" || pathProtocol == "server2" || protocol == "nodeserver" || pathProtocol == "nodeserver")
 				{
 					client->sendEventsToRpcServer = true;
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to RPC client.");
@@ -1246,7 +1253,6 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			{
 				client->rpcType = BaseLib::RpcType::websocket;
 				client->webSocketClient = true;
-				if(protocol == "nodeclient" || pathProtocol == "nodeclient") client->nodeClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
