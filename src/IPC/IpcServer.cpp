@@ -955,24 +955,33 @@ void IpcServer::mainThread()
 			int32_t maxfd = 0;
 			FD_ZERO(&readFileDescriptor);
 			{
+				std::vector<PIpcClientData> clients;
+				{
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					clients.reserve(_clients.size());
+					for(auto& client : _clients)
+					{
+						if(client.second->closed) continue;
+						if(client.second->fileDescriptor->descriptor == -1)
+						{
+							client.second->closed = true;
+							continue;
+						}
+						clients.push_back(client.second);
+					}
+				}
+
 				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
 				fileDescriptorGuard.lock();
 				maxfd = _serverFileDescriptor->descriptor;
 				FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 
+				for(auto& client : clients)
 				{
-					std::lock_guard<std::mutex> stateGuard(_stateMutex);
-					for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-					{
-						if(i->second->closed) continue;
-						if(i->second->fileDescriptor->descriptor == -1)
-						{
-							i->second->closed = true;
-							continue;
-						}
-						FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
-						if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
-					}
+					int32_t descriptor = client->fileDescriptor->descriptor;
+					if(descriptor == -1) continue; //Never pass -1 to FD_SET => undefined behaviour. This is just a safety precaution, because the file descriptor manager is locked and descriptors shouldn't be modified.
+					FD_SET(descriptor, &readFileDescriptor);
+					if(descriptor > maxfd) maxfd = descriptor;
 				}
 			}
 
