@@ -1086,7 +1086,7 @@ void IpcServer::readClient(PIpcClientData& clientData)
 			processedBytes = 0;
 			while(processedBytes < bytesRead)
 			{
-				processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
+				processedBytes += clientData->binaryRpc->process(clientData->buffer.data() + processedBytes, bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
 					std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, clientData->binaryRpc->getData());

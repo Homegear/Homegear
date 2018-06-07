@@ -285,7 +285,7 @@ bool RpcServer::lifetick()
     return false;
 }
 
-int verifyClientCert(gnutls_session_t tlsSession)
+/*int verifyClientCert(gnutls_session_t tlsSession)
 {
 	//Called during handshake just after the certificate message has been received.
 
@@ -294,7 +294,7 @@ int verifyClientCert(gnutls_session_t tlsSession)
 	if(status > 0) return -1;
 
 	return 0;
-}
+}*/
 
 void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 {
@@ -326,6 +326,11 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 			_out.printWarning("Warning: RPC server has no WebSocket authorization enabled. This is very dangerous as every webpage opened in a browser (also remote one's!!!) can control this installation.");
 		}
 
+        if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication.");
+        if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) _out.printInfo("Info: Enabling client certificate authentication.");
+        if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication for WebSockets.");
+        if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo("Info: Enabling session authentication for WebSockets.");
+
 		if(_info->ssl)
 		{
 			int32_t result = 0;
@@ -334,18 +339,18 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 				_out.printError("Error: Could not allocate TLS certificate structure: " + std::string(gnutls_strerror(result)));
 				return;
 			}
-			if((result = gnutls_certificate_set_x509_key_file(_x509Cred, GD::bl->settings.certPath().c_str(), GD::bl->settings.keyPath().c_str(), GNUTLS_X509_FMT_PEM)) < 0)
+			if((result = gnutls_certificate_set_x509_key_file(_x509Cred, _info->certPath.c_str(), _info->keyPath.c_str(), GNUTLS_X509_FMT_PEM)) < 0)
 			{
 				_out.printError("Error: Could not load certificate or key file: " + std::string(gnutls_strerror(result)));
 				gnutls_certificate_free_credentials(_x509Cred);
 				_x509Cred = nullptr;
 				return;
 			}
-			if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+			if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
 			{
-				if(!GD::bl->settings.caPath().empty())
+				if(!_info->caPath.empty())
 				{
-					if((result = gnutls_certificate_set_x509_trust_file(_x509Cred, GD::bl->settings.caPath().c_str(), GNUTLS_X509_FMT_PEM)) < 0)
+					if((result = gnutls_certificate_set_x509_trust_file(_x509Cred, _info->caPath.c_str(), GNUTLS_X509_FMT_PEM)) < 0)
 					{
 						gnutls_certificate_free_credentials(_x509Cred);
 						_x509Cred = nullptr;
@@ -368,77 +373,54 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 					return;
 				}
 
-				gnutls_certificate_set_verify_function(_x509Cred, &verifyClientCert);
+				//gnutls_certificate_set_verify_function(_x509Cred, &verifyClientCert);
 			}
 			if(!_dhParams)
 			{
-				if(GD::bl->settings.loadDHParamsFromFile())
-				{
-					if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
-					{
-						_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
-						gnutls_certificate_free_credentials(_x509Cred);
-						_x509Cred = nullptr;
-						_dhParams = nullptr;
-						return;
-					}
-					std::vector<uint8_t> binaryData;
-					try
-					{
-						binaryData = GD::bl->io.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
-						binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
-					}
-					catch(BaseLib::Exception& ex)
-					{
-						_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\": " + std::string(ex.what()));
-						gnutls_certificate_free_credentials(_x509Cred);
-						gnutls_dh_params_deinit(_dhParams);
-						_x509Cred = nullptr;
-						_dhParams = nullptr;
-						return;
-					}
-					catch(...)
-					{
-						_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\".");
-						gnutls_certificate_free_credentials(_x509Cred);
-						gnutls_dh_params_deinit(_dhParams);
-						_x509Cred = nullptr;
-						_dhParams = nullptr;
-						return;
-					}
-					gnutls_datum_t data;
-					data.data = &binaryData.at(0);
-					data.size = binaryData.size();
-					if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
-					{
-						_out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
-						gnutls_certificate_free_credentials(_x509Cred);
-						gnutls_dh_params_deinit(_dhParams);
-						_x509Cred = nullptr;
-						_dhParams = nullptr;
-						return;
-					}
-				}
-				else
-				{
-					uint32_t bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_DH, GNUTLS_SEC_PARAM_ULTRA);
-					if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
-					{
-						_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
-						gnutls_certificate_free_credentials(_x509Cred);
-						_x509Cred = nullptr;
-						return;
-					}
-					if((result = gnutls_dh_params_generate2(_dhParams, bits)) != GNUTLS_E_SUCCESS)
-					{
-						_out.printError("Error: Could not generate DH parameters: " + std::string(gnutls_strerror(result)));
-						gnutls_certificate_free_credentials(_x509Cred);
-						gnutls_dh_params_deinit(_dhParams);
-						_x509Cred = nullptr;
-						_dhParams = nullptr;
-						return;
-					}
-				}
+                if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
+                {
+                    _out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
+                    gnutls_certificate_free_credentials(_x509Cred);
+                    _x509Cred = nullptr;
+                    _dhParams = nullptr;
+                    return;
+                }
+                std::vector<uint8_t> binaryData;
+                try
+                {
+                    binaryData = GD::bl->io.getUBinaryFileContent(_info->dhParamPath.c_str());
+                    binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
+                }
+                catch(BaseLib::Exception& ex)
+                {
+                    _out.printError("Error: Could not load DH parameter file \"" + _info->dhParamPath + "\": " + std::string(ex.what()));
+                    gnutls_certificate_free_credentials(_x509Cred);
+                    gnutls_dh_params_deinit(_dhParams);
+                    _x509Cred = nullptr;
+                    _dhParams = nullptr;
+                    return;
+                }
+                catch(...)
+                {
+                    _out.printError("Error: Could not load DH parameter file \"" + _info->dhParamPath + "\".");
+                    gnutls_certificate_free_credentials(_x509Cred);
+                    gnutls_dh_params_deinit(_dhParams);
+                    _x509Cred = nullptr;
+                    _dhParams = nullptr;
+                    return;
+                }
+                gnutls_datum_t data;
+                data.data = &binaryData.at(0);
+                data.size = binaryData.size();
+                if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
+                {
+                    _out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
+                    gnutls_certificate_free_credentials(_x509Cred);
+                    gnutls_dh_params_deinit(_dhParams);
+                    _x509Cred = nullptr;
+                    _dhParams = nullptr;
+                    return;
+                }
 			}
 			if((result = gnutls_priority_init(&_tlsPriorityCache, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
 			{
@@ -605,6 +587,7 @@ void RpcServer::mainThread()
 						_currentClientID++;
 						client->id++;
 					}
+                    client->auth = std::make_shared<Auth>(_info->validGroups);
 					_clients[client->id] = client;
 					_out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 				}
@@ -1199,11 +1182,17 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			std::string pathProtocol;
 			int32_t pos = http.getHeader().path.find('/', 1);
 			if(http.getHeader().path.size() == 7 || pos == 7) pathProtocol = http.getHeader().path.substr(1, 6);
+			else if(http.getHeader().path.size() == 8 || pos == 8) pathProtocol = http.getHeader().path.substr(1, 7);
 			else if(http.getHeader().path.size() == 11 || pos == 11) pathProtocol = http.getHeader().path.substr(1, 10);
-			if(pathProtocol == "client" || pathProtocol == "server" || pathProtocol == "server2")
+			if(pathProtocol == "client" || pathProtocol == "server")
 			{
 				//path starts with "/client/" or "/server/". Both are not part of the client id.
 				if(http.getHeader().path.size() > 8) client->webSocketClientId = http.getHeader().path.substr(8);
+			}
+			else if(pathProtocol == "server2")
+			{
+				//path starts with "/client/" or "/server/". Both are not part of the client id.
+				if(http.getHeader().path.size() > 9) client->webSocketClientId = http.getHeader().path.substr(9);
 			}
 			else if(pathProtocol == "nodeclient" || pathProtocol == "nodeserver")
 			{
@@ -1225,6 +1214,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				client->initKeepAlive = true;
 				client->initNewFormat = true;
 				client->initSubscribePeers = true;
+				if(protocol == "nodeserver" || pathProtocol == "nodeserver") client->nodeClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
@@ -1235,7 +1225,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 				header.append("\r\n");
 				std::vector<char> data(&header[0], &header[0] + header.size());
 				sendRPCResponseToClient(client, data, true);
-				if(protocol == "server2" || pathProtocol == "server2")
+				if(protocol == "server2" || pathProtocol == "server2" || protocol == "nodeserver" || pathProtocol == "nodeserver")
 				{
 					client->sendEventsToRpcServer = true;
 					_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to RPC client.");
@@ -1246,7 +1236,6 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 			{
 				client->rpcType = BaseLib::RpcType::websocket;
 				client->webSocketClient = true;
-				if(protocol == "nodeclient" || pathProtocol == "nodeclient") client->nodeClient = true;
 				std::string header;
 				header.reserve(133 + websocketAccept.size());
 				header.append("HTTP/1.1 101 Switching Protocols\r\n");
@@ -1354,12 +1343,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 						if(binaryRpc.isFinished())
 						{
 							std::shared_ptr<BaseLib::Rpc::RpcHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
-							if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+							if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
 							{
-								if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 								try
 								{
-									if(!client->auth.basicServer(header, client->user, client->acls))
+									if(!client->auth->basicServer(client->socket, header, client->user, client->acls))
 									{
 										_out.printError("Error: Authorization failed. Closing connection.");
 										break;
@@ -1494,12 +1482,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 					sendRPCResponseToClient(client, response, false);
 					closeClientConnection(client);
 				}
-				else if((_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic || _info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) && !client->webSocketAuthorized)
+				else if(((_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) || (_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session)) && !client->webSocketAuthorized)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket, client->user, client->acls))
+						if((_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) && !client->auth->basicServer(client->socket, webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Basic authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1507,7 +1494,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 							sendRPCResponseToClient(client, output, false);
 							break;
 						}
-						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket, client->user, client->acls))
+						else if((_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) && !client->auth->sessionServer(client->socket, webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Session authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1518,8 +1505,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 						else
 						{
 							client->webSocketAuthorized = true;
-							if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
-							else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
+							if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
+							else if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
 							if(client->webSocketClient || client->sendEventsToRpcServer)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
@@ -1562,12 +1549,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 					continue;
 				}
 
-				if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+				if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(!client->auth.basicServer(http, client->user, client->acls))
+						if(!client->auth->basicServer(client->socket, http, client->user, client->acls))
 						{
 							_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
 							break;
@@ -1768,60 +1754,41 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
-		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert ? GNUTLS_CERT_REQUIRE : GNUTLS_CERT_IGNORE);
 		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
 		{
 			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
-		gnutls_transport_set_ptr(client->socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
-		do
+        gnutls_transport_set_ptr(client->socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
+
+        if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert) gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUIRE);
+        else if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUEST);
+        do
 		{
 			result = gnutls_handshake(client->socketDescriptor->tlsSession);
         } while (result < 0 && gnutls_error_is_fatal(result) == 0);
 		if(result < 0)
 		{
-			_out.printWarning("Warning: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-			return;
+            _out.printWarning("Warning: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
+            GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+            return;
 		}
 
-		if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+		if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
 		{
-			const gnutls_datum_t* derClientCertificates = gnutls_certificate_get_peers(client->socketDescriptor->tlsSession, nullptr);
-			if(!derClientCertificates)
-			{
-				_out.printError("Error retrieving client certificate.");
-				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-				return;
-			}
-			gnutls_x509_crt_t clientCertificates;
-			unsigned int certMax = 1;
-			if(gnutls_x509_crt_list_import(&clientCertificates, &certMax, derClientCertificates, GNUTLS_X509_FMT_DER, 0) < 1)
-			{
-				_out.printError("Error importing client certificate.");
-				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-				return;
-			}
-			gnutls_datum_t distinguishedName;
-			if(gnutls_x509_crt_get_dn2(clientCertificates, &distinguishedName) != GNUTLS_E_SUCCESS)
-			{
-				_out.printError("Error getting client certificate's distinguished name.");
-				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-				return;
-			}
-
-            std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
-			client->user = BaseLib::HelperFunctions::toLower(userName);
-            if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
-            if(!client->acls->fromUser(userName))
+            std::string error;
+			if(!client->auth->certificateServer(client->socketDescriptor, client->user, client->acls, error))
             {
-                _out.printError("Error getting ACLs for client or the user doesn't exist. User (= distinguished name): " + userName);
-                GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-                return;
+                if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+                {
+                    _out.printError("Error: Authentication failed: " + error);
+                    GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+                    return;
+                }
+                else _out.printInfo("Info: Certificate authentication failed. Falling back to next authentication type. Error was: " + error);
             }
-			_out.printInfo("Info: Successfully logged in with distinguished name: " + userName);
+            else _out.printInfo("Info: User " + client->user + " was successfully authenticated using certificate authentication.");
 		}
 
 		return;

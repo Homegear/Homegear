@@ -77,7 +77,6 @@ public:
 	std::shared_ptr<BaseLib::TcpSocket> socket;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
-	Auth auth;
 	int32_t lastPacketSent = -1;
 	std::set<uint64_t> subscribedPeers;
 

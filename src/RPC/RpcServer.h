@@ -59,7 +59,7 @@ namespace Rpc
 				bool webSocketAuthorized = false;
 				bool nodeClient = false;
 				std::thread readThread;
-				Auth auth;
+				std::shared_ptr<Auth> auth;
 
 				Client();
 				virtual ~Client();
