@@ -260,6 +260,7 @@ void NodeBlueServer::collectGarbage()
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			try
 			{
+                clientsToRemove.reserve(_clients.size());
 				for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->closed) clientsToRemove.push_back(i->second);
@@ -522,6 +523,7 @@ void NodeBlueServer::homegearReloading()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -635,6 +637,48 @@ void NodeBlueServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVa
     }
 }
 
+BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs()
+{
+	try
+	{
+        std::vector<PNodeBlueClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
+            for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        auto nodeArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        nodeArray->arrayValue->reserve(100);
+        for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+            auto result = sendRequest(*i, "getNodesWithFixedInputs", parameters, true);
+            if(result->errorStruct) continue;
+            if(nodeArray->arrayValue->size() + result->arrayValue->size() > nodeArray->arrayValue->capacity()) nodeArray->arrayValue->reserve(nodeArray->arrayValue->size() + result->arrayValue->size() + 100);
+            nodeArray->arrayValue->insert(nodeArray->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+        }
+        return nodeArray;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable NodeBlueServer::getNodeVariable(std::string nodeId, std::string topic)
 {
 	try
@@ -739,6 +783,7 @@ void NodeBlueServer::enableNodeEvents()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -776,6 +821,7 @@ void NodeBlueServer::disableNodeEvents()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1183,6 +1229,7 @@ void NodeBlueServer::startFlows()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1239,6 +1286,7 @@ void NodeBlueServer::sendShutdown()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1284,6 +1332,7 @@ bool NodeBlueServer::sendReset()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1334,6 +1383,7 @@ void NodeBlueServer::closeClientConnections()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				clients.push_back(i->second);
@@ -1386,6 +1436,7 @@ void NodeBlueServer::stopNodes()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1676,6 +1727,7 @@ uint32_t NodeBlueServer::flowCount()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1759,6 +1811,7 @@ void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_pt
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1814,6 +1867,7 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PV
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1850,6 +1904,7 @@ void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1900,6 +1955,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;

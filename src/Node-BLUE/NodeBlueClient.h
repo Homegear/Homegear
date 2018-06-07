@@ -235,6 +235,8 @@ private:
 		Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
 		Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
 
+		Flows::PVariable getNodesWithFixedInputs(Flows::PArray& parameters);
+
 		Flows::PVariable getNodeVariable(Flows::PArray& parameters);
 		Flows::PVariable getFlowVariable(Flows::PArray& parameters);
 

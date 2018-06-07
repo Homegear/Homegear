@@ -142,6 +142,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("getFlowData", std::make_shared<RPCGetFlowData>());
     _rpcMethods->emplace("getGlobalData", std::make_shared<RPCGetGlobalData>());
     _rpcMethods->emplace("getNodeEvents", std::make_shared<RPCGetNodeEvents>());
+    _rpcMethods->emplace("getNodesWithFixedInputs", std::make_shared<RPCGetNodesWithFixedInputs>());
     _rpcMethods->emplace("getNodeVariable", std::make_shared<RPCGetNodeVariable>());
     _rpcMethods->emplace("getPairingInfo", std::make_shared<RPCGetPairingInfo>());
     _rpcMethods->emplace("getParamset", std::make_shared<RPCGetParamset>());

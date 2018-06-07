@@ -793,6 +793,16 @@ public:
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCGetNodesWithFixedInputs : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCGetNodesWithFixedInputs()
+	{
+		addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCGetNodeVariable : public BaseLib::Rpc::RpcMethod
 {
 public:
