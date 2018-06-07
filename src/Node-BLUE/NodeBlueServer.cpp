@@ -652,17 +652,15 @@ BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs()
             }
         }
 
-        auto nodeArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-        nodeArray->arrayValue->reserve(100);
+        auto nodeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
         for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
         {
             BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
             auto result = sendRequest(*i, "getNodesWithFixedInputs", parameters, true);
             if(result->errorStruct) continue;
-            if(nodeArray->arrayValue->size() + result->arrayValue->size() > nodeArray->arrayValue->capacity()) nodeArray->arrayValue->reserve(nodeArray->arrayValue->size() + result->arrayValue->size() + 100);
-            nodeArray->arrayValue->insert(nodeArray->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+            nodeStruct->structValue->insert(result->structValue->begin(), result->structValue->end());
         }
-        return nodeArray;
+        return nodeStruct;
 	}
 	catch(const std::exception& ex)
 	{

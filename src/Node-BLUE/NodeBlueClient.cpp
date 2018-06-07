@@ -1991,15 +1991,14 @@ Flows::PVariable NodeBlueClient::getNodesWithFixedInputs(Flows::PArray& paramete
     try
     {
         std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
-        auto nodeArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
-        nodeArray->arrayValue->reserve(_fixedInputValues.size());
+        auto nodeStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
 
         for(auto& node : _fixedInputValues)
         {
-            nodeArray->arrayValue->emplace_back(std::make_shared<Flows::Variable>(node.first));
+            nodeStruct->structValue->emplace(node.first, std::make_shared<Flows::Variable>(node.second.size()));
         }
 
-        return nodeArray;
+        return nodeStruct;
     }
     catch(const std::exception& ex)
     {

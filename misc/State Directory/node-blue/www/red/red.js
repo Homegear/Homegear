@@ -780,12 +780,14 @@ RED.comms = (function() {
     function getFixedInputs() {
         homegear.invoke("getNodesWithFixedInputs", function(message) {
             var dirty = false;
-            for(var i = 0; i < message.result.length; i++) {
-                dirty = true;
-                var currentNode = RED.nodes.node(message.result[i]);
-                if(currentNode) {
-                    currentNode.fixedInputs = 1;
-                    currentNode.dirty = true;
+            for(var nodeKey in message.result) {
+                if (message.result.hasOwnProperty(nodeKey)) {
+                    dirty = true;
+                    var currentNode = RED.nodes.node(nodeKey);
+                    if(currentNode) {
+                        currentNode.fixedInputs = message.result[nodeKey];
+                        currentNode.dirty = true;
+                    }
                 }
             }
             if(dirty) RED.view.redraw();
