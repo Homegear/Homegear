@@ -51,29 +51,28 @@ public:
 class Auth
 {
 public:
-	Auth();
-	Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<std::string>& validUsers);
-	Auth(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string userName, std::string password);
+	Auth(std::unordered_set<uint64_t>& validGroups);
 	virtual ~Auth() {}
 
-	bool initialized() { return _initialized; }
-	std::pair<std::string, std::string> basicClient();
-	bool basicServer(std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls);
-	bool basicServer(BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls);
-	bool basicServer(BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
-	bool sessionServer(BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
+	bool authenticated() { return _authenticated; }
+	void setAuthenticated(bool value) { _authenticated = value; }
+    bool validUser(std::string& userName);
+	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls);
+	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls);
+	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
+	bool sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
+    bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, BaseLib::Security::PAcls& acls, std::string& error);
 
-	void sendBasicUnauthorized(bool binary);
-	void sendWebSocketAuthorized();
-	void sendWebSocketUnauthorized(std::string reason);
+	void sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bool binary);
+	void sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket>& socket);
+	void sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string reason);
 protected:
-	bool _initialized = false;
+	std::atomic_bool _authenticated;
 	std::string _hostname;
-	std::shared_ptr<BaseLib::TcpSocket> _socket;
 	std::string _basicAuthHTTPHeader;
 	std::vector<char> _basicUnauthBinaryHeader;
 	std::vector<char> _basicUnauthHTTPHeader;
-	std::vector<std::string> _validUsers;
+	std::unordered_set<uint64_t> _validGroups;
 	std::string _userName;
 	std::string _password;
 	std::pair<std::string, std::string> _basicAuthString;

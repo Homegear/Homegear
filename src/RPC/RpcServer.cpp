@@ -285,7 +285,7 @@ bool RpcServer::lifetick()
     return false;
 }
 
-int verifyClientCert(gnutls_session_t tlsSession)
+/*int verifyClientCert(gnutls_session_t tlsSession)
 {
 	//Called during handshake just after the certificate message has been received.
 
@@ -294,7 +294,7 @@ int verifyClientCert(gnutls_session_t tlsSession)
 	if(status > 0) return -1;
 
 	return 0;
-}
+}*/
 
 void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 {
@@ -326,6 +326,11 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 			_out.printWarning("Warning: RPC server has no WebSocket authorization enabled. This is very dangerous as every webpage opened in a browser (also remote one's!!!) can control this installation.");
 		}
 
+        if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication.");
+        if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) _out.printInfo("Info: Enabling client certificate authentication.");
+        if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication for WebSockets.");
+        if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo("Info: Enabling session authentication for WebSockets.");
+
 		if(_info->ssl)
 		{
 			int32_t result = 0;
@@ -341,7 +346,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 				_x509Cred = nullptr;
 				return;
 			}
-			if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+			if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
 			{
 				if(!_info->caPath.empty())
 				{
@@ -368,7 +373,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
 					return;
 				}
 
-				gnutls_certificate_set_verify_function(_x509Cred, &verifyClientCert);
+				//gnutls_certificate_set_verify_function(_x509Cred, &verifyClientCert);
 			}
 			if(!_dhParams)
 			{
@@ -582,6 +587,7 @@ void RpcServer::mainThread()
 						_currentClientID++;
 						client->id++;
 					}
+                    client->auth = std::make_shared<Auth>(_info->validGroups);
 					_clients[client->id] = client;
 					_out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 				}
@@ -1337,12 +1343,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 						if(binaryRpc.isFinished())
 						{
 							std::shared_ptr<BaseLib::Rpc::RpcHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
-							if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+							if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
 							{
-								if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 								try
 								{
-									if(!client->auth.basicServer(header, client->user, client->acls))
+									if(!client->auth->basicServer(client->socket, header, client->user, client->acls))
 									{
 										_out.printError("Error: Authorization failed. Closing connection.");
 										break;
@@ -1477,12 +1482,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 					sendRPCResponseToClient(client, response, false);
 					closeClientConnection(client);
 				}
-				else if((_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic || _info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) && !client->webSocketAuthorized)
+				else if(((_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) || (_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session)) && !client->webSocketAuthorized)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic && !client->auth.basicServer(webSocket, client->user, client->acls))
+						if((_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) && !client->auth->basicServer(client->socket, webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Basic authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1490,7 +1494,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 							sendRPCResponseToClient(client, output, false);
 							break;
 						}
-						else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session && !client->auth.sessionServer(webSocket, client->user, client->acls))
+						else if((_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) && !client->auth->sessionServer(client->socket, webSocket, client->user, client->acls))
 						{
 							_out.printError("Error: Session authentication failed for host " + client->address + ". Closing connection.");
 							std::vector <char> output;
@@ -1501,8 +1505,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 						else
 						{
 							client->webSocketAuthorized = true;
-							if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
-							else if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
+							if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
+							else if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
 							if(client->webSocketClient || client->sendEventsToRpcServer)
 							{
 								_out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
@@ -1545,12 +1549,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 					continue;
 				}
 
-				if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+				if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, _info->validUsers);
 					try
 					{
-						if(!client->auth.basicServer(http, client->user, client->acls))
+						if(!client->auth->basicServer(client->socket, http, client->user, client->acls))
 						{
 							_out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
 							break;
@@ -1751,60 +1754,41 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
-		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert ? GNUTLS_CERT_REQUIRE : GNUTLS_CERT_IGNORE);
 		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
 		{
 			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
 			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
-		gnutls_transport_set_ptr(client->socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
-		do
+        gnutls_transport_set_ptr(client->socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
+
+        if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert) gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUIRE);
+        else if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUEST);
+        do
 		{
 			result = gnutls_handshake(client->socketDescriptor->tlsSession);
         } while (result < 0 && gnutls_error_is_fatal(result) == 0);
 		if(result < 0)
 		{
-			_out.printWarning("Warning: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-			return;
+            _out.printWarning("Warning: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
+            GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+            return;
 		}
 
-		if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+		if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
 		{
-			const gnutls_datum_t* derClientCertificates = gnutls_certificate_get_peers(client->socketDescriptor->tlsSession, nullptr);
-			if(!derClientCertificates)
-			{
-				_out.printError("Error retrieving client certificate.");
-				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-				return;
-			}
-			gnutls_x509_crt_t clientCertificates;
-			unsigned int certMax = 1;
-			if(gnutls_x509_crt_list_import(&clientCertificates, &certMax, derClientCertificates, GNUTLS_X509_FMT_DER, 0) < 1)
-			{
-				_out.printError("Error importing client certificate.");
-				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-				return;
-			}
-			gnutls_datum_t distinguishedName;
-			if(gnutls_x509_crt_get_dn2(clientCertificates, &distinguishedName) != GNUTLS_E_SUCCESS)
-			{
-				_out.printError("Error getting client certificate's distinguished name.");
-				GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-				return;
-			}
-
-            std::string userName = std::string((char*)distinguishedName.data, distinguishedName.size);
-			client->user = BaseLib::HelperFunctions::toLower(userName);
-            if(!client->acls) client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
-            if(!client->acls->fromUser(userName))
+            std::string error;
+			if(!client->auth->certificateServer(client->socketDescriptor, client->user, client->acls, error))
             {
-                _out.printError("Error getting ACLs for client or the user doesn't exist. User (= distinguished name): " + userName);
-                GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-                return;
+                if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
+                {
+                    _out.printError("Error: Authentication failed: " + error);
+                    GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+                    return;
+                }
+                else _out.printInfo("Info: Certificate authentication failed. Falling back to next authentication type. Error was: " + error);
             }
-			_out.printInfo("Info: Successfully logged in with distinguished name: " + userName);
+            else _out.printInfo("Info: User " + client->user + " was successfully authenticated using certificate authentication.");
 		}
 
 		return;
