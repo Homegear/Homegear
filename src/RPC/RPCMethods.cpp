@@ -4645,6 +4645,38 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCInvokeFamilyMethod::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("invokeFamilyMethod")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		auto family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-32501, "Unknown family.");
+
+		auto central = family->getCentral();
+		if(!central) return BaseLib::Variable::createError(-32501, "Family has no central.");
+
+		return central->invokeFamilyMethod(clientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCListBidcosInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
