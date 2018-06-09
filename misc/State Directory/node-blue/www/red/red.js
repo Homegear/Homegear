@@ -777,12 +777,34 @@ RED.comms = (function() {
         });
     }
 
+    function getFixedInputs() {
+        homegear.invoke("getNodesWithFixedInputs", function(message) {
+            var dirty = false;
+            for(var nodeKey in message.result) {
+                if (message.result.hasOwnProperty(nodeKey)) {
+                    dirty = true;
+                    var currentNode = RED.nodes.node(nodeKey);
+                    if(currentNode) {
+                        currentNode.fixedInputs = message.result[nodeKey];
+                        currentNode.dirty = true;
+                    }
+                }
+            }
+            if(dirty) {
+                RED.view.redraw();
+                if(errornotification) errornotification.close();
+                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",true);
+            }
+        });
+    }
+
     return {
         homegear: getHomegear,
         connect: connectWS,
         subscribe: subscribe,
         unsubscribe: unsubscribe,
-        getEvents: getEvents
+        getEvents: getEvents,
+        getFixedInputs: getFixedInputs
     }
 })();
 ;/**
@@ -12935,7 +12957,7 @@ RED.view = (function() {
                                                     text: RED._("common.label.clear"),
                                                     click: function() {
                                                         RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
-                                                        d.fixedInputs -= 1;
+                                                        if(d.fixedInputs > 0) d.fixedInputs -= 1;
                                                         d.dirty = true;
                                                         $( this ).dialog( "close" );
                                                         redraw();

@@ -260,6 +260,7 @@ void NodeBlueServer::collectGarbage()
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			try
 			{
+                clientsToRemove.reserve(_clients.size());
 				for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->closed) clientsToRemove.push_back(i->second);
@@ -522,6 +523,7 @@ void NodeBlueServer::homegearReloading()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -635,6 +637,46 @@ void NodeBlueServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVa
     }
 }
 
+BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs()
+{
+	try
+	{
+        std::vector<PNodeBlueClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
+            for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        auto nodeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+            auto result = sendRequest(*i, "getNodesWithFixedInputs", parameters, true);
+            if(result->errorStruct) continue;
+            nodeStruct->structValue->insert(result->structValue->begin(), result->structValue->end());
+        }
+        return nodeStruct;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable NodeBlueServer::getNodeVariable(std::string nodeId, std::string topic)
 {
 	try
@@ -739,6 +781,7 @@ void NodeBlueServer::enableNodeEvents()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -776,6 +819,7 @@ void NodeBlueServer::disableNodeEvents()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1183,6 +1227,7 @@ void NodeBlueServer::startFlows()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1239,6 +1284,7 @@ void NodeBlueServer::sendShutdown()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1284,6 +1330,7 @@ bool NodeBlueServer::sendReset()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1334,6 +1381,7 @@ void NodeBlueServer::closeClientConnections()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				clients.push_back(i->second);
@@ -1386,6 +1434,7 @@ void NodeBlueServer::stopNodes()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1676,6 +1725,7 @@ uint32_t NodeBlueServer::flowCount()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1759,6 +1809,7 @@ void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_pt
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1814,6 +1865,7 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PV
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1850,6 +1902,7 @@ void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1900,6 +1953,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -2223,24 +2277,33 @@ void NodeBlueServer::mainThread()
 			int32_t maxfd = 0;
 			FD_ZERO(&readFileDescriptor);
 			{
+				std::vector<PNodeBlueClientData> clients;
+				{
+					std::lock_guard<std::mutex> stateGuard(_stateMutex);
+					clients.reserve(_clients.size());
+					for(auto& client : _clients)
+					{
+						if(client.second->closed) continue;
+						if(client.second->fileDescriptor->descriptor == -1)
+						{
+							client.second->closed = true;
+							continue;
+						}
+						clients.push_back(client.second);
+					}
+				}
+
 				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
 				fileDescriptorGuard.lock();
 				maxfd = _serverFileDescriptor->descriptor;
 				FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 
+				for(auto& client : clients)
 				{
-					std::lock_guard<std::mutex> stateGuard(_stateMutex);
-					for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-					{
-						if(i->second->closed) continue;
-						if(i->second->fileDescriptor->descriptor == -1)
-						{
-							i->second->closed = true;
-							continue;
-						}
-						FD_SET(i->second->fileDescriptor->descriptor, &readFileDescriptor);
-						if(i->second->fileDescriptor->descriptor > maxfd) maxfd = i->second->fileDescriptor->descriptor;
-					}
+					int32_t descriptor = client->fileDescriptor->descriptor;
+					if(descriptor == -1) continue; //Never pass -1 to FD_SET => undefined behaviour. This is just a safety precaution, because the file descriptor manager is locked and descriptors shouldn't be modified.
+					FD_SET(descriptor, &readFileDescriptor);
+					if(descriptor > maxfd) maxfd = descriptor;
 				}
 			}
 

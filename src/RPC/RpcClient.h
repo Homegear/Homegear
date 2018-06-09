@@ -75,6 +75,8 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 
+	std::pair<std::string, std::string> basicAuth(std::string& userName, std::string& password);
+
 	void sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);
 };
 

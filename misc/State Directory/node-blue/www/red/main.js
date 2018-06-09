@@ -435,6 +435,7 @@
             RED.library.loadFlowLibrary();
         });
         RED.comms.getEvents();
+        RED.comms.getFixedInputs();
     }
 
     function showAbout() {

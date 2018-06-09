@@ -85,6 +85,18 @@ RpcClient::~RpcClient()
     }
 }
 
+std::pair<std::string, std::string> RpcClient::basicAuth(std::string& userName, std::string& password)
+{
+	if(userName.empty() || password.empty()) throw AuthException("User name or password is empty.");
+	std::pair<std::string, std::string> basicAuthString;
+	basicAuthString.first = "Authorization";
+	std::string credentials = userName + ":" + password;
+	std::string encodedData;
+	BaseLib::Base64::encode(credentials, encodedData);
+	basicAuthString.second = "Basic " + encodedData;
+	return basicAuthString;
+}
+
 void RpcClient::invokeBroadcast(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters)
 {
 	try
@@ -376,7 +388,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		}
 
 
-		if(server->settings && server->settings->authType != ClientSettings::Settings::AuthType::none && !server->auth.initialized())
+		if(server->settings && server->settings->authType != ClientSettings::Settings::AuthType::none)
 		{
 			if(server->settings->userName.empty() || server->settings->password.empty())
 			{
@@ -385,7 +397,6 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 				std::cerr << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
 				return;
 			}
-			server->auth = Auth(server->socket, server->settings->userName, server->settings->password);
 		}
 
 		if(insertHeader)
@@ -393,10 +404,10 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			if(server->binary)
 			{
 				BaseLib::Rpc::RpcHeader header;
-				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
+				if(server->settings && (server->settings->authType & ClientSettings::Settings::AuthType::basic))
 				{
 					_out.printDebug("Using Basic Access Authentication.");
-					std::pair<std::string, std::string> authField = server->auth.basicClient();
+                    std::pair<std::string, std::string> authField = basicAuth(server->settings->userName, server->settings->password);
 					header.authorization = authField.second;
 				}
 				_rpcEncoder->insertHeader(data, header);
@@ -405,10 +416,10 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 			else //XML-RPC, JSON-RPC
 			{
 				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
-				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
+				if(server->settings && (server->settings->authType & ClientSettings::Settings::AuthType::basic))
 				{
 					_out.printDebug("Using Basic Access Authentication.");
-					std::pair<std::string, std::string> authField = server->auth.basicClient();
+					std::pair<std::string, std::string> authField = basicAuth(server->settings->userName, server->settings->password);
 					header += authField.first + ": " + authField.second + "\r\n";
 				}
 				header += "\r\n";

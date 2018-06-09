@@ -59,7 +59,7 @@ namespace Rpc
 				bool webSocketAuthorized = false;
 				bool nodeClient = false;
 				std::thread readThread;
-				Auth auth;
+				std::shared_ptr<Auth> auth;
 
 				Client();
 				virtual ~Client();
@@ -134,7 +134,6 @@ namespace Rpc
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection);
-			std::string getHttpHtmlResponseHeader(uint32_t contentLength, bool closeConnection);
 			void closeClientConnection(std::shared_ptr<Client> client);
 			bool clientValid(std::shared_ptr<Client>& client);
 	};

@@ -1,40 +1,6 @@
 <?php
 require_once("user.php");
 
-function ipIsV6($ip) : int
-{
-    return strpos($ip, ':') !== false;
-}
-
-function clientInPrivateNet() : bool
-{
-    if(substr($_SERVER['REMOTE_ADDR'], 0, 7) == '::ffff:' && strpos($_SERVER['REMOTE_ADDR'], '.') !== false) $_SERVER['REMOTE_ADDR'] = substr($_SERVER['REMOTE_ADDR'], 7);
-
-    if(ipIsV6($_SERVER['REMOTE_ADDR']))
-    {
-        $ip = $_SERVER['REMOTE_ADDR'];
-        $ip6 = substr($ip, 0, 6);
-        $ip2 = substr($ip6, 0, 2);
-
-        return $ip6 == 'fe80::' || $ip2 == 'fc' || $ip2 == 'fd' || $ip == '::1';
-    }
-    else
-    {
-        $clientIp = ip2long($_SERVER['REMOTE_ADDR']);
-        $bcast10 = ip2long('255.0.0.0');
-        $nmask10 = ip2long('10.0.0.0');
-        $bcast172 = ip2long('255.240.0.0');
-        $nmask172 = ip2long('172.16.0.0');
-        $bcast192 = ip2long('255.255.0.0');
-        $nmask192 = ip2long('192.168.0.0');
-        $bcast127 = ip2long('255.0.0.0');
-        $nmask127 = ip2long('127.0.0.0');
-        return (($clientIp & $bcast10) == $nmask10) || (($clientIp & $bcast172) == $nmask172) || (($clientIp & $bcast192) == $nmask192) || (($clientIp & $bcast127) == $nmask127);
-    }
-}
-
-if((!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != "on") && !clientInPrivateNet()) die('unauthorized');
-
 $user = new User();
 if(!$user->checkAuth(true)) die();
 ?>

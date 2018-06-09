@@ -72,6 +72,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("nodeOutput", std::bind(&NodeBlueClient::nodeOutput, this, std::placeholders::_1));
     _localRpcMethods.emplace("invokeNodeMethod", std::bind(&NodeBlueClient::invokeExternalNodeMethod, this, std::placeholders::_1));
     _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&NodeBlueClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+    _localRpcMethods.emplace("getNodesWithFixedInputs", std::bind(&NodeBlueClient::getNodesWithFixedInputs, this, std::placeholders::_1));
     _localRpcMethods.emplace("getFlowVariable", std::bind(&NodeBlueClient::getFlowVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("getNodeVariable", std::bind(&NodeBlueClient::getNodeVariable, this, std::placeholders::_1));
     _localRpcMethods.emplace("setFlowVariable", std::bind(&NodeBlueClient::setFlowVariable, this, std::placeholders::_1));
@@ -1969,6 +1970,35 @@ Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray& paramet
             return getConfigParameter(parameters->at(0)->stringValue, innerParameters->at(0)->stringValue);
         }
         return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::getNodesWithFixedInputs(Flows::PArray& parameters)
+{
+    try
+    {
+        std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+        auto nodeStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+        for(auto& node : _fixedInputValues)
+        {
+            nodeStruct->structValue->emplace(node.first, std::make_shared<Flows::Variable>(node.second.size()));
+        }
+
+        return nodeStruct;
     }
     catch(const std::exception& ex)
     {
