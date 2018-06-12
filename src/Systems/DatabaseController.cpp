@@ -3118,13 +3118,19 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 
 bool DatabaseController::createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups)
 {
-	try
-	{
+    try
+    {
         if(groups.empty())
         {
             GD::out.printError("Error: Could not create user. Groups are not specified.");
             return false;
         }
+	    
+	if(name == "rpcserver" || name == "gateway-client")
+	{
+            GD::out.printError("Error: Could not create user. User name is reserved.");
+            return false;
+	}
 
 		BaseLib::PVariable groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		groupArray->arrayValue->reserve(groups.size());
