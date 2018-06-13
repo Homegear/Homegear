@@ -70,8 +70,8 @@ public:
 	void initServerMethods(std::pair<std::string, std::string> address);
 	void broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value);
 	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-	void systemListMethods(std::pair<std::string, std::string> address);
-	void listDevices(std::pair<std::string, std::string> address);
+	void systemListMethods(std::pair<std::string, std::string>& address);
+	void listDevices(std::pair<std::string, std::string>& address);
 	void broadcastError(int32_t level, std::string message);
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 	void broadcastNewEvent(BaseLib::PVariable eventDescription);
@@ -79,7 +79,7 @@ public:
 	void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
-	void sendUnknownDevices(std::pair<std::string, std::string> address);
+	void sendUnknownDevices(std::pair<std::string, std::string>& address);
 	void sendError(std::pair<std::string, std::string> address, int32_t level, std::string message);
 	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string path, std::string id);
 	std::shared_ptr<RemoteRpcServer> addSingleConnectionServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string id);
