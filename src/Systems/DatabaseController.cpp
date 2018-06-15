@@ -4579,7 +4579,7 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 		}
 		else if(data.size() == 7)
 		{
-			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND variableIndex=" + std::to_string(data.at(2)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
 			enqueue(0, entry);
 		}
 		else  if(data.size() == 8 && data.at(0)->intValue != 0)
