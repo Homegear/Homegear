@@ -4566,23 +4566,23 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 					eventServer->binary = true;
 
 				// {{{ Reconnect on CCU2 as it doesn't reconnect automatically
-				if((BaseLib::Math::isNumber(interfaceId, false) && server.second == "1999") || interfaceId == "Homegear_java")
-				{
-					clientInfo->clientType = BaseLib::RpcClientType::ccu2;
-					eventServer->reconnectInfinitely = true;
-					if(eventServer->socket)
+					if((BaseLib::Math::isNumber(interfaceId, false) && server.second == "1999") || interfaceId == "Homegear_java")
 					{
-						eventServer->socket->setReadTimeout(30000000);
-						eventServer->socket->setWriteTimeout(30000000);
+						clientInfo->clientType = BaseLib::RpcClientType::ccu2;
+						eventServer->reconnectInfinitely = true;
+						if(eventServer->socket)
+						{
+							eventServer->socket->setReadTimeout(30000000);
+							eventServer->socket->setWriteTimeout(30000000);
+						}
 					}
-				}
-					// }}}
-					// {{{ Keep connection to IP-Symcon
-				else if(interfaceId == "IPS")
-				{
-					clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
-					eventServer->reconnectInfinitely = true;
-				}
+				// }}}
+                // {{{ IP-Symcon
+					else if(interfaceId.size() >= 3 && interfaceId.compare(0, 3, "IPS") == 0)
+					{
+						clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
+						if(interfaceId == "IPS") eventServer->reconnectInfinitely = true; //Keep connection to IP-Symcon version 3
+					}
 				// }}}
 
 				clientInfo->initUrl = url;
