@@ -426,7 +426,7 @@ bool DatabaseController::convertDatabase()
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
 
-		if(version == "0.7.4") return false; //Up to date
+		if(version == "0.7.5") return false; //Up to date
 		/*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -702,8 +702,17 @@ bool DatabaseController::convertDatabase()
 
             version = "0.7.4";
         }
+		if(version == "0.7.4")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.5...");
 
-        if(version != "0.7.4")
+			data.clear();
+			_db.executeWriteCommand("DELETE FROM serviceMessages", data);
+
+			version = "0.7.5";
+		}
+
+        if(version != "0.7.5")
         {
             GD::out.printCritical("Critical: Unknown database version: " + version);
             return true; //Don't know, what to do
