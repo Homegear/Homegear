@@ -1209,7 +1209,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
                 if(!scriptInfo->clientInfo->acls->fromUser(user))
 				{
 					_out.printError("Error: Could not get ACLs for user \"" + user + "\".");
-					auto result = BaseLib::Variable::createError(-32011, "Unauthorized.");
+					auto result = BaseLib::Variable::createError(-32603, "Unauthorized.");
 					sendResponse(queueEntry->clientData, scriptId, queueEntry->parameters->at(1), result);
 				}
             }
@@ -2241,7 +2241,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("scriptHeaders")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("scriptHeaders")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 			std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -2296,7 +2296,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("peerExists")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("peerExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 			if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
@@ -2309,7 +2309,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 					if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
 					{
 						auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
-						if(!peer || !scriptInfo->clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+						if(!peer || !scriptInfo->clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 					}
 				}
 			}
@@ -2335,7 +2335,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listRpcClients")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listRpcClients")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
 			BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -2385,7 +2385,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("raiseDeleteDevice")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("raiseDeleteDevice")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() != 1 || parameters->at(0)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Method expects device address array as parameter.");
 
             std::vector<uint64_t> newIds{};
@@ -2412,7 +2412,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getFamilySetting")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
 
 			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
@@ -2458,7 +2458,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setFamilySetting")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() != 3 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID, parameter name and value as parameters.");
 
 			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
@@ -2494,7 +2494,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 	{
 		try
 		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteFamilySetting")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 			if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
 
 			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
@@ -2524,7 +2524,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("mqttPublish")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("mqttPublish")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters (topic and payload).");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Topic is empty.");
@@ -2554,7 +2554,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("auth")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("auth")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
@@ -2583,7 +2583,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createUser")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
@@ -2620,7 +2620,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteUser")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
@@ -2646,7 +2646,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUserMetadata")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
@@ -2671,7 +2671,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUsersGroups")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUsersGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
@@ -2707,7 +2707,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setUserMetadata")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
@@ -2733,7 +2733,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateUser")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects two or three parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tString && parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string or array.");
@@ -2776,7 +2776,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("userExists")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("userExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
@@ -2804,7 +2804,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listUsers")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listUsers")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
 				std::map<uint64_t, User::UserInfo> users;
@@ -2854,7 +2854,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createGroup")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters. " + std::to_string(parameters->size()) + " given.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type struct.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
@@ -2880,7 +2880,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteGroup")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
@@ -2905,7 +2905,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroup")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1 && parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
                 if(parameters->size() == 2 && parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
@@ -2933,7 +2933,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroups")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() > 1) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
                 if(parameters->size() == 1 && parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 
@@ -2958,7 +2958,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("groupExists")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("groupExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
@@ -2983,7 +2983,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         {
             try
             {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateGroup")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly two or three parameters.");
                 if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
                 if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
@@ -3013,7 +3013,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
 				std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfo = GD::familyController->getModuleInfo();
@@ -3054,7 +3054,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("loadModule")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("loadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
@@ -3080,7 +3080,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("unloadModule")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("unloadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
@@ -3106,7 +3106,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("reloadModule")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("reloadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
 				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
@@ -3134,7 +3134,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("checkLicense")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("checkLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters. " + std::to_string(parameters->size()) + " given.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
 				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
@@ -3174,7 +3174,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("removeLicense")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("removeLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
 				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
@@ -3214,7 +3214,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getLicenseStates")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getLicenseStates")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
 
@@ -3267,7 +3267,7 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 		{
 			try
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getTrialStartTime")) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getTrialStartTime")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
 				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
 				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
