@@ -674,12 +674,33 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			exit 1
 		fi
 	fi
-	if test -f /build/UploadStable.sh; then
-		/build/UploadStable.sh
+	if test -f /build/UploadRepository.sh; then
+		/build/UploadRepository.sh
 	fi
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
+
+cat > "$rootfs/build/CreateDebianPackageTesting.sh" <<-'EOF'
+#!/bin/bash
+
+/build/CreateDebianPackage.sh testing $1
+
+cd /build
+
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu2_*.deb && test -f homegear-influxdb_*.deb; then
+	if [[ -n $1 ]]; then
+		if test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb; then
+			echo "Error: Some or all packages from gitit.de could not be created."
+			exit 1
+		fi
+	fi
+	if test -f /build/UploadRepository.sh; then
+		/build/UploadRepository.sh
+	fi
+fi
+EOF
+chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
@@ -694,7 +715,7 @@ if [ -n "$HOMEGEARBUILD_SHELL" ]; then
 	/bin/bash
 	exit 0
 fi
-if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_STABLESERVERPATH" || -z "$HOMEGEARBUILD_NIGHTLYSERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
+if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_REPOSITORYSERVERPATH" || -z "$HOMEGEARBUILD_NIGHTLYSERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	while :
 	do
 		echo "Setting up SSH package uploading:"
@@ -721,9 +742,9 @@ if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$H
 		done
 		while :
 		do
-			read -p "Please specify the path on the server to upload stable packages to: " HOMEGEARBUILD_STABLESERVERPATH
-			HOMEGEARBUILD_STABLESERVERPATH=${HOMEGEARBUILD_STABLESERVERPATH%/}
-			if [ -n "$HOMEGEARBUILD_STABLESERVERPATH" ]; then
+			read -p "Please specify the path on the server to upload stable packages to: " HOMEGEARBUILD_REPOSITORYSERVERPATH
+			HOMEGEARBUILD_REPOSITORYSERVERPATH=${HOMEGEARBUILD_REPOSITORYSERVERPATH%/}
+			if [ -n "$HOMEGEARBUILD_REPOSITORYSERVERPATH" ]; then
 				break
 			fi
 		done
@@ -752,7 +773,7 @@ if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$H
 		echo -e "Server name:\t$HOMEGEARBUILD_SERVERNAME"
 		echo -e "Server port:\t$HOMEGEARBUILD_SERVERPORT"
 		echo -e "Server user:\t$HOMEGEARBUILD_SERVERUSER"
-		echo -e "Server path (stable):\t$HOMEGEARBUILD_STABLESERVERPATH"
+		echo -e "Server path (stable):\t$HOMEGEARBUILD_REPOSITORYSERVERPATH"
 		echo -e "Server path (nightlies):\t$HOMEGEARBUILD_NIGHTLYSERVERPATH"
 		echo -e "Certificate:\t"
 		echo "$HOMEGEARBUILD_SERVERCERT"
@@ -768,7 +789,7 @@ if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$H
 		fi
 	done
 else
-	HOMEGEARBUILD_STABLESERVERPATH=${HOMEGEARBUILD_STABLESERVERPATH%/}
+	HOMEGEARBUILD_REPOSITORYSERVERPATH=${HOMEGEARBUILD_REPOSITORYSERVERPATH%/}
 	HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
@@ -794,9 +815,9 @@ if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
-		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_STABLESERVERPATH}
+		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_REPOSITORYSERVERPATH}
 		if [ \$? -eq 0 ]; then
-			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_STABLESERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_STABLESERVERPATH}/\${filename}\"
+			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_REPOSITORYSERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_REPOSITORYSERVERPATH}/\${filename}\"
 			if [ \$? -eq 0 ]; then
 				echo "Packages uploaded successfully."
 				exit 0
@@ -806,8 +827,8 @@ if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 		fi
 	fi
 fi
-" > /build/UploadStable.sh
-chmod 755 /build/UploadStable.sh
+" > /build/UploadRepository.sh
+chmod 755 /build/UploadRepository.sh
 
 echo "#!/bin/bash
 
@@ -838,6 +859,8 @@ rm /FirstStart.sh
 
 if [ "$HOMEGEARBUILD_TYPE" = "stable" ]; then
 	/build/CreateDebianPackageStable.sh ${HOMEGEARBUILD_API_KEY}
+elif [ "$HOMEGEARBUILD_TYPE" = "testing" ]; then
+	/build/CreateDebianPackageTesting.sh ${HOMEGEARBUILD_API_KEY}
 elif [ "$HOMEGEARBUILD_TYPE" = "nightly" ]; then
 	/build/CreateDebianPackageNightly.sh ${HOMEGEARBUILD_API_KEY}
 else
