@@ -209,6 +209,113 @@ void sigchld_handler(int32_t signalNumber)
     }
 }
 
+void terminateThread()
+{
+    try
+    {
+        if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
+        if(GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+    #ifndef NO_SCRIPTENGINE
+        if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+    #endif
+        if(GD::familyController) GD::familyController->homegearShuttingDown();
+        _disposing = true;
+        GD::out.printInfo("(Shutdown) => Stopping CLI server");
+        if(GD::cliServer) GD::cliServer->stop();
+        if(GD::bl->settings.enableUPnP())
+        {
+            GD::out.printInfo("Stopping UPnP server...");
+            GD::uPnP->stop();
+        }
+    #ifdef EVENTHANDLER
+        GD::out.printInfo( "(Shutdown) => Stopping Event handler");
+        if(GD::eventHandler) GD::eventHandler->dispose();
+    #endif
+        stopRPCServers(true);
+        GD::rpcServers.clear();
+
+        if(GD::mqtt && GD::mqtt->enabled())
+        {
+            GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
+            GD::mqtt->stop();
+        }
+        GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
+        if(GD::rpcClient) GD::rpcClient->dispose();
+        GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
+        if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
+        GD::out.printInfo("(Shutdown) => Stopping IPC server...");
+        if(GD::ipcServer) GD::ipcServer->stop();
+        if(GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
+        if(GD::nodeBlueServer) GD::nodeBlueServer->stop();
+    #ifndef NO_SCRIPTENGINE
+        GD::out.printInfo("(Shutdown) => Stopping script engine server...");
+        if(GD::scriptEngineServer) GD::scriptEngineServer->stop();
+    #endif
+        GD::out.printMessage("(Shutdown) => Saving device families");
+        if(GD::familyController) GD::familyController->save(false);
+        GD::out.printMessage("(Shutdown) => Disposing device families");
+        if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+        GD::out.printMessage("(Shutdown) => Disposing database");
+        if(GD::bl->db)
+        {
+            //Finish database operations before closing modules, otherwise SEGFAULT
+            GD::bl->db->dispose();
+            GD::bl->db.reset();
+        }
+        GD::out.printMessage("(Shutdown) => Disposing family modules");
+        GD::familyController->dispose();
+        GD::out.printMessage("(Shutdown) => Disposing licensing modules");
+        if(GD::licensingController) GD::licensingController->dispose();
+        GD::bl->fileDescriptorManager.dispose();
+        _monitor.stop();
+        GD::out.printMessage("(Shutdown) => Shutdown complete.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void reloadThread()
+{
+    try
+    {
+        GD::out.printCritical("Info: Backing up database...");
+        GD::bl->db->hotBackup();
+        if(!GD::bl->db->isOpen())
+        {
+            GD::out.printCritical("Critical: Can't reopen database. Exiting...");
+            _exit(1);
+        }
+        GD::out.printInfo("Reloading Node-BLUE server...");
+        if(GD::nodeBlueServer) GD::nodeBlueServer->homegearReloading();
+#ifndef NO_SCRIPTENGINE
+        GD::out.printInfo("Reloading script engine server...");
+        if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();
+#endif
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void terminate(int signalNumber)
 {
 	try
@@ -239,62 +346,10 @@ void terminate(int signalNumber)
 			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			GD::bl->shuttingDown = true;
 			_shuttingDownMutex.unlock();
-			if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
-			if(GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
-#ifndef NO_SCRIPTENGINE
-			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
-#endif
-			if(GD::familyController) GD::familyController->homegearShuttingDown();
-			_disposing = true;
-			GD::out.printInfo("(Shutdown) => Stopping CLI server");
-			if(GD::cliServer) GD::cliServer->stop();
-			if(GD::bl->settings.enableUPnP())
-			{
-				GD::out.printInfo("Stopping UPnP server...");
-				GD::uPnP->stop();
-			}
-#ifdef EVENTHANDLER
-			GD::out.printInfo( "(Shutdown) => Stopping Event handler");
-			if(GD::eventHandler) GD::eventHandler->dispose();
-#endif
-			stopRPCServers(true);
-			GD::rpcServers.clear();
 
-			if(GD::mqtt && GD::mqtt->enabled())
-			{
-				GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
-				GD::mqtt->stop();
-			}
-			GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
-			if(GD::rpcClient) GD::rpcClient->dispose();
-			GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
-			if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
-			GD::out.printInfo("(Shutdown) => Stopping IPC server...");
-			if(GD::ipcServer) GD::ipcServer->stop();
-			if(GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
-			if(GD::nodeBlueServer) GD::nodeBlueServer->stop();
-#ifndef NO_SCRIPTENGINE
-			GD::out.printInfo("(Shutdown) => Stopping script engine server...");
-			if(GD::scriptEngineServer) GD::scriptEngineServer->stop();
-#endif
-			GD::out.printMessage("(Shutdown) => Saving device families");
-			if(GD::familyController) GD::familyController->save(false);
-			GD::out.printMessage("(Shutdown) => Disposing device families");
-			if(GD::familyController) GD::familyController->disposeDeviceFamilies();
-			GD::out.printMessage("(Shutdown) => Disposing database");
-			if(GD::bl->db)
-			{
-				//Finish database operations before closing modules, otherwise SEGFAULT
-				GD::bl->db->dispose();
-				GD::bl->db.reset();
-			}
-			GD::out.printMessage("(Shutdown) => Disposing family modules");
-			GD::familyController->dispose();
-			GD::out.printMessage("(Shutdown) => Disposing licensing modules");
-			if(GD::licensingController) GD::licensingController->dispose();
-			GD::bl->fileDescriptorManager.dispose();
-			_monitor.stop();
-			GD::out.printMessage("(Shutdown) => Shutdown complete.");
+            std::thread t(terminateThread); //Stop in thread to not lock mutexes in signal handler => possible deadlock. If an additional signal now occurs, the thread continues to run.
+            t.join();
+
 			if(_startAsDaemon || _nonInteractive)
 			{
 				fclose(stdout);
@@ -372,19 +427,10 @@ void terminate(int signalNumber)
 					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
-			GD::out.printCritical("Info: Backing up database...");
-			GD::bl->db->hotBackup();
-			if(!GD::bl->db->isOpen())
-			{
-				GD::out.printCritical("Critical: Can't reopen database. Exiting...");
-				_exit(1);
-			}
-			GD::out.printInfo("Reloading Node-BLUE server...");
-			if(GD::nodeBlueServer) GD::nodeBlueServer->homegearReloading();
-#ifndef NO_SCRIPTENGINE
-			GD::out.printInfo("Reloading script engine server...");
-			if(GD::scriptEngineServer) GD::scriptEngineServer->homegearReloading();
-#endif
+
+            std::thread t(reloadThread); //Reload in thread to not lock mutexes in signal handler => possible deadlock. If an additional signal now occurs, the thread continues to run.
+            t.join();
+
 			_shuttingDownMutex.lock();
 			_startUpComplete = true;
 			if(_shutdownQueued)

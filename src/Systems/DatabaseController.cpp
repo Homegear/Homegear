@@ -426,7 +426,7 @@ bool DatabaseController::convertDatabase()
 		if(result->empty()) return false; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
 
-		if(version == "0.7.4") return false; //Up to date
+		if(version == "0.7.5") return false; //Up to date
 		/*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -702,8 +702,17 @@ bool DatabaseController::convertDatabase()
 
             version = "0.7.4";
         }
+		if(version == "0.7.4")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.5...");
 
-        if(version != "0.7.4")
+			data.clear();
+			_db.executeWriteCommand("DELETE FROM serviceMessages", data);
+
+			version = "0.7.5";
+		}
+
+        if(version != "0.7.5")
         {
             GD::out.printCritical("Critical: Unknown database version: " + version);
             return true; //Don't know, what to do
@@ -2760,7 +2769,7 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInCategory(BaseLib::PRp
                 _systemVariables.emplace(systemVariable->name, systemVariable);
             }
 
-            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             if((systemVariable->categories.empty() && categoryId == 0) || systemVariable->categories.find(categoryId) != systemVariable->categories.end())
             {
@@ -2826,7 +2835,7 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInRoom(BaseLib::PRpcCli
                 _systemVariables.emplace(systemVariable->name, systemVariable);
             }
 
-            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32011, "Unauthorized.");
+            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             systemVariableArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(systemVariable->name));
         }
@@ -3118,13 +3127,19 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 
 bool DatabaseController::createUser(const std::string& name, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups)
 {
-	try
-	{
+    try
+    {
         if(groups.empty())
         {
             GD::out.printError("Error: Could not create user. Groups are not specified.");
             return false;
         }
+	    
+	if(name == "rpcserver" || name == "gateway-client")
+	{
+            GD::out.printError("Error: Could not create user. User name is reserved.");
+            return false;
+	}
 
 		BaseLib::PVariable groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		groupArray->arrayValue->reserve(groups.size());
@@ -4573,7 +4588,7 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 		}
 		else if(data.size() == 7)
 		{
-			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(0)->intValue) + " AND variableIndex=" + std::to_string(data.at(1)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, variableIndex, timestamp, integerValue, stringValue, binaryValue) VALUES((SELECT variableID FROM serviceMessages WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND variableIndex=" + std::to_string(data.at(2)->intValue) + "), ?, ?, ?, ?, ?, ?, ?)", data);
 			enqueue(0, entry);
 		}
 		else  if(data.size() == 8 && data.at(0)->intValue != 0)
