@@ -2057,7 +2057,7 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
 			else
 			{
 				auto peerIds = std::make_shared<BaseLib::Array>();
-                peerIds->push_back(parameters->at(0));
+                if(peerId > 0) peerIds->push_back(std::make_shared<BaseLib::Variable>(peerId));
 				result = central->getAllValues(clientInfo, peerIds, returnWriteOnly, checkAcls);
 			}
 			if(result && result->errorStruct)
