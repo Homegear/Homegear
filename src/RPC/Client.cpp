@@ -931,7 +931,7 @@ void Client::collectGarbage()
 		_lastGarbageCollection = BaseLib::HelperFunctions::getTime();
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator i = _servers.begin(); i != _servers.end(); ++i)
 		{
-			if(i->second->removed || (i->second->socket && !i->second->socket->connected() && i->second->keepAlive && !i->second->reconnectInfinitely) || (!i->second->initialized && now - i->second->creationTime > 120))
+			if(i->second->removed || i->second->getServerClientInfo()->closed || (i->second->socket && !i->second->socket->connected() && i->second->keepAlive && !i->second->reconnectInfinitely) || (!i->second->initialized && now - i->second->creationTime > 120))
 			{
 				if(i->second->socket) i->second->socket->close();
 				serversToRemove.push_back(i->first);
