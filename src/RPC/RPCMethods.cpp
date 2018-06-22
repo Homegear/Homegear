@@ -2004,12 +2004,15 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tBoolean }),
 				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger }),
-				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean })
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }),
+				std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray, BaseLib::VariableType::tBoolean })
 			}));
 			if(error != ParameterError::Enum::noError) return getError(error);
 		}
 
 		uint64_t peerId = 0;
+		bool isArray = false;
 		bool returnWriteOnly = false;
 		if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::VariableType::tBoolean)
 		{
@@ -2019,10 +2022,18 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
 		{
             peerId = parameters->at(0)->integerValue64;
 		}
-		else if(parameters->size() == 2)
+		else if(parameters->size() == 1 && (parameters->at(0)->type == BaseLib::VariableType::tArray))
+		{
+			isArray = true;
+		}
+		else if(parameters->size() == 2 && (parameters->at(0)->type == BaseLib::VariableType::tInteger || parameters->at(0)->type == BaseLib::VariableType::tInteger64))
 		{
             peerId = parameters->at(0)->integerValue64;
 			returnWriteOnly = parameters->at(1)->booleanValue;
+		}
+		else if(parameters->size() == 2 && (parameters->at(0)->type == BaseLib::VariableType::tArray))
+		{
+			isArray = true;
 		}
 
 		BaseLib::PVariable values(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -2040,7 +2051,15 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
                     if(!peer || !clientInfo->acls->checkDeviceReadAccess(peer)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 }
             }
-			BaseLib::PVariable result = central->getAllValues(clientInfo, peerId, returnWriteOnly, checkAcls);
+
+			BaseLib::PVariable result;
+			if(isArray) result = central->getAllValues(clientInfo, parameters->at(0)->arrayValue, returnWriteOnly, checkAcls);
+			else
+			{
+				auto peerIds = std::make_shared<BaseLib::Array>();
+                if(peerId > 0) peerIds->push_back(std::make_shared<BaseLib::Variable>(peerId));
+				result = central->getAllValues(clientInfo, peerIds, returnWriteOnly, checkAcls);
+			}
 			if(result && result->errorStruct)
 			{
 				if(peerId > 0) return result;
