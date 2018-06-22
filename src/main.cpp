@@ -295,6 +295,42 @@ void reloadThread()
             GD::out.printCritical("Critical: Can't reopen database. Exiting...");
             _exit(1);
         }
+
+        if(GD::bl->settings.changed())
+        {
+            GD::out.printMessage("Settings were changed. Restarting services...");
+
+            if(GD::bl->settings.enableUPnP())
+            {
+                GD::out.printInfo("Stopping UPnP server");
+                GD::uPnP->stop();
+            }
+            stopRPCServers(false);
+            if(GD::mqtt->enabled())
+            {
+                GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
+                GD::mqtt->stop();
+            }
+            //Binding fails sometimes with "address is already in use" without waiting.
+            std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+            GD::out.printMessage("Reloading settings...");
+            GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+            GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+            GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+            GD::mqtt->loadSettings();
+            if(GD::mqtt->enabled())
+            {
+                GD::out.printInfo("Starting MQTT client");;
+                GD::mqtt->start();
+            }
+            startRPCServers();
+            if(GD::bl->settings.enableUPnP())
+            {
+                GD::out.printInfo("Starting UPnP server");
+                GD::uPnP->start();
+            }
+        }
+
         GD::out.printInfo("Reloading Node-BLUE server...");
         if(GD::nodeBlueServer) GD::nodeBlueServer->homegearReloading();
 #ifndef NO_SCRIPTENGINE
@@ -381,40 +417,10 @@ void terminate(int signalNumber)
 			}
 			_startUpComplete = false;
 			_shuttingDownMutex.unlock();
-			/*if(GD::bl->settings.changed())
-			{
-				if(GD::bl->settings.enableUPnP())
-				{
-					GD::out.printInfo("Stopping UPnP server");
-					GD::uPnP->stop();
-				}
-				stopRPCServers(false);
-				if(GD::mqtt->enabled())
-				{
-					GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
-					GD::mqtt->stop();
-				}
-				if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
-				//Binding fails sometimes with "address is already in use" without waiting.
-				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-				GD::out.printMessage("Reloading settings...");
-				GD::bl->settings.load(GD::configPath + "main.conf");
-				GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
-				GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
-				GD::mqtt->loadSettings();
-				if(GD::mqtt->enabled())
-				{
-					GD::out.printInfo("Starting MQTT client");;
-					GD::mqtt->start();
-				}
-				if(GD::familyController) GD::familyController->physicalInterfaceStartListening();
-				startRPCServers();
-				if(GD::bl->settings.enableUPnP())
-				{
-					GD::out.printInfo("Starting UPnP server");
-					GD::uPnP->start();
-				}
-			}*/
+
+			std::thread t(reloadThread); //Reload in thread to not lock mutexes in signal handler => possible deadlock. If an additional signal now occurs, the thread continues to run.
+			t.join();
+
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon || _nonInteractive)
 			{
@@ -427,9 +433,6 @@ void terminate(int signalNumber)
 					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
-
-            std::thread t(reloadThread); //Reload in thread to not lock mutexes in signal handler => possible deadlock. If an additional signal now occurs, the thread continues to run.
-            t.join();
 
 			_shuttingDownMutex.lock();
 			_startUpComplete = true;
