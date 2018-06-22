@@ -1068,6 +1068,16 @@ private:
 	std::thread _initServerThread;
 };
 
+class RPCInvokeFamilyMethod : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCInvokeFamilyMethod()
+	{
+		addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+	}
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCListBidcosInterfaces : public BaseLib::Rpc::RpcMethod
 {
 public:

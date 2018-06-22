@@ -12860,7 +12860,7 @@ RED.view = (function() {
                                             if(j != 0) types += ", ";
                                             types += inputInfo.types[j];
                                         }
-                                        types = "</i></p>";
+                                        types += "</i></p>";
                                         content = infoBody;
                                     }
                                 }
