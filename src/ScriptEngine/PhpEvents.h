@@ -39,6 +39,7 @@ public:
 	class EventData
 	{
 	public:
+		std::string source;
 		std::string type;
 		uint64_t id = 0;
 		int32_t channel = -1;

@@ -386,7 +386,7 @@ void IpcServer::homegearShuttingDown()
     }
 }
 
-void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
+void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values)
 {
 	try
 	{
@@ -446,7 +446,13 @@ void IpcServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std
 
 		for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
-			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(5);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
 			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
 		}

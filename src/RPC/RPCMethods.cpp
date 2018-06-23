@@ -43,13 +43,8 @@ BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("devTest")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-		bool value = false;
-		if(parameters->size() > 0) value = parameters->at(0)->booleanValue;
 
-		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{ "PRESS_SHORT" });
-		BaseLib::PArray values(new std::vector<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(value)) });
-		GD::rpcClient->broadcastEvent(90, 1, "OPNWEATHES:1", valueKeys, values);
-		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
     {
@@ -5138,10 +5133,11 @@ BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			id = parameters->at(0)->stringValue;
 		}
 
+		std::string source;
 		std::shared_ptr<std::vector<std::string>> variables(new std::vector<std::string>{ "PONG" });
 		BaseLib::PArray values(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(id)) });
-		GD::familyController->onEvent(0, -1, variables, values);
-		GD::familyController->onRPCEvent(0, -1, "CENTRAL", variables, values);
+		GD::familyController->onEvent(source, 0, -1, variables, values);
+		GD::familyController->onRPCEvent(source, 0, -1, "CENTRAL", variables, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(true));
 	}

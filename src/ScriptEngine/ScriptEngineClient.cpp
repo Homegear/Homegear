@@ -2224,25 +2224,26 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 {
 	try
 	{
-		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 5) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 		for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			int32_t channel = parameters->at(1)->integerValue;
+			int32_t channel = parameters->at(2)->integerValue;
 			std::string variableName;
-			if(i->second && (parameters->at(0)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(0)->integerValue64, -1, variableName)))
+			if(i->second && (parameters->at(1)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(1)->integerValue64, -1, variableName)))
 			{
-				for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
+				for(uint32_t j = 0; j < parameters->at(3)->arrayValue->size(); j++)
 				{
-					variableName = parameters->at(2)->arrayValue->at(j)->stringValue;
-					if(!i->second->peerSubscribed(static_cast<uint64_t>(parameters->at(0)->integerValue64), channel, variableName)) continue;
-					std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+					variableName = parameters->at(3)->arrayValue->at(j)->stringValue;
+					if(!i->second->peerSubscribed(static_cast<uint64_t>(parameters->at(1)->integerValue64), channel, variableName)) continue;
+					auto eventData = std::make_shared<PhpEvents::EventData>();
+					eventData->source = parameters->at(0)->stringValue;
 					eventData->type = "event";
-					eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
+					eventData->id = static_cast<uint64_t>(parameters->at(1)->integerValue64);
 					eventData->channel = channel;
 					eventData->variable = variableName;
-					eventData->value = parameters->at(3)->arrayValue->at(j);
+					eventData->value = parameters->at(4)->arrayValue->at(j);
 					if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 				}
 			}
