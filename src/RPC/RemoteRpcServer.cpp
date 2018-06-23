@@ -68,6 +68,8 @@ RemoteRpcServer::RemoteRpcServer(BaseLib::PRpcClientInfo& serverClientInfo)
 
 RemoteRpcServer::RemoteRpcServer(std::shared_ptr<RpcClient>& client, BaseLib::PRpcClientInfo& serverClientInfo) : RemoteRpcServer(serverClientInfo)
 {
+    removed = false;
+    initialized = false;
 	_client = client;
 }
 
@@ -195,7 +197,11 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 {
 	try
 	{
-		if(_serverClientInfo->closed) return BaseLib::Variable::createError(-32501, "Unknown client.");
+		if(_serverClientInfo->closed)
+        {
+            removed = true;
+            return BaseLib::Variable::createError(-32501, "Unknown client.");
+        }
 
 		std::lock_guard<std::mutex> invokeGuard(_serverClientInfo->invokeMutex);
 
