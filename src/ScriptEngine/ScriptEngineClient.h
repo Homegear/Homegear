@@ -182,7 +182,7 @@ private:
 	void sendOutput(std::string output, bool error);
 	void sendHeaders(BaseLib::PVariable headers);
 	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait);
-	BaseLib::PVariable sendRequest(int32_t scriptId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait);
+	BaseLib::PVariable sendRequest(int32_t scriptId, uint64_t peerId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait);
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
 	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 	void sendScriptFinished(int32_t exitCode);

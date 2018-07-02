@@ -4530,6 +4530,11 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		}
 		else
 		{
+            if(_reservedIds.find(interfaceId) != _reservedIds.end() || interfaceId.compare(0, sizeof("device-") - 1, "device-") == 0)
+            {
+                interfaceId = "client-" + interfaceId;
+            }
+
             if(url.empty()) //Send events over connection to server
 			{
 				clientInfo->sendEventsToRpcServer = true;

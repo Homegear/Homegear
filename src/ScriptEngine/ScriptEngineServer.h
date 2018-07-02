@@ -127,7 +127,7 @@ private:
 	std::map<int32_t, PScriptEngineClientData> _clients;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
-	BaseLib::PRpcClientInfo _dummyClientInfo;
+	BaseLib::PRpcClientInfo _scriptEngineClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
 	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _executeScriptMutex;
