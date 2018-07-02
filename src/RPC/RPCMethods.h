@@ -1066,6 +1066,7 @@ private:
 	bool _disposing = false;
 	std::mutex _initServerThreadMutex;
 	std::thread _initServerThread;
+	const std::unordered_set<std::string> _reservedIds{ "homegear", "scriptEngine", "ipcServer", "nodeBlue", "mqtt" };
 };
 
 class RPCInvokeFamilyMethod : public BaseLib::Rpc::RpcMethod

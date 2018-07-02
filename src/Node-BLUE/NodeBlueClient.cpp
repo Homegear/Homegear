@@ -2327,11 +2327,12 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
 {
     try
     {
-        if(parameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->size() != 5) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
         std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
-        auto peerId = static_cast<uint64_t>(parameters->at(0)->integerValue64);
-        int32_t channel = parameters->at(1)->integerValue;
+        std::string& source = parameters->at(0)->stringValue;
+        auto peerId = static_cast<uint64_t>(parameters->at(1)->integerValue64);
+        int32_t channel = parameters->at(2)->integerValue;
 
         auto peerIterator = _peerSubscriptions.find(peerId);
         if(peerIterator == _peerSubscriptions.end()) return std::make_shared<Flows::Variable>();
@@ -2339,19 +2340,19 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
         auto channelIterator = peerIterator->second.find(channel);
         if(channelIterator == peerIterator->second.end()) return std::make_shared<Flows::Variable>();
 
-        for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
+        for(uint32_t j = 0; j < parameters->at(3)->arrayValue->size(); j++)
         {
-            std::string variableName = parameters->at(2)->arrayValue->at(j)->stringValue;
+            std::string variableName = parameters->at(3)->arrayValue->at(j)->stringValue;
 
             auto variableIterator = channelIterator->second.find(variableName);
             if(variableIterator == channelIterator->second.end()) continue;
 
-            Flows::PVariable value = parameters->at(3)->arrayValue->at(j);
+            Flows::PVariable value = parameters->at(4)->arrayValue->at(j);
 
             for(auto nodeId : variableIterator->second)
             {
                 Flows::PINode node = _nodeManager->getNode(nodeId);
-                if(node) node->variableEvent(peerId, channel, variableName, value);
+                if(node) node->variableEvent(source, peerId, channel, variableName, value);
             }
         }
 

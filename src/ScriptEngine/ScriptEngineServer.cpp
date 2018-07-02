@@ -58,12 +58,13 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
-    _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-	_dummyClientInfo->scriptEngineServer = true;
-    _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+    _scriptEngineClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+    _scriptEngineClientInfo->scriptEngineServer = true;
+    _scriptEngineClientInfo->initInterfaceId = "scriptEngine";
+    _scriptEngineClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
     std::vector<uint64_t> groups{ 2 };
-    _dummyClientInfo->acls->fromGroups(groups);
-	_dummyClientInfo->user = "SYSTEM (2)";
+    _scriptEngineClientInfo->acls->fromGroups(groups);
+    _scriptEngineClientInfo->user = "SYSTEM (2)";
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -903,14 +904,14 @@ BaseLib::PVariable ScriptEngineServer::executeDeviceMethod(BaseLib::PArray& para
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
+void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values)
 {
 	try
 	{
 		if(_shuttingDown) return;
-		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+		if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-		bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+		bool checkAcls = _scriptEngineClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
 		if(checkAcls)
 		{
@@ -932,17 +933,17 @@ void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::share
 			{
 				if(id == 0)
 				{
-                    if(_dummyClientInfo->acls->variablesRoomsCategoriesReadSet())
+                    if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesReadSet())
                     {
                         auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
-                        if(systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
+                        if(systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
                         {
                             newVariables->push_back(variables->at(i));
                             newValues->push_back(values->at(i));
                         }
                     }
 				}
-				else if(peer && _dummyClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
+				else if(peer && _scriptEngineClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
 				{
 					newVariables->push_back(variables->at(i));
 					newValues->push_back(values->at(i));
@@ -964,7 +965,13 @@ void ScriptEngineServer::broadcastEvent(uint64_t id, int32_t channel, std::share
 
 		for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
-			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(5);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
 			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
 		}
@@ -989,8 +996,8 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib
 	{
 		if(_shuttingDown) return;
 
-		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+		if(_scriptEngineClientInfo->acls->roomsCategoriesDevicesReadSet())
 		{
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -1001,7 +1008,7 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib
 					for(auto id : ids)
 					{
 						auto peer = central->getPeer((uint64_t)id);
-						if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+						if(!peer || !_scriptEngineClientInfo->acls->checkDeviceReadAccess(peer)) return;
 					}
 				}
 			}
@@ -1080,8 +1087,8 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
 	{
 		if(_shuttingDown) return;
 
-		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
+		if(_scriptEngineClientInfo->acls->roomsCategoriesDevicesReadSet())
 		{
 			std::shared_ptr<BaseLib::Systems::Peer> peer;
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -1089,7 +1096,7 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
 			{
 				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
 				if(central) peer = central->getPeer(id);
-				if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+				if(!peer || !_scriptEngineClientInfo->acls->checkDeviceReadAccess(peer)) return;
 			}
 		}
 
@@ -1200,10 +1207,15 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			auto scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId");
             scriptInfo->scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId")->integerValue;
             std::string user = queueEntry->parameters->at(0)->structValue->at("user")->stringValue;
-            if(user.empty()) scriptInfo->clientInfo = _dummyClientInfo;
-            else
+
+            scriptInfo->clientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+            *scriptInfo->clientInfo = *_scriptEngineClientInfo;
+
+            scriptInfo->clientInfo->peerId = queueEntry->parameters->at(0)->structValue->at("peerId")->integerValue64;
+            if(scriptInfo->clientInfo->peerId != 0) scriptInfo->clientInfo->addon = true;
+
+            if(!user.empty())
             {
-				scriptInfo->clientInfo = std::make_shared<BaseLib::RpcClientInfo>();
                 scriptInfo->clientInfo->user = user;
                 scriptInfo->clientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), scriptInfo->scriptId);
                 if(!scriptInfo->clientInfo->acls->fromUser(user))

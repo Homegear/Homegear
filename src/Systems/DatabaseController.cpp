@@ -2293,12 +2293,13 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
-		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(peerID, -1, valueKeys, values);
+		std::string source;
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
-		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
+		GD::scriptEngineServer->broadcastEvent(source, peerID, -1, valueKeys, values);
 #endif
-		if(GD::ipcServer) GD::ipcServer->broadcastEvent(peerID, -1, valueKeys, values);
-		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(source, peerID, -1, valueKeys, values);
+		GD::rpcClient->broadcastEvent(source, peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -2354,12 +2355,13 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(peerID, -1, dataID, value);
 #endif
-		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(peerID, -1, valueKeys, values);
+        std::string source;
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
-		GD::scriptEngineServer->broadcastEvent(peerID, -1, valueKeys, values);
+		GD::scriptEngineServer->broadcastEvent(source, peerID, -1, valueKeys, values);
 #endif
-		if(GD::ipcServer) GD::ipcServer->broadcastEvent(peerID, -1, valueKeys, values);
-		GD::rpcClient->broadcastEvent(peerID, -1, serialNumber, valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(source, peerID, -1, valueKeys, values);
+		GD::rpcClient->broadcastEvent(source, peerID, -1, serialNumber, valueKeys, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
@@ -2406,12 +2408,14 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 #ifdef EVENTHANDLER
         GD::eventHandler->trigger(variableId, value);
 #endif
-        if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
+        std::string source;
+        if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, 0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
-        GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
+        GD::scriptEngineServer->broadcastEvent(source, 0, -1, valueKeys, values);
 #endif
-        if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
-        GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
+        if(GD::ipcServer) GD::ipcServer->broadcastEvent(source, 0, -1, valueKeys, values);
+        std::string deviceAddress;
+        GD::rpcClient->broadcastEvent(source, 0, -1, deviceAddress, valueKeys, values);
 
         return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
     }
@@ -2975,14 +2979,16 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableId
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(variableId, value);
 #endif
+        std::string source;
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableId});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
-		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(0, -1, valueKeys, values);
+		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, 0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
-		GD::scriptEngineServer->broadcastEvent(0, -1, valueKeys, values);
+		GD::scriptEngineServer->broadcastEvent(source, 0, -1, valueKeys, values);
 #endif
-		if(GD::ipcServer) GD::ipcServer->broadcastEvent(0, -1, valueKeys, values);
-		GD::rpcClient->broadcastEvent(0, -1, "", valueKeys, values);
+		if(GD::ipcServer) GD::ipcServer->broadcastEvent(source, 0, -1, valueKeys, values);
+        std::string deviceAddress;
+		GD::rpcClient->broadcastEvent(source, 0, -1, deviceAddress, valueKeys, values);
 
         return std::make_shared<BaseLib::Variable>();
 	}

@@ -590,6 +590,7 @@ void RpcServer::mainThread()
 						client->id++;
 					}
                     client->auth = std::make_shared<Auth>(_info->validGroups);
+                    client->initInterfaceId = "rpc-client-" + address + ":" + std::to_string(port);
 					_clients[client->id] = client;
 				}
 
