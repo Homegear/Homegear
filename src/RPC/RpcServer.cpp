@@ -1131,7 +1131,7 @@ void RpcServer::collectGarbage()
 
 		for(auto& client : clientsToRemove)
 		{
-			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
+			_out.printDebug("Debug: Joining read thread of client " + std::to_string(client->id));
 			GD::bl->threadManager.join(client->readThread);
 
 			{
