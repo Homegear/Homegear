@@ -349,7 +349,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.2")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.5")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -424,6 +424,7 @@ bool DatabaseController::convertDatabase()
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return false; //Handled in initializeDatabase
+		int64_t versionId = result->at(0).at(0)->intValue;
 		std::string version = result->at(0).at(3)->textValue;
 
 		if(version == "0.7.5") return false; //Up to date
@@ -439,7 +440,7 @@ bool DatabaseController::convertDatabase()
 			save(true);
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result.at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -464,7 +465,7 @@ bool DatabaseController::convertDatabase()
 			save(true);
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result.at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -484,7 +485,7 @@ bool DatabaseController::convertDatabase()
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -501,7 +502,7 @@ bool DatabaseController::convertDatabase()
 			_db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -524,7 +525,7 @@ bool DatabaseController::convertDatabase()
 			_db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3");
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -544,7 +545,7 @@ bool DatabaseController::convertDatabase()
 			_db.executeCommand("CREATE INDEX peersIndex ON peers (peerID, parent, address, serialNumber, type)");
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -561,7 +562,7 @@ bool DatabaseController::convertDatabase()
 			_db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077");
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -588,7 +589,7 @@ bool DatabaseController::convertDatabase()
             _db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'");
 
             data.clear();
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
             //Don't forget to set new version in initializeDatabase!!!
@@ -633,7 +634,7 @@ bool DatabaseController::convertDatabase()
 
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -653,7 +654,7 @@ bool DatabaseController::convertDatabase()
             _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
 
 			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
@@ -692,7 +693,7 @@ bool DatabaseController::convertDatabase()
 			}
 
             data.clear();
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
             //Don't forget to set new version in initializeDatabase!!!
@@ -708,6 +709,15 @@ bool DatabaseController::convertDatabase()
 
 			data.clear();
 			_db.executeWriteCommand("DELETE FROM serviceMessages", data);
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.5")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			version = "0.7.5";
 		}

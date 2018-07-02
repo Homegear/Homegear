@@ -237,8 +237,8 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		auto methods = GD::rpcServers.begin()->second->getMethods();
 		BaseLib::PVariable returns(new BaseLib::Variable(BaseLib::VariableType::tArray));
+        returns->arrayValue->reserve(parameters->at(0)->arrayValue->size());
 		for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{
 			if((*i)->type != BaseLib::VariableType::tStruct)
@@ -262,14 +262,12 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 				continue;
 			}
 			std::string methodName = (*i)->structValue->at("methodName")->stringValue;
-			BaseLib::PArray parameters = (*i)->structValue->at("params")->arrayValue;
+			auto parameters = (*i)->structValue->at("params");
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
 			else
 			{
-				auto methodIterator = methods->find(methodName);
-				if(methodIterator == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
-				else returns->arrayValue->push_back(methodIterator->second->invoke(clientInfo, parameters));
+				returns->arrayValue->push_back(GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters));
 			}
 		}
 
