@@ -627,7 +627,8 @@ void IpcServer::closeClientConnection(PIpcClientData client)
 		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
 		for (auto& element : _clientsByRpcMethods)
 		{
-			if (element.second.second->id == client->id) rpcMethodsToRemove.push_back(element.first);
+            element.second.second.erase(client->id);
+			if(element.second.second.empty()) rpcMethodsToRemove.push_back(element.first);
 		}
 		for (auto& rpcMethod : rpcMethodsToRemove)
 		{
@@ -654,7 +655,7 @@ BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, 
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-		PIpcClientData clientData;
+		std::vector<PIpcClientData> clientData;
 		{
 			std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
 			auto clientIterator = _clientsByRpcMethods.find(methodName);
@@ -663,15 +664,32 @@ BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, 
 				_out.printError("Warning: RPC method not found: " + methodName);
 				return BaseLib::Variable::createError(-32601, ": Requested method not found.");
 			}
-			clientData = clientIterator->second.second;
+			clientData.reserve(clientIterator->second.second.size());
+			for(auto& client : clientIterator->second.second)
+			{
+				clientData.push_back(client.second);
+			}
 		}
 
-		BaseLib::PVariable response = sendRequest(clientData, methodName, parameters);
-		if (response->errorStruct)
+		BaseLib::PVariable responses;
+		BaseLib::PVariable responseStruct;
+		if(clientData.size() > 1)
 		{
-			_out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(clientData->id) + ": " + response->structValue->at("faultString")->stringValue);
+			responses = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			responses->structValue->emplace("multipleClients", std::make_shared<BaseLib::Variable>(true));
+			responseStruct = responses->structValue->emplace("returnValues", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first->second;
 		}
-		return response;
+		for(auto& client : clientData)
+		{
+			BaseLib::PVariable response = sendRequest(client, methodName, parameters);
+			if(response->errorStruct)
+			{
+				_out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(client->id) + ": " + response->structValue->at("faultString")->stringValue);
+			}
+			if(clientData.size() == 1) return response;
+			else responseStruct->structValue->emplace(std::to_string(client->id), response);
+		}
+
 	}
 	catch (const std::exception& ex)
 	{
@@ -1260,18 +1278,8 @@ BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int3
 		}
 
 		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
-		auto clientIterator = _clientsByRpcMethods.find(methodName);
-		if (clientIterator != _clientsByRpcMethods.end())
-		{
-			if (clientIterator->second.second->id != clientData->id)
-			{
-				_out.printError("Error: Client " + std::to_string(clientData->id) + " tried to register a RPC method \"" + methodName + "\" already registed by client " + std::to_string(clientIterator->second.second->id) + ".");
-				return BaseLib::Variable::createError(-2, "RPC method is already registered by another client.");
-			}
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		_clientsByRpcMethods.emplace(methodName, std::make_pair(rpcMethod, clientData));
-		_out.printInfo("Info: Client " + std::to_string(clientData->id) + " successfully registered RPC method \"" + methodName + "\".");
+		_clientsByRpcMethods[methodName].second.emplace(clientData->id, clientData);
+		_out.printInfo("Info: Client " + std::to_string(clientData->id) + " successfully registered RPC method \"" + methodName + "\" (this method is registered by " + std::to_string(_clientsByRpcMethods[methodName].second.size()) + " client(s)).");
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}

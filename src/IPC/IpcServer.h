@@ -91,7 +91,7 @@ private:
 	std::mutex _stateMutex;
 	std::map<int32_t, PIpcClientData> _clients;
 	std::mutex _clientsByRpcMethodsMutex;
-	std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, PIpcClientData>> _clientsByRpcMethods;
+	std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, std::unordered_map<int32_t, PIpcClientData>>> _clientsByRpcMethods;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
