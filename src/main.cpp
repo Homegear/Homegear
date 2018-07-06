@@ -308,7 +308,7 @@ void reloadThread()
             stopRPCServers(false);
             if(GD::mqtt->enabled())
             {
-                GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
+                GD::out.printInfo( "(Shutdown) => Stopping MQTT client");
                 GD::mqtt->stop();
             }
             //Binding fails sometimes with "address is already in use" without waiting.
