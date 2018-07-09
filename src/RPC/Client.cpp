@@ -317,6 +317,7 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 					}
 
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+                    parameters->push_back(std::make_shared<BaseLib::Variable>(source));
 					if(server->second->newFormat)
 					{
 						parameters->push_back(std::make_shared<BaseLib::Variable>(id));
@@ -325,7 +326,6 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 					else parameters->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
 					parameters->push_back(std::make_shared<BaseLib::Variable>(valueKeys->at(i)));
 					parameters->push_back(values->at(i));
-					if(server->second->newFormat) parameters->push_back(std::make_shared<BaseLib::Variable>(source));
 					server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("event", parameters));
 				}
 			}
@@ -354,6 +354,7 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 					method->structValue->insert(BaseLib::StructElement("methodName", std::make_shared<BaseLib::Variable>(methodName)));
 					BaseLib::PVariable params = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 					method->structValue->insert(BaseLib::StructElement("params", params));
+                    params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(source));
 					if(server->second->newFormat)
 					{
 						params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(id));
@@ -362,7 +363,6 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 					else params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
 					params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(valueKeys->at(i)));
 					params->arrayValue->push_back(values->at(i));
-					if(server->second->newFormat) params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(source));
 				}
 				parameters->push_back(array);
 				//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
