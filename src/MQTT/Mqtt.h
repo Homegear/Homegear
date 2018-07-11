@@ -86,22 +86,24 @@ public:
 	/**
 	 * Queues a peer message for publishing to the MQTT broker.
 	 *
+	 * @param source The source of the event, either the ID of the client calling "setValue()" or "device".
 	 * @param peerId The id of the peer to queue the message for.
 	 * @param channel The channel of the peer to queue the message for.
 	 * @param key The name of the variable.
 	 * @param value The value of the variable.
 	 */
-	void queueMessage(uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value);
+	void queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value);
 
 	/**
 	 * Queues a peer message containing multiple variables for publishing to the MQTT broker.
 	 *
+	 * @param source The source of the event, either the ID of the client calling "setValue()" or "device".
 	 * @param peerId The id of the peer to queue the message for.
 	 * @param channel The channel of the peer to queue the message for.
 	 * @param keys The names of the variables.
 	 * @param values The values of the variables.
 	 */
-	void queueMessage(uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values);
+	void queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values);
 private:
 	class QueueEntrySend : public BaseLib::IQueueEntry
 	{

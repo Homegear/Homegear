@@ -1134,6 +1134,12 @@ ZEND_FUNCTION(hg_poll_event)
 			add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
 		}
 
+		if(!eventData->source.empty())
+		{
+			ZVAL_STRINGL(&element, eventData->source.c_str(), eventData->source.size());
+			add_assoc_zval_ex(return_value, "EVENTSOURCE", sizeof("EVENTSOURCE") - 1, &element);
+		}
+
 		ZVAL_LONG(&element, eventData->id);
 		add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
 

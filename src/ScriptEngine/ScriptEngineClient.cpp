@@ -526,7 +526,7 @@ void ScriptEngineClient::sendScriptFinished(int32_t exitCode)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptFinished");
 		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(exitCode))});
-		sendRequest(globals->id, globals->user, methodName, parameters, false);
+		sendRequest(globals->id, globals->peerId, globals->user, methodName, parameters, false);
 	}
 	catch(const std::exception& ex)
     {
@@ -749,7 +749,7 @@ void ScriptEngineClient::sendOutput(std::string output, bool error)
 		parameters->reserve(2);
 		parameters->emplace_back(std::make_shared<BaseLib::Variable>(output));
 		parameters->emplace_back(std::make_shared<BaseLib::Variable>(error));
-		sendRequest(globals->id, globals->user, methodName, parameters, true);
+		sendRequest(globals->id, globals->peerId, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -772,7 +772,7 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
 		BaseLib::PArray parameters(new BaseLib::Array{headers});
-		sendRequest(globals->id, globals->user, methodName, parameters, true);
+		sendRequest(globals->id, globals->peerId, globals->user, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -794,7 +794,7 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 	{
 		if(_nodesStopped) return BaseLib::Variable::createError(-32500, "RPC calls are forbidden after \"stop\" is executed.");
 		zend_homegear_globals* globals = php_homegear_get_globals();
-		return sendRequest(globals->id, globals->user, methodName, parameters->arrayValue, wait);
+		return sendRequest(globals->id, globals->peerId, globals->user, methodName, parameters->arrayValue, wait);
 	}
 	catch(const std::exception& ex)
     {
@@ -844,7 +844,7 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, uint64_t peerId, std::string user, std::string methodName, BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
@@ -868,6 +868,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, std::string
 		array->reserve(4);
 		auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(scriptId));
+		scriptInfo->structValue->emplace("peerId", std::make_shared<BaseLib::Variable>(peerId));
 		scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(user));
 		array->push_back(scriptInfo);
 		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
@@ -2224,25 +2225,26 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 {
 	try
 	{
-		if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->size() != 5) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
 		std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
 		for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
 		{
-			int32_t channel = parameters->at(1)->integerValue;
+			int32_t channel = parameters->at(2)->integerValue;
 			std::string variableName;
-			if(i->second && (parameters->at(0)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(0)->integerValue64, -1, variableName)))
+			if(i->second && (parameters->at(1)->integerValue64 == 0 || i->second->peerSubscribed(parameters->at(1)->integerValue64, -1, variableName)))
 			{
-				for(uint32_t j = 0; j < parameters->at(2)->arrayValue->size(); j++)
+				for(uint32_t j = 0; j < parameters->at(3)->arrayValue->size(); j++)
 				{
-					variableName = parameters->at(2)->arrayValue->at(j)->stringValue;
-					if(!i->second->peerSubscribed(static_cast<uint64_t>(parameters->at(0)->integerValue64), channel, variableName)) continue;
-					std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+					variableName = parameters->at(3)->arrayValue->at(j)->stringValue;
+					if(!i->second->peerSubscribed(static_cast<uint64_t>(parameters->at(1)->integerValue64), channel, variableName)) continue;
+					auto eventData = std::make_shared<PhpEvents::EventData>();
+					eventData->source = parameters->at(0)->stringValue;
 					eventData->type = "event";
-					eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
+					eventData->id = static_cast<uint64_t>(parameters->at(1)->integerValue64);
 					eventData->channel = channel;
 					eventData->variable = variableName;
-					eventData->value = parameters->at(3)->arrayValue->at(j);
+					eventData->value = parameters->at(4)->arrayValue->at(j);
 					if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
 				}
 			}

@@ -256,7 +256,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
     }
 }
 
-void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
+void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::string& deviceAddress, std::shared_ptr<std::vector<std::string>>& valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>>& values)
 {
 	try
 	{
@@ -275,7 +275,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			_lifetick1.second = false;
 		}
 
-		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(id, channel, *valueKeys, *values); //ACL check is in MQTT
+		if(GD::mqtt->enabled()) GD::mqtt->queueMessage(source, id, channel, *valueKeys, *values); //ACL check is in MQTT
 		std::string methodName("event");
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
@@ -317,7 +317,7 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 					}
 
 					std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
-					parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+                    parameters->push_back(std::make_shared<BaseLib::Variable>(source));
 					if(server->second->newFormat)
 					{
 						parameters->push_back(std::make_shared<BaseLib::Variable>(id));
@@ -354,10 +354,16 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 					method->structValue->insert(BaseLib::StructElement("methodName", std::make_shared<BaseLib::Variable>(methodName)));
 					BaseLib::PVariable params = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 					method->structValue->insert(BaseLib::StructElement("params", params));
-					params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+
+                    if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+                    {
+                        //Home Assistant only accepts it's own ID as event source
+                        params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+                    }
+                    else params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(source));
 					if(server->second->newFormat)
 					{
-						params->arrayValue->push_back(std::make_shared<BaseLib::Variable>((int32_t)id));
+						params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(id));
 						params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
 					}
 					else params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
@@ -410,7 +416,7 @@ void Client::systemListMethods(std::pair<std::string, std::string>& address)
 	{
 		std::shared_ptr<RemoteRpcServer> server = getServer(address);
 		if(!server) return;
-		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> { std::make_shared<BaseLib::Variable>(server->id) });
+		auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
 		std::string methodName = "system.listMethods";
 		BaseLib::PVariable result = server->invoke(methodName, parameters);
 		if(result->errorStruct)
@@ -466,7 +472,12 @@ void Client::listDevices(std::pair<std::string, std::string>& address)
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("listDevices")) return;
-		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable> { BaseLib::PVariable(new BaseLib::Variable(server->id)) });
+		auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+        {
+            parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
+        }
+        else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 		std::string methodName = "listDevices";
 		BaseLib::PVariable result = server->invoke(methodName, parameters);
 		if(result->errorStruct)
@@ -548,7 +559,13 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string>& address)
 			if(!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 		if(devices->arrayValue->empty()) return;
-		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(server->id)), devices });
+        auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+        {
+            parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
+        }
+        else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
+        parameters->push_back(devices);
 		std::string methodName = "newDevices";
 		BaseLib::PVariable result = server->invoke(methodName, parameters);
 		if(result->errorStruct)
@@ -582,7 +599,12 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
 		if(!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end()) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("error")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->id)));
+        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+        {
+            //Home Assistant only accepts it's own ID as event source
+            parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
+        }
+        else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
 		parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(message)));
 		server->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("error", parameters)));
@@ -611,7 +633,12 @@ void Client::broadcastError(int32_t level, std::string message)
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
 			if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("error")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+            {
+                //Home Assistant only accepts it's own ID as event source
+                parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+            }
+            else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(message)));
 			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("error", parameters)));
@@ -685,7 +712,7 @@ void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable 
             }
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			parameters->push_back(deviceDescriptions);
 			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("newDevices", parameters)));
 		}
@@ -715,7 +742,7 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newEvent") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("newEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			parameters->push_back(eventDescription);
 			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("newEvent", parameters)));
 		}
@@ -752,7 +779,12 @@ void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("deleteDevices")) continue;
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+            {
+                //Home Assistant only accepts it's own ID as event source
+                parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+            }
+            else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			if(server->second->newFormat) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
 			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("deleteDevices", parameters)));
@@ -783,7 +815,7 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteEvent") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("deleteEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)type)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)peerID)));
@@ -840,7 +872,12 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
             }
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+            {
+                //Home Assistant only accepts it's own ID as event source
+                parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+            }
+            else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			if(server->second->newFormat)
 			{
 				parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)id)));
@@ -876,7 +913,7 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateEvent") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("updateEvent")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(server->second->id)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)type)));
 			parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)peerID)));

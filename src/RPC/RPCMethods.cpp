@@ -43,13 +43,8 @@ BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("devTest")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-		bool value = false;
-		if(parameters->size() > 0) value = parameters->at(0)->booleanValue;
 
-		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{ "PRESS_SHORT" });
-		BaseLib::PArray values(new std::vector<BaseLib::PVariable>{ BaseLib::PVariable(new BaseLib::Variable(value)) });
-		GD::rpcClient->broadcastEvent(90, 1, "OPNWEATHES:1", valueKeys, values);
-		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
     {
@@ -237,8 +232,8 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tArray }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		auto methods = GD::rpcServers.begin()->second->getMethods();
 		BaseLib::PVariable returns(new BaseLib::Variable(BaseLib::VariableType::tArray));
+        returns->arrayValue->reserve(parameters->at(0)->arrayValue->size());
 		for(std::vector<BaseLib::PVariable>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{
 			if((*i)->type != BaseLib::VariableType::tStruct)
@@ -262,14 +257,12 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
 				continue;
 			}
 			std::string methodName = (*i)->structValue->at("methodName")->stringValue;
-			BaseLib::PArray parameters = (*i)->structValue->at("params")->arrayValue;
+			auto parameters = (*i)->structValue->at("params");
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
 			else
 			{
-				auto methodIterator = methods->find(methodName);
-				if(methodIterator == methods->end()) returns->arrayValue->push_back(BaseLib::Variable::createError(-32601, "Requested method not found."));
-				else returns->arrayValue->push_back(methodIterator->second->invoke(clientInfo, parameters));
+				returns->arrayValue->push_back(GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters));
 			}
 		}
 
@@ -4535,6 +4528,11 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 		}
 		else
 		{
+            if(_reservedIds.find(interfaceId) != _reservedIds.end() || interfaceId.compare(0, sizeof("device-") - 1, "device-") == 0)
+            {
+                interfaceId = "client-" + interfaceId;
+            }
+
             if(url.empty()) //Send events over connection to server
 			{
 				clientInfo->sendEventsToRpcServer = true;
@@ -4601,6 +4599,12 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 					{
 						clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
 						if(interfaceId == "IPS") eventServer->reconnectInfinitely = true; //Keep connection to IP-Symcon version 3
+					}
+				// }}}
+				// {{{ Home Assistant
+					else if(interfaceId.compare(0, 13, "homeassistant") == 0)
+					{
+						clientInfo->clientType = BaseLib::RpcClientType::homeassistant;
 					}
 				// }}}
 
@@ -5138,10 +5142,11 @@ BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			id = parameters->at(0)->stringValue;
 		}
 
+		std::string source;
 		std::shared_ptr<std::vector<std::string>> variables(new std::vector<std::string>{ "PONG" });
 		BaseLib::PArray values(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(id)) });
-		GD::familyController->onEvent(0, -1, variables, values);
-		GD::familyController->onRPCEvent(0, -1, "CENTRAL", variables, values);
+		GD::familyController->onEvent(source, 0, -1, variables, values);
+		GD::familyController->onRPCEvent(source, 0, -1, "CENTRAL", variables, values);
 
 		return BaseLib::PVariable(new BaseLib::Variable(true));
 	}

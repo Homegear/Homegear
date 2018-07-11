@@ -1046,8 +1046,27 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
 
 			valueKeys->push_back(valueKey);
 			values->push_back(rpcParameter->convertFromPacket(parameterData));
-			raiseEvent(_peerID, channel, valueKeys, values);
-			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+            std::string address = _serialNumber + ":" + std::to_string(channel);
+            if(clientInfo->scriptEngineServer)
+            {
+                if(clientInfo->peerId != 0 && clientInfo->peerId == _peerID)
+                {
+                    std::string eventSource = "device-" + std::to_string(_peerID);
+                    raiseEvent(eventSource, _peerID, channel, valueKeys, values);
+                    raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
+                }
+                else
+                {
+                    std::string eventSource = "scriptEngine";
+                    raiseEvent(eventSource, _peerID, channel, valueKeys, values);
+                    raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
+                }
+            }
+            else
+            {
+                raiseEvent(clientInfo->initInterfaceId, _peerID, channel, valueKeys, values);
+                raiseRPCEvent(clientInfo->initInterfaceId, _peerID, channel, address, valueKeys, values);
+            }
 
 			return PVariable(new Variable(VariableType::tVoid));
 		}
