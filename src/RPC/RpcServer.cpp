@@ -585,14 +585,16 @@ void RpcServer::mainThread()
 					client->socketDescriptor = clientFileDescriptor;
 					while(_clients.find(client->id) != _clients.end())
 					{
-						_out.printError("Error: Client id was used twice. This shouldn't happen. Please report this error to the developer.");
+						std::cerr << "Error: Client id was used twice. This shouldn't happen. Please report this error to the developer." << std::endl;
 						_currentClientID++;
 						client->id++;
 					}
                     client->auth = std::make_shared<Auth>(_info->validGroups);
+                    client->initInterfaceId = "rpc-client-" + address + ":" + std::to_string(port);
 					_clients[client->id] = client;
-					_out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 				}
+
+                _out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 
 				client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
 				if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
@@ -676,7 +678,7 @@ void RpcServer::mainThread()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
+    if(!_info->socketDescriptor) GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 }
 
 bool RpcServer::clientValid(std::shared_ptr<Client>& client)
@@ -1122,23 +1124,23 @@ void RpcServer::collectGarbage()
 
 		{
             std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, std::shared_ptr<Client>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(auto& client : _clients)
 			{
-				if(i->second->closed) clientsToRemove.push_back(i->second);
+				if(client.second->closed) clientsToRemove.push_back(client.second);
 			}
 		}
 
-		for(std::vector<std::shared_ptr<Client>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
+		for(auto& client : clientsToRemove)
 		{
-			_out.printDebug("Debug: Joining read thread of client " + std::to_string((*i)->id));
-			GD::bl->threadManager.join((*i)->readThread);
+			_out.printDebug("Debug: Joining read thread of client " + std::to_string(client->id));
+			GD::bl->threadManager.join(client->readThread);
 
 			{
                 std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				_clients.erase((*i)->id);
+				_clients.erase(client->id);
 			}
 
-			_out.printDebug("Debug: Client " + std::to_string((*i)->id) + " removed.");
+			_out.printDebug("Debug: Client " + std::to_string(client->id) + " removed.");
 		}
 	}
 	catch(const std::exception& ex)

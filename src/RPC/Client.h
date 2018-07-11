@@ -69,7 +69,7 @@ public:
 	void disconnectRega();
 	void initServerMethods(std::pair<std::string, std::string> address);
 	void broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value);
-	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
+	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::string& deviceAddress, std::shared_ptr<std::vector<std::string>>& valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
 	void systemListMethods(std::pair<std::string, std::string>& address);
 	void listDevices(std::pair<std::string, std::string>& address);
 	void broadcastError(int32_t level, std::string message);

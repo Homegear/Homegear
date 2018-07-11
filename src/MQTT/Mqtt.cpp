@@ -90,6 +90,7 @@ void Mqtt::start()
 
         _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
         _dummyClientInfo->mqttClient = true;
+		_dummyClientInfo->initInterfaceId = "mqtt";
         _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
         std::vector<uint64_t> groups{ 6 };
         _dummyClientInfo->acls->fromGroups(groups);
@@ -1172,7 +1173,7 @@ void Mqtt::queueMessage(std::string topic, std::string& payload)
 	}
 }
 
-void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
+void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
 {
 
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, key, value) -> peerId="+std::to_string(peerId)+", channel="+std::to_string(channel)+", key="+key+", value="+value->stringValue);
@@ -1187,8 +1188,9 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
             //Never send different message formats to Bluemix IOT platform as it will drop the connection
 			std::shared_ptr<MqttMessage> messageJson = std::make_shared<MqttMessage>();
 			messageJson->topic = "id/" + std::to_string(peerId) + "/evt/ch-" + std::to_string(channel) + "/fmt/json";
-			BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-			structValue->structValue->insert(BaseLib::StructElement(key, value));
+			BaseLib::PVariable structValue = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			structValue->structValue->emplace(key, value);
+			structValue->structValue->emplace("eventSource", std::make_shared<BaseLib::Variable>(source));
 			_jsonEncoder->encode(structValue, messageJson->message);
 			messageJson->retain = retain;
 			queueMessage(messageJson);
@@ -1223,8 +1225,9 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 			{
 				std::shared_ptr<MqttMessage> messageJson2(new MqttMessage());
 				messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-				BaseLib::PVariable structValue(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-				structValue->structValue->insert(BaseLib::StructElement("value", value));
+				BaseLib::PVariable structValue = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				structValue->structValue->emplace("value", value);
+				structValue->structValue->emplace("eventSource", std::make_shared<BaseLib::Variable>(source));
 				_jsonEncoder->encode(structValue, messageJson2->message);
 				messageJson2->retain = retain;
 				queueMessage(messageJson2);
@@ -1245,7 +1248,7 @@ void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::string& key, Base
 	}
 }
 
-void Mqtt::queueMessage(uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values)
+void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values)
 {
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, keys, values) -> peerId="+std::to_string(peerId)+", channel="+std::to_string(channel)+", keys, values");
 	try

@@ -57,6 +57,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
 	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
 	_dummyClientInfo->flowsServer = true;
+	_dummyClientInfo->initInterfaceId = "nodeBlue";
 	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	std::vector<uint64_t> groups{ 4 };
 	_dummyClientInfo->acls->fromGroups(groups);
@@ -1758,7 +1759,7 @@ uint32_t NodeBlueServer::flowCount()
     return 0;
 }
 
-void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values)
+void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values)
 {
 	try
 	{
@@ -1820,7 +1821,13 @@ void NodeBlueServer::broadcastEvent(uint64_t id, int32_t channel, std::shared_pt
 
 		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
-			BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(*variables)), BaseLib::PVariable(new BaseLib::Variable(values))});
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(5);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
 			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
 		}

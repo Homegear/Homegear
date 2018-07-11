@@ -72,7 +72,7 @@ public:
 	std::string checkSessionId(const std::string& sessionId);
 	BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
 	BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
-	void broadcastEvent(uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, BaseLib::PArray values);
+	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
@@ -127,7 +127,7 @@ private:
 	std::map<int32_t, PScriptEngineClientData> _clients;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
-	BaseLib::PRpcClientInfo _dummyClientInfo;
+	BaseLib::PRpcClientInfo _scriptEngineClientInfo;
 	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
 	std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _executeScriptMutex;
