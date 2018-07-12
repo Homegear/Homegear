@@ -61,6 +61,7 @@ typedef struct _zend_homegear_globals
 	// {{{ Needed by ScriptEngineClient
 	int32_t id = 0;
 	std::string user;
+	std::string language;
 	std::string token;
 	bool executionStarted = false;
 	// }}}
