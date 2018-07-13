@@ -1207,6 +1207,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			auto scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId");
             scriptInfo->scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId")->integerValue;
             std::string user = queueEntry->parameters->at(0)->structValue->at("user")->stringValue;
+			std::string language = queueEntry->parameters->at(0)->structValue->at("language")->stringValue;
 
             scriptInfo->clientInfo = std::make_shared<BaseLib::RpcClientInfo>();
             *scriptInfo->clientInfo = *_scriptEngineClientInfo;
@@ -1225,6 +1226,8 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 					sendResponse(queueEntry->clientData, scriptId, queueEntry->parameters->at(1), result);
 				}
             }
+
+			if(!language.empty()) scriptInfo->clientInfo->language = language;
 
 			auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
