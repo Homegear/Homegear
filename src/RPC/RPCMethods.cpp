@@ -4602,7 +4602,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 					}
 				// }}}
 				// {{{ Home Assistant
-					else if(interfaceId.compare(0, 13, "homeassistant") == 0)
+					else if(interfaceId.size() >= 13 && interfaceId.compare(0, 13, "homeassistant") == 0)
 					{
 						clientInfo->clientType = BaseLib::RpcClientType::homeassistant;
 					}
@@ -5142,7 +5142,7 @@ BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 			id = parameters->at(0)->stringValue;
 		}
 
-		std::string source;
+		std::string source = clientInfo->initInterfaceId;
 		std::shared_ptr<std::vector<std::string>> variables(new std::vector<std::string>{ "PONG" });
 		BaseLib::PArray values(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(id)) });
 		GD::familyController->onEvent(source, 0, -1, variables, values);

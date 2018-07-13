@@ -112,6 +112,7 @@ ZEND_FUNCTION(hg_update_user);
 ZEND_FUNCTION(hg_user_exists);
 ZEND_FUNCTION(hg_users);
 ZEND_FUNCTION(hg_log);
+ZEND_FUNCTION(hg_set_language);
 ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_FUNCTION(hg_get_http_contents);
 ZEND_FUNCTION(hg_download);
@@ -995,6 +996,28 @@ ZEND_FUNCTION(hg_register_thread)
 		if(user.empty()) php_error_docref(NULL, E_ERROR, "user is empty.");
 
 		SEG(user) = user;
+	}
+
+	ZEND_FUNCTION(hg_set_language)
+	{
+		if(_disposed) RETURN_NULL();
+		int argc = 0;
+		zval* args = nullptr;
+		if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+		std::string language;
+
+		if(argc > 1) php_error_docref(NULL, E_ERROR, "Too many arguments passed to Homegear::setLanguage().");
+		else if(argc == 1)
+		{
+			if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_ERROR, "language is not of type string.");
+			else
+			{
+				if(Z_STRLEN(args[0]) > 0) language = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+			}
+		}
+		if(language.empty()) php_error_docref(NULL, E_ERROR, "language is empty.");
+
+		SEG(language) = language;
 	}
 
 	ZEND_FUNCTION(hg_update_user)
@@ -2339,6 +2362,7 @@ static const zend_function_entry homegear_methods[] = {
     ZEND_ME_MAPPING(ssdpSearch, hg_ssdp_search, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME_MAPPING(configureGateway, hg_configure_gateway, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+	ZEND_ME_MAPPING(setLanguage, hg_set_language, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 	ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
