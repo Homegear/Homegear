@@ -355,9 +355,9 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 					BaseLib::PVariable params = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 					method->structValue->insert(BaseLib::StructElement("params", params));
 
-                    if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+                    if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
                     {
-                        //Home Assistant only accepts it's own ID as event source
+                        //Home Assistant and CCU only accept it's own ID as event source
                         params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
                     }
                     else params->arrayValue->push_back(std::make_shared<BaseLib::Variable>(source));
@@ -473,8 +473,9 @@ void Client::listDevices(std::pair<std::string, std::string>& address)
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("listDevices")) return;
 		auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
-        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
         {
+            //Home Assistant and CCU only accept it's own ID as event source
             parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
         }
         else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
@@ -560,8 +561,9 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string>& address)
 		}
 		if(devices->arrayValue->empty()) return;
         auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
-        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
         {
+            //Home Assistant and CCU only accept it's own ID as event source
             parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
         }
         else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
@@ -599,9 +601,9 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
 		if(!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end()) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("error")) return;
 		std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+        if(server->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
         {
-            //Home Assistant only accepts it's own ID as event source
+            //Home Assistant and CCU only accept it's own ID as event source
             parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
         }
         else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
@@ -633,9 +635,9 @@ void Client::broadcastError(int32_t level, std::string message)
 			if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
 			if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("error")) continue;
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
             {
-                //Home Assistant only accepts it's own ID as event source
+                //Home Assistant and CCU only accept it's own ID as event source
                 parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
             }
             else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
@@ -712,7 +714,12 @@ void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable 
             }
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-            parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
+            {
+                //Home Assistant and CCU only accept it's own ID as event source
+                parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
+            }
+            else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
 			parameters->push_back(deviceDescriptions);
 			server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("newDevices", parameters)));
 		}
@@ -779,9 +786,9 @@ void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("deleteDevices")) continue;
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
             {
-                //Home Assistant only accepts it's own ID as event source
+                //Home Assistant and CCU only accept it's own ID as event source
                 parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
             }
             else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
@@ -872,9 +879,9 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
             }
 
 			std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
-            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant)
+            if(server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::homeassistant || server->second->getServerClientInfo()->clientType == BaseLib::RpcClientType::ccu2)
             {
-                //Home Assistant only accepts it's own ID as event source
+                //Home Assistant and CCU only accept it's own ID as event source
                 parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
             }
             else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
