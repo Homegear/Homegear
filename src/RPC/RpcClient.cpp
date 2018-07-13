@@ -315,43 +315,43 @@ BaseLib::PVariable RpcClient::invoke(RemoteRpcServer* server, std::string method
 void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry)
 {
 	try
-	{
-		if(!server)
-		{
-			std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
-			std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
-			return;
-		}
-		if(server->removed) return;
+    {
+        if(!server)
+        {
+            std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
+            std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Could not send packet. Pointer to server or data is nullptr." << std::endl;
+            return;
+        }
+        if(server->removed) return;
 
-		if(server->autoConnect)
-		{
-			if(server->hostname.empty())
-			{
-				std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
-				std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
-				server->removed = true;
-				return;
-			}
-			if(!server->useSSL && server->settings && server->settings->forceSSL)
-			{
-				std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
-				std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
-				server->removed = true;
-				return;
-			}
-		}
+        if(server->autoConnect)
+        {
+            if(server->hostname.empty())
+            {
+                std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
+                std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Error: hostname is empty." << std::endl;
+                server->removed = true;
+                return;
+            }
+            if(!server->useSSL && server->settings && server->settings->forceSSL)
+            {
+                std::cout << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
+                std::cerr << BaseLib::Output::getTimeString() << " " << "RPC Client: Tried to send unencrypted packet to " << server->hostname << " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again." << std::endl;
+                server->removed = true;
+                return;
+            }
+        }
 
-		try
-		{
-			if(!server->socket->connected())
-			{
-				if(server->autoConnect)
-				{
-					server->socket->setHostname(server->hostname);
-					server->socket->setPort(server->address.second);
-					if(server->settings)
-					{
+        try
+        {
+            if(!server->socket->connected())
+            {
+                if(server->autoConnect)
+                {
+                    server->socket->setHostname(server->hostname);
+                    server->socket->setPort(server->address.second);
+                    if(server->settings)
+                    {
                         std::unordered_map<std::string, BaseLib::TcpSocket::PCertificateInfo> certificates;
                         BaseLib::TcpSocket::PCertificateInfo certificateInfo = std::make_shared<BaseLib::TcpSocket::CertificateInfo>();
                         certificateInfo->caFile = server->settings->caFile;
@@ -359,45 +359,45 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
                         certificateInfo->keyFile = server->settings->keyFile;
                         certificates.emplace("*", certificateInfo);
                         server->socket->setCertificates(certificates);
-						server->socket->setVerifyCertificate(server->settings->verifyCertificate);
-					}
-					server->socket->setUseSSL(server->useSSL);
-					if(server->settings)
-					{
-						server->socket->setReadTimeout(server->settings->timeout);
-						server->socket->setWriteTimeout(server->settings->timeout);
-					}
-					server->socket->open();
-				}
-				else
-				{
-					std::cout << BaseLib::Output::getTimeString() << " " << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
-					std::cerr << BaseLib::Output::getTimeString() << " " << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
-					server->removed = true;
-					return;
-				}
-			}
-		}
-		catch(const BaseLib::SocketOperationException& ex)
-		{
-			if(!server->reconnectInfinitely) server->removed = true;
-			GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
-			std::cout << BaseLib::Output::getTimeString() << " " << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
-			std::cerr << BaseLib::Output::getTimeString() << " " << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
-			return;
-		}
+                        server->socket->setVerifyCertificate(server->settings->verifyCertificate);
+                    }
+                    server->socket->setUseSSL(server->useSSL);
+                    if(server->settings)
+                    {
+                        server->socket->setReadTimeout(server->settings->timeout);
+                        server->socket->setWriteTimeout(server->settings->timeout);
+                    }
+                    server->socket->open();
+                }
+                else
+                {
+                    std::cout << BaseLib::Output::getTimeString() << " " << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
+                    std::cerr << BaseLib::Output::getTimeString() << " " << "Connection to server with id " << std::to_string(server->uid) << " closed. Removing server." << std::endl;
+                    server->removed = true;
+                    return;
+                }
+            }
+        }
+        catch(const BaseLib::SocketOperationException& ex)
+        {
+            if(!server->reconnectInfinitely) server->removed = true;
+            GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
+            std::cout << BaseLib::Output::getTimeString() << " " << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
+            std::cerr << BaseLib::Output::getTimeString() << " " << ex.what() << " Removing server. Server has to send \"init\" again." << std::endl;
+            return;
+        }
 
 
-		if(server->settings && server->settings->authType != ClientSettings::Settings::AuthType::none)
-		{
-			if(server->settings->userName.empty() || server->settings->password.empty())
-			{
-				server->socket->close();
-				std::cout << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
-				std::cerr << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
-				return;
-			}
-		}
+        if(server->settings && server->settings->authType != ClientSettings::Settings::AuthType::none)
+        {
+            if(server->settings->userName.empty() || server->settings->password.empty())
+            {
+                server->socket->close();
+                std::cout << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
+                std::cerr << BaseLib::Output::getTimeString() << " " << "Error: No user name or password specified in config file for RPC server " << server->hostname << ". Closing connection." << std::endl;
+                return;
+            }
+        }
 
 		if(insertHeader)
 		{
@@ -433,7 +433,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
 		if(GD::bl->debugLevel >= 5)
 		{
 			if(server->binary || server->webSocket) _out.printDebug("Debug: Sending packet: " + GD::bl->hf.getHexString(data));
-			else _out.printDebug("Debug: Sending packet: " + std::string(&data.at(0), data.size()));
+			else _out.printDebug("Debug: Sending packet: " + std::string(data.data(), data.size()));
 		}
 		try
 		{

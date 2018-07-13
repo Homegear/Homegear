@@ -678,7 +678,7 @@ void RpcServer::mainThread()
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
+    if(!_info->socketDescriptor) GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 }
 
 bool RpcServer::clientValid(std::shared_ptr<Client>& client)

@@ -4601,6 +4601,12 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 						if(interfaceId == "IPS") eventServer->reconnectInfinitely = true; //Keep connection to IP-Symcon version 3
 					}
 				// }}}
+				// {{{ Home Assistant
+					else if(interfaceId.compare(0, 13, "homeassistant") == 0)
+					{
+						clientInfo->clientType = BaseLib::RpcClientType::homeassistant;
+					}
+				// }}}
 
 				clientInfo->initUrl = url;
 				clientInfo->initInterfaceId = interfaceId;

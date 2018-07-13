@@ -519,17 +519,17 @@ createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
 createPackage homegear-management $1 homegear-management 0
 if [[ -n $2 ]]; then
-	sha512=`sha512sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
-	sed -i '/if(sha512(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i '/if(sha512(homegearPath) != /d' homegear-licensing-${1}/src/Licensing.cpp
-	sed -i "/std::string homegearPath(buffer, size);/aif(sha512(homegearPath) != \"$sha512\") return false;" homegear-licensing-${1}/src/Licensing.cpp
+	sha256=`sha256sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha256(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/std::string homegearPath(buffer, size);/aif(sha256(homegearPath) != \"$sha256\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha256(homegearPath) != /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/std::string homegearPath(buffer, size);/aif(sha256(homegearPath) != \"$sha256\") return false;" homegear-licensing-${1}/src/Licensing.cpp
 
-	sha512=`sha512sum /usr/lib/libhomegear-base.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
-	sed -i '/if(sha512(baselibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i '/if(sha512(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
-	sed -i "/if(baselibPath.empty()) return false;/aif(sha512(baselibPath) == \"$sha512\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+	sha256=`sha256sum /usr/lib/libhomegear-base.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha256(baselibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if(baselibPath.empty()) return false;/aif(sha256(baselibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha256(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if(baselibPath.empty()) return false;/aif(sha256(baselibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
 	createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
 	createPackage homegear-licensing $1 homegear-licensing 1
