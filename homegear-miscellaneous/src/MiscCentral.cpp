@@ -797,10 +797,16 @@ PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::str
 	try
 	{
 		if(serialNumber.empty()) return Variable::createError(-2, "Unknown device.");
-		std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
-		if(!peer) return PVariable(new Variable(VariableType::tVoid));
 
-		return deleteDevice(clientInfo, peer->getID(), flags);
+		uint64_t peerId = 0;
+
+		{
+			std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
+			if(!peer) return PVariable(new Variable(VariableType::tVoid));
+			peerId = peer->getID();
+		}
+
+		return deleteDevice(clientInfo, peerId, flags);
 	}
 	catch(const std::exception& ex)
     {
@@ -817,18 +823,20 @@ PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::str
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags)
+PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags)
 {
 	try
 	{
-		if(peerID == 0) return Variable::createError(-2, "Unknown device.");
-		std::shared_ptr<MiscPeer> peer = getPeer(peerID);
-		if(!peer) return PVariable(new Variable(VariableType::tVoid));
-		uint64_t id = peer->getID();
+		if(peerId == 0) return Variable::createError(-2, "Unknown device.");
 
-		deletePeer(id);
+		{
+			std::shared_ptr<MiscPeer> peer = getPeer(peerId);
+			if(!peer) return PVariable(new Variable(VariableType::tVoid));
+		}
 
-		if(peerExists(id)) return Variable::createError(-1, "Error deleting peer. See log for more details.");
+		deletePeer(peerId);
+
+		if(peerExists(peerId)) return Variable::createError(-1, "Error deleting peer. See log for more details.");
 
 		return PVariable(new Variable(VariableType::tVoid));
 	}
