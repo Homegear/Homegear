@@ -4598,6 +4598,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 					else if(interfaceId.size() >= 3 && interfaceId.compare(0, 3, "IPS") == 0)
 					{
 						clientInfo->clientType = BaseLib::RpcClientType::ipsymcon;
+                        eventServer->sendNewDevices = false;
 						if(interfaceId == "IPS") eventServer->reconnectInfinitely = true; //Keep connection to IP-Symcon version 3
 					}
 				// }}}
