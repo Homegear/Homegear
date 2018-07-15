@@ -29,8 +29,8 @@
 */
 
 #include "CliClient.h"
-#include "../GD/GD.h"
 
+#include "../../config.h"
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -73,15 +73,15 @@ void CliClient::onConnect()
     }
     catch (const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch (Ipc::IpcException& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch (...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -101,11 +101,11 @@ int32_t CliClient::terminal(std::string& command)
 
         if(!connected())
         {
-            GD::out.printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
+            Ipc::Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
             return 3;
         }
 
-        if(GD::bl->debugLevel >= 4) std::cout << "Connected to Homegear (version " + GD::bl->version() + ")." << std::endl;
+        std::cout << "Connected to Homegear (version " << VERSION << ")." << std::endl;
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
@@ -113,9 +113,7 @@ int32_t CliClient::terminal(std::string& command)
         std::string lastCommand;
         std::string currentCommand;
         char* sendBuffer;
-        std::array<char, 1025> receiveBuffer;
         int32_t bytes = 0;
-        int64_t timeoutCounter = 0;
         while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
         {
             if(command.empty())
@@ -152,15 +150,15 @@ int32_t CliClient::terminal(std::string& command)
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -179,15 +177,15 @@ Ipc::PVariable CliClient::output(Ipc::PArray& parameters)
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Ipc::Variable::createError(-32500, "Unknown application error.");
 }
@@ -204,15 +202,15 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Ipc::Variable::createError(-32500, "Unknown application error.");
 }

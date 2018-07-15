@@ -30,10 +30,6 @@
 
 #include "IpcServer.h"
 #include "../GD/GD.h"
-#include <homegear-base/BaseLib.h>
-
-namespace Ipc
-{
 
 IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 {
@@ -1299,4 +1295,3 @@ BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int3
 }
 // }}}
 
-}

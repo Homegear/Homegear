@@ -35,7 +35,7 @@
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"
-#include "../CLI/CLIServer.h"
+#include "../CLI/CliServer.h"
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
 #include "../Systems/FamilyController.h"
@@ -75,7 +75,7 @@ public:
 #ifndef NO_SCRIPTENGINE
 	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
 #endif
-	static std::unique_ptr<Ipc::IpcServer> ipcServer;
+	static std::unique_ptr<IpcServer> ipcServer;
 	static std::unique_ptr<NodeBlue::NodeBlueServer> nodeBlueServer;
 	static std::unique_ptr<CLI::Server> cliServer;
 	static BaseLib::Rpc::ServerInfo serverInfo;

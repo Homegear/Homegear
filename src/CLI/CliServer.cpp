@@ -28,7 +28,7 @@
  * files in the program, then also delete it here.
 */
 
-#include "CLIServer.h"
+#include "CliServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Security/Acl.h>

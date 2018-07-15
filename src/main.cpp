@@ -30,7 +30,7 @@
 
 #include "GD/GD.h"
 #include "Monitor.h"
-#include "CLI/CLIClient.h"
+#include "CLI/CliClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "Node-BLUE/NodeBlueClient.h"
 #include "UPnP/UPnP.h"
@@ -1100,7 +1100,7 @@ void startUp()
 #endif
 
 		GD::nodeBlueServer.reset(new NodeBlue::NodeBlueServer());
-		GD::ipcServer.reset(new Ipc::IpcServer());
+		GD::ipcServer.reset(new IpcServer());
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
 		{
@@ -1409,8 +1409,9 @@ int main(int argc, char* argv[])
     		else if(arg == "-r")
     		{
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
-    			CLI::Client cliClient;
-    			int32_t exitCode = cliClient.start();
+    			CliClient cliClient(GD::bl->settings.socketPath());
+				std::string command;
+    			int32_t exitCode = cliClient.terminal(command);
     			exit(exitCode);
     		}
 #ifndef NO_SCRIPTENGINE
@@ -1465,8 +1466,9 @@ int main(int argc, char* argv[])
     				else command << " " << argv[j];
     			}
 
-    			CLI::Client cliClient;
-    			int32_t exitCode = cliClient.start(command.str());
+    			CliClient cliClient(GD::bl->settings.socketPath());
+				std::string commandString = command.str();
+    			int32_t exitCode = cliClient.terminal(commandString);
     			exit(exitCode);
     		}
     		else if(arg == "-tc")
@@ -1480,8 +1482,8 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::bl->debugLevel = 3; //Only output warnings.
     			std::string command = "lifetick";
-    			CLI::Client cliClient;
-    			int32_t exitCode = cliClient.start(command);
+    			CliClient cliClient(GD::bl->settings.socketPath());
+    			int32_t exitCode = cliClient.terminal(command);
     			exit(exitCode);
     		}
     		else if(arg == "-pre")

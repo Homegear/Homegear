@@ -59,5 +59,5 @@ std::unique_ptr<EventHandler> GD::eventHandler;
 #ifndef NO_SCRIPTENGINE
 std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
 #endif
-std::unique_ptr<Ipc::IpcServer> GD::ipcServer;
+std::unique_ptr<IpcServer> GD::ipcServer;
 std::unique_ptr<NodeBlue::NodeBlueServer> GD::nodeBlueServer;

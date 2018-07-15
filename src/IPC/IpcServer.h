@@ -35,9 +35,6 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Ipc
-{
-
 class IpcServer : public BaseLib::IQueue
 {
 public:
@@ -118,6 +115,4 @@ private:
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	// }}}
 };
-
-}
 #endif
