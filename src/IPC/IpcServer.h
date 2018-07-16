@@ -113,6 +113,9 @@ private:
 
 	// {{{ RPC methods
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+    BaseLib::PVariable cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+	BaseLib::PVariable cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+	BaseLib::PVariable cliPeerCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	// }}}
 };
 #endif

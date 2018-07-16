@@ -85,6 +85,17 @@ void CliClient::onConnect()
     }
 }
 
+std::string CliClient::getBreadcrumb()
+{
+    if(_currentFamily != -1)
+    {
+        if(_currentPeer != 0) return "Family " + std::to_string(_currentFamily) + " - " + "peer " + (_currentPeer > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(_currentPeer, 8) : std::to_string(_currentPeer));
+        else return "Family " + std::to_string(_currentFamily);
+    }
+    else if(_currentPeer != 0) return "Peer " + (_currentPeer > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(_currentPeer, 8) : std::to_string(_currentPeer));
+    else return "";
+}
+
 int32_t CliClient::terminal(std::string& command)
 {
     try
@@ -105,7 +116,11 @@ int32_t CliClient::terminal(std::string& command)
             return 3;
         }
 
-        std::cout << "Connected to Homegear (version " << VERSION << ")." << std::endl;
+        if(command.empty())
+        {
+            std::cout << "Connected to Homegear (version " << VERSION << ")." << std::endl << std::endl;
+            std::cout << "Please type >>help<< to list all available commands." << std::endl;
+        }
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
@@ -114,7 +129,7 @@ int32_t CliClient::terminal(std::string& command)
         std::string currentCommand;
         char* sendBuffer;
         int32_t bytes = 0;
-        while(!command.empty() || (sendBuffer = readline((level + "> ").c_str())) != NULL)
+        while(!command.empty() || (sendBuffer = readline((getBreadcrumb() + "> ").c_str())) != NULL)
         {
             if(command.empty())
             {
@@ -128,8 +143,6 @@ int32_t CliClient::terminal(std::string& command)
                     return 4;
                 }
 
-                //Send command
-
                 currentCommand = std::string(sendBuffer);
                 if(currentCommand != lastCommand)
                 {
@@ -142,10 +155,129 @@ int32_t CliClient::terminal(std::string& command)
                     sendBuffer = nullptr;
                 }
             }
+            else currentCommand = command;
+
+            std::ostringstream stringStream;
+            std::vector<std::string> arguments;
+            bool showHelp = false;
+
+            if(currentCommand.empty()) continue;
+            else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "unselect", "u", "..", 0, arguments, showHelp))
+            {
+                if(_currentPeer > 0) _currentPeer = 0;
+                else if(_currentFamily != -1) _currentFamily = -1;
+            }
+            else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "families select", "fs", "", 1, arguments, showHelp))
+            {
+                if(showHelp)
+                {
+                    stringStream << "Description: This command selects a device family." << std::endl;
+                    stringStream << "Usage: families select FAMILYID" << std::endl << std::endl;
+                    stringStream << "Parameters:" << std::endl;
+                    stringStream << "  FAMILYID:\tThe id of the family to select. Type >>families list<< to get a list of supported families. Example: 1" << std::endl;
+                    std::cout << stringStream.str() << std::endl;
+                    continue;
+                }
+
+                int32_t family = BaseLib::Math::getNumber(arguments.at(0));
+
+                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                parameters->push_back(std::make_shared<Ipc::Variable>(family));
+                Ipc::PVariable result = invoke("familyExists", parameters);
+                if(result->errorStruct)
+                {
+                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                }
+                else if(result->booleanValue)
+                {
+                    _currentFamily = family;
+                    std::cout << "For a list of available family commands type >>help<<." << std::endl;
+                }
+                else std::cout << "Unknown family." << std::endl;
+            }
+            else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "peers select", "ps", "", 1, arguments, showHelp))
+            {
+                if(showHelp)
+                {
+                    stringStream << "Description: This command selects a peer." << std::endl;
+                    stringStream << "Usage: peers select PEERID" << std::endl << std::endl;
+                    stringStream << "Parameters:" << std::endl;
+                    stringStream << "  PEERID:\tThe id of the peer to select. Example: 513" << std::endl;
+                    std::cout << stringStream.str() << std::endl;
+                    continue;
+                }
+
+                uint64_t peerId = (uint64_t)BaseLib::Math::getNumber64(arguments.at(0));
+
+                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
+                Ipc::PVariable result = invoke("peerExists", parameters);
+                if(result->errorStruct)
+                {
+                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                }
+                else if(result->booleanValue)
+                {
+                    _currentPeer = peerId;
+                    std::cout << "For a list of available peer commands type >>help<<." << std::endl;
+                }
+                else std::cout << "Unknown peer." << std::endl;
+            }
+            else if(_currentPeer != 0)
+            {
+                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                parameters->reserve(2);
+                parameters->push_back(std::make_shared<Ipc::Variable>(_currentPeer));
+                parameters->push_back(std::make_shared<Ipc::Variable>(currentCommand));
+                Ipc::PVariable result = invoke("cliPeerCommand", parameters);
+                if(result->errorStruct)
+                {
+                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                }
+                else std::cout << result->stringValue;
+            }
+            else if(_currentFamily != -1)
+            {
+                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                parameters->reserve(2);
+                parameters->push_back(std::make_shared<Ipc::Variable>(_currentFamily));
+                parameters->push_back(std::make_shared<Ipc::Variable>(currentCommand));
+                Ipc::PVariable result = invoke("cliFamilyCommand", parameters);
+                if(result->errorStruct)
+                {
+                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                }
+                else std::cout << result->stringValue;
+            }
             else
             {
-                //Send command
+                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                parameters->push_back(std::make_shared<Ipc::Variable>(currentCommand));
+                Ipc::PVariable result = invoke("cliGeneralCommand", parameters);
+                if(result->errorStruct)
+                {
+                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                }
+                else
+                {
+                    if(result->type == Ipc::VariableType::tString) std::cout << result->stringValue;
+                    else if(result->type == Ipc::VariableType::tStruct)
+                    {
+                        auto outputIterator = result->structValue->find("output");
+                        if(outputIterator != result->structValue->end()) std::cout << outputIterator->second->stringValue;
+
+                        if(!command.empty())
+                        {
+                            auto exitCodeIterator = result->structValue->find("exitCode");
+                            if(exitCodeIterator != result->structValue->end()) return exitCodeIterator->second->integerValue;
+                        }
+                    }
+                }
             }
+
+            if(!command.empty()) break;
+
+            currentCommand = "";
         }
     }
     catch(const std::exception& ex)
@@ -169,9 +301,17 @@ Ipc::PVariable CliClient::output(Ipc::PArray& parameters)
     try
     {
         if(parameters->size() != 1) return Ipc::Variable::createError(-1, "Wrong parameter count.");
-        if(parameters->at(0)->type != Ipc::VariableType::tString) return Ipc::Variable::createError(-1, "Parameter is not of type String.");
+        if(parameters->at(0)->type != Ipc::VariableType::tStruct) return Ipc::Variable::createError(-1, "Parameter is not of type Struct.");
 
-        std::cout << parameters->at(0)->stringValue << std::endl;
+        auto errorIterator = parameters->at(0)->structValue->find("errorOutput");
+        bool errorOutput = errorIterator != parameters->at(0)->structValue->end() && errorIterator->second->booleanValue;
+
+        auto outputIterator = parameters->at(0)->structValue->find("output");
+        if(outputIterator != parameters->at(0)->structValue->end())
+        {
+            if(errorOutput) std::cerr << outputIterator->second->stringValue;
+            else std::cout << outputIterator->second->stringValue;
+        }
 
         return std::make_shared<Ipc::Variable>();
     }

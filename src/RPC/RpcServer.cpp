@@ -114,6 +114,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("deleteSystemVariable", std::make_shared<RPCDeleteSystemVariable>());
     _rpcMethods->emplace("enableEvent", std::make_shared<RPCEnableEvent>());
     _rpcMethods->emplace("executeMiscellaneousDeviceMethod", std::make_shared<RPCExecuteMiscellaneousDeviceMethod>());
+    _rpcMethods->emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
     _rpcMethods->emplace("getAllConfig", std::make_shared<RPCGetAllConfig>());
     _rpcMethods->emplace("getAllMetadata", std::make_shared<RPCGetAllMetadata>());
     _rpcMethods->emplace("getAllScripts", std::make_shared<RPCGetAllScripts>());
@@ -177,6 +178,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("listTeams", std::make_shared<RPCListTeams>());
     _rpcMethods->emplace("logLevel", std::make_shared<RPCLogLevel>());
     _rpcMethods->emplace("nodeOutput", std::make_shared<RPCNodeOutput>());
+    _rpcMethods->emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
     _rpcMethods->emplace("ping", std::make_shared<RPCPing>());
     _rpcMethods->emplace("putParamset", std::make_shared<RPCPutParamset>());
     _rpcMethods->emplace("removeCategoryFromChannel", std::make_shared<RPCRemoveCategoryFromChannel>());

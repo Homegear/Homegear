@@ -42,9 +42,13 @@ public:
 
 	int32_t terminal(std::string& command);
 private:
+	int32_t _currentFamily = -1;
+	uint64_t _currentPeer = 0;
+
 	std::mutex _onConnectWaitMutex;
 	std::condition_variable _onConnectConditionVariable;
 
+	std::string getBreadcrumb();
 	virtual void onConnect();
 
 	// {{{ RPC methods

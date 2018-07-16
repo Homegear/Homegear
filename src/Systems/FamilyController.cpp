@@ -658,8 +658,6 @@ int32_t FamilyController::unloadModule(std::string filename)
 				family->lock();
 			}
 
-			if(_currentFamily && family->getFamily() == _currentFamily->getFamily()) _currentFamily.reset();
-
 			family->homegearShuttingDown();
 			family->physicalInterfaces()->stopListening();
 			while(family.use_count() > 2) //At this point, the node is used by "_families" and "family".
@@ -889,7 +887,6 @@ void FamilyController::dispose()
 		_disposed = true;
 		_rpcCache.reset();
 		_familiesMutex.lock();
-		_currentFamily.reset();
 		_families.clear();
 		_familiesMutex.unlock();
 		_moduleLoadersMutex.lock();
@@ -1043,124 +1040,6 @@ bool FamilyController::peerExists(uint64_t peerId)
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
-}
-
-std::string FamilyController::handleCliCommand(std::string& command)
-{
-	try
-	{
-		std::ostringstream stringStream;
-		if((command == "unselect" || command == "u") && _currentFamily && !_currentFamily->peerSelected())
-		{
-			_currentFamily.reset();
-			return "Device family unselected.\n";
-		}
-		else if((command.compare(0, 8, "families") || BaseLib::HelperFunctions::isShortCliCommand(command)) && _currentFamily)
-		{
-			std::string result = _currentFamily->handleCliCommand(command);
-			return result;
-		}
-		else if(command == "families help" || command == "fh")
-		{
-			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
-			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "families list (ls)\tList all available device families" << std::endl;
-			stringStream << "families select (fs)\tSelect a device family" << std::endl;
-			return stringStream.str();
-		}
-		else if(command == "families list" || command == "fl" || (command == "ls" && !_currentFamily))
-		{
-			std::string bar(" │ ");
-			const int32_t idWidth = 5;
-			const int32_t nameWidth = 30;
-			std::string nameHeader = "Name";
-			nameHeader.resize(nameWidth, ' ');
-			stringStream << std::setfill(' ')
-				<< std::setw(idWidth) << "ID" << bar
-				<< nameHeader
-				<< std::endl;
-			stringStream << "──────┼───────────────────────────────" << std::endl;
-			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
-			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-			{
-				if(i->first == -1) continue;
-				std::string name = i->second->getName();
-				name.resize(nameWidth, ' ');
-				stringStream
-						<< std::setw(idWidth) << std::setfill(' ') << (int32_t)i->first << bar
-						<< name << std::endl;
-			}
-			stringStream << "──────┴───────────────────────────────" << std::endl;
-			return stringStream.str();
-		}
-		else if(command.compare(0, 15, "families select") == 0 || command.compare(0, 2, "fs") == 0)
-		{
-			int32_t family = -1;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 's') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					family = BaseLib::Math::getNumber(element, false);
-					if(family == -1)
-					{
-						return "Invalid family id.\n";
-					}
-				}
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command selects a device family." << std::endl;
-				stringStream << "Usage: families select FAMILYID" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  FAMILYID:\tThe id of the family to select. Example: 1" << std::endl;
-				stringStream << "Supported families:" << std::endl;
-				std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
-				for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-				{
-					if(i->first == -1) continue;
-					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << i->second->getName() << std::endl << std::dec;
-				}
-				return stringStream.str();
-			}
-			_currentFamily = getFamily(family);
-			if(!_currentFamily)
-			{
-				stringStream << "Device family not found." << std::endl;
-				return stringStream.str();
-			}
-
-			stringStream << "Device family \"" << _currentFamily->getName() << "\" selected." << std::endl;
-			stringStream << "For information about the family's commands type: \"help\"" << std::endl;
-
-			return stringStream.str();
-		}
-		else return "Unknown command.\n";
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "Error executing command. See log file for more details.\n";
 }
 
 BaseLib::PVariable FamilyController::listFamilies(int32_t familyId)

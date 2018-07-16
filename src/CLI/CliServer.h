@@ -49,55 +49,24 @@
 #include <iostream>
 #include <string>
 
-namespace CLI {
-
-class Server {
+class CliServer {
 public:
-	Server();
-	virtual ~Server();
+	CliServer();
+	virtual ~CliServer();
 
-	void start();
-	void stop();
-	std::string handleCommand(std::string& command);
+	BaseLib::PVariable generalCommand(std::string& command);
+	std::string familyCommand(int32_t familyId, std::string& command);
+	std::string peerCommand(uint64_t peerId, std::string& command);
 private:
-	class ClientData
-	{
-	public:
-		ClientData() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); }
-		ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
-		virtual ~ClientData() {}
+    std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+    bool _scriptFinished = false;
+    std::mutex _waitMutex;
+    std::condition_variable _waitConditionVariable;
 
-		int32_t id = 0;
-		bool closed = false;
-		std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-		std::thread readThread;
-		std::mutex sendMutex;
-	};
-
-	std::string _socketPath;
-	std::atomic_bool _stopServer;
-	std::thread _mainThread;
-	int32_t _backlog = 10;
-	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-	int32_t _maxConnections = 50;
-	std::mutex _stateMutex;
-	std::map<int32_t, std::shared_ptr<ClientData>> _clients;
-	static int32_t _currentClientID;
-	std::mutex _garbageCollectionMutex;
-	int64_t _lastGargabeCollection = 0;
-
-	void collectGarbage();
-	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
-	std::string handleUserCommand(std::string& command);
-	std::string handleModuleCommand(std::string& command);
-	std::string handleGlobalCommand(std::string& command);
-	void getFileDescriptor(bool deleteOldSocket = false);
-	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
-	void mainThread();
-	void readClient(std::shared_ptr<ClientData> clientData);
-	void closeClientConnection(std::shared_ptr<ClientData> client);
-	void send(std::shared_ptr<ClientData> client, std::string& data);
+    void scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode);
+    void scriptOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& output, bool error);
+    std::string userCommand(std::string& command);
+    std::string moduleCommand(std::string& command);
 };
 
-}
 #endif
