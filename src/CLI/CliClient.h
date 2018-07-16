@@ -32,35 +32,33 @@
 #define CLICLIENT_H_
 
 #include <homegear-base/BaseLib.h>
+#include <homegear-ipc/IIpcClient.h>
 
-#include <thread>
-#include <mutex>
-#include <string>
+#include <termios.h>
 
-namespace CLI {
-
-class Client {
+class CliClient : public Ipc::IIpcClient
+{
 public:
-	Client();
-	virtual ~Client();
+	CliClient(std::string socketPath);
+	virtual ~CliClient();
 
-	/**
-	 * Starts the CLI client.
-	 *
-	 * @param command A CLI command to execute. After this command is executed the function returns. If "command" is empty the function listens for input until "exit" or "quit" is entered.
-	 * @return Returns the exit code. If a script is executed the script exit code is returned.
-	 */
-	int32_t start(std::string command = "");
+	int32_t terminal(std::string& command);
 private:
-	std::string _socketPath;
-	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-	bool _stopPingThread = false;
-	std::thread _pingThread;
-	bool _closed = false;
-	std::mutex _sendMutex;
+    std::atomic_bool _printEvents;
+	int32_t _currentFamily = -1;
+	uint64_t _currentPeer = 0;
 
-	void ping();
+	std::mutex _onConnectWaitMutex;
+	std::condition_variable _onConnectConditionVariable;
+
+	std::string getBreadcrumb();
+	virtual void onConnect();
+    virtual void onDisconnect();
+
+	// {{{ RPC methods
+	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters);
+	Ipc::PVariable output(Ipc::PArray& parameters);
+	// }}}
 };
 
-}
 #endif

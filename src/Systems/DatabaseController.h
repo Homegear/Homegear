@@ -127,7 +127,7 @@ public:
 	// }}}
 
 	// {{{ Metadata
-		virtual BaseLib::PVariable setMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata);
+		virtual BaseLib::PVariable setMetadata(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata);
 		virtual BaseLib::PVariable getMetadata(uint64_t peerId, std::string& dataId);
 		virtual BaseLib::PVariable getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls);
 		virtual BaseLib::PVariable deleteMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId);
@@ -146,7 +146,7 @@ public:
         virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsAndCategories, bool checkAcls);
         virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
         virtual void removeRoomFromSystemVariables(uint64_t roomId);
-        virtual BaseLib::PVariable setSystemVariable(std::string& variableId, BaseLib::PVariable& value);
+        virtual BaseLib::PVariable setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value);
         virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categories);
         virtual BaseLib::PVariable setSystemVariableRoom(std::string& variableId, uint64_t room);
         virtual bool systemVariableHasCategory(std::string& variableId, uint64_t categoryId);
