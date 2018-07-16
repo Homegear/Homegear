@@ -112,6 +112,7 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
+	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
     BaseLib::PVariable cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	BaseLib::PVariable cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);

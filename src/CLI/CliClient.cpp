@@ -53,7 +53,7 @@ void CliClient::onConnect()
         bool error = false;
 
         auto parameters = std::make_shared<Ipc::Array>();
-        parameters->reserve(3);
+        parameters->reserve(2);
         parameters->push_back(std::make_shared<Ipc::Variable>("cliOutput"));
         parameters->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray)); //Outer array
         auto signature = std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray); //Inner array (= signature)
@@ -68,6 +68,36 @@ void CliClient::onConnect()
             Ipc::Output::printCritical("Critical: Could not register RPC method cliOutput: " + result->structValue->at("faultString")->stringValue);
         }
         if (error) return;
+
+        parameters = std::make_shared<Ipc::Array>();
+        result = invoke("getClientId", parameters);
+        if (result->errorStruct)
+        {
+            error = true;
+            Ipc::Output::printCritical("Critical: Could not get my own client ID: " + result->structValue->at("faultString")->stringValue);
+        }
+        if (error) return;
+        int32_t clientId = result->integerValue;
+
+        parameters = std::make_shared<Ipc::Array>();
+        parameters->reserve(2);
+        parameters->push_back(std::make_shared<Ipc::Variable>("cliOutput-" + std::to_string(clientId)));
+        parameters->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray)); //Outer array
+        signature = std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray); //Inner array (= signature)
+        signature->arrayValue->reserve(6);
+        signature->arrayValue->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tVoid)); //Return value
+        signature->arrayValue->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tString)); //1st parameter
+        parameters->back()->arrayValue->push_back(signature);
+        result = invoke("registerRpcMethod", parameters);
+        if (result->errorStruct)
+        {
+            error = true;
+            Ipc::Output::printCritical("Critical: Could not register RPC method cliOutput-" + std::to_string(clientId) + ": " + result->structValue->at("faultString")->stringValue);
+        }
+        if (error) return;
+
+        //Does not invalidate iterators or references so no mutex is needed
+        _localRpcMethods.emplace("cliOutput-" + std::to_string(clientId), std::bind(&CliClient::output, this, std::placeholders::_1));
 
         std::unique_lock<std::mutex> waitLock(_onConnectWaitMutex);
         waitLock.unlock();
@@ -403,18 +433,19 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
 
         if(_printEvents)
         {
-            uint64_t peerId = parameters->at(1)->integerValue64;
+            uint64_t peerId = (uint64_t)parameters->at(1)->integerValue64;
 
             if(_currentPeer != 0 && peerId != _currentPeer) return std::make_shared<Ipc::Variable>();
-            else if(_currentFamily != -1 && peerId > 0)
+            else if(_currentFamily != -1)
             {
+                if(peerId == 0) return std::make_shared<Ipc::Variable>();
                 auto parameters = std::make_shared<Ipc::Array>();
                 parameters->reserve(3);
                 parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
                 parameters->push_back(std::make_shared<Ipc::Variable>(-1));
                 auto fields = std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray);
                 fields->arrayValue->push_back(std::make_shared<Ipc::Variable>(std::string("FAMILY")));
-                parameters->back()->arrayValue->push_back(fields);
+                parameters->push_back(fields);
                 auto result = invoke("getDeviceDescription", parameters);
                 if(result->errorStruct || result->structValue->at("FAMILY")->integerValue != _currentFamily) return std::make_shared<Ipc::Variable>();
             }

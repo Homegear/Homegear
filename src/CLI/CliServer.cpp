@@ -33,8 +33,9 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Security/Acl.h>
 
-CliServer::CliServer()
+CliServer::CliServer(int32_t clientId)
 {
+    _clientId = clientId;
     _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
     _dummyClientInfo->initInterfaceId = "cliServer";
     _dummyClientInfo->ipcServer = true;
@@ -1230,7 +1231,7 @@ void CliServer::scriptOutput(PScriptInfo& scriptInfo, std::string& output, bool 
 {
     try
     {
-        std::string methodName = "cliOutput";
+        std::string methodName = "cliOutput-" + std::to_string(_clientId);
 
         BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
         auto outputStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);

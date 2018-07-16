@@ -51,13 +51,14 @@
 
 class CliServer {
 public:
-	CliServer();
+	CliServer(int32_t clientId);
 	virtual ~CliServer();
 
 	BaseLib::PVariable generalCommand(std::string& command);
 	std::string familyCommand(int32_t familyId, std::string& command);
 	std::string peerCommand(uint64_t peerId, std::string& command);
 private:
+	int32_t _clientId = 0;
     std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
     bool _scriptFinished = false;
     std::mutex _waitMutex;

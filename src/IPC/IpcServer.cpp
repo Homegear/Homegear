@@ -214,6 +214,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
     }
 
+	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getClientId", std::bind(&IpcServer::getClientId, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliGeneralCommand", std::bind(&IpcServer::cliGeneralCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliFamilyCommand", std::bind(&IpcServer::cliFamilyCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -1252,6 +1253,27 @@ std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> IpcSer
 }
 
 // {{{ RPC methods
+BaseLib::PVariable IpcServer::getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		return std::make_shared<BaseLib::Variable>(clientData->id);
+	}
+	catch (const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch (...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
 {
 	try
@@ -1311,7 +1333,7 @@ BaseLib::PVariable IpcServer::cliGeneralCommand(PIpcClientData& clientData, int3
 		if(command.empty()) return std::make_shared<BaseLib::Variable>();
         if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: CLI client " + std::to_string(clientData->id) + " is executing command: " + command);
 
-        CliServer cliServer;
+        CliServer cliServer(clientData->id);
         return cliServer.generalCommand(command);
     }
     catch (const std::exception& ex)
@@ -1341,7 +1363,7 @@ BaseLib::PVariable IpcServer::cliFamilyCommand(PIpcClientData& clientData, int32
         if(command.empty()) return std::make_shared<BaseLib::Variable>();
         if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: CLI client " + std::to_string(clientData->id) + " is executing family command: " + command);
 
-        CliServer cliServer;
+        CliServer cliServer(clientData->id);
         return std::make_shared<BaseLib::Variable>(cliServer.familyCommand(parameters->at(0)->integerValue, command));
     }
     catch (const std::exception& ex)
@@ -1371,7 +1393,7 @@ BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData& clientData, int32_t
         if(command.empty()) return std::make_shared<BaseLib::Variable>();
         if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: CLI client " + std::to_string(clientData->id) + " is executing peer command: " + command);
 
-        CliServer cliServer;
+        CliServer cliServer(clientData->id);
         return std::make_shared<BaseLib::Variable>(cliServer.peerCommand((uint64_t)parameters->at(0)->integerValue64, command));
     }
     catch (const std::exception& ex)
