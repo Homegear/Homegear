@@ -638,6 +638,11 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "debuglevel (dl)      Changes the debug level" << std::endl;
+			stringStream << "events (ev)          Prints variable updates to the standard output" << std::endl;
+			stringStream << "lifetick (lt)        Checks the lifeticks of all components." << std::endl;
+			stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
+			stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
+			stringStream << "threads              Prints current thread count" << std::endl;
 #ifndef NO_SCRIPTENGINE
 			stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
 			stringStream << "runcommand (rc)      Executes a PHP command" << std::endl;
@@ -649,10 +654,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 				stringStream << "flowcount (fc)     Restarts the number of currently running flows" << std::endl;
 				stringStream << "flowsrestart (fr)    Restarts all flows" << std::endl;
 			}
-			stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
-			stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
-			stringStream << "threads              Prints current thread count" << std::endl;
-			stringStream << "lifetick (lt)        Checks the lifeticks of all components." << std::endl;
 			stringStream << "users [COMMAND]      Execute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]   Execute device family commands. Type \"families help\" for more information." << std::endl;
 			stringStream << "modules [COMMAND]    Execute module commands. Type \"modules help\" for more information." << std::endl;
@@ -1124,7 +1125,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 		else if(command.compare(0, 5, "users") == 0 || command.compare(0, 6, "groups") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u') || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'g')) return std::make_shared<BaseLib::Variable>(userCommand(command));
 		else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'm'))) return std::make_shared<BaseLib::Variable>(moduleCommand(command));
 
-		return std::make_shared<BaseLib::Variable>(std::string());
+		return std::make_shared<BaseLib::Variable>(std::string("Unknown command."));
 	}
     catch(const std::exception& ex)
     {

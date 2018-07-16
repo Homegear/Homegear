@@ -34,6 +34,8 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-ipc/IIpcClient.h>
 
+#include <termios.h>
+
 class CliClient : public Ipc::IIpcClient
 {
 public:
@@ -42,6 +44,7 @@ public:
 
 	int32_t terminal(std::string& command);
 private:
+    std::atomic_bool _printEvents;
 	int32_t _currentFamily = -1;
 	uint64_t _currentPeer = 0;
 
@@ -50,6 +53,7 @@ private:
 
 	std::string getBreadcrumb();
 	virtual void onConnect();
+    virtual void onDisconnect();
 
 	// {{{ RPC methods
 	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters);

@@ -38,6 +38,8 @@ CliClient::CliClient(std::string socketPath) : IIpcClient(socketPath)
 {
 	_localRpcMethods.emplace("broadcastEvent", std::bind(&CliClient::broadcastEvent, this, std::placeholders::_1));
 	_localRpcMethods.emplace("cliOutput", std::bind(&CliClient::output, this, std::placeholders::_1));
+
+    _printEvents = false;
 }
 
 CliClient::~CliClient()
@@ -51,7 +53,7 @@ void CliClient::onConnect()
         bool error = false;
 
         auto parameters = std::make_shared<Ipc::Array>();
-        parameters->reserve(2);
+        parameters->reserve(3);
         parameters->push_back(std::make_shared<Ipc::Variable>("cliOutput"));
         parameters->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray)); //Outer array
         auto signature = std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray); //Inner array (= signature)
@@ -83,6 +85,20 @@ void CliClient::onConnect()
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void CliClient::onDisconnect()
+{
+    //{{{ Reenable buffered input
+    struct termios t{};
+    tcgetattr(STDIN_FILENO, &t);
+    t.c_lflag |= ICANON;
+    t.c_lflag |= ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+    //}}}
+
+    std::cout << "Disconnected from Homegear." << std::endl;
+    exit(6);
 }
 
 std::string CliClient::getBreadcrumb()
@@ -133,7 +149,13 @@ int32_t CliClient::terminal(std::string& command)
         {
             if(command.empty())
             {
-                if(!connected()) break;
+                if(!connected())
+                {
+                    std::cout << "Disconnected from Homegear." << std::endl;
+                    stop();
+                    free(sendBuffer);
+                    return 5;
+                }
                 bytes = strnlen(sendBuffer, 1000000);
                 if(bytes == 0 || sendBuffer[0] == '\n' || sendBuffer[0] == 0) continue;
                 if(bytes >= 4 && (strncmp(sendBuffer, "quit", 4) == 0 || strncmp(sendBuffer, "exit", 4) == 0 || strncmp(sendBuffer, "moin", 4) == 0))
@@ -176,24 +198,25 @@ int32_t CliClient::terminal(std::string& command)
                     stringStream << "Parameters:" << std::endl;
                     stringStream << "  FAMILYID:\tThe id of the family to select. Type >>families list<< to get a list of supported families. Example: 1" << std::endl;
                     std::cout << stringStream.str() << std::endl;
-                    continue;
                 }
-
-                int32_t family = BaseLib::Math::getNumber(arguments.at(0));
-
-                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
-                parameters->push_back(std::make_shared<Ipc::Variable>(family));
-                Ipc::PVariable result = invoke("familyExists", parameters);
-                if(result->errorStruct)
+                else
                 {
-                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    int32_t family = BaseLib::Math::getNumber(arguments.at(0));
+
+                    Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                    parameters->push_back(std::make_shared<Ipc::Variable>(family));
+                    Ipc::PVariable result = invoke("familyExists", parameters);
+                    if(result->errorStruct)
+                    {
+                        std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    }
+                    else if(result->booleanValue)
+                    {
+                        _currentFamily = family;
+                        std::cout << "For a list of available family commands type >>help<<." << std::endl;
+                    }
+                    else std::cout << "Unknown family." << std::endl;
                 }
-                else if(result->booleanValue)
-                {
-                    _currentFamily = family;
-                    std::cout << "For a list of available family commands type >>help<<." << std::endl;
-                }
-                else std::cout << "Unknown family." << std::endl;
             }
             else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "peers select", "ps", "", 1, arguments, showHelp))
             {
@@ -204,24 +227,66 @@ int32_t CliClient::terminal(std::string& command)
                     stringStream << "Parameters:" << std::endl;
                     stringStream << "  PEERID:\tThe id of the peer to select. Example: 513" << std::endl;
                     std::cout << stringStream.str() << std::endl;
-                    continue;
                 }
-
-                uint64_t peerId = (uint64_t)BaseLib::Math::getNumber64(arguments.at(0));
-
-                Ipc::PArray parameters = std::make_shared<Ipc::Array>();
-                parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
-                Ipc::PVariable result = invoke("peerExists", parameters);
-                if(result->errorStruct)
+                else
                 {
-                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    uint64_t peerId = (uint64_t) BaseLib::Math::getNumber64(arguments.at(0));
+
+                    Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+                    parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
+                    Ipc::PVariable result = invoke("peerExists", parameters);
+                    if(result->errorStruct)
+                    {
+                        std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    }
+                    else if(result->booleanValue)
+                    {
+                        _currentPeer = peerId;
+                        std::cout << "For a list of available peer commands type >>help<<." << std::endl;
+                    }
+                    else std::cout << "Unknown peer." << std::endl;
                 }
-                else if(result->booleanValue)
+            }
+            else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "events", "ev", "", 0, arguments, showHelp))
+            {
+                if(showHelp)
                 {
-                    _currentPeer = peerId;
-                    std::cout << "For a list of available peer commands type >>help<<." << std::endl;
+                    stringStream << "Description: This command prints events from Homegear to the standard output. When no family and no peer is selected, updates from all devices and including system variables are output. When a family or peer is selected, only events from this family or peer are output." << std::endl << std::endl;
+                    stringStream << "Usage: events" << std::endl;
+                    std::cout << stringStream.str() << std::endl;
                 }
-                else std::cout << "Unknown peer." << std::endl;
+                else
+                {
+                    std::cout << "Listening for variable updates";
+                    if(_currentPeer != 0) std::cout << " of peer " << _currentPeer;
+                    else if(_currentFamily != -1) std::cout << " in family " << _currentFamily;
+                    std::cout << ". Press >>ESC<< or >>q<< to abort." << std::endl;
+
+                    //{{{ Disable buffered input
+                    struct termios t{};
+                    tcgetattr(STDIN_FILENO, &t);
+                    t.c_lflag &= ~ICANON;
+                    t.c_lflag &= ~ECHO;
+                    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+                    //}}}
+
+                    _printEvents = true;
+
+                    int charCode = -1;
+                    do
+                    {
+                        charCode = std::getchar();
+                    } while(connected() && charCode != 27 && charCode != 81 && charCode != 113);
+
+                    _printEvents = false;
+
+                    //{{{ Reenable buffered input
+                    tcgetattr(STDIN_FILENO, &t);
+                    t.c_lflag |= ICANON;
+                    t.c_lflag |= ECHO;
+                    tcsetattr(STDIN_FILENO, TCSANOW, &t);
+                    //}}}
+                }
             }
             else if(_currentPeer != 0)
             {
@@ -336,7 +401,29 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
     {
         if(parameters->size() != 5) return Ipc::Variable::createError(-1, "Wrong parameter count.");
 
+        if(_printEvents)
+        {
+            uint64_t peerId = parameters->at(1)->integerValue64;
 
+            if(_currentPeer != 0 && peerId != _currentPeer) return std::make_shared<Ipc::Variable>();
+            else if(_currentFamily != -1 && peerId > 0)
+            {
+                auto parameters = std::make_shared<Ipc::Array>();
+                parameters->reserve(3);
+                parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
+                parameters->push_back(std::make_shared<Ipc::Variable>(-1));
+                auto fields = std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray);
+                fields->arrayValue->push_back(std::make_shared<Ipc::Variable>(std::string("FAMILY")));
+                parameters->back()->arrayValue->push_back(fields);
+                auto result = invoke("getDeviceDescription", parameters);
+                if(result->errorStruct || result->structValue->at("FAMILY")->integerValue != _currentFamily) return std::make_shared<Ipc::Variable>();
+            }
+
+            for(uint32_t i = 0; i < parameters->at(3)->arrayValue->size(); ++i)
+            {
+                std::cout << "ID >>" << (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) << "<<, channel >>" << parameters->at(2)->integerValue << "<<, variable >>" << parameters->at(3)->arrayValue->at(i)->stringValue << "<<, source >>" << parameters->at(0)->stringValue << "<<, value >>" << BaseLib::HelperFunctions::trim(parameters->at(4)->arrayValue->at(i)->print(false, false, true)) << "<<" << std::endl;
+            }
+        }
 
         return std::make_shared<Ipc::Variable>();
     }

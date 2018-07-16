@@ -2251,7 +2251,7 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string&
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string& serialNumber, std::string& dataID, BaseLib::PVariable& metadata)
+BaseLib::PVariable DatabaseController::setMetadata(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, std::string& serialNumber, std::string& dataID, BaseLib::PVariable& metadata)
 {
 	try
 	{
@@ -2293,7 +2293,7 @@ BaseLib::PVariable DatabaseController::setMetadata(uint64_t peerID, std::string&
 #endif
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
-		std::string source;
+		std::string& source = clientInfo->initInterfaceId;
 		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
 		GD::scriptEngineServer->broadcastEvent(source, peerID, -1, valueKeys, values);
@@ -2925,7 +2925,7 @@ uint64_t DatabaseController::getSystemVariableRoomInternal(std::string& variable
 	return 0;
 }
 
-BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableId, BaseLib::PVariable& value)
+BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value)
 {
 	try
 	{
@@ -2979,7 +2979,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(std::string& variableId
 #ifdef EVENTHANDLER
 		GD::eventHandler->trigger(variableId, value);
 #endif
-        std::string source;
+        std::string& source = clientInfo->initInterfaceId;
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableId});
 		std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});
 		if(GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, 0, -1, valueKeys, values);

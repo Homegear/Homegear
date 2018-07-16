@@ -6690,7 +6690,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 			return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 		}
 		serialNumber = peer->getSerialNumber();
-		return GD::bl->db->setMetadata(peer->getID(), serialNumber, parameters->at(1)->stringValue, value);
+		return GD::bl->db->setMetadata(clientInfo, peer->getID(), serialNumber, parameters->at(1)->stringValue, value);
 	}
 	catch(const std::exception& ex)
     {
@@ -6953,7 +6953,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
 		BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
 
-		return GD::bl->db->setSystemVariable(parameters->at(0)->stringValue, value);
+		return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value);
 	}
 	catch(const std::exception& ex)
     {
