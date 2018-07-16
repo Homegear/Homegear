@@ -134,8 +134,6 @@ public:
 	void loadModules();
 	void load();
 	void save(bool full);
-	bool familySelected() { return (bool)_currentFamily; }
-	std::string handleCliCommand(std::string& command);
 
 	/*
 	 * Returns the family map.
@@ -183,7 +181,6 @@ private:
 
 	std::mutex _familiesMutex;
 	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> _families;
-	std::shared_ptr<BaseLib::Systems::DeviceFamily> _currentFamily;
 
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 

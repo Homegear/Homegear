@@ -31,9 +31,6 @@
 #include "IpcClientData.h"
 #include "../GD/GD.h"
 
-namespace Ipc
-{
-
 IpcClientData::IpcClientData()
 {
 	init();
@@ -57,4 +54,3 @@ void IpcClientData::init()
 	buffer.resize(1024);
 }
 
-}

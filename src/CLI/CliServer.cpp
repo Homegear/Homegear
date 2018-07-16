@@ -28,446 +28,27 @@
  * files in the program, then also delete it here.
 */
 
-#include "CLIServer.h"
+#include "CliServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Security/Acl.h>
 
-namespace CLI {
-
-int32_t Server::_currentClientID = 0;
-
-Server::Server()
+CliServer::CliServer()
 {
-	_stopServer = false;
+    _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+    _dummyClientInfo->initInterfaceId = "cliServer";
+    _dummyClientInfo->ipcServer = true;
+    _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+    std::vector<uint64_t> groups{ 3 };
+    _dummyClientInfo->acls->fromGroups(groups);
+    _dummyClientInfo->user = "SYSTEM (3)";
 }
 
-Server::~Server()
+CliServer::~CliServer()
 {
-	stop();
 }
 
-void Server::collectGarbage()
-{
-	_garbageCollectionMutex.lock();
-	try
-	{
-		_lastGargabeCollection = GD::bl->hf.getTime();
-		std::vector<std::shared_ptr<ClientData>> clientsToRemove;
-		_stateMutex.lock();
-		try
-		{
-			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				if(i->second->closed) clientsToRemove.push_back(i->second);
-			}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		_stateMutex.unlock();
-		for(std::vector<std::shared_ptr<ClientData>>::iterator i = clientsToRemove.begin(); i != clientsToRemove.end(); ++i)
-		{
-			GD::out.printDebug("Debug: Joining read thread of CLI client " + std::to_string((*i)->id));
-			GD::bl->threadManager.join((*i)->readThread);
-			_stateMutex.lock();
-			try
-			{
-				_clients.erase((*i)->id);
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_stateMutex.unlock();
-			GD::out.printDebug("Debug: CLI client " + std::to_string((*i)->id) + " removed.");
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _garbageCollectionMutex.unlock();
-}
-
-void Server::start()
-{
-	try
-	{
-		_socketPath = GD::bl->settings.socketPath() + "homegear.sock";
-		stop();
-		_stopServer = false;
-		GD::bl->threadManager.start(_mainThread, true, &Server::mainThread, this);
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void Server::stop()
-{
-	try
-	{
-		_stopServer = true;
-		GD::bl->threadManager.join(_mainThread);
-		GD::out.printDebug("Debug: Waiting for CLI client threads to finish.");
-		{
-			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-			for(std::map<int32_t, std::shared_ptr<ClientData>>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-			{
-				closeClientConnection(i->second);
-			}
-		}
-		while(_clients.size() > 0)
-		{
-			collectGarbage();
-			if(_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		unlink(_socketPath.c_str());
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-}
-
-void Server::closeClientConnection(std::shared_ptr<ClientData> client)
-{
-	try
-	{
-		if(!client) return;
-		GD::bl->fileDescriptorManager.close(client->fileDescriptor);
-		client->closed = true;
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void Server::mainThread()
-{
-	try
-	{
-		getFileDescriptor(true); //Deletes an existing socket file
-		std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor;
-		while(!_stopServer)
-		{
-			try
-			{
-				//Don't lock _stateMutex => no synchronisation needed
-				if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
-				{
-					collectGarbage();
-					if(_clients.size() > GD::bl->settings.cliServerMaxConnections())
-					{
-						GD::out.printError("Error in CLI server: There are too many clients connected to me. Waiting for connections to close. You can increase the number of allowed connections in main.conf.");
-						std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-						continue;
-					}
-				}
-				getFileDescriptor();
-				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor == -1)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-					continue;
-				}
-				clientFileDescriptor = getClientFileDescriptor();
-				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				continue;
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				continue;
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				continue;
-			}
-			try
-			{
-				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-				std::lock_guard<std::mutex> stateGuard(_stateMutex);
-				clientData->id = _currentClientID++;
-				_clients[clientData->id] = clientData;
-				GD::bl->threadManager.start(clientData->readThread, false, &Server::readClient, this, clientData);
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-		}
-		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
-{
-	std::shared_ptr<BaseLib::FileDescriptor> descriptor;
-	try
-	{
-		timeval timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		fd_set readFileDescriptor;
-		int32_t nfds = 0;
-		FD_ZERO(&readFileDescriptor);
-		{
-			auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
-			fileDescriptorGuard.lock();
-			nfds = _serverFileDescriptor->descriptor + 1;
-			if(nfds <= 0)
-			{
-				fileDescriptorGuard.unlock();
-				GD::out.printError("Error: CLI server socket descriptor is invalid.");
-				return descriptor;
-			}
-			FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		}
-		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout))
-		{
-			if(GD::bl->hf.getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.cliServerMaxConnections() * 100 / 112) collectGarbage();
-			return descriptor;
-		}
-
-		sockaddr_un clientAddress;
-		socklen_t addressSize = sizeof(addressSize);
-		descriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize));
-		if(descriptor->descriptor == -1) return descriptor;
-		GD::out.printInfo("Info: CLI connection accepted. Client number: " + std::to_string(descriptor->id));
-
-		return descriptor;
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return descriptor;
-}
-
-void Server::getFileDescriptor(bool deleteOldSocket)
-{
-	try
-	{
-		struct stat sb;
-		if(stat(GD::bl->settings.socketPath().c_str(), &sb) == -1)
-		{
-			if(errno == ENOENT) GD::out.printError("Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
-			else throw BaseLib::Exception("Error reading information of directory " + GD::bl->settings.socketPath() + ": " + strerror(errno));
-			_stopServer = true;
-			return;
-		}
-		if(!S_ISDIR(sb.st_mode))
-		{
-			GD::out.printError("Directory " + GD::bl->settings.socketPath() + " does not exist. Please create it before starting Homegear otherwise the command line interface won't work.");
-			_stopServer = true;
-			return;
-		}
-		if(deleteOldSocket)
-		{
-			if(unlink(_socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + _socketPath + ". Error: " + strerror(errno)));
-		}
-		else if(stat(_socketPath.c_str(), &sb) == 0) return;
-
-		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
-		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + _socketPath + ". Error: " + strerror(errno)));
-		int32_t reuseAddress = 1;
-		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
-		{
-			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw(BaseLib::Exception("Couldn't set socket options: " + _socketPath + ". Error: " + strerror(errno)));
-		}
-		sockaddr_un serverAddress;
-		serverAddress.sun_family = AF_LOCAL;
-		//104 is the size on BSD systems - slightly smaller than in Linux
-		if(_socketPath.length() > 104)
-		{
-			//Check for buffer overflow
-			GD::out.printCritical("Critical: Socket path is too long.");
-			return;
-		}
-		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
-		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
-		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
-		{
-			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
-		}
-		if(chmod(_socketPath.c_str(), S_IRWXU | S_IRWXG) == -1)
-		{
-			GD::out.printError("Error: chmod failed on unix socket \"" + _socketPath + "\".");
-		}
-		return;
-    }
-    catch(const std::exception& ex)
-    {
-    	GD::out.printError("Couldn't create socket file " + _socketPath + ": " + ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-}
-
-void Server::readClient(std::shared_ptr<ClientData> clientData)
-{
-	try
-	{
-		std::string unselect = "unselect";
-		GD::familyController->handleCliCommand(unselect);
-		GD::familyController->handleCliCommand(unselect);
-		GD::familyController->handleCliCommand(unselect);
-		GD::familyController->handleCliCommand(unselect);
-
-		int32_t bufferMax = 1024;
-		char buffer[bufferMax + 1];
-		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
-		int32_t bytesRead;
-		GD::out.printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->id) + ".");
-		while(!_stopServer)
-		{
-			//Timeout needs to be set every time, so don't put it outside of the while loop
-			timeval timeout;
-			timeout.tv_sec = 2;
-			timeout.tv_usec = 0;
-			fd_set readFileDescriptor;
-			int32_t nfds = 0;
-			FD_ZERO(&readFileDescriptor);
-			{
-				auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
-				fileDescriptorGuard.lock();
-				nfds = clientData->fileDescriptor->descriptor + 1;
-				if(nfds <= 0)
-				{
-					fileDescriptorGuard.unlock();
-					GD::out.printInfo("Info: Connection to CLI client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-					closeClientConnection(clientData);
-					return;
-				}
-				FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
-			}
-			bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
-			if(bytesRead == 0) continue;
-			if(bytesRead != 1)
-			{
-				GD::out.printInfo("Info: Connection to CLI client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-				closeClientConnection(clientData);
-				return;
-			}
-
-			bytesRead = read(clientData->fileDescriptor->descriptor, buffer, bufferMax);
-			if(bytesRead <= 0)
-			{
-				GD::out.printInfo("Info: Connection to CLI client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
-				closeClientConnection(clientData);
-				//If we close the socket, the socket file gets deleted. We don't want that
-				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-				return;
-			}
-
-			std::string command;
-			command.insert(command.end(), buffer, buffer + bytesRead);
-			handleCommand(command, clientData);
-		}
-		closeClientConnection(clientData);
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::string Server::handleUserCommand(std::string& command)
+std::string CliServer::userCommand(std::string& command)
 {
 	try
 	{
@@ -816,7 +397,7 @@ std::string Server::handleUserCommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::string Server::handleModuleCommand(std::string& command)
+std::string CliServer::moduleCommand(std::string& command)
 {
 	try
 	{
@@ -1044,15 +625,15 @@ std::string Server::handleModuleCommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-
-std::string Server::handleGlobalCommand(std::string& command)
+BaseLib::PVariable CliServer::generalCommand(std::string& command)
 {
 	try
 	{
+        if(command.empty()) return std::make_shared<BaseLib::Variable>(std::string());
 		std::ostringstream stringStream;
 		std::vector<std::string> arguments;
 		bool showHelp = false;
-		if(BaseLib::HelperFunctions::checkCliCommand(command, "help", "h", "", 0, arguments, showHelp) && !GD::familyController->familySelected())
+		if(BaseLib::HelperFunctions::checkCliCommand(command, "help", "h", "", 0, arguments, showHelp))
 		{
 			stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
@@ -1075,23 +656,23 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "users [COMMAND]      Execute user commands. Type \"users help\" for more information." << std::endl;
 			stringStream << "families [COMMAND]   Execute device family commands. Type \"families help\" for more information." << std::endl;
 			stringStream << "modules [COMMAND]    Execute module commands. Type \"modules help\" for more information." << std::endl;
-			return stringStream.str();
+			return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
-		else if(BaseLib::HelperFunctions::checkCliCommand(command, "test", "tst", "", 0, arguments, showHelp) && !GD::familyController->familySelected())
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "test", "tst", "", 0, arguments, showHelp))
 		{
 #ifndef NO_SCRIPTENGINE
 			GD::scriptEngineServer->devTestClient();
 #endif
 			stringStream << "Done." << std::endl;
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "disconnect", "dcr", "", 0, arguments, showHelp))
 		{
 			GD::rpcClient->disconnectRega();
 			stringStream << "RegaHss socket closed." << std::endl;
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
-		else if(BaseLib::HelperFunctions::checkCliCommand(command, "debuglevel", "dl", "", 1, arguments, showHelp) && !GD::familyController->familySelected())
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "debuglevel", "dl", "", 1, arguments, showHelp))
 		{
 			int32_t debugLevel = 3;
 
@@ -1101,15 +682,15 @@ std::string Server::handleGlobalCommand(std::string& command)
 				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			debugLevel = BaseLib::Math::getNumber(arguments.at(0), false);
-			if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
+			if(debugLevel < 0 || debugLevel > 10) return std::make_shared<BaseLib::Variable>(std::string("Invalid debug level. Please provide a debug level between 0 and 10.\n"));
 
 			GD::bl->debugLevel = debugLevel;
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 #ifndef NO_SCRIPTENGINE
 		else if(command.compare(0, 9, "runscript") == 0 || command.compare(0, 2, "rs") == 0)
@@ -1147,21 +728,26 @@ std::string Server::handleGlobalCommand(std::string& command)
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  PATH:\t\tPath relative to the Homegear scripts folder." << std::endl;
 				stringStream << "  ARGUMENTS:\tParameters passed to the script." << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			std::string argumentsString = arguments.str();
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, argumentsString));
-			scriptInfo->returnOutput = true;
-			GD::scriptEngineServer->executeScript(scriptInfo, true);
-			bool addNewLine = false;
-			if(!scriptInfo->output.empty())
-			{
-				stringStream << scriptInfo->output;
-                if(scriptInfo->output.back() != '\n') addNewLine = true;
-			}
-			stringStream << (addNewLine ? "\n" : "") << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
-			return stringStream.str();
+            scriptInfo->scriptFinishedCallback = std::bind(&CliServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
+            scriptInfo->scriptOutputCallback = std::bind(&CliServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+			GD::scriptEngineServer->executeScript(scriptInfo, false);
+
+            std::unique_lock<std::mutex> waitLock(_waitMutex);
+            int64_t startTime = BaseLib::HelperFunctions::getTime();
+            while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+            {
+                if(BaseLib::HelperFunctions::getTime() - startTime > 300000) return true;
+                else return _scriptFinished;
+            }));
+
+            auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(scriptInfo->exitCode));
+            return output;
 		}
 		else if(command.compare(0, 10, "runcommand") == 0 || command.compare(0, 3, "rc ") == 0 || command.compare(0, 1, "$") == 0)
 		{
@@ -1174,7 +760,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				stringStream << "Usage: runcommand COMMAND" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  COMMAND:\t\tThe command to execute. E. g.: $hg->setValue(12, 2, \"STATE\", true);" << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			std::string script;
@@ -1182,7 +768,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			script.append("<?php\nuse Homegear\\Homegear as Homegear;\nuse Homegear\\HomegearGpio as HomegearGpio;\nuse Homegear\\HomegearSerial as HomegearSerial;\nuse Homegear\\HomegearI2c as HomegearI2c;\n$hg = new Homegear();\n");
 			if(commandSize > 0) command = command.substr(commandSize);
 			BaseLib::HelperFunctions::trim(command);
-			if(command.size() < 4) return "Invalid code.";
+			if(command.size() < 4) return std::make_shared<BaseLib::Variable>(std::string("Invalid code.\n"));
 			if((command.front() == '\"' && command.back() == '\"') || (command.front() == '\'' && command.back() == '\'')) command = command.substr(1, command.size() - 2);
 			command.push_back(';');
 
@@ -1192,16 +778,21 @@ std::string Server::handleGlobalCommand(std::string& command)
 			std::string relativePath = "/inline.php";
 			std::string arguments;
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, script, arguments));
-			scriptInfo->returnOutput = true;
-			GD::scriptEngineServer->executeScript(scriptInfo, true);
-            bool addNewLine = false;
-            if(!scriptInfo->output.empty())
+            scriptInfo->scriptFinishedCallback = std::bind(&CliServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
+            scriptInfo->scriptOutputCallback = std::bind(&CliServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+			GD::scriptEngineServer->executeScript(scriptInfo, false);
+
+            std::unique_lock<std::mutex> waitLock(_waitMutex);
+            int64_t startTime = BaseLib::HelperFunctions::getTime();
+            while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
             {
-                stringStream << scriptInfo->output;
-                if(scriptInfo->output.back() != '\n') addNewLine = true;
-            }
-            stringStream << (addNewLine ? "\n" : "") << "Exit code: " << std::dec << scriptInfo->exitCode << std::endl;
-			return stringStream.str();
+                if(BaseLib::HelperFunctions::getTime() - startTime > 300000) return true;
+                else return _scriptFinished;
+            }));
+
+            auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(scriptInfo->exitCode));
+            return output;
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "scriptcount", "sc", "", 0, arguments, showHelp))
 		{
@@ -1209,11 +800,11 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				stringStream << "Description: This command returns the total number of currently running scripts." << std::endl;
 				stringStream << "Usage: scriptcount" << std::endl << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			stringStream << std::dec << GD::scriptEngineServer->scriptCount() << std::endl;
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "scriptsrunning", "sr", "", 0, arguments, showHelp))
 		{
@@ -1221,11 +812,11 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				stringStream << "Description: This command returns the script IDs and filenames of all running scripts." << std::endl;
 				stringStream << "Usage: scriptsrunning" << std::endl << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
-			if(runningScripts.empty()) return "No scripts are being executed.\n";
+			if(runningScripts.empty()) return std::make_shared<BaseLib::Variable>(std::string("No scripts are being executed.\n"));
 
 			stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID" << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
 			for(auto& script : runningScripts)
@@ -1233,7 +824,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				stringStream << std::setw(10) << std::get<0>(script) << std::setw(10) << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(10) << std::get<2>(script) << std::setw(80) << std::get<3>(script) << std::endl;
 			}
 
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 #endif
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "flowcount", "fc", "", 0, arguments, showHelp))
@@ -1242,11 +833,11 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				stringStream << "Description: This command returns the total number of currently running flows." << std::endl;
 				stringStream << "Usage: flowcount" << std::endl << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			if(GD::nodeBlueServer) stringStream << std::dec << GD::nodeBlueServer->flowCount() << std::endl;
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "flowsrestart", "fr", "", 0, arguments, showHelp))
 		{
@@ -1254,14 +845,14 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				stringStream << "Description: This command restarts all flows." << std::endl;
 				stringStream << "Usage: flowsrestart" << std::endl << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			if(GD::nodeBlueServer) GD::nodeBlueServer->restartFlows();
 
 			stringStream << "Flows restarted." << std::endl;
 
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(command.compare(0, 10, "rpcclients") == 0 || command.compare(0, 3, "rcl") == 0)
 		{
@@ -1286,7 +877,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				stringStream << "Description: This command lists all connected RPC clients." << std::endl;
 				stringStream << "Usage: rpcclients" << std::endl << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			int32_t idWidth = 10;
@@ -1371,7 +962,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 				stringStream << std::endl;
 			}
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(command.compare(0, 10, "rpcservers") == 0 || command.compare(0, 3, "rpc") == 0)
 		{
@@ -1396,7 +987,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 			{
 				stringStream << "Description: This command lists all active RPC servers." << std::endl;
 				stringStream << "Usage: rpcservers" << std::endl << std::endl;
-				return stringStream.str();
+                return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
 			int32_t nameWidth = 20;
@@ -1444,12 +1035,12 @@ std::string Server::handleGlobalCommand(std::string& command)
 					<< std::endl;
 
 			}
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(command.compare(0, 7, "threads") == 0)
 		{
 			stringStream << GD::bl->threadManager.getCurrentThreadCount() << " of " << GD::bl->threadManager.getMaxThreadCount() << std::endl << "Maximum thread count since start: " << GD::bl->threadManager.getMaxRegisteredThreadCount() << std::endl;
-			return stringStream.str();
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "lifetick", "lt", "", 2, arguments, showHelp))
 		{
@@ -1494,10 +1085,46 @@ std::string Server::handleGlobalCommand(std::string& command)
 				exitCode = 127;
 				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-			stringStream << "Exit code: " << exitCode << std::endl;
-			return stringStream.str();
+			auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(exitCode));
+            output->structValue->emplace("output", std::make_shared<BaseLib::Variable>(stringStream.str()));
+            return output;
 		}
-		return "";
+        else if(BaseLib::HelperFunctions::checkCliCommand(command, "families help", "fh", "", 0, arguments, showHelp))
+        {
+            stringStream << "List of commands (shortcut in brackets):" << std::endl << std::endl;
+            stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+            stringStream << "families list (ls)\tList all available device families" << std::endl;
+            stringStream << "families select (fs)\tSelect a device family" << std::endl;
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
+        }
+        else if(BaseLib::HelperFunctions::checkCliCommand(command, "families list", "fl", "ls", 0, arguments, showHelp))
+        {
+            std::string bar(" │ ");
+            const int32_t idWidth = 5;
+            const int32_t nameWidth = 30;
+            std::string nameHeader = "Name";
+            nameHeader.resize(nameWidth, ' ');
+            stringStream << std::setfill(' ')
+                         << std::setw(idWidth) << "ID" << bar
+                         << nameHeader
+                         << std::endl;
+            stringStream << "──────┼───────────────────────────────" << std::endl;
+            auto families = GD::familyController->getFamilies();
+            for(auto& family : families)
+            {
+                if(family.first == -1) continue;
+                std::string name = family.second->getName();
+                name.resize(nameWidth, ' ');
+                stringStream << std::setw(idWidth) << std::setfill(' ') << (int32_t)family.first << bar << name << std::endl;
+            }
+            stringStream << "──────┴───────────────────────────────" << std::endl;
+            return std::make_shared<BaseLib::Variable>(stringStream.str());
+        }
+		else if(command.compare(0, 5, "users") == 0 || command.compare(0, 6, "groups") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u') || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'g')) return std::make_shared<BaseLib::Variable>(userCommand(command));
+		else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'm'))) return std::make_shared<BaseLib::Variable>(moduleCommand(command));
+
+		return std::make_shared<BaseLib::Variable>(std::string());
 	}
     catch(const std::exception& ex)
     {
@@ -1510,96 +1137,119 @@ std::string Server::handleGlobalCommand(std::string& command)
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::make_shared<BaseLib::Variable>(std::string("Error executing command. See log file for more details.\n"));
+}
+
+std::string CliServer::familyCommand(int32_t familyId, std::string& command)
+{
+    try
+    {
+        if(command.empty()) return "";
+
+        auto family = GD::familyController->getFamily(familyId);
+        if(!family) return "Unknown family.";
+
+        return family->handleCliCommand(command);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
 
-std::string Server::handleCommand(std::string& command)
+std::string CliServer::peerCommand(uint64_t peerId, std::string& command)
 {
-	try
-	{
-		if(!command.empty() && command.at(0) == 0) return "";
-		std::string response = handleGlobalCommand(command);
-		if(response.empty())
-		{
-			//User commands can be executed when family is selected
-			if(command.compare(0, 5, "users") == 0 || command.compare(0, 6, "groups") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'u' && !GD::familyController->familySelected()) || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'g' && !GD::familyController->familySelected())) response = handleUserCommand(command);
-			//Do not execute module commands when family is selected
-			else if((command.compare(0, 7, "modules") == 0 || (BaseLib::HelperFunctions::isShortCliCommand(command) && command.at(0) == 'm')) && !GD::familyController->familySelected()) response = handleModuleCommand(command);
-			else response = GD::familyController->handleCliCommand(command);
-		}
-		return response;
-	}
+    try
+    {
+        if(command.empty()) return "";
+
+        auto families = GD::familyController->getFamilies();
+        for(auto& family : families)
+        {
+            auto central = family.second->getCentral();
+            if(!central) continue;
+
+            auto peer = central->getPeer(peerId);
+            if(!peer) continue;
+
+            return peer->handleCliCommand(command);
+        }
+
+        return "Unknown peer.";
+    }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return "";
+    return "Error executing command. See log file for more details.\n";
 }
 
-void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
+void CliServer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode)
 {
-	try
-	{
-		if(!command.empty() && command.at(0) == 0) return;
-		std::string response = handleCommand(command);
-		response.push_back(0);
-		send(clientData, response);
-	}
+    try
+    {
+        std::unique_lock<std::mutex> waitLock(_waitMutex);
+        _scriptFinished = true;
+        waitLock.unlock();
+        _waitConditionVariable.notify_all();
+    }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void Server::send(std::shared_ptr<ClientData> client, std::string& data)
+void CliServer::scriptOutput(PScriptInfo& scriptInfo, std::string& output, bool error)
 {
-	try
-	{
-		std::lock_guard<std::mutex> clientLock(client->sendMutex);
-		if(client->fileDescriptor->descriptor == -1) return;
-		int32_t totallySentBytes = 0;
-		while (totallySentBytes < (signed)data.size())
-		{
-			int32_t sizeToSend = data.size() - totallySentBytes;
-			if(totallySentBytes + sizeToSend == (signed)data.size() && sizeToSend == 1024) sizeToSend -= 1; //Avoid packet size of exactly 1024, so CLI client does not hang. I know, this is a bad solution for the problem. At some point the CLI packets need to RPC encoded to avoid this problem.
-			int32_t sentBytes = ::send(client->fileDescriptor->descriptor, data.c_str() + totallySentBytes, sizeToSend, MSG_NOSIGNAL);
-			if(sentBytes == -1)
-			{
-				GD::out.printError("CLI Server: Error: Could not send data to client: " + std::to_string(client->fileDescriptor->descriptor));
-				break;
-			}
-			totallySentBytes += sentBytes;
-		}
-	}
+    try
+    {
+        std::string methodName = "cliOutput";
+
+        BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+        auto outputStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        outputStruct->structValue->emplace("errorOutput", std::make_shared<BaseLib::Variable>(error));
+        outputStruct->structValue->emplace("output", std::make_shared<BaseLib::Variable>(output));
+        parameters->push_back(outputStruct);
+
+        auto result = GD::ipcServer->callRpcMethod(_dummyClientInfo, methodName, parameters);
+        if(result->errorStruct) GD::out.printError("Error calling method \"cliOutput\": " + result->structValue->at("faultString")->stringValue);
+    }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
 }

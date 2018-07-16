@@ -30,7 +30,7 @@
 
 #include "GD/GD.h"
 #include "Monitor.h"
-#include "CLI/CLIClient.h"
+#include "CLI/CliClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "Node-BLUE/NodeBlueClient.h"
 #include "UPnP/UPnP.h"
@@ -38,8 +38,6 @@
 #include <homegear-base/BaseLib.h>
 #include "../config.h"
 
-#include <readline/readline.h>
-#include <readline/history.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <wait.h>
@@ -220,8 +218,6 @@ void terminateThread()
     #endif
         if(GD::familyController) GD::familyController->homegearShuttingDown();
         _disposing = true;
-        GD::out.printInfo("(Shutdown) => Stopping CLI server");
-        if(GD::cliServer) GD::cliServer->stop();
         if(GD::bl->settings.enableUPnP())
         {
             GD::out.printInfo("Stopping UPnP server...");
@@ -1100,7 +1096,7 @@ void startUp()
 #endif
 
 		GD::nodeBlueServer.reset(new NodeBlue::NodeBlueServer());
-		GD::ipcServer.reset(new Ipc::IpcServer());
+		GD::ipcServer.reset(new IpcServer());
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php"))
 		{
@@ -1142,10 +1138,6 @@ void startUp()
 		}
 
         startRPCServers();
-
-		GD::out.printInfo("Starting CLI server...");
-		GD::cliServer.reset(new CLI::Server());
-		GD::cliServer->start();
 
 #ifdef EVENTHANDLER
         GD::out.printInfo("Initializing event handler...");
@@ -1215,35 +1207,7 @@ void startUp()
 			GD::out.printError("Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
 		}
 
-		char* inputBuffer = nullptr;
-        if(_startAsDaemon || _nonInteractive)
-        {
-        	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        }
-        else
-        {
-        	rl_bind_key('\t', rl_abort); //no autocompletion
-			while(true)
-			{
-				inputBuffer = readline("");
-				if(inputBuffer == nullptr)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-					continue;
-				}
-				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
-				if(strncmp(inputBuffer, "quit", 4) == 0 || strncmp(inputBuffer, "exit", 4) == 0 || strncmp(inputBuffer, "moin", 4) == 0) break;
-
-				add_history(inputBuffer); //Sets inputBuffer to 0
-
-				std::string input(inputBuffer);
-				std::cout << GD::cliServer->handleCommand(input);
-				free(inputBuffer);
-			}
-			clear_history();
-        }
-
-        terminate(SIGTERM);
+        while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 	catch(const std::exception& ex)
     {
@@ -1409,8 +1373,9 @@ int main(int argc, char* argv[])
     		else if(arg == "-r")
     		{
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
-    			CLI::Client cliClient;
-    			int32_t exitCode = cliClient.start();
+    			CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
+				std::string command;
+    			int32_t exitCode = cliClient.terminal(command);
     			exit(exitCode);
     		}
 #ifndef NO_SCRIPTENGINE
@@ -1465,8 +1430,9 @@ int main(int argc, char* argv[])
     				else command << " " << argv[j];
     			}
 
-    			CLI::Client cliClient;
-    			int32_t exitCode = cliClient.start(command.str());
+    			CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
+				std::string commandString = command.str();
+    			int32_t exitCode = cliClient.terminal(commandString);
     			exit(exitCode);
     		}
     		else if(arg == "-tc")
@@ -1480,8 +1446,8 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			GD::bl->debugLevel = 3; //Only output warnings.
     			std::string command = "lifetick";
-    			CLI::Client cliClient;
-    			int32_t exitCode = cliClient.start(command);
+    			CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
+    			int32_t exitCode = cliClient.terminal(command);
     			exit(exitCode);
     		}
     		else if(arg == "-pre")

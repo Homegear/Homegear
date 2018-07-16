@@ -16,10 +16,10 @@ set(SOURCE_FILES
         homegear-miscellaneous/src/Miscellaneous.h
         homegear-miscellaneous/src/MiscPeer.cpp
         homegear-miscellaneous/src/MiscPeer.h
-        src/CLI/CLIClient.cpp
-        src/CLI/CLIClient.h
-        src/CLI/CLIServer.cpp
-        src/CLI/CLIServer.h
+        src/CLI/CliClient.cpp
+        src/CLI/CliClient.h
+        src/CLI/CliServer.cpp
+        src/CLI/CliServer.h
         src/Database/SQLite3.cpp
         src/Database/SQLite3.h
         src/Events/EventHandler.cpp

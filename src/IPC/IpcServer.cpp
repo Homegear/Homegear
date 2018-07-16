@@ -30,10 +30,7 @@
 
 #include "IpcServer.h"
 #include "../GD/GD.h"
-#include <homegear-base/BaseLib.h>
-
-namespace Ipc
-{
+#include "../CLI/CliServer.h"
 
 IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 {
@@ -76,6 +73,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable()));
 	_rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
 	_rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
+    _rpcMethods.emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
 	_rpcMethods.emplace("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig()));
 	_rpcMethods.emplace("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata()));
 	_rpcMethods.emplace("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts()));
@@ -120,6 +118,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams()));
 	_rpcMethods.emplace("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel()));
 	_rpcMethods.emplace("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCNodeOutput()));
+    _rpcMethods.emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
 	_rpcMethods.emplace("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing()));
 	_rpcMethods.emplace("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset()));
 	_rpcMethods.emplace("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveEvent()));
@@ -216,6 +215,9 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
     }
 
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliGeneralCommand", std::bind(&IpcServer::cliGeneralCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliFamilyCommand", std::bind(&IpcServer::cliFamilyCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliPeerCommand", std::bind(&IpcServer::cliPeerCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 IpcServer::~IpcServer()
@@ -627,7 +629,8 @@ void IpcServer::closeClientConnection(PIpcClientData client)
 		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
 		for (auto& element : _clientsByRpcMethods)
 		{
-			if (element.second.second->id == client->id) rpcMethodsToRemove.push_back(element.first);
+            element.second.second.erase(client->id);
+			if(element.second.second.empty()) rpcMethodsToRemove.push_back(element.first);
 		}
 		for (auto& rpcMethod : rpcMethodsToRemove)
 		{
@@ -654,7 +657,7 @@ BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, 
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-		PIpcClientData clientData;
+		std::vector<PIpcClientData> clientData;
 		{
 			std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
 			auto clientIterator = _clientsByRpcMethods.find(methodName);
@@ -663,15 +666,32 @@ BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, 
 				_out.printError("Warning: RPC method not found: " + methodName);
 				return BaseLib::Variable::createError(-32601, ": Requested method not found.");
 			}
-			clientData = clientIterator->second.second;
+			clientData.reserve(clientIterator->second.second.size());
+			for(auto& client : clientIterator->second.second)
+			{
+				clientData.push_back(client.second);
+			}
 		}
 
-		BaseLib::PVariable response = sendRequest(clientData, methodName, parameters);
-		if (response->errorStruct)
+		BaseLib::PVariable responses;
+		BaseLib::PVariable responseStruct;
+		if(clientData.size() > 1)
 		{
-			_out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(clientData->id) + ": " + response->structValue->at("faultString")->stringValue);
+			responses = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			responses->structValue->emplace("multipleClients", std::make_shared<BaseLib::Variable>(true));
+			responseStruct = responses->structValue->emplace("returnValues", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first->second;
 		}
-		return response;
+		for(auto& client : clientData)
+		{
+			BaseLib::PVariable response = sendRequest(client, methodName, parameters);
+			if(response->errorStruct)
+			{
+				_out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(client->id) + ": " + response->structValue->at("faultString")->stringValue);
+			}
+			if(clientData.size() == 1) return response;
+			else responseStruct->structValue->emplace(std::to_string(client->id), response);
+		}
+
 	}
 	catch (const std::exception& ex)
 	{
@@ -1260,20 +1280,10 @@ BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int3
 		}
 
 		std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
-		auto clientIterator = _clientsByRpcMethods.find(methodName);
-		if (clientIterator != _clientsByRpcMethods.end())
-		{
-			if (clientIterator->second.second->id != clientData->id)
-			{
-				_out.printError("Error: Client " + std::to_string(clientData->id) + " tried to register a RPC method \"" + methodName + "\" already registed by client " + std::to_string(clientIterator->second.second->id) + ".");
-				return BaseLib::Variable::createError(-2, "RPC method is already registered by another client.");
-			}
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		_clientsByRpcMethods.emplace(methodName, std::make_pair(rpcMethod, clientData));
-		_out.printInfo("Info: Client " + std::to_string(clientData->id) + " successfully registered RPC method \"" + methodName + "\".");
+		_clientsByRpcMethods[methodName].second.emplace(clientData->id, clientData);
+		_out.printInfo("Info: Client " + std::to_string(clientData->id) + " successfully registered RPC method \"" + methodName + "\" (this method is registered by " + std::to_string(_clientsByRpcMethods[methodName].second.size()) + " client(s)).");
 
-		return BaseLib::PVariable(new BaseLib::Variable());
+		return std::make_shared<BaseLib::Variable>();
 	}
 	catch (const std::exception& ex)
 	{
@@ -1289,6 +1299,94 @@ BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int3
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
+
+BaseLib::PVariable IpcServer::cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if (parameters->size() < 1) return BaseLib::Variable::createError(-1, "Method expects at least one parameter. " + std::to_string(parameters->size()) + " given.");
+        if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+
+        std::string& command = parameters->at(0)->stringValue;
+		if(command.empty()) return std::make_shared<BaseLib::Variable>();
+        if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: CLI client " + std::to_string(clientData->id) + " is executing command: " + command);
+
+        CliServer cliServer;
+        return cliServer.generalCommand(command);
+    }
+    catch (const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch (BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch (...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() < 2) return BaseLib::Variable::createError(-1, "Method expects at least two parameters. " + std::to_string(parameters->size()) + " given.");
+        if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+        if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+        std::string& command = parameters->at(1)->stringValue;
+        if(command.empty()) return std::make_shared<BaseLib::Variable>();
+        if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: CLI client " + std::to_string(clientData->id) + " is executing family command: " + command);
+
+        CliServer cliServer;
+        return std::make_shared<BaseLib::Variable>(cliServer.familyCommand(parameters->at(0)->integerValue, command));
+    }
+    catch (const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch (BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch (...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() < 2) return BaseLib::Variable::createError(-1, "Method expects at least two parameters. " + std::to_string(parameters->size()) + " given.");
+        if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+        if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+        std::string& command = parameters->at(1)->stringValue;
+        if(command.empty()) return std::make_shared<BaseLib::Variable>();
+        if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: CLI client " + std::to_string(clientData->id) + " is executing peer command: " + command);
+
+        CliServer cliServer;
+        return std::make_shared<BaseLib::Variable>(cliServer.peerCommand((uint64_t)parameters->at(0)->integerValue64, command));
+    }
+    catch (const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch (BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch (...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 // }}}
 
-}
