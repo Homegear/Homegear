@@ -404,8 +404,8 @@ Ipc::PVariable CliClient::output(Ipc::PArray& parameters)
         auto outputIterator = parameters->at(0)->structValue->find("output");
         if(outputIterator != parameters->at(0)->structValue->end())
         {
-            if(errorOutput) std::cerr << outputIterator->second->stringValue;
-            else std::cout << outputIterator->second->stringValue;
+            if(errorOutput) std::cerr << outputIterator->second->stringValue << std::flush;
+            else std::cout << outputIterator->second->stringValue << std::flush;
         }
 
         return std::make_shared<Ipc::Variable>();

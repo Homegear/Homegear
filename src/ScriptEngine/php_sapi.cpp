@@ -403,14 +403,14 @@ static char* php_homegear_read_cookies()
 static size_t php_homegear_ub_write_string(std::string& string)
 {
 	if(string.empty() || _disposed) return 0;
-	if(string.size() > 2 && string.at(string.size() - 1) == '\n')
-	{
-		if(string.at(string.size() - 2) == '\r') string.resize(string.size() - 2);
-		else string.resize(string.size() - 1);
-	}
 	if(SEG(outputCallback)) SEG(outputCallback)(string, false);
 	else
 	{
+		if(string.size() > 2 && string.at(string.size() - 1) == '\n')
+		{
+			if(string.at(string.size() - 2) == '\r') string.resize(string.size() - 2);
+			else string.resize(string.size() - 1);
+		}
 		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + string);
 		else GD::out.printMessage("Script output: " + string);
 	}
@@ -420,15 +420,19 @@ static size_t php_homegear_ub_write_string(std::string& string)
 static size_t php_homegear_ub_write(const char* str, size_t length)
 {
 	if(length == 0 || _disposed) return 0;
-	if(length > 2 && *(str + length - 1) == '\n')
+	if(SEG(outputCallback))
 	{
-		if(*(str + length - 2) == '\r') length -= 2;
-		else length -= 1;
+		std::string output(str, length);
+		SEG(outputCallback)(output, false);
 	}
-	std::string output(str, length);
-	if(SEG(outputCallback)) SEG(outputCallback)(output, false);
 	else
 	{
+		std::string output(str, length);
+		if(length > 2 && *(str + length - 1) == '\n')
+		{
+			if(*(str + length - 2) == '\r') length -= 2;
+			else length -= 1;
+		}
 		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + output);
 		else GD::out.printMessage("Script output: " + output);
 	}
