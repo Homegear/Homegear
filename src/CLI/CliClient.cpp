@@ -127,7 +127,7 @@ void CliClient::onDisconnect()
     tcsetattr(STDIN_FILENO, TCSANOW, &t);
     //}}}
 
-    std::cout << "Disconnected from Homegear." << std::endl;
+    standardOutput("Disconnected from Homegear.\n");
     exit(6);
 }
 
@@ -164,8 +164,8 @@ int32_t CliClient::terminal(std::string& command)
 
         if(command.empty())
         {
-            std::cout << "Connected to Homegear (version " << VERSION << ")." << std::endl << std::endl;
-            std::cout << "Please type >>help<< to list all available commands." << std::endl;
+            standardOutput("Connected to Homegear (version " + std::string(VERSION) + ").\n\n");
+            standardOutput("Please type >>help<< to list all available commands.\n");
         }
 
         rl_bind_key('\t', rl_abort); //no autocompletion
@@ -181,7 +181,7 @@ int32_t CliClient::terminal(std::string& command)
             {
                 if(!connected())
                 {
-                    std::cout << "Disconnected from Homegear." << std::endl;
+                    standardOutput("Disconnected from Homegear.\n");
                     stop();
                     free(sendBuffer);
                     return 5;
@@ -227,7 +227,7 @@ int32_t CliClient::terminal(std::string& command)
                     stringStream << "Usage: families select FAMILYID" << std::endl << std::endl;
                     stringStream << "Parameters:" << std::endl;
                     stringStream << "  FAMILYID:\tThe id of the family to select. Type >>families list<< to get a list of supported families. Example: 1" << std::endl;
-                    std::cout << stringStream.str() << std::endl;
+                    standardOutput(stringStream.str() + "\n");
                 }
                 else
                 {
@@ -238,14 +238,14 @@ int32_t CliClient::terminal(std::string& command)
                     Ipc::PVariable result = invoke("familyExists", parameters);
                     if(result->errorStruct)
                     {
-                        std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                        errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                     }
                     else if(result->booleanValue)
                     {
                         _currentFamily = family;
-                        std::cout << "For a list of available family commands type >>help<<." << std::endl;
+                        standardOutput("For a list of available family commands type >>help<<.\n");
                     }
-                    else std::cout << "Unknown family." << std::endl;
+                    else standardOutput("Unknown family.\n");
                 }
             }
             else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "peers select", "ps", "", 1, arguments, showHelp))
@@ -256,7 +256,7 @@ int32_t CliClient::terminal(std::string& command)
                     stringStream << "Usage: peers select PEERID" << std::endl << std::endl;
                     stringStream << "Parameters:" << std::endl;
                     stringStream << "  PEERID:\tThe id of the peer to select. Example: 513" << std::endl;
-                    std::cout << stringStream.str() << std::endl;
+                    standardOutput(stringStream.str() + "\n");
                 }
                 else
                 {
@@ -267,14 +267,14 @@ int32_t CliClient::terminal(std::string& command)
                     Ipc::PVariable result = invoke("peerExists", parameters);
                     if(result->errorStruct)
                     {
-                        std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                        errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                     }
                     else if(result->booleanValue)
                     {
                         _currentPeer = peerId;
-                        std::cout << "For a list of available peer commands type >>help<<." << std::endl;
+                        standardOutput("For a list of available peer commands type >>help<<.\n");
                     }
-                    else std::cout << "Unknown peer." << std::endl;
+                    else standardOutput("Unknown peer.\n");
                 }
             }
             else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "events", "ev", "", 0, arguments, showHelp))
@@ -283,14 +283,14 @@ int32_t CliClient::terminal(std::string& command)
                 {
                     stringStream << "Description: This command prints events from Homegear to the standard output. When no family and no peer is selected, updates from all devices and including system variables are output. When a family or peer is selected, only events from this family or peer are output." << std::endl << std::endl;
                     stringStream << "Usage: events" << std::endl;
-                    std::cout << stringStream.str() << std::endl;
+                    standardOutput(stringStream.str() + "\n");
                 }
                 else
                 {
-                    std::cout << "Listening for variable updates";
-                    if(_currentPeer != 0) std::cout << " of peer " << _currentPeer;
-                    else if(_currentFamily != -1) std::cout << " in family " << _currentFamily;
-                    std::cout << ". Press >>ESC<< or >>q<< to abort." << std::endl;
+                    standardOutput("Listening for variable updates");
+                    if(_currentPeer != 0) standardOutput(" of peer " + std::to_string(_currentPeer));
+                    else if(_currentFamily != -1) standardOutput(" in family " + std::to_string(_currentFamily));
+                    standardOutput(". Press >>ESC<< or >>q<< to abort.\n");
 
                     //{{{ Disable buffered input
                     struct termios t{};
@@ -327,9 +327,9 @@ int32_t CliClient::terminal(std::string& command)
                 Ipc::PVariable result = invoke("cliPeerCommand", parameters);
                 if(result->errorStruct)
                 {
-                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                 }
-                else std::cout << result->stringValue;
+                else standardOutputReference(result->stringValue);
             }
             else if(_currentFamily != -1)
             {
@@ -340,9 +340,9 @@ int32_t CliClient::terminal(std::string& command)
                 Ipc::PVariable result = invoke("cliFamilyCommand", parameters);
                 if(result->errorStruct)
                 {
-                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                 }
-                else std::cout << result->stringValue;
+                else standardOutputReference(result->stringValue);
             }
             else
             {
@@ -351,15 +351,15 @@ int32_t CliClient::terminal(std::string& command)
                 Ipc::PVariable result = invoke("cliGeneralCommand", parameters);
                 if(result->errorStruct)
                 {
-                    std::cerr << "Error executing command: " + result->structValue->at("faultString")->stringValue << std::endl;
+                    errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                 }
                 else
                 {
-                    if(result->type == Ipc::VariableType::tString) std::cout << result->stringValue;
+                    if(result->type == Ipc::VariableType::tString) standardOutputReference(result->stringValue);
                     else if(result->type == Ipc::VariableType::tStruct)
                     {
                         auto outputIterator = result->structValue->find("output");
-                        if(outputIterator != result->structValue->end()) std::cout << outputIterator->second->stringValue;
+                        if(outputIterator != result->structValue->end()) standardOutputReference(outputIterator->second->stringValue);
 
                         if(!command.empty())
                         {
@@ -390,6 +390,90 @@ int32_t CliClient::terminal(std::string& command)
     return 0;
 }
 
+void CliClient::standardOutputReference(std::string& text)
+{
+    try
+    {
+        std::lock_guard<std::mutex> outputGuard(_outputMutex);
+        std::cout << text;
+    }
+    catch(const std::exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void CliClient::standardOutput(std::string text)
+{
+    try
+    {
+        std::lock_guard<std::mutex> outputGuard(_outputMutex);
+        std::cout << text;
+    }
+    catch(const std::exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void CliClient::errorOutputReference(std::string& text)
+{
+    try
+    {
+        std::lock_guard<std::mutex> outputGuard(_outputMutex);
+        std::cerr << text;
+    }
+    catch(const std::exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void CliClient::errorOutput(std::string text)
+{
+    try
+    {
+        std::lock_guard<std::mutex> outputGuard(_outputMutex);
+        std::cerr << text;
+    }
+    catch(const std::exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 // {{{ RPC methods
 Ipc::PVariable CliClient::output(Ipc::PArray& parameters)
 {
@@ -404,6 +488,7 @@ Ipc::PVariable CliClient::output(Ipc::PArray& parameters)
         auto outputIterator = parameters->at(0)->structValue->find("output");
         if(outputIterator != parameters->at(0)->structValue->end())
         {
+            std::lock_guard<std::mutex> outputGuard(_outputMutex);
             if(errorOutput) std::cerr << outputIterator->second->stringValue << std::flush;
             else std::cout << outputIterator->second->stringValue << std::flush;
         }
@@ -454,7 +539,8 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
             {
                 std::string value = parameters->at(4)->arrayValue->at(i)->print(false, false, true);
                 BaseLib::HelperFunctions::trim(value);
-                std::cout << "ID >>" << (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) << "<<, channel >>" << parameters->at(2)->integerValue << "<<, variable >>" << parameters->at(3)->arrayValue->at(i)->stringValue << "<<, source >>" << parameters->at(0)->stringValue << "<<, value >>" << value << "<<" << std::endl;
+
+                standardOutput("ID >>" + (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) + "<<, channel >>" + std::to_string(parameters->at(2)->integerValue) + "<<, variable >>" + parameters->at(3)->arrayValue->at(i)->stringValue + "<<, source >>" + parameters->at(0)->stringValue + "<<, value >>" + value + "<<\n");
             }
         }
 
