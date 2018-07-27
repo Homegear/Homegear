@@ -48,6 +48,8 @@ private:
 	int32_t _currentFamily = -1;
 	uint64_t _currentPeer = 0;
 
+	std::mutex _outputMutex;
+
 	std::mutex _onConnectWaitMutex;
 	std::condition_variable _onConnectConditionVariable;
 
@@ -59,6 +61,11 @@ private:
 	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters);
 	Ipc::PVariable output(Ipc::PArray& parameters);
 	// }}}
+
+	void standardOutputReference(std::string& text);
+	void standardOutput(std::string text);
+	void errorOutputReference(std::string& text);
+	void errorOutput(std::string text);
 };
 
 #endif
