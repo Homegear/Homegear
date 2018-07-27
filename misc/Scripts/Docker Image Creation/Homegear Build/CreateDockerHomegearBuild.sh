@@ -531,6 +531,18 @@ if [[ -n $2 ]]; then
 	sed -i '/if(sha256(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
 	sed -i "/if(baselibPath.empty()) return false;/aif(sha256(baselibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
+	sha256=`sha256sum /usr/lib/libhomegear-node.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha256(nodelibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if(nodelibPath.empty()) return false;/aif(sha256(nodelibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha256(nodelibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if(nodelibPath.empty()) return false;/aif(sha256(nodelibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+
+	sha256=`sha256sum /usr/lib/libhomegear-ipc.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
+	sed -i '/if(sha256(ipclibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if(ipclibPath.empty()) return false;/aif(sha256(ipclibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if(sha256(ipclibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if(ipclibPath.empty()) return false;/aif(sha256(ipclibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+
 	createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
 	createPackage homegear-licensing $1 homegear-licensing 1
 

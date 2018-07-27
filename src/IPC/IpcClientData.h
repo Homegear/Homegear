@@ -35,9 +35,6 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Ipc
-{
-
 class IpcClientData
 {
 private:
@@ -60,6 +57,4 @@ public:
 };
 
 typedef std::shared_ptr<IpcClientData> PIpcClientData;
-
-}
 #endif

@@ -33,9 +33,6 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Ipc
-{
-
 class IpcResponse
 {
 public:
@@ -50,7 +47,5 @@ public:
 };
 
 typedef std::shared_ptr<IpcResponse> PIpcResponse;
-
-}
 
 #endif

@@ -35,9 +35,6 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Ipc
-{
-
 class IpcServer : public BaseLib::IQueue
 {
 public:
@@ -91,7 +88,7 @@ private:
 	std::mutex _stateMutex;
 	std::map<int32_t, PIpcClientData> _clients;
 	std::mutex _clientsByRpcMethodsMutex;
-	std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, PIpcClientData>> _clientsByRpcMethods;
+	std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, std::unordered_map<int32_t, PIpcClientData>>> _clientsByRpcMethods;
 	int32_t _currentClientId = 0;
 	int64_t _lastGargabeCollection = 0;
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
@@ -115,9 +112,11 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
+	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+    BaseLib::PVariable cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+	BaseLib::PVariable cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+	BaseLib::PVariable cliPeerCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	// }}}
 };
-
-}
 #endif
