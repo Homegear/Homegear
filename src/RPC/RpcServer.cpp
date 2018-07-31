@@ -897,6 +897,29 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
     }
 }
 
+bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
+
+        return _rpcMethods->find(methodName) != _rpcMethods->end() || GD::ipcServer->methodExists(clientInfo, methodName);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
 {
 	try

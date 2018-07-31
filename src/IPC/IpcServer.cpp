@@ -652,6 +652,31 @@ void IpcServer::closeClientConnection(PIpcClientData client)
     }
 }
 
+bool IpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName)
+{
+	try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
+
+        std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+        auto clientIterator = _clientsByRpcMethods.find(methodName);
+        return clientIterator != _clientsByRpcMethods.end();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters)
 {
 	try
