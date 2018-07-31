@@ -392,12 +392,12 @@ unzip ${1}.zip
 rm ${1}.zip
 
 if [[ -n $2 ]]; then
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-AdminUI/repository/master/archive.zip?private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/Homegear-Addons/Homegear-AdminUI/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
-	unzip master.zip
+	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
-	rm master.zip
-	mv Homegear-AdminUI-master* Homegear-AdminUI-${1}
+	rm ${1}.zip
+	mv Homegear-AdminUI-${1}* Homegear-AdminUI-${1}
 
 	wget --https-only https://gitit.de/Homegear-Addons/homegear-easy-licensing/repository/master/archive.zip?private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
