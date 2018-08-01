@@ -927,7 +927,7 @@ BaseLib::PVariable IpcServer::sendRequest(PIpcClientData& clientData, std::strin
 		}))
 		{
 			i++;
-			if(i == 5)
+			if(i == 15)
 			{
 				_out.printError("Error: IPC client with ID " + std::to_string(clientData->id) + " is not responding... Closing connection.");
 				closeClientConnection(clientData);
