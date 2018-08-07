@@ -281,8 +281,8 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
 			if(server->second->removed || (server->second->getServerClientInfo()->sendEventsToRpcServer && (server->second->getServerClientInfo()->closed || !server->second->getServerClientInfo()->socket->connected())) || (server->second->socket && !server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely)) continue;
-            //Don't accept "PONG" here for OpenHAB if not initialized
-			if(!server->second->initialized || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
+            //At least OpenHAB needs PONG to be send event when initialization is not complete
+			if((!server->second->initialized && valueKeys->at(0) != "PONG") || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("event")) continue;
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
