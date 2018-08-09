@@ -1090,7 +1090,7 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
 		server->settings = GD::clientSettings.get(server->hostname);
 		_servers[server->uid] = server;
 		if(server->settings) GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
-        if(server->settings->keepAlive) server->keepAlive = true;
+        if(server->settings && server->settings->keepAlive) server->keepAlive = true;
 		return server;
 	}
 	catch(const std::exception& ex)
