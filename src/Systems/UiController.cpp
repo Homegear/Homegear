@@ -236,6 +236,50 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
     }
 }
 
+void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variableInputs)
+{
+    try
+    {
+        for(auto& variableInput : *variableInputs)
+        {
+            auto peerIdIterator = variableInput->structValue->find("peerId");
+            if(peerIdIterator == variableInput->structValue->end()) continue;
+            auto channelIterator = variableInput->structValue->find("channel");
+            if(channelIterator == variableInput->structValue->end()) continue;
+            auto nameIterator = variableInput->structValue->find("name");
+            if(nameIterator == variableInput->structValue->end()) continue;
+
+            std::string methodName = "getValue";
+            auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            parameters->arrayValue->reserve(3);
+            parameters->arrayValue->emplace_back(peerIdIterator->second);
+            parameters->arrayValue->emplace_back(channelIterator->second);
+            parameters->arrayValue->emplace_back(nameIterator->second);
+
+            auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+            if(result->errorStruct)
+            {
+                GD::out.printWarning("Warning: Could not get value for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
+                continue;
+            }
+
+            variableInput->structValue->emplace("value", result);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language)
 {
     try
@@ -279,6 +323,21 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            //{{{ value
+                //Simple
+                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                else //Complex
+                {
+                    auto controlsIterator = elementInfo->structValue->find("controls");
+                    if(controlsIterator != elementInfo->structValue->end())
+                    {
+                        auto variableInputsIterator = controlsIterator->second->structValue->find("variableInputs");
+                        if(variableInputsIterator != controlsIterator->second->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                    }
+                }
+            //}}}
 
             auto dataIterator = uiElement.second->data->structValue->find("metadata");
             if(dataIterator != uiElement.second->data->structValue->end())
@@ -372,6 +431,22 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            //{{{ value
+                //Simple
+                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                else //Complex
+                {
+                    auto controlsIterator = elementInfo->structValue->find("controls");
+                    if(controlsIterator != elementInfo->structValue->end())
+                    {
+                        auto variableInputsIterator = controlsIterator->second->structValue->find("variableInputs");
+                        if(variableInputsIterator != controlsIterator->second->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                    }
+                }
+            //}}}
+
             uiElements->arrayValue->emplace_back(elementInfo);
         }
 
@@ -431,6 +506,22 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            //{{{ value
+                //Simple
+                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                else //Complex
+                {
+                    auto controlsIterator = elementInfo->structValue->find("controls");
+                    if(controlsIterator != elementInfo->structValue->end())
+                    {
+                        auto variableInputsIterator = controlsIterator->second->structValue->find("variableInputs");
+                        if(variableInputsIterator != controlsIterator->second->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                    }
+                }
+            //}}}
+
             uiElements->arrayValue->emplace_back(elementInfo);
         }
 
@@ -457,39 +548,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
     {
         auto families = GD::familyController->getFamilies();
 
-        for(auto& peerVector : uiElement->peerInfo->inputPeers)
-        {
-            for(auto& peerInfo : peerVector)
-            {
-                for(auto& family : families)
-                {
-                    auto central = family.second->getCentral();
-                    if(!central) continue;
-
-                    auto peer = central->getPeer((uint64_t) peerInfo->peerId);
-                    if(!peer) continue;
-
-                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
-                }
-            }
-        }
-
-        for(auto& peerVector : uiElement->peerInfo->outputPeers)
-        {
-            for(auto& peerInfo : peerVector)
-            {
-                for(auto& family : families)
-                {
-                    auto central = family.second->getCentral();
-                    if(!central) continue;
-
-                    auto peer = central->getPeer((uint64_t) peerInfo->peerId);
-                    if(!peer) continue;
-
-                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
-                }
-            }
-        }
+        //variableInputs and variableOutputs are filled by UiElements::getUiElement
 
         for(auto& variableInput : rpcElement->variableInputs)
         {
@@ -501,6 +560,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
                 auto peer = central->getPeer((uint64_t)variableInput->peerId);
                 if(!peer) continue;
 
+                if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
                 if(!clientInfo->acls->checkVariableReadAccess(peer, variableInput->channel, variableInput->name)) return false;
             }
         }
@@ -515,7 +575,8 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
                 auto peer = central->getPeer((uint64_t)variableOutput->peerId);
                 if(!peer) continue;
 
-                if(!clientInfo->acls->checkVariableReadAccess(peer, variableOutput->channel, variableOutput->name)) return false;
+                if(!clientInfo->acls->checkDeviceWriteAccess(peer)) return false;
+                if(!clientInfo->acls->checkVariableWriteAccess(peer, variableOutput->channel, variableOutput->name)) return false;
             }
         }
 
