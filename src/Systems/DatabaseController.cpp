@@ -1179,17 +1179,28 @@ BaseLib::PVariable DatabaseController::getRoomsInStory(BaseLib::PRpcClientInfo c
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyId));
         std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT rooms FROM stories WHERE id=?", data);
         if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown story.");
-
+		std::multimap<int32_t, uint64_t> sortedRooms;
+		int32_t pos = 0;
         std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
-        auto rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-        rooms->arrayValue->reserve(roomStrings.size());
         for(auto& roomString : roomStrings)
         {
             uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
             if(checkAcls && !clientInfo->acls->checkRoomReadAccess(room)) continue;
-            if(room != 0) rooms->arrayValue->push_back(std::make_shared<BaseLib::Variable>(room));
+            if(room != 0)
+			{
+				auto metadata = getRoomMetadata(room);
+				auto positionIterator = metadata->structValue->find("position");
+				if(positionIterator != metadata->structValue->end()) sortedRooms.emplace(positionIterator->second->integerValue64, room);
+				else sortedRooms.emplace(pos++, room);
+			}
         }
 
+		auto rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		rooms->arrayValue->reserve(sortedRooms.size());
+		for(auto& room : sortedRooms)
+		{
+			rooms->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(room.second));
+		}
         return rooms;
     }
     catch(const std::exception& ex)
@@ -1238,10 +1249,10 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode)
 {
     try
     {
-        BaseLib::PVariable stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		std::multimap<int32_t, BaseLib::PVariable> sortedStories;
+		int32_t storyPos = 0;
 
         std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, rooms, metadata FROM stories");
-        stories->arrayValue->reserve(rows->size());
         for(auto& row : *rows)
         {
             BaseLib::PVariable story = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -1260,27 +1271,51 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode)
                 }
             }
 
-            BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			std::multimap<int32_t, uint64_t> sortedRooms;
+			int32_t roomPos = 0;
             std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
-            rooms->arrayValue->reserve(roomStrings.size());
             for(auto& roomString : roomStrings)
             {
                 if(roomString.empty()) continue;
                 uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
-                if(room != 0) rooms->arrayValue->push_back(std::make_shared<BaseLib::Variable>(room));
+                if(room != 0)
+				{
+					auto metadata = getRoomMetadata(room);
+					auto positionIterator = metadata->structValue->find("position");
+					if(positionIterator != metadata->structValue->end()) sortedRooms.emplace(positionIterator->second->integerValue64, room);
+					else sortedRooms.emplace(roomPos++, room);
+				}
             }
+			BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			rooms->arrayValue->reserve(sortedRooms.size());
+			for(auto& room : sortedRooms)
+			{
+				rooms->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(room.second));
+			}
 			story->structValue->emplace("ROOMS", rooms);
 
             if(!row.second.at(3)->binaryValue->empty())
             {
                 BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
                 story->structValue->emplace("METADATA", metadata);
-            }
-            else story->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-            stories->arrayValue->push_back(story);
+				auto positionIterator = metadata->structValue->find("position");
+				if(positionIterator != metadata->structValue->end()) sortedStories.emplace(positionIterator->second->integerValue64, story);
+				else sortedStories.emplace(storyPos++, story);
+            }
+            else
+			{
+				story->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+				sortedStories.emplace(storyPos++, story);
+			}
         }
 
+		BaseLib::PVariable stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		stories->arrayValue->reserve(sortedStories.size());
+		for(auto& story : sortedStories)
+		{
+			stories->arrayValue->emplace_back(story.second);
+		}
         return stories;
     }
     catch(const std::exception& ex)
@@ -1576,10 +1611,10 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
 {
 	try
 	{
-		BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		std::multimap<int32_t, BaseLib::PVariable> sortedRooms;
+		int32_t pos = 0;
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM rooms");
-		rooms->arrayValue->reserve(rows->size());
 		for(auto& row : *rows)
 		{
             if(checkAcls && !clientInfo->acls->checkRoomReadAccess(row.second.at(0)->intValue)) continue;
@@ -1602,12 +1637,24 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
 			{
 				BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
 				room->structValue->emplace("METADATA", metadata);
-			}
-			else room->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-			rooms->arrayValue->push_back(room);
+				auto positionIterator = metadata->structValue->find("position");
+				if(positionIterator != metadata->structValue->end()) sortedRooms.emplace(positionIterator->second->integerValue64, room);
+				else sortedRooms.emplace(pos++, room);
+			}
+			else
+			{
+				room->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+				sortedRooms.emplace(pos++, room);
+			}
 		}
 
+		BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		rooms->arrayValue->reserve(sortedRooms.size());
+		for(auto& room : sortedRooms)
+		{
+			rooms->arrayValue->emplace_back(room.second);
+		}
 		return rooms;
 	}
 	catch(const std::exception& ex)
@@ -1784,10 +1831,10 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
 {
 	try
 	{
-		BaseLib::PVariable categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		std::multimap<int32_t, BaseLib::PVariable> sortedCategories;
+		int32_t pos = 0;
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM categories");
-		categories->arrayValue->reserve(rows->size());
 		for(auto& row : *rows)
 		{
             if(checkAcls && !clientInfo->acls->checkCategoryReadAccess(row.second.at(0)->intValue)) continue;
@@ -1810,11 +1857,24 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
 			{
 				BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
 				category->structValue->emplace("METADATA", metadata);
+
+				auto positionIterator = metadata->structValue->find("position");
+				if(positionIterator != metadata->structValue->end()) sortedCategories.emplace(positionIterator->second->integerValue64, category);
+				else sortedCategories.emplace(pos++, category);
 			}
-			else category->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
-			categories->arrayValue->push_back(category);
+			else
+			{
+				category->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+				sortedCategories.emplace(pos++, category);
+			}
 		}
 
+		BaseLib::PVariable categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		categories->arrayValue->reserve(sortedCategories.size());
+		for(auto& category : sortedCategories)
+		{
+			categories->arrayValue->emplace_back(category.second);
+		}
 		return categories;
 	}
 	catch(const std::exception& ex)
