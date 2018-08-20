@@ -160,6 +160,18 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
 
                         auto nameIterator = peerElement->structValue->find("variableName");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+
+                        auto minimumValueIterator = peerElement->structValue->find("minimumValue");
+                        if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
+
+                        auto maximumValueIterator = peerElement->structValue->find("maximumValue");
+                        if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
+
+                        auto minimumValueScaledIterator = peerElement->structValue->find("minimumValueScaled");
+                        if(minimumValueScaledIterator != peerElement->structValue->end()) variableInfo->minimumValueScaled = minimumValueScaledIterator->second;
+
+                        auto maximumValueScaledIterator = peerElement->structValue->find("maximumValueScaled");
+                        if(maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
@@ -197,6 +209,12 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
 
                         auto nameIterator = peerElement->structValue->find("variableName");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+
+                        auto minimumValueIterator = peerElement->structValue->find("minimumValue");
+                        if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
+
+                        auto maximumValueIterator = peerElement->structValue->find("maximumValue");
+                        if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
@@ -264,6 +282,37 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
             }
 
             variableInput->structValue->emplace("value", result);
+
+            auto minimumValueIterator = variableInput->structValue->find("minimumValue");
+            auto maximumValueIterator = variableInput->structValue->find("maximumValue");
+            if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
+            {
+                methodName = "getVariableDescription";
+                auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                if(result->errorStruct)
+                {
+                    GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
+                    continue;
+                }
+
+                if(minimumValueIterator == variableInput->structValue->end())
+                {
+                    auto minimumValueIterator2 = result->structValue->find("MIN");
+                    if(minimumValueIterator2 != result->structValue->end())
+                    {
+                        variableInput->structValue->emplace("minimumValue", minimumValueIterator2->second);
+                    }
+                }
+
+                if(maximumValueIterator == variableInput->structValue->end())
+                {
+                    auto maximumValueIterator2 = result->structValue->find("MAX");
+                    if(maximumValueIterator2 != result->structValue->end())
+                    {
+                        variableInput->structValue->emplace("maximumValue", maximumValueIterator2->second);
+                    }
+                }
+            }
         }
     }
     catch(const std::exception& ex)

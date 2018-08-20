@@ -57,6 +57,16 @@
 				<!-- The unit to display behind the input value -->
 				<unit>°C</unit>
 
+				<!-- The minimum value the variable can have. Can be overridden by "addUiElement()". If not defined, the variable's minimum value is used. -->
+				<minimumValue>-255</minimumValue>
+
+				<!-- The maximum value the variable can have. Can be overridden by "addUiElement()". If not defined, the variable's maximum value is used. -->
+				<maximumValue>255</maximumValue>
+
+				<!-- If the following two elements are defined, the minimum and maximum value should be scaled to this range: -->
+				<minimumValueScaled>0</minimumValueScaled>
+				<maximumValueScaled>100</maximumValueScaled>
+
 				<!-- The values within the condition are set if the specified condition matches the input variable value. -->
 				<conditions>
 					<condition operator="not" value="0">
@@ -105,6 +115,8 @@
 				<deviceTypeId>*</deviceTypeId>
 				<channel>*</channel>
 				<name>*</name>
+				<minimumValue>-273.15</minimumValue>
+				<maximumValue>100.0</maximumValue>
 			</variable>
 		</variableOutputs>
 

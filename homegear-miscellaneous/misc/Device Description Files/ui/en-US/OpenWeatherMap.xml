@@ -19,7 +19,7 @@
 		</variableOutputs>
 	</homegearUiElement>
 	<homegearUiElement>
-		<id>254.100.OpenWeatherMap</id>
+		<id>254.0x100.OpenWeatherMap</id>
 		<type>complex</type>
 		<icons>
 			<icon>
@@ -31,12 +31,12 @@
 		<cols>1</cols>
 		<rows>3</rows>
 		<controls>
-			<control id="Base.Temperature.Channel1">
+			<control id="Base.Temperature">
 				<posX>0</posX>
 				<posY>0</posY>
 				<colWidth>1</colWidth>
 			</control>
-			<control id="Base.Humidity.Channel1">
+			<control id="Base.Humidity">
 				<posX>0</posX>
 				<posY>1</posY>
 				<colWidth>1</colWidth>
@@ -47,9 +47,5 @@
 				<colWidth>1</colWidth>
 			</control>
 		</controls>
-		<metadata>
-			<!--<foo></foo>-->
-			<!--<bar></bar>-->
-		</metadata>
 	</homegearUiElement>
 </homegearUiElements>

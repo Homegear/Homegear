@@ -4659,7 +4659,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 				eventServer->type = clientInfo->clientType;
 				if(flags != 0)
 				{
-					eventServer->keepAlive = flags & 1;
+					if(!eventServer->keepAlive) eventServer->keepAlive = flags & 1;
 					eventServer->binary = (flags & 2) || eventServer->binary;
 					eventServer->newFormat = flags & 4;
 					eventServer->subscribePeers = flags & 8;

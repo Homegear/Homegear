@@ -1088,9 +1088,16 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
 		server->id = id;
 		server->uid = _serverId++;
 		server->settings = GD::clientSettings.get(server->hostname);
+		if(server->settings)
+		{
+			GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
+			if(server->settings->keepAlive)
+			{
+				GD::out.printInfo("Info: Not closing connection to client after sending packets.");
+				server->keepAlive = true;
+			}
+		}
 		_servers[server->uid] = server;
-		if(server->settings) GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
-        if(server->settings && server->settings->keepAlive) server->keepAlive = true;
 		return server;
 	}
 	catch(const std::exception& ex)
