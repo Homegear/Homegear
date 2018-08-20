@@ -5,7 +5,7 @@
 		<type>simple</type>
 		<control>temperature</control>
 		<icons>
-			<icon>
+			<icon id="temperature">
 				<name>thermometer</name>
 			</icon>
 		</icons>

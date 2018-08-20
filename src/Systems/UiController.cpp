@@ -382,8 +382,11 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
                     auto controlsIterator = elementInfo->structValue->find("controls");
                     if(controlsIterator != elementInfo->structValue->end())
                     {
-                        auto variableInputsIterator = controlsIterator->second->structValue->find("variableInputs");
-                        if(variableInputsIterator != controlsIterator->second->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                        for(auto& control : *controlsIterator->second->arrayValue)
+                        {
+                            auto variableInputsIterator = control->structValue->find("variableInputs");
+                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                        }
                     }
                 }
             //}}}
@@ -490,8 +493,11 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
                     auto controlsIterator = elementInfo->structValue->find("controls");
                     if(controlsIterator != elementInfo->structValue->end())
                     {
-                        auto variableInputsIterator = controlsIterator->second->structValue->find("variableInputs");
-                        if(variableInputsIterator != controlsIterator->second->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        for(auto& control : *controlsIterator->second->arrayValue)
+                        {
+                            auto variableInputsIterator = control->structValue->find("variableInputs");
+                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        }
                     }
                 }
             //}}}
@@ -565,8 +571,11 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
                     auto controlsIterator = elementInfo->structValue->find("controls");
                     if(controlsIterator != elementInfo->structValue->end())
                     {
-                        auto variableInputsIterator = controlsIterator->second->structValue->find("variableInputs");
-                        if(variableInputsIterator != controlsIterator->second->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        for(auto& control : *controlsIterator->second->arrayValue)
+                        {
+                            auto variableInputsIterator = control->structValue->find("variableInputs");
+                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        }
                     }
                 }
             //}}}

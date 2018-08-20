@@ -5,7 +5,7 @@
 		<type>simple</type>
 		<control>button</control>
 		<icons>
-			<icon>
+			<icon id="refresh">
 				<name>refresh</name>
 			</icon>
 		</icons>
@@ -22,7 +22,7 @@
 		<id>254.0x100.OpenWeatherMap</id>
 		<type>complex</type>
 		<icons>
-			<icon>
+			<icon id="weather">
 				<name>weather</name>
 			</icon>
 		</icons>

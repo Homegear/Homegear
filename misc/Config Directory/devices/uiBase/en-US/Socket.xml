@@ -14,7 +14,7 @@
 				<conditions>
 					<condition operator="not" value="0">
 						<icons>
-							<icon>
+							<icon id="state">
 								<name>socketOn</name>
 								<color>colorOn</color>
 							</icon>
@@ -28,7 +28,7 @@
 					</condition>
 					<condition operator="e" value="0">
 						<icons>
-							<icon>
+							<icon id="state">
 								<name>socketOff</name>
 								<color>colorOff</color>
 							</icon>
