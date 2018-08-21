@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearUiElements lang="en-US">
 	<homegearUiElement>
-		<id>Base.Temperature</id>
+		<uniqueUiElementId>Base.Temperature</uniqueUiElementId>
 		<type>simple</type>
 		<control>temperature</control>
 		<icons>
@@ -15,7 +15,7 @@
 				<deviceTypeId>*</deviceTypeId>
 				<channel>*</channel>
 				<name>*</name>
-				<visualize>true</visualize>
+				<visualizeInOverview>true</visualizeInOverview>
 				<unit>°C</unit>
 				<minimumValue>-273.15</minimumValue>
 				<maximumValue>100.0</maximumValue>
@@ -37,7 +37,7 @@
 				<deviceTypeId>*</deviceTypeId>
 				<channel>*</channel>
 				<name>*</name>
-				<visualize>true</visualize>
+				<visualizeInOverview>true</visualizeInOverview>
 				<unit>%</unit>
 				<minimumValue>0</minimumValue>
 				<maximumValue>100</maximumValue>

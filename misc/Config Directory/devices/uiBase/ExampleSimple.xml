@@ -5,7 +5,7 @@
 	<homegearUiElement>
 
 		<!-- The ID is either "Base" plus a unique name for generic UI elements -->
-		<id>Base.MyUiElement</id>
+		<uniqueUiElementId>Base.MyUiElement</uniqueUiElementId>
 		<!-- or for device specific UI elements: Family ID plus device type number (homegearDevice\supportedDevices\device\typeNumber) plus an arbitrary string. E. g. for OpenWeatherMap: -->
 		<!-- <id>254.0x100.OpenWeatherMap</id> -->
 		
@@ -51,8 +51,8 @@
 				<!-- If you want the input to us a specific variable name, set the name here. This can be overridden by "addUiElement()". -->
 				<name>*</name>
 
-				<!-- Set this to "false" if you don't want to visualize this input on the frontend. -->
-				<visualize>true</visualize>
+				<!-- Set this to "false" if you don't want to visualize this input on the frontend overview. -->
+				<visualizeInOverview>true</visualizeInOverview>
 				
 				<!-- The unit to display behind the input value -->
 				<unit>°C</unit>
@@ -68,7 +68,18 @@
 				<maximumValueScaled>100</maximumValueScaled>
 
 				<!-- The values within the condition are set if the specified condition matches the input variable value. -->
-				<conditions>
+				<rendering>
+					<!--
+						Available conditions:
+						- e: ==
+						- g: >
+						- l: <
+						- ge: >=
+						- le: <=
+						- not: !
+						- t: true
+						- f: false 
+					-->
 					<condition operator="not" value="0">
 						<!-- Input dependent icons -->
 						<icons>
@@ -104,7 +115,7 @@
 							</text>
 						</texts>
 					</condition>
-				</conditions>
+				</rendering>
 			</variable>
 		</variableInputs>
 

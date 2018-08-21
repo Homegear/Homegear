@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearUiElements lang="en-US">
 	<homegearUiElement>
-		<id>Base.Socket</id>
+		<uniqueUiElementId>Base.Socket</uniqueUiElementId>
 		<type>simple</type>
 		<control>socket</control>
 		<variableInputs>
@@ -10,8 +10,8 @@
 				<deviceTypeId>*</deviceTypeId>
 				<channel>*</channel>
 				<name>*</name>
-				<visualize>true</visualize>
-				<conditions>
+				<visualizeInOverview>true</visualizeInOverview>
+				<rendering>
 					<condition operator="not" value="0">
 						<icons>
 							<icon id="state">
@@ -40,7 +40,7 @@
 							</text>
 						</texts>
 					</condition>
-				</conditions>
+				</rendering>
 			</variable>
 		</variableInputs>
 		<variableOutputs>
