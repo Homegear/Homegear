@@ -150,7 +150,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
 
                     if(peerElement->type == BaseLib::VariableType::tStruct)
                     {
-                        auto peerIdIterator = peerElement->structValue->find("peerId");
+                        auto peerIdIterator = peerElement->structValue->find("peer");
                         if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
                         variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
@@ -158,20 +158,20 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto channelIterator = peerElement->structValue->find("channel");
                         if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
 
-                        auto nameIterator = peerElement->structValue->find("variableName");
+                        auto nameIterator = peerElement->structValue->find("name");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
 
-                        auto minimumValueIterator = peerElement->structValue->find("minimumValue");
+                        auto minimumValueIterator = peerElement->structValue->find("minimum");
                         if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
 
-                        auto maximumValueIterator = peerElement->structValue->find("maximumValue");
+                        auto maximumValueIterator = peerElement->structValue->find("maximum");
                         if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
 
-                        auto minimumValueScaledIterator = peerElement->structValue->find("minimumValueScaled");
+                        auto minimumValueScaledIterator = peerElement->structValue->find("minimumScaled");
                         if(minimumValueScaledIterator != peerElement->structValue->end()) variableInfo->minimumValueScaled = minimumValueScaledIterator->second;
 
-                        auto maximumValueScaledIterator = peerElement->structValue->find("maximumValueScaled");
-                        if(maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
+                        auto maximumValueScaledIterator = peerElement->structValue->find("maximumScaled");
+                        if(maximumValueScaledIterator != peerElement->structValue->end()) variableValueInfo->maximumValueScaled = maximumValueScaledIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
@@ -199,7 +199,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
 
                     if(peerElement->type == BaseLib::VariableType::tStruct)
                     {
-                        auto peerIdIterator = peerElement->structValue->find("peerId");
+                        auto peerIdIterator = peerElement->structValue->find("peer");
                         if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
                         variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
@@ -207,13 +207,13 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto channelIterator = peerElement->structValue->find("channel");
                         if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
 
-                        auto nameIterator = peerElement->structValue->find("variableName");
+                        auto nameIterator = peerElement->structValue->find("name");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
 
-                        auto minimumValueIterator = peerElement->structValue->find("minimumValue");
+                        auto minimumValueIterator = peerElement->structValue->find("minimum");
                         if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
 
-                        auto maximumValueIterator = peerElement->structValue->find("maximumValue");
+                        auto maximumValueIterator = peerElement->structValue->find("maximum");
                         if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
@@ -260,7 +260,7 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
     {
         for(auto& variableInput : *variableInputs)
         {
-            auto peerIdIterator = variableInput->structValue->find("peerId");
+            auto peerIdIterator = variableInput->structValue->find("peer");
             if(peerIdIterator == variableInput->structValue->end()) continue;
             auto channelIterator = variableInput->structValue->find("channel");
             if(channelIterator == variableInput->structValue->end()) continue;
@@ -386,7 +386,7 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
                         {
                             auto variableInputsIterator = control->structValue->find("variableInputs");
                             if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
-                        }
+                        };
                     }
                 }
             //}}}
