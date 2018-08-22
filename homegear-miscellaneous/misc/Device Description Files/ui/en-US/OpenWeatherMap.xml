@@ -11,7 +11,7 @@
 		</icons>
 		<variableOutputs>
 			<variable>
-				<familyId>254</familyId>
+				<family>254</family>
 				<deviceTypeId>0x100</deviceTypeId>
 				<channel>1</channel>
 				<name>REQUEST</name>
@@ -36,20 +36,20 @@
 			<control id="Base.Temperature">
 				<x>0</x>
 				<y>0</y>
-				<colSpan>1</colSpan>
-				<rowSpan>1</rowSpan>
+				<columns>1</columns>
+				<rows>1</rows>
 			</control>
 			<control id="Base.Humidity">
 				<x>0</x>
 				<y>1</y>
-				<colSpan>1</colSpan>
-				<rowSpan>1</rowSpan>
+				<columns>1</columns>
+				<rows>1</rows>
 			</control>
 			<control id="254.0x100.Refresh">
 				<x>0</x>
 				<y>2</y>
-				<colSpan>1</colSpan>
-				<rowSpan>1</rowSpan>
+				<columns>1</columns>
+				<rows>1</rows>
 			</control>
 		</controls>
 	</homegearUiElement>
