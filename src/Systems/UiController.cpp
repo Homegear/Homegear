@@ -171,7 +171,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         if(minimumValueScaledIterator != peerElement->structValue->end()) variableInfo->minimumValueScaled = minimumValueScaledIterator->second;
 
                         auto maximumValueScaledIterator = peerElement->structValue->find("maximumScaled");
-                        if(maximumValueScaledIterator != peerElement->structValue->end()) variableValueInfo->maximumValueScaled = maximumValueScaledIterator->second;
+                        if(maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
