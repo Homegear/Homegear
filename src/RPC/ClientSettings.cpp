@@ -169,6 +169,12 @@ void ClientSettings::load(std::string filename)
 					if(settings->timeout < 1000000) settings->timeout = 1000000;
 					GD::out.printDebug("Debug: timeout of RPC client " + settings->name + " set to " + std::to_string(settings->timeout));
 				}
+                else if(name == "keepalive")
+                {
+                    BaseLib::HelperFunctions::toLower(value);
+                    settings->keepAlive = (value == "true");
+                    GD::out.printDebug("Debug: keepAlive of RPC client " + settings->name + " set to " + std::to_string(settings->keepAlive));
+                }
 				else
 				{
 					GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));

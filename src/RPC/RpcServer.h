@@ -82,6 +82,7 @@ namespace Rpc
 			void stop();
 			uint32_t connectionCount();
             std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; };
+			bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 			BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters);
 
 			BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);

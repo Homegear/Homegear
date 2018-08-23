@@ -107,7 +107,13 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 	try
 	{
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("system.listMethods")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+		if(!parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({ BaseLib::VariableType::tString }));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+
+        if(parameters->size() == 1) return std::make_shared<BaseLib::Variable>(GD::rpcServers.begin()->second->methodExists(clientInfo, parameters->at(0)->stringValue));
 
 		BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		auto methods = GD::rpcServers.begin()->second->getMethods();
@@ -4653,7 +4659,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 				eventServer->type = clientInfo->clientType;
 				if(flags != 0)
 				{
-					eventServer->keepAlive = flags & 1;
+					if(!eventServer->keepAlive) eventServer->keepAlive = flags & 1;
 					eventServer->binary = (flags & 2) || eventServer->binary;
 					eventServer->newFormat = flags & 4;
 					eventServer->subscribePeers = flags & 8;

@@ -60,6 +60,7 @@ public:
 		std::string password;
 		uint32_t retries = 3;
 		uint32_t timeout = 15000000;
+		bool keepAlive = false;
 	};
 
 	ClientSettings();

@@ -70,6 +70,7 @@ protected:
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
 
     void addDataInfo(PUiElement& uiElement, BaseLib::PVariable& data);
+    void addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variableInputs);
     bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
 };
 

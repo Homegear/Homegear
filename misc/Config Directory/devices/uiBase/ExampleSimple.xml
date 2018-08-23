@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Example file for a simple UI element definition -->
+<!-- Set "lang" to language of this XML file and place this file into the correct language folder -->
+<homegearUiElements lang="en-US">
+	<homegearUiElement>
+
+		<!-- The ID is either "Base" plus a unique name for generic UI elements -->
+		<uniqueUiElementId>Base.MyUiElement</uniqueUiElementId>
+		<!-- or for device specific UI elements: Family ID plus device type number (homegearDevice\supportedDevices\device\typeNumber) plus an arbitrary string. E. g. for OpenWeatherMap: -->
+		<!-- <id>254.0x100.OpenWeatherMap</id> -->
+		
+		<!-- simple or complex. Complex elements consist of multiple simple elements which are referenced using their IDs. -->
+		<type>simple</type>
+
+		<!-- A string identifying the frontend UI element -->
+		<control>MyUiElement</control>
+
+		<!-- Input independent icons. Input dependent icons are defined in "variableInputs". -->
+		<icons>
+			<icon id="socket">
+				<!-- The name should be the icon's file name without file ending. -->
+				<name>socket1</name>
+				<!-- Icon color class to set -->
+				<color>myColor</color>
+			</icon>
+		</icons>
+
+		<!-- Input independent texts used by the UI element -->
+		<texts>
+			<text id="on">
+				<content>on</content>
+				<!-- Text color class to set -->
+				<color>myColor</color>
+			</text>
+			<text id="off">
+				<content>off</content>
+				<color>myColor</color>
+			</text>
+		</texts>
+
+		<!-- One or more Homegear variables linked to the UI element as inputs -->
+		<variableInputs>
+			<!-- One or more "variable" elements -->
+			<variable>
+				<!-- For generic UI elements set "*" here. For family specific or device specific UI elements specify the family ID here. -->
+				<familyId>*</familyId>
+				<!-- For generic UI elements set "*" here. For device specific UI elements specify the device's type number here. -->
+				<deviceTypeId>*</deviceTypeId>
+				<!-- If you want the input to be on a specific channel, set the channel number here. This can be overridden by "addUiElement()". -->
+				<channel>*</channel>
+				<!-- If you want the input to us a specific variable name, set the name here. This can be overridden by "addUiElement()". -->
+				<name>*</name>
+
+				<!-- Set this to "false" if you don't want to visualize this input on the frontend overview. -->
+				<visualizeInOverview>true</visualizeInOverview>
+				
+				<!-- The unit to display behind the input value -->
+				<unit>°C</unit>
+
+				<!-- The minimum value the variable can have. Can be overridden by "addUiElement()". If not defined, the variable's minimum value is used. -->
+				<minimumValue>-255</minimumValue>
+
+				<!-- The maximum value the variable can have. Can be overridden by "addUiElement()". If not defined, the variable's maximum value is used. -->
+				<maximumValue>255</maximumValue>
+
+				<!-- If the following two elements are defined, the minimum and maximum value should be scaled to this range: -->
+				<minimumValueScaled>0</minimumValueScaled>
+				<maximumValueScaled>100</maximumValueScaled>
+
+				<!-- The values within the condition are set if the specified condition matches the input variable value. -->
+				<rendering>
+					<!--
+						Available conditions:
+						- e: ==
+						- g: >
+						- l: <
+						- ge: >=
+						- le: <=
+						- not: !
+						- t: true
+						- f: false 
+					-->
+					<condition operator="not" value="0">
+						<!-- Input dependent icons -->
+						<icons>
+							<icon id="state">
+								<!-- The name should be the icon's file name without file ending. -->
+								<name>socketOn</name>
+								<!-- Icon color class to set -->
+								<color>colorOn</color>
+							</icon>
+						</icons>
+						
+						<!-- Input dependent texts used by the UI element -->
+						<texts>
+							<text id="state">
+								<content>on</content>
+								<!-- Text color class to set -->
+								<color>colorOn</color>
+							</text>
+						</texts>
+					</condition>
+
+					<condition operator="e" value="0">
+						<icons>
+							<icon id="state">
+								<name>socketOff</name>
+								<color>colorOff</color>
+							</icon>
+						</icons>
+						<texts>
+							<text id="state">
+								<content>off</content>
+								<color>colorOff</color>
+							</text>
+						</texts>
+					</condition>
+				</rendering>
+			</variable>
+		</variableInputs>
+
+		<!-- One or more Homegear variables linked to the UI element as outputs -->
+		<variableOutputs>
+			<variable>
+				<familyId>*</familyId>
+				<deviceTypeId>*</deviceTypeId>
+				<channel>*</channel>
+				<name>*</name>
+				<minimumValue>-273.15</minimumValue>
+				<maximumValue>100.0</maximumValue>
+			</variable>
+		</variableOutputs>
+
+		<!-- Arbitrary metadata -->
+		<metadata>
+			<!--<foo>My metadata</foo>-->
+			<!--<bar>More metadata</bar>-->
+		</metadata>
+	</homegearUiElement>
+</homegearUiElements>

@@ -150,7 +150,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
 
                     if(peerElement->type == BaseLib::VariableType::tStruct)
                     {
-                        auto peerIdIterator = peerElement->structValue->find("peerId");
+                        auto peerIdIterator = peerElement->structValue->find("peer");
                         if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
                         variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
@@ -158,8 +158,20 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto channelIterator = peerElement->structValue->find("channel");
                         if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
 
-                        auto nameIterator = peerElement->structValue->find("variableName");
+                        auto nameIterator = peerElement->structValue->find("name");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+
+                        auto minimumValueIterator = peerElement->structValue->find("minimum");
+                        if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
+
+                        auto maximumValueIterator = peerElement->structValue->find("maximum");
+                        if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
+
+                        auto minimumValueScaledIterator = peerElement->structValue->find("minimumScaled");
+                        if(minimumValueScaledIterator != peerElement->structValue->end()) variableInfo->minimumValueScaled = minimumValueScaledIterator->second;
+
+                        auto maximumValueScaledIterator = peerElement->structValue->find("maximumScaled");
+                        if(maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
@@ -187,7 +199,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
 
                     if(peerElement->type == BaseLib::VariableType::tStruct)
                     {
-                        auto peerIdIterator = peerElement->structValue->find("peerId");
+                        auto peerIdIterator = peerElement->structValue->find("peer");
                         if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
                         variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
@@ -195,8 +207,14 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto channelIterator = peerElement->structValue->find("channel");
                         if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
 
-                        auto nameIterator = peerElement->structValue->find("variableName");
+                        auto nameIterator = peerElement->structValue->find("name");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
+
+                        auto minimumValueIterator = peerElement->structValue->find("minimum");
+                        if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
+
+                        auto maximumValueIterator = peerElement->structValue->find("maximum");
+                        if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
@@ -219,6 +237,81 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
             for(auto& categoryElement : *dataIterator->second->arrayValue)
             {
                 uiElement->categoryIds.emplace((uint64_t)categoryElement->integerValue64);
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variableInputs)
+{
+    try
+    {
+        for(auto& variableInput : *variableInputs)
+        {
+            auto peerIdIterator = variableInput->structValue->find("peer");
+            if(peerIdIterator == variableInput->structValue->end()) continue;
+            auto channelIterator = variableInput->structValue->find("channel");
+            if(channelIterator == variableInput->structValue->end()) continue;
+            auto nameIterator = variableInput->structValue->find("name");
+            if(nameIterator == variableInput->structValue->end()) continue;
+
+            std::string methodName = "getValue";
+            auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            parameters->arrayValue->reserve(3);
+            parameters->arrayValue->emplace_back(peerIdIterator->second);
+            parameters->arrayValue->emplace_back(channelIterator->second);
+            parameters->arrayValue->emplace_back(nameIterator->second);
+
+            auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+            if(result->errorStruct)
+            {
+                GD::out.printWarning("Warning: Could not get value for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
+                continue;
+            }
+
+            variableInput->structValue->emplace("value", result);
+
+            auto minimumValueIterator = variableInput->structValue->find("minimumValue");
+            auto maximumValueIterator = variableInput->structValue->find("maximumValue");
+            if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
+            {
+                methodName = "getVariableDescription";
+                auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                if(result->errorStruct)
+                {
+                    GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
+                    continue;
+                }
+
+                if(minimumValueIterator == variableInput->structValue->end())
+                {
+                    auto minimumValueIterator2 = result->structValue->find("MIN");
+                    if(minimumValueIterator2 != result->structValue->end())
+                    {
+                        variableInput->structValue->emplace("minimumValue", minimumValueIterator2->second);
+                    }
+                }
+
+                if(maximumValueIterator == variableInput->structValue->end())
+                {
+                    auto maximumValueIterator2 = result->structValue->find("MAX");
+                    if(maximumValueIterator2 != result->structValue->end())
+                    {
+                        variableInput->structValue->emplace("maximumValue", maximumValueIterator2->second);
+                    }
+                }
             }
         }
     }
@@ -279,6 +372,24 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            //{{{ value
+                //Simple
+                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                else //Complex
+                {
+                    auto controlsIterator = elementInfo->structValue->find("controls");
+                    if(controlsIterator != elementInfo->structValue->end())
+                    {
+                        for(auto& control : *controlsIterator->second->arrayValue)
+                        {
+                            auto variableInputsIterator = control->structValue->find("variableInputs");
+                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                        };
+                    }
+                }
+            //}}}
 
             auto dataIterator = uiElement.second->data->structValue->find("metadata");
             if(dataIterator != uiElement.second->data->structValue->end())
@@ -372,6 +483,25 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            //{{{ value
+                //Simple
+                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                else //Complex
+                {
+                    auto controlsIterator = elementInfo->structValue->find("controls");
+                    if(controlsIterator != elementInfo->structValue->end())
+                    {
+                        for(auto& control : *controlsIterator->second->arrayValue)
+                        {
+                            auto variableInputsIterator = control->structValue->find("variableInputs");
+                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        }
+                    }
+                }
+            //}}}
+
             uiElements->arrayValue->emplace_back(elementInfo);
         }
 
@@ -431,6 +561,25 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
             elementInfo->structValue->emplace("categories", categories);
+
+            //{{{ value
+                //Simple
+                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                else //Complex
+                {
+                    auto controlsIterator = elementInfo->structValue->find("controls");
+                    if(controlsIterator != elementInfo->structValue->end())
+                    {
+                        for(auto& control : *controlsIterator->second->arrayValue)
+                        {
+                            auto variableInputsIterator = control->structValue->find("variableInputs");
+                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        }
+                    }
+                }
+            //}}}
+
             uiElements->arrayValue->emplace_back(elementInfo);
         }
 
@@ -457,39 +606,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
     {
         auto families = GD::familyController->getFamilies();
 
-        for(auto& peerVector : uiElement->peerInfo->inputPeers)
-        {
-            for(auto& peerInfo : peerVector)
-            {
-                for(auto& family : families)
-                {
-                    auto central = family.second->getCentral();
-                    if(!central) continue;
-
-                    auto peer = central->getPeer((uint64_t) peerInfo->peerId);
-                    if(!peer) continue;
-
-                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
-                }
-            }
-        }
-
-        for(auto& peerVector : uiElement->peerInfo->outputPeers)
-        {
-            for(auto& peerInfo : peerVector)
-            {
-                for(auto& family : families)
-                {
-                    auto central = family.second->getCentral();
-                    if(!central) continue;
-
-                    auto peer = central->getPeer((uint64_t) peerInfo->peerId);
-                    if(!peer) continue;
-
-                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
-                }
-            }
-        }
+        //variableInputs and variableOutputs are filled by UiElements::getUiElement
 
         for(auto& variableInput : rpcElement->variableInputs)
         {
@@ -501,6 +618,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
                 auto peer = central->getPeer((uint64_t)variableInput->peerId);
                 if(!peer) continue;
 
+                if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
                 if(!clientInfo->acls->checkVariableReadAccess(peer, variableInput->channel, variableInput->name)) return false;
             }
         }
@@ -515,7 +633,8 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
                 auto peer = central->getPeer((uint64_t)variableOutput->peerId);
                 if(!peer) continue;
 
-                if(!clientInfo->acls->checkVariableReadAccess(peer, variableOutput->channel, variableOutput->name)) return false;
+                if(!clientInfo->acls->checkDeviceWriteAccess(peer)) return false;
+                if(!clientInfo->acls->checkVariableWriteAccess(peer, variableOutput->channel, variableOutput->name)) return false;
             }
         }
 

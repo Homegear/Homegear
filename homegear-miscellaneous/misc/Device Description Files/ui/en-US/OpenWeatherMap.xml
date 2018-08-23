@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearUiElements lang="en-US">
 	<homegearUiElement>
-		<id>254.100.Refresh</id>
+		<uniqueUiElementId>254.0x100.Refresh</uniqueUiElementId>
 		<type>simple</type>
 		<control>button</control>
 		<icons>
-			<icon>
+			<icon id="refresh">
 				<name>refresh</name>
 			</icon>
 		</icons>
 		<variableOutputs>
 			<variable>
-				<familyId>254</familyId>
+				<family>254</family>
 				<deviceTypeId>0x100</deviceTypeId>
 				<channel>1</channel>
 				<name>REQUEST</name>
@@ -19,37 +19,38 @@
 		</variableOutputs>
 	</homegearUiElement>
 	<homegearUiElement>
-		<id>254.100.OpenWeatherMap</id>
+		<id>254.0x100.OpenWeatherMap</id>
 		<type>complex</type>
 		<icons>
-			<icon>
+			<icon id="weather">
 				<name>weather</name>
 			</icon>
 		</icons>
-		<width>3</width>
-		<height>3</height>
-		<cols>1</cols>
-		<rows>3</rows>
+		<grid>
+			<width>3</width>
+			<height>3</height>
+			<columns>1</columns>
+			<rows>3</rows>
+		</grid>
 		<controls>
-			<control id="Base.Temperature.Channel1">
-				<posX>0</posX>
-				<posY>0</posY>
-				<colWidth>1</colWidth>
+			<control id="Base.Temperature">
+				<x>0</x>
+				<y>0</y>
+				<columns>1</columns>
+				<rows>1</rows>
 			</control>
-			<control id="Base.Humidity.Channel1">
-				<posX>0</posX>
-				<posY>1</posY>
-				<colWidth>1</colWidth>
+			<control id="Base.Humidity">
+				<x>0</x>
+				<y>1</y>
+				<columns>1</columns>
+				<rows>1</rows>
 			</control>
-			<control id="254.100.Refresh">
-				<posX>0</posX>
-				<posY>2</posY>
-				<colWidth>1</colWidth>
+			<control id="254.0x100.Refresh">
+				<x>0</x>
+				<y>2</y>
+				<columns>1</columns>
+				<rows>1</rows>
 			</control>
 		</controls>
-		<metadata>
-			<!--<foo></foo>-->
-			<!--<bar></bar>-->
-		</metadata>
 	</homegearUiElement>
 </homegearUiElements>

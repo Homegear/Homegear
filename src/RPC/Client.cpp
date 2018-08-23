@@ -280,7 +280,8 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
 		std::lock_guard<std::mutex> serversGuard(_serversMutex);
 		for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
 		{
-			if(server->second->removed || (server->second->getServerClientInfo()->sendEventsToRpcServer && (server->second->getServerClientInfo()->closed || !server->second->getServerClientInfo()->socket->connected())) || (server->second->socket && !server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) || (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) continue;
+			if(server->second->removed || (server->second->getServerClientInfo()->sendEventsToRpcServer && (server->second->getServerClientInfo()->closed || !server->second->getServerClientInfo()->socket->connected())) || (server->second->socket && !server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely)) continue;
+            //At least OpenHAB needs PONG to be send event when initialization is not complete
 			if((!server->second->initialized && valueKeys->at(0) != "PONG") || (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end()))) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("event")) continue;
 			if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
@@ -1087,8 +1088,16 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
 		server->id = id;
 		server->uid = _serverId++;
 		server->settings = GD::clientSettings.get(server->hostname);
+		if(server->settings)
+		{
+			GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
+			if(server->settings->keepAlive)
+			{
+				GD::out.printInfo("Info: Not closing connection to client after sending packets.");
+				server->keepAlive = true;
+			}
+		}
 		_servers[server->uid] = server;
-		if(server->settings) GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
 		return server;
 	}
 	catch(const std::exception& ex)

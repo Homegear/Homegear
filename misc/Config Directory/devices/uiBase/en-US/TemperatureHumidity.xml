@@ -1,55 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearUiElements lang="en-US">
 	<homegearUiElement>
-		<id>Base.Temperature.Channel1</id>
+		<uniqueUiElementId>Base.Temperature</uniqueUiElementId>
 		<type>simple</type>
-		<control>knob</control>
-		<unit>°C</unit>
+		<control>temperature</control>
 		<icons>
-			<icon>
+			<icon id="temperature">
 				<name>thermometer</name>
-				<!--<conditionOperator>e</conditionOperator> (operators: e, g, ge, l, le, not)-->
-				<!--<conditionValue>0</conditionValue>-->
 			</icon>
-			<!--<icon></icon>-->
 		</icons>
-		<texts>
-			<text id="heading">Temperature</text>
-			<!--<text></text>-->
-		</texts>
 		<variableInputs>
 			<variable>
 				<familyId>*</familyId>
 				<deviceTypeId>*</deviceTypeId>
-				<channel>1</channel>
-				<name>TEMPERATURE</name>
+				<channel>*</channel>
+				<name>*</name>
+				<visualizeInOverview>true</visualizeInOverview>
+				<unit>°C</unit>
+				<minimumValue>-273.15</minimumValue>
+				<maximumValue>100.0</maximumValue>
 			</variable>
 		</variableInputs>
-		<metadata>
-			<!--<foo></foo>-->
-			<!--<bar></bar>-->
-		</metadata>
 	</homegearUiElement>
 	<homegearUiElement>
-		<id>Base.Humidity.Channel1</id>
+		<id>Base.Humidity</id>
 		<type>simple</type>
-		<control>knob</control>
-		<unit>%</unit>
+		<control>humidity</control>
 		<icons>
 			<icon>
 				<name>waterdrop</name>
 			</icon>
 		</icons>
-		<texts>
-			<text id="heading">Humidity</text>
-			<!--<text></text>-->
-		</texts>
 		<variableInputs>
 			<variable>
 				<familyId>*</familyId>
 				<deviceTypeId>*</deviceTypeId>
-				<channel>1</channel>
-				<name>HUMIDITY</name>
+				<channel>*</channel>
+				<name>*</name>
+				<visualizeInOverview>true</visualizeInOverview>
+				<unit>%</unit>
+				<minimumValue>0</minimumValue>
+				<maximumValue>100</maximumValue>
 			</variable>
 		</variableInputs>
 	</homegearUiElement>

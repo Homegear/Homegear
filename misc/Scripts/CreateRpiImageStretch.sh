@@ -259,7 +259,8 @@ chown -R homegear:homegear /var/lib/homegear
 # }}}
 
 systemctl enable setup-tmpfs
-sed -i "s/#SystemMaxUse=/SystemMaxUse=10M/g" /etc/systemd/journald.conf
+sed -i "s/#SystemMaxUse=/SystemMaxUse=1M/g" /etc/systemd/journald.conf
+sed -i "s/#RuntimeMaxUse=/RuntimeMaxUse=1M/g" /etc/systemd/journald.conf
 EOF
 chmod +x $rootfs/fourth-stage
 LANG=C chroot $rootfs /fourth-stage

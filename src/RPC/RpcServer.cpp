@@ -897,6 +897,29 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
     }
 }
 
+bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
+
+        return _rpcMethods->find(methodName) != _rpcMethods->end() || GD::ipcServer->methodExists(clientInfo, methodName);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
 {
 	try
@@ -1639,7 +1662,6 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	try
 	{
-		bool tooManyConnections = false;
 		{
 			//Don't lock _stateMutex => no synchronisation needed
 			if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
@@ -1647,8 +1669,19 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
 				collectGarbage();
 				if(_clients.size() > GD::bl->settings.rpcServerMaxConnections())
 				{
-					_out.printError("Error: There are too many clients connected to me. Closing incoming connection. You can increase the number of allowed connections in main.conf.");
-					tooManyConnections = true;
+					_out.printError("Error: There are too many clients connected to me. Closing oldest connection. You can increase the number of allowed connections in main.conf.");
+
+                    std::shared_ptr<Client> clientToClose;
+                    {
+                        std::lock_guard<std::mutex> stateGuard(_stateMutex);
+                        for(auto& client : _clients)
+                        {
+                            if(!client.second->closed) clientToClose = client.second;
+                        }
+                    }
+
+                    closeClientConnection(clientToClose);
+                    collectGarbage();
 				}
 			}
 		}
@@ -1681,11 +1714,6 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
 		socklen_t addressSize = sizeof(addressSize);
 		fileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientInfo, &addressSize));
 		if(!fileDescriptor) return fileDescriptor;
-		if(tooManyConnections)
-		{
-			GD::bl->fileDescriptorManager.shutdown(fileDescriptor);
-			return std::shared_ptr<BaseLib::FileDescriptor>();
-		}
 
 		getpeername(fileDescriptor->descriptor, (struct sockaddr*)&clientInfo, &addressSize);
 

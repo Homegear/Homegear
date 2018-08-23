@@ -24,7 +24,7 @@ case $1 in
 		chown homegear:homegear /var/lib/homegear
 		chmod 750 /var/lib/homegear
 
-		if test ! -e /var/lib/homegear/scripts/HM-XMLRPC-Client; then
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION && test ! -e /var/lib/homegear/scripts/HM-XMLRPC-Client; then
 			rm -Rf /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
 			mkdir /tmp/HomegearScriptsDir

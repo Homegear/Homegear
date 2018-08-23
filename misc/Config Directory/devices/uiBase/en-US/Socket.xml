@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearUiElements lang="en-US">
+	<homegearUiElement>
+		<uniqueUiElementId>Base.Socket</uniqueUiElementId>
+		<type>simple</type>
+		<control>socket</control>
+		<variableInputs>
+			<variable>
+				<familyId>*</familyId>
+				<deviceTypeId>*</deviceTypeId>
+				<channel>*</channel>
+				<name>*</name>
+				<visualizeInOverview>true</visualizeInOverview>
+				<rendering>
+					<condition operator="not" value="0">
+						<icons>
+							<icon id="state">
+								<name>socketOn</name>
+								<color>colorOn</color>
+							</icon>
+						</icons>
+						<texts>
+							<text id="state">
+								<content>on</content>
+								<color>colorOn</color>
+							</text>
+						</texts>
+					</condition>
+					<condition operator="e" value="0">
+						<icons>
+							<icon id="state">
+								<name>socketOff</name>
+								<color>colorOff</color>
+							</icon>
+						</icons>
+						<texts>
+							<text id="state">
+								<content>off</content>
+								<color>colorOff</color>
+							</text>
+						</texts>
+					</condition>
+				</rendering>
+			</variable>
+		</variableInputs>
+		<variableOutputs>
+			<variable>
+				<familyId>*</familyId>
+				<deviceTypeId>*</deviceTypeId>
+				<channel>*</channel>
+				<name>*</name>
+			</variable>
+		</variableOutputs>
+		<metadata>
+		</metadata>
+	</homegearUiElement>
+</homegearUiElements>
