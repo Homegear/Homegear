@@ -17,7 +17,7 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
 {
 	try
 	{
@@ -57,7 +57,6 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			i->second->unlock();
 		}
 
-		std::vector<std::string> headers;
 		std::vector<char> content;
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
@@ -112,6 +111,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 			else if(!contentString.empty())
 			{
+                std::vector<std::string> headers;
 				std::string header;
 				_http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
 				content.insert(content.end(), header.begin(), header.end());
@@ -249,7 +249,13 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 #endif
 			std::string contentType = _http.getMimeType(ending);
+            std::vector<std::string> headers;
 			if(contentType.empty()) contentType = "application/octet-stream";
+            else
+            {
+                if(cacheTime > 0) headers.push_back("Cache-Control: max-age=" + std::to_string(cacheTime) + ", private"); //Cache known content type
+                else headers.push_back("Cache-Control: no-cache");
+            }
 			//Don't return content when method is "HEAD"
 			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(fullPath);
 			std::string header;
@@ -576,7 +582,6 @@ void WebServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<ch
 		{
 			_out.printInfo("Info: " + ex.what());
 		}
-		socket->close();
 	}
     catch(const std::exception& ex)
     {

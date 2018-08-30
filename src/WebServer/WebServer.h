@@ -41,7 +41,7 @@ namespace WebServer
 			WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
 			virtual ~WebServer();
 
-			void get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+			void get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime = 0);
 			void post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
 			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);

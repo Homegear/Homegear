@@ -1152,6 +1152,11 @@ void RpcServer::collectGarbage()
 			for(auto& client : _clients)
 			{
 				if(client.second->closed) clientsToRemove.push_back(client.second);
+                else if(client.second->rpcType == BaseLib::RpcType::webserver && client.second->lastReceivedPacket.load() != 0 && BaseLib::HelperFunctions::getTime() - client.second->lastReceivedPacket.load() > 10000)
+                {
+                    closeClientConnection(client.second);
+                    clientsToRemove.push_back(client.second);
+                }
 			}
 		}
 
@@ -1614,11 +1619,13 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 						http.getHeader().path.compare(0, 7, "/admin/") == 0
                     ))
 				{
-
+                    client->rpcType = BaseLib::RpcType::webserver;
 					http.getHeader().remoteAddress = client->address;
 					http.getHeader().remotePort = client->port;
 					if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(http, client->socket);
-					else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket);
+					else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket, _info->cacheAssets);
+                    if(http.getHeader().connection & BaseLib::Http::Connection::Enum::close) closeClientConnection(client);
+                    client->lastReceivedPacket = BaseLib::HelperFunctions::getTime();
 				}
 				else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
 				{
