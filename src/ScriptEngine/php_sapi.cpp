@@ -571,6 +571,14 @@ static void php_homegear_register_variables(zval* track_vars_array)
 			php_register_variable_safe((char*)"SERVER_ADDR", (char*)server->address.c_str(), server->address.size(), track_vars_array);
 			ZVAL_LONG(&value, server->port);
 			php_register_variable_ex((char*)"SERVER_PORT", &value, track_vars_array);
+			if(server->webSocket) php_register_variable_safe((char*)"WEBSOCKET_ENABLED", (char*)"true", 4, track_vars_array);
+			else php_register_variable_safe((char*)"WEBSOCKET_ENABLED", (char*)"false", 5, track_vars_array);
+            if(server->restServer) php_register_variable_safe((char*)"REST_ENABLED", (char*)"true", 4, track_vars_array);
+            else php_register_variable_safe((char*)"REST_ENABLED", (char*)"false", 5, track_vars_array);
+            if(server->xmlrpcServer) php_register_variable_safe((char*)"XMLRPC_ENABLED", (char*)"true", 4, track_vars_array);
+            else php_register_variable_safe((char*)"XMLRPC_ENABLED", (char*)"false", 5, track_vars_array);
+            if(server->jsonrpcServer) php_register_variable_safe((char*)"JSONRPC_ENABLED", (char*)"true", 4, track_vars_array);
+            else php_register_variable_safe((char*)"JSONRPC_ENABLED", (char*)"false", 5, track_vars_array);
 			std::string authType = (server->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) ? "basic" : "none";
 			php_register_variable_safe((char*)"AUTH_TYPE", (char*)authType.c_str(), authType.size(), track_vars_array);
 			std::string webSocketAuthType = (server->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) ? "basic" : ((server->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) ? "session" : "none");
