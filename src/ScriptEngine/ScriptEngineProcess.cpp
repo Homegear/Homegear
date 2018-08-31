@@ -33,6 +33,8 @@
 #include "ScriptEngineProcess.h"
 #include "../GD/GD.h"
 
+#include <homegear-base/Encoding/GZip.h>
+
 namespace ScriptEngine
 {
 
@@ -87,7 +89,12 @@ void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output, bo
 			{
 				try
 				{
-					scriptsIterator->second->socket->proofwrite(output.c_str(), output.size());
+                    if(scriptsIterator->second->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip)
+                    {
+                        std::vector<char> newContent = BaseLib::GZip::compress<std::vector<char>, std::string>(output, 5);
+                        scriptsIterator->second->socket->proofwrite(newContent.data(), newContent.size());
+                    }
+                    else scriptsIterator->second->socket->proofwrite(output.c_str(), output.size());
 				}
 				catch(BaseLib::SocketDataLimitException& ex)
 				{

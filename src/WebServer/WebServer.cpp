@@ -2,6 +2,8 @@
 #include "../UPnP/UPnP.h"
 #include "WebServer.h"
 
+#include <homegear-base/Encoding/GZip.h>
+
 namespace WebServer
 {
 WebServer::WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo)
@@ -168,7 +170,6 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			int32_t pos = path.find_last_of('.');
 			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
-			std::string contentString;
             std::string contentPath = _serverInfo->contentPath;
             std::string fullPath;
             std::string relativePath = '/' + path;
@@ -249,7 +250,9 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			}
 #endif
 			std::string contentType = _http.getMimeType(ending);
+            std::vector<char> contentString;
             std::vector<std::string> headers;
+            headers.reserve(2);
 			if(contentType.empty()) contentType = "application/octet-stream";
             else
             {
@@ -257,7 +260,17 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
                 else headers.push_back("Cache-Control: no-cache");
             }
 			//Don't return content when method is "HEAD"
-			if(http.getHeader().method == "GET") contentString = GD::bl->io.getFileContent(fullPath);
+			if(http.getHeader().method == "GET")
+            {
+                contentString = GD::bl->io.getBinaryFileContent(fullPath);
+
+                if(http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip)
+                {
+                    auto newContent = BaseLib::GZip::compress<std::vector<char>, std::vector<char>>(contentString, 5);
+                    contentString.swap(newContent);
+                    headers.push_back("Content-Encoding: gzip");
+                }
+            }
 			std::string header;
 			_http.constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
 			content.insert(content.end(), header.begin(), header.end());
@@ -620,11 +633,18 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
 		std::string output;
 		output.reserve(1024);
 		output.append("HTTP/1.1 " + std::to_string(responseCode) + ' ' + scriptInfo->http.getStatusText(responseCode) + "\r\n");
+
+        if(scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::Enum::gzip)
+        {
+            output.append("Content-Encoding: gzip\r\n");
+        }
+
 		for(BaseLib::Struct::iterator i = headers->structValue->begin(); i != headers->structValue->end(); ++i)
 		{
 			if(output.size() + i->first.size() + i->second->stringValue.size() + 6 > output.capacity()) output.reserve(output.capacity() + 1024);
 			output.append(i->first + ": " + i->second->stringValue + "\r\n");
 		}
+
 		output.append("\r\n");
 		scriptInfo->socket->proofwrite(output.c_str(), output.size());
 	}
