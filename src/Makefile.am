@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
-AM_LDFLAGS = -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
+AM_LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
 if HAVE_PHP_HEADERS
 # {{{ PHP libraries
 LIBS += -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ledit -lrt -lltdl -lgmp -lenchant -lrt -lm -lnsl -lxml2 -lxslt -licuuc -licui18n -licuio -lcrypt -lcrypto -lssl -lgnutls

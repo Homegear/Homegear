@@ -254,7 +254,6 @@ sed -i '/.*#include <ctype.h>/a#include <limits.h>' xmlrpc/libxmlrpc/base64.c
 sed -i '/.*#include <string.h>/a#include <stdlib.h>' xmlrpc/libxmlrpc/encodings.c
 sed -i "s/if(queue_index == NULL)/if(index == NULL)/g" xmlrpc/libxmlrpc/queue.c
 cd ..
-
 autoconf
 version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`
