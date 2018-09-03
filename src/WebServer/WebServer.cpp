@@ -244,7 +244,28 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
 				scriptInfo->socket = socket;
 				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
+                scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 				GD::scriptEngineServer->executeScript(scriptInfo, true);
+                if(scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip)
+                {
+                    std::vector<char> newContent = BaseLib::GZip::compress<std::vector<char>, std::string>(scriptInfo->output, 5);
+                    try
+                    {
+                        scriptInfo->socket->proofwrite(newContent.data(), newContent.size());
+                    }
+                    catch(BaseLib::SocketDataLimitException& ex)
+                    {
+                        GD::out.printWarning("Warning: " + ex.what());
+                    }
+                    catch(const BaseLib::SocketOperationException& ex)
+                    {
+                        GD::out.printError("Error: " + ex.what());
+                    }
+                    catch(const std::exception& ex)
+                    {
+                        GD::out.printError(std::string("Error: ") + ex.what());
+                    }
+                }
 				socket->close();
 				return;
 			}
@@ -493,7 +514,28 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
 			scriptInfo->socket = socket;
 			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
+            scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 			GD::scriptEngineServer->executeScript(scriptInfo, true);
+            if(scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip)
+            {
+                std::vector<char> newContent = BaseLib::GZip::compress<std::vector<char>, std::string>(scriptInfo->output, 5);
+                try
+                {
+                    scriptInfo->socket->proofwrite(newContent.data(), newContent.size());
+                }
+                catch(BaseLib::SocketDataLimitException& ex)
+                {
+                    GD::out.printWarning("Warning: " + ex.what());
+                }
+                catch(const BaseLib::SocketOperationException& ex)
+                {
+                    GD::out.printError("Error: " + ex.what());
+                }
+                catch(const std::exception& ex)
+                {
+                    GD::out.printError(std::string("Error: ") + ex.what());
+                }
+            }
 			socket->close();
 		}
 		catch(const std::exception& ex)
@@ -659,6 +701,33 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
     catch(...)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void WebServer::sendOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& output, bool error)
+{
+    try
+    {
+        if(!scriptInfo) return;
+
+        if(scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip)
+        {
+            if(scriptInfo->output.size() + output.size() > scriptInfo->output.capacity()) scriptInfo->output.reserve(scriptInfo->output.capacity() + (((output.size() / 1024) + 1) * 1024));
+            scriptInfo->output.append(output);
+        }
+        else scriptInfo->socket->proofwrite(output.c_str(), output.size());
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

@@ -85,33 +85,6 @@ void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output, bo
 		std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
 		if(scriptsIterator != _scripts.end())
 		{
-			if(scriptsIterator->second->socket)
-			{
-				try
-				{
-                    if(scriptsIterator->second->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip)
-                    {
-                        std::vector<char> newContent = BaseLib::GZip::compress<std::vector<char>, std::string>(output, 5);
-                        scriptsIterator->second->socket->proofwrite(newContent.data(), newContent.size());
-                    }
-                    else scriptsIterator->second->socket->proofwrite(output.c_str(), output.size());
-				}
-				catch(BaseLib::SocketDataLimitException& ex)
-				{
-					GD::out.printWarning("Warning: " + ex.what());
-					scriptsIterator->second->socket->close();
-				}
-				catch(const BaseLib::SocketOperationException& ex)
-				{
-					GD::out.printError("Error: " + ex.what());
-					scriptsIterator->second->socket->close();
-				}
-				catch(const std::exception& ex)
-				{
-					GD::out.printError(std::string("Error: ") + ex.what());
-					scriptsIterator->second->socket->close();
-				}
-			}
 			if(scriptsIterator->second->scriptOutputCallback) scriptsIterator->second->scriptOutputCallback(scriptsIterator->second, output, error);
 			if(scriptsIterator->second->returnOutput)
 			{

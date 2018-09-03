@@ -58,6 +58,7 @@ namespace WebServer
 
 			void send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data);
 			void sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, BaseLib::PVariable& headers);
+            void sendOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& output, bool error);
 	};
 }
 #endif
