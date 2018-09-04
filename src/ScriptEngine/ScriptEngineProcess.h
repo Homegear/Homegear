@@ -58,6 +58,7 @@ private:
 	std::map<int32_t, PScriptFinishedInfo> _scriptFinishedInfo;
 	PScriptEngineClientData _clientData;
 	bool _nodeProcess = false;
+	bool _exited = false;
 	std::atomic_uint _nodeThreadCount;
 	std::function<void(std::string)> _unregisterNode;
     std::function<void(uint64_t)> _unregisterDevice;
@@ -74,6 +75,8 @@ public:
 	void setClientData(PScriptEngineClientData& value) { _clientData = value; }
 	void setUnregisterNode(std::function<void(std::string)> value) { _unregisterNode.swap(value); }
 	void setUnregisterDevice(std::function<void(uint64_t)> value) { _unregisterDevice.swap(value); }
+	bool getExited() { return _exited; }
+	void setExited(bool value) { _exited = value; }
 	bool isNodeProcess() { return _nodeProcess; }
 
 	void invokeScriptOutput(int32_t id, std::string& output, bool error);

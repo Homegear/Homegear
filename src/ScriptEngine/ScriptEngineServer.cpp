@@ -690,6 +690,9 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
 
 			if(signal != -1 && signal != 15) exitCode = -32500;
 
+            process->setExited(true);
+            process->requestConditionVariable.notify_all();
+
 			{
 				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
 				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, -1, exitCode);
@@ -1653,8 +1656,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		{
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			_processes[process->getPid()] = process;
-
-			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData() || process->getExited()); });
 
 			if(!process->getClientData())
 			{
@@ -1955,12 +1957,21 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		std::unique_lock<std::mutex> executeScriptGuard(_executeScriptMutex);
 		if(_shuttingDown || GD::bl->shuttingDown) return;
 		PScriptEngineProcess process = getFreeProcess(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, scriptInfo->maxThreadCount);
-		if(_shuttingDown || GD::bl->shuttingDown) return;
-		if(!process)
+		if(!process || _shuttingDown || GD::bl->shuttingDown)
 		{
-			_out.printError("Error: Could not get free process. Not executing script.");
-			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
-			scriptInfo->exitCode = -1;
+			if(!_shuttingDown && !GD::bl->shuttingDown)
+			{
+				_out.printError("Error: Could not get free process. Not executing script.");
+				if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
+                scriptInfo->exitCode = -1;
+			}
+            else
+            {
+                _out.printInfo("Info: Not executing script, because I'm shutting down.");
+                scriptInfo->exitCode = 0;
+            }
+
+            scriptInfo->finished = true;
 
 			{
 				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);

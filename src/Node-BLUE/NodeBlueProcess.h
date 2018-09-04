@@ -52,6 +52,7 @@ private:
 	std::map<int32_t, PFlowInfoServer> _flows;
 	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
 	PNodeBlueClientData _clientData;
+	bool _exited = false;
 	std::atomic_uint _nodeThreadCount;
 public:
 	NodeBlueProcess();
@@ -63,6 +64,8 @@ public:
 	pid_t getPid() { return _pid; }
 	void setPid(pid_t value) { _pid = value; }
 	PNodeBlueClientData& getClientData() { return _clientData; }
+	bool getExited() { return _exited; }
+	void setExited(bool value) { _exited = value; }
 	void setClientData(PNodeBlueClientData& value) { _clientData = value; }
 
 	void invokeFlowFinished(int32_t exitCode);

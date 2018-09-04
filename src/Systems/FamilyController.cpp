@@ -465,10 +465,12 @@ void FamilyController::homegearShuttingDown()
 {
 	try
 	{
+		GD::out.printInfo("Info: Shutting down family modules...");
 		onEvent("homegear", 0, -1, std::shared_ptr<std::vector<std::string>>(new std::vector<std::string>{"HOMEGEAR_SHUTTINGDOWN"}), BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}));
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
+			GD::out.printInfo("Info: Shutting down family module \"" + i->second->getName() + "\"...");
 			i->second->homegearShuttingDown();
 		}
 	}

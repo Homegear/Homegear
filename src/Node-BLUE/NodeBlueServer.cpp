@@ -578,6 +578,11 @@ void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, 
 			else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
 			if(signal != -1 && signal != 15) exitCode = -32500;
+
+			process->setExited(true);
+
+            process->requestConditionVariable.notify_all();
+
 			process->invokeFlowFinished(exitCode);
 			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown)
 			{
@@ -2444,7 +2449,7 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 			}
 
 			std::unique_lock<std::mutex> requestLock(_processRequestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()) || process->getExited(); });
 
 			if(!process->getClientData())
 			{
