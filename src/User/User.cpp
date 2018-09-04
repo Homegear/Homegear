@@ -30,7 +30,7 @@
 
 #include "User.h"
 #include "../GD/GD.h"
-#include <homegear-base/BaseLib.h>
+#include <homegear-base/Security/Sign.h>
 
 std::vector<unsigned char> User::generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt)
 {
@@ -293,3 +293,150 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
     }
     return false;
 }
+
+// {{{ OAuth
+    std::string User::generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime)
+    {
+        BaseLib::Security::Sign sign(privateKey, publicKey);
+
+        auto randomBytes = BaseLib::HelperFunctions::getRandomBytes(32);
+        std::string tempKey;
+        tempKey.reserve(256);
+        BaseLib::Base64::encode(randomBytes, tempKey);
+        tempKey.push_back(',');
+        tempKey.append(type);
+        tempKey.push_back(',');
+        tempKey.append(userName);
+        tempKey.push_back(',');
+        tempKey.append(std::to_string(BaseLib::HelperFunctions::getTimeSeconds() + lifetime));
+        std::vector<char> tempKey2(tempKey.begin(), tempKey.end());
+        auto signature = sign.sign(tempKey2);
+        std::string signatureString;
+        BaseLib::Base64::encode(signature, signatureString);
+        tempKey.push_back(',');
+        tempKey.append(signatureString);
+        std::string key;
+        BaseLib::Base64::encode(tempKey, key);
+        return key;
+    }
+
+    bool User::oauthCreate(const std::string& userName, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey)
+    {
+        try
+        {
+            if(!GD::bl->db->userNameExists(userName)) return false;
+
+            newKey = generateOauthKey(userName, privateKey, publicKey, "access", tokenLifetime);
+            newRefreshKey = generateOauthKey(userName, privateKey, publicKey, "refresh", refreshTokenLifetime);
+
+            return true;
+        }
+        catch(std::exception& ex)
+        {
+            GD::out.printError("Error creating OAuth key for user: " + std::string(ex.what()));
+        }
+        catch(...)
+        {
+            GD::out.printError("Unknown error creating OAuth key for user.");
+        }
+        return false;
+    }
+
+    bool User::oauthVerify(const std::string& key, const std::string& privateKey, const std::string& publicKey, std::string& userName)
+    {
+        try
+        {
+            std::string decodedKey;
+            BaseLib::Base64::decode(key, decodedKey);
+            auto keyParts = BaseLib::HelperFunctions::splitAll(decodedKey, ',');
+            if(keyParts.size() < 5) return false;
+
+            if(keyParts.at(1) != "access") return false;
+
+            std::string tempKey;
+            tempKey.reserve(decodedKey.size());
+            tempKey.append(keyParts.at(0));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(1));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(2));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(3));
+            std::vector<char> tempKeyData(tempKey.begin(), tempKey.end());
+
+            std::vector<char> signatureData;
+            BaseLib::Base64::decode(keyParts.at(4), signatureData);
+
+            BaseLib::Security::Sign sign(privateKey, publicKey);
+            bool signatureResult = sign.verify(tempKeyData, signatureData);
+            if(!signatureResult) return false;
+
+            userName = keyParts.at(2);
+
+            auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(3));
+
+            return lifeEnds - BaseLib::HelperFunctions::getTimeSeconds() > 0;
+        }
+        catch(std::exception& ex)
+        {
+            GD::out.printError("Error verifying OAuth key of user: " + std::string(ex.what()));
+        }
+        catch(...)
+        {
+            GD::out.printError("Unknown error verifying OAuth key of user.");
+        }
+        return false;
+    }
+
+    bool User::oauthRefresh(const std::string& refreshKey, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey, std::string& userName)
+    {
+        try
+        {
+            std::string decodedKey;
+            BaseLib::Base64::decode(refreshKey, decodedKey);
+            auto keyParts = BaseLib::HelperFunctions::splitAll(decodedKey, ',');
+            if(keyParts.size() < 5) return false;
+
+            if(keyParts.at(1) != "refresh") return false;
+
+            std::string tempKey;
+            tempKey.reserve(decodedKey.size());
+            tempKey.append(keyParts.at(0));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(1));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(2));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(3));
+            std::vector<char> tempKeyData(tempKey.begin(), tempKey.end());
+
+            std::vector<char> signatureData;
+            BaseLib::Base64::decode(keyParts.at(4), signatureData);
+
+            BaseLib::Security::Sign sign(privateKey, publicKey);
+            bool signatureResult = sign.verify(tempKeyData, signatureData);
+            if(!signatureResult) return false;
+
+            userName = keyParts.at(2);
+
+            auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(3));
+            if(lifeEnds - BaseLib::HelperFunctions::getTimeSeconds() < 0) return false;
+
+            if(!GD::bl->db->userNameExists(userName)) return false;
+
+            newKey = generateOauthKey(userName, privateKey, publicKey, "access", tokenLifetime);
+            newRefreshKey = generateOauthKey(userName, privateKey, publicKey, "refresh", refreshTokenLifetime);
+            
+            return true;
+        }
+        catch(std::exception& ex)
+        {
+            GD::out.printError("Error refreshing OAuth key for user: " + std::string(ex.what()));
+        }
+        catch(...)
+        {
+            GD::out.printError("Unknown error refreshing OAuth key for user.");
+        }
+        return false;
+    }
+// }}}
