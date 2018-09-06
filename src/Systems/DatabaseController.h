@@ -157,10 +157,14 @@ public:
 		virtual bool deleteUser(uint64_t userId);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getPassword(const std::string& name);
 		virtual uint64_t getUserId(const std::string& name);
+		virtual int64_t getUserKeyIndex1(uint64_t userId);
+        virtual int64_t getUserKeyIndex2(uint64_t userId);
         virtual BaseLib::PVariable getUserMetadata(uint64_t userId);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
 		virtual std::vector<uint64_t> getUsersGroups(uint64_t userId);
 		virtual bool updateUser(uint64_t userId, const std::vector<uint8_t>& passwordHash, const std::vector<uint8_t>& salt, const std::vector<uint64_t>& groups);
+		virtual void setUserKeyIndex1(uint64_t userId, int64_t keyIndex);
+        virtual void setUserKeyIndex2(uint64_t userId, int64_t keyIndex);
         virtual BaseLib::PVariable setUserMetadata(uint64_t userId, BaseLib::PVariable metadata);
 		virtual bool userNameExists(const std::string& name);
 	// }}}

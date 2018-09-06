@@ -297,6 +297,21 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 // {{{ OAuth
     std::string User::generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime)
     {
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        int64_t keyIndex = 0;
+        if(type == "access")
+        {
+            keyIndex = GD::bl->db->getUserKeyIndex1(userId);
+            while(keyIndex == 0) keyIndex++;
+            GD::bl->db->setUserKeyIndex1(userId, keyIndex);
+        }
+        else if(type == "refresh")
+        {
+            keyIndex = GD::bl->db->getUserKeyIndex2(userId);
+            while(keyIndex == 0) keyIndex++;
+            GD::bl->db->setUserKeyIndex2(userId, keyIndex);
+        }
+
         BaseLib::Security::Sign sign(privateKey, publicKey);
 
         auto randomBytes = BaseLib::HelperFunctions::getRandomBytes(32);
@@ -307,6 +322,8 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
         tempKey.append(type);
         tempKey.push_back(',');
         tempKey.append(userName);
+        tempKey.push_back(',');
+        tempKey.append(std::to_string(keyIndex));
         tempKey.push_back(',');
         tempKey.append(std::to_string(BaseLib::HelperFunctions::getTimeSeconds() + lifetime));
         std::vector<char> tempKey2(tempKey.begin(), tempKey.end());
@@ -346,10 +363,14 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
     {
         try
         {
+            uint64_t userId = GD::bl->db->getUserId(userName);
+            if(userId == 0) return false;
+            int64_t keyIndex = GD::bl->db->getUserKeyIndex1(userId);
+
             std::string decodedKey;
             BaseLib::Base64::decode(key, decodedKey);
             auto keyParts = BaseLib::HelperFunctions::splitAll(decodedKey, ',');
-            if(keyParts.size() < 5) return false;
+            if(keyParts.size() < 6) return false;
 
             if(keyParts.at(1) != "access") return false;
 
@@ -362,10 +383,12 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
             tempKey.append(keyParts.at(2));
             tempKey.push_back(',');
             tempKey.append(keyParts.at(3));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(4));
             std::vector<char> tempKeyData(tempKey.begin(), tempKey.end());
 
             std::vector<char> signatureData;
-            BaseLib::Base64::decode(keyParts.at(4), signatureData);
+            BaseLib::Base64::decode(keyParts.at(5), signatureData);
 
             BaseLib::Security::Sign sign(privateKey, publicKey);
             bool signatureResult = sign.verify(tempKeyData, signatureData);
@@ -373,8 +396,9 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 
             userName = keyParts.at(2);
 
-            auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(3));
+            if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber(keyParts.at(3))) return false;
 
+            auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(4));
             return lifeEnds - BaseLib::HelperFunctions::getTimeSeconds() > 0;
         }
         catch(std::exception& ex)
@@ -392,10 +416,14 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
     {
         try
         {
+            uint64_t userId = GD::bl->db->getUserId(userName);
+            if(userId == 0) return false;
+            int64_t keyIndex = GD::bl->db->getUserKeyIndex2(userId);
+
             std::string decodedKey;
             BaseLib::Base64::decode(refreshKey, decodedKey);
             auto keyParts = BaseLib::HelperFunctions::splitAll(decodedKey, ',');
-            if(keyParts.size() < 5) return false;
+            if(keyParts.size() < 6) return false;
 
             if(keyParts.at(1) != "refresh") return false;
 
@@ -408,10 +436,12 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
             tempKey.append(keyParts.at(2));
             tempKey.push_back(',');
             tempKey.append(keyParts.at(3));
+            tempKey.push_back(',');
+            tempKey.append(keyParts.at(4));
             std::vector<char> tempKeyData(tempKey.begin(), tempKey.end());
 
             std::vector<char> signatureData;
-            BaseLib::Base64::decode(keyParts.at(4), signatureData);
+            BaseLib::Base64::decode(keyParts.at(5), signatureData);
 
             BaseLib::Security::Sign sign(privateKey, publicKey);
             bool signatureResult = sign.verify(tempKeyData, signatureData);
@@ -419,7 +449,9 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 
             userName = keyParts.at(2);
 
-            auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(3));
+            if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber(keyParts.at(3))) return false;
+
+            auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(4));
             if(lifeEnds - BaseLib::HelperFunctions::getTimeSeconds() < 0) return false;
 
             if(!GD::bl->db->userNameExists(userName)) return false;

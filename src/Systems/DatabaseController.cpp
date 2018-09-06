@@ -101,7 +101,7 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS licenseVariables (variableID INTEGER PRIMARY KEY UNIQUE, moduleID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS licenseVariablesIndex ON licenseVariables (variableID, moduleID, variableIndex)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL, groups BLOB NOT NULL, metadata BLOB NOT NULL)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL, groups BLOB NOT NULL, metadata BLOB NOT NULL, keyIndex1 INTEGER, keyIndex2 INTEGER)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS groups (id INTEGER PRIMARY KEY UNIQUE, translations BLOB NOT NULL, acl BLOB NOT NULL)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS groupsIndex ON groups (id)");
@@ -349,7 +349,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.5")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.6")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -427,7 +427,7 @@ bool DatabaseController::convertDatabase()
 		int64_t versionId = result->at(0).at(0)->intValue;
 		std::string version = result->at(0).at(3)->textValue;
 
-		if(version == "0.7.5") return false; //Up to date
+		if(version == "0.7.6") return false; //Up to date
 		/*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -721,8 +721,27 @@ bool DatabaseController::convertDatabase()
 
 			version = "0.7.5";
 		}
+		if(version == "0.7.5")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.6...");
 
-        if(version != "0.7.5")
+			data.clear();
+            _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex1 INTEGER");
+            _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex2 INTEGER");
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.6")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+			version = "0.7.6";
+		}
+
+        if(version != "0.7.6")
         {
             GD::out.printCritical("Critical: Unknown database version: " + version);
             return true; //Don't know, what to do
@@ -3393,6 +3412,56 @@ uint64_t DatabaseController::getUserId(const std::string& name)
 	return 0;
 }
 
+int64_t DatabaseController::getUserKeyIndex1(uint64_t userId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(userId)));
+        std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT keyIndex1 FROM users WHERE userID=?", data);
+        if(result->empty()) return 0;
+        return result->at(0).at(0)->intValue;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
+int64_t DatabaseController::getUserKeyIndex2(uint64_t userId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(userId)));
+        std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT keyIndex2 FROM users WHERE userID=?", data);
+        if(result->empty()) return 0;
+        return result->at(0).at(0)->intValue;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
 std::vector<uint64_t> DatabaseController::getUsersGroups(uint64_t userId)
 {
 	try
@@ -3474,6 +3543,56 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(co
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<BaseLib::Database::DataTable>();
+}
+
+void DatabaseController::setUserKeyIndex1(uint64_t userId, int64_t keyIndex)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        if(_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return;
+
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(keyIndex));
+        _db.executeCommand("UPDATE users SET keyIndex1=? WHERE userID=?", data);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void DatabaseController::setUserKeyIndex2(uint64_t userId, int64_t keyIndex)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        if(_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return;
+
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(keyIndex));
+        _db.executeCommand("UPDATE users SET keyIndex2=? WHERE userID=?", data);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 BaseLib::PVariable DatabaseController::setUserMetadata(uint64_t userId, BaseLib::PVariable metadata)
