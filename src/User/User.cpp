@@ -426,7 +426,7 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 
             newKey = generateOauthKey(userName, privateKey, publicKey, "access", tokenLifetime);
             newRefreshKey = generateOauthKey(userName, privateKey, publicKey, "refresh", refreshTokenLifetime);
-            
+
             return true;
         }
         catch(std::exception& ex)
