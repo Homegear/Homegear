@@ -3255,7 +3255,9 @@ bool DatabaseController::createUser(const std::string& name, const std::vector<u
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(salt));
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupBlob));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
-		_db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?, ?, ?)", data);
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+		_db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?, ?, ?, ?, ?)", data);
 		if(userNameExists(name)) return true;
 	}
 	catch(const std::exception& ex)
