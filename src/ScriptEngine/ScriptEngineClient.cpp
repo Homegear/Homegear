@@ -771,7 +771,8 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 	{
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
-		BaseLib::PArray parameters(new BaseLib::Array{headers});
+		auto parameters = std::make_shared<BaseLib::Array>();
+		parameters->emplace_back(std::move(headers));
 		sendRequest(globals->id, globals->peerId, globals->user, globals->language, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)

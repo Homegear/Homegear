@@ -254,6 +254,10 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _localRpcMethods.emplace("getUsersGroups", std::bind(&ScriptEngineServer::getUsersGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	    _localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	    _localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+        _localRpcMethods.emplace("createOauthKeys", std::bind(&ScriptEngineServer::createOauthKeys, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("refreshOauthKey", std::bind(&ScriptEngineServer::refreshOauthKey, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        _localRpcMethods.emplace("verifyOauthKey", std::bind(&ScriptEngineServer::verifyOauthKey, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //}}}
 
     //{{{ Groups
@@ -2875,6 +2879,137 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 			}
 			return BaseLib::Variable::createError(-32500, "Unknown application error.");
 		}
+
+        BaseLib::PVariable ScriptEngineServer::createOauthKeys(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createOauthKeys")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+                if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+                auto userName = BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+                if(!User::exists(userName)) return BaseLib::Variable::createError(-2, "User does not exist.");
+
+                if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+                std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
+                std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
+                if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");
+
+                std::string key;
+                std::string refreshKey;
+                if(!User::oauthCreate(userName, privateKey, publicKey, GD::bl->settings.oauthTokenLifetime(), GD::bl->settings.oauthRefreshTokenLifetime(), key, refreshKey))
+                {
+                    return BaseLib::Variable::createError(-3, "Error generating OAuth keys.");
+                }
+
+                auto oauthResponse = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                oauthResponse->structValue->emplace("token_type", std::make_shared<BaseLib::Variable>("bearer"));
+                oauthResponse->structValue->emplace("access_token", std::make_shared<BaseLib::Variable>(key));
+                oauthResponse->structValue->emplace("expires_in", std::make_shared<BaseLib::Variable>(std::to_string(GD::bl->settings.oauthTokenLifetime())));
+                oauthResponse->structValue->emplace("refresh_token", std::make_shared<BaseLib::Variable>(refreshKey));
+
+                return oauthResponse;
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::refreshOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("refreshOauthKey")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+                if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+                auto refreshKey = parameters->at(0)->stringValue;
+
+                if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+                std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
+                std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
+                if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");
+
+                std::string key;
+                std::string newRefreshKey;
+                std::string userName;
+                if(!User::oauthRefresh(refreshKey, privateKey, publicKey, GD::bl->settings.oauthTokenLifetime(), GD::bl->settings.oauthRefreshTokenLifetime(), key, newRefreshKey, userName))
+                {
+                    return BaseLib::Variable::createError(-3, "Could not refresh access key.");
+                }
+
+                auto oauthResponse = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                oauthResponse->structValue->emplace("token_type", std::make_shared<BaseLib::Variable>("bearer"));
+                oauthResponse->structValue->emplace("access_token", std::make_shared<BaseLib::Variable>(key));
+                oauthResponse->structValue->emplace("expires_in", std::make_shared<BaseLib::Variable>(std::to_string(GD::bl->settings.oauthTokenLifetime())));
+                oauthResponse->structValue->emplace("refresh_token", std::make_shared<BaseLib::Variable>(newRefreshKey));
+                oauthResponse->structValue->emplace("user", std::make_shared<BaseLib::Variable>(userName));
+
+                return oauthResponse;
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
+
+        BaseLib::PVariable ScriptEngineServer::verifyOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+        {
+            try
+            {
+                if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("verifyOauthKey")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+                if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+                auto key = parameters->at(0)->stringValue;
+
+                if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+                std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
+                std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
+                if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");
+
+                std::string userName;
+                if(!User::oauthVerify(key, privateKey, publicKey, userName)) return std::make_shared<BaseLib::Variable>(false);
+
+                return std::make_shared<BaseLib::Variable>(userName);
+            }
+            catch(const std::exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(BaseLib::Exception& ex)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+            }
+            catch(...)
+            {
+                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+            }
+            return BaseLib::Variable::createError(-32500, "Unknown application error.");
+        }
 	// }}}
 
     // {{{ Group methods

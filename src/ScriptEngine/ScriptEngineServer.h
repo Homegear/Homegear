@@ -191,6 +191,10 @@ private:
 			BaseLib::PVariable updateUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 			BaseLib::PVariable userExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 			BaseLib::PVariable listUsers(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+
+			BaseLib::PVariable createOauthKeys(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable refreshOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+			BaseLib::PVariable verifyOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
 		// }}}
 
         // {{{ Group methods

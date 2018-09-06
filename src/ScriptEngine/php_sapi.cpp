@@ -450,7 +450,7 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 	if(!sapi_headers || !SEG(sendHeadersCallback)) return SAPI_HEADER_SEND_FAILED;
 	BaseLib::PVariable headers(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 	if(!SEG(webRequest)) return SAPI_HEADER_SENT_SUCCESSFULLY;
-	headers->structValue->insert(BaseLib::StructElement("RESPONSE_CODE", BaseLib::PVariable(new BaseLib::Variable(sapi_headers->http_response_code))));
+	headers->structValue->emplace("RESPONSE_CODE", std::make_shared<BaseLib::Variable>(sapi_headers->http_response_code));
 	zend_llist_element* element = sapi_headers->headers.head;
 	while(element)
 	{
@@ -467,7 +467,18 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 			temp = "Content-Type: text/html; charset=UTF-8";
 		}
 		std::pair<std::string, std::string> dataPair = BaseLib::HelperFunctions::splitFirst(temp, ':');
-		headers->structValue->insert(BaseLib::StructElement(BaseLib::HelperFunctions::trim(dataPair.first), BaseLib::PVariable(new BaseLib::Variable(BaseLib::HelperFunctions::trim(dataPair.second)))));
+		BaseLib::HelperFunctions::trim(dataPair.first);
+		auto headerIterator = headers->structValue->find(dataPair.first);
+		if(headerIterator == headers->structValue->end())
+		{
+			auto headerElement = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			headerElement->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(dataPair.second));
+			headers->structValue->emplace(dataPair.first, headerElement);
+		}
+		else
+		{
+			headerIterator->second->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(dataPair.second));
+		}
 		element = element->next;
 	}
 	SEG(sendHeadersCallback)(headers);

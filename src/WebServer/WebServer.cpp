@@ -666,9 +666,9 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
 
 		{
 			std::lock_guard<std::mutex> sendHeaderGuard(_sendHeaderHookMutex);
-			for(std::map<std::string, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>>::iterator i = _sendHeaderHooks.begin(); i != _sendHeaderHooks.end(); ++i)
+			for(auto& hook : _sendHeaderHooks)
 			{
-				i->second(scriptInfo->http, headers);
+				hook.second(scriptInfo->http, headers);
 			}
 		}
 
@@ -681,10 +681,13 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
             output.append("Content-Encoding: gzip\r\n");
         }
 
-		for(BaseLib::Struct::iterator i = headers->structValue->begin(); i != headers->structValue->end(); ++i)
+		for(auto& headerArray : *headers->structValue)
 		{
-			if(output.size() + i->first.size() + i->second->stringValue.size() + 6 > output.capacity()) output.reserve(output.capacity() + 1024);
-			output.append(i->first + ": " + i->second->stringValue + "\r\n");
+			for(auto& header : *headerArray.second->arrayValue)
+			{
+				if(output.size() + headerArray.first.size() + header->stringValue.size() + 6 > output.capacity()) output.reserve(output.capacity() + 1024 + headerArray.first.size() + header->stringValue.size() + 6);
+				output.append(headerArray.first + ": " + header->stringValue + "\r\n");
+			}
 		}
 
 		output.append("\r\n");

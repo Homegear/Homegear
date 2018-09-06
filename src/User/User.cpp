@@ -363,10 +363,6 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
     {
         try
         {
-            uint64_t userId = GD::bl->db->getUserId(userName);
-            if(userId == 0) return false;
-            int64_t keyIndex = GD::bl->db->getUserKeyIndex1(userId);
-
             std::string decodedKey;
             BaseLib::Base64::decode(key, decodedKey);
             auto keyParts = BaseLib::HelperFunctions::splitAll(decodedKey, ',');
@@ -396,6 +392,9 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 
             userName = keyParts.at(2);
 
+            uint64_t userId = GD::bl->db->getUserId(userName);
+            if(userId == 0) return false;
+            int64_t keyIndex = GD::bl->db->getUserKeyIndex1(userId);
             if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber(keyParts.at(3))) return false;
 
             auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(4));
@@ -416,10 +415,6 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
     {
         try
         {
-            uint64_t userId = GD::bl->db->getUserId(userName);
-            if(userId == 0) return false;
-            int64_t keyIndex = GD::bl->db->getUserKeyIndex2(userId);
-
             std::string decodedKey;
             BaseLib::Base64::decode(refreshKey, decodedKey);
             auto keyParts = BaseLib::HelperFunctions::splitAll(decodedKey, ',');
@@ -449,6 +444,9 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 
             userName = keyParts.at(2);
 
+            uint64_t userId = GD::bl->db->getUserId(userName);
+            if(userId == 0) return false;
+            int64_t keyIndex = GD::bl->db->getUserKeyIndex2(userId);
             if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber(keyParts.at(3))) return false;
 
             auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(4));
