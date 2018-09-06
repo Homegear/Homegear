@@ -67,11 +67,13 @@ public:
 	static bool getAll(std::map<uint64_t, UserInfo>& users);
 
     // {{{ OAuth
-        static std::string generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime);
         static bool oauthCreate(const std::string& userName, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey);
         static bool oauthVerify(const std::string& key, const std::string& privateKey, const std::string& publicKey, std::string& userName);
         static bool oauthRefresh(const std::string& refreshKey, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey, std::string& userName);
     // }}}
+
+private:
+    static std::string generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime);
 };
 
 #endif
