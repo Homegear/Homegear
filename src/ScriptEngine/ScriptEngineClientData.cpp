@@ -33,6 +33,9 @@
 #include "ScriptEngineClientData.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 namespace ScriptEngine
 {
 
@@ -55,6 +58,8 @@ ScriptEngineClientData::ScriptEngineClientData(std::shared_ptr<BaseLib::FileDesc
 
 ScriptEngineClientData::~ScriptEngineClientData()
 {
+}
+
 }
 
 }

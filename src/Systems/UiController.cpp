@@ -31,6 +31,9 @@
 #include "UiController.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 UiController::UiController()
 {
     _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
@@ -54,7 +57,7 @@ void UiController::load()
         for(auto& row : *rows)
         {
             auto uiElement = std::make_shared<UiElement>();
-            uiElement->databaseId = (uint64_t)row.second.at(0)->intValue;
+            uiElement->databaseId = (uint64_t) row.second.at(0)->intValue;
             uiElement->elementId = row.second.at(1)->textValue;
             uiElement->data = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
 
@@ -153,7 +156,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto peerIdIterator = peerElement->structValue->find("peer");
                         if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
-                        variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
+                        variableInfo->peerId = (uint64_t) peerIdIterator->second->integerValue64;
 
                         auto channelIterator = peerElement->structValue->find("channel");
                         if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
@@ -175,7 +178,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
-                        variableInfo->peerId = (uint64_t)peerElement->integerValue64;
+                        variableInfo->peerId = (uint64_t) peerElement->integerValue64;
                     }
                     else continue;
 
@@ -202,7 +205,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto peerIdIterator = peerElement->structValue->find("peer");
                         if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
 
-                        variableInfo->peerId = (uint64_t)peerIdIterator->second->integerValue64;
+                        variableInfo->peerId = (uint64_t) peerIdIterator->second->integerValue64;
 
                         auto channelIterator = peerElement->structValue->find("channel");
                         if(channelIterator != peerElement->structValue->end()) variableInfo->channel = channelIterator->second->integerValue;
@@ -218,7 +221,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                     }
                     else if(peerElement->integerValue64 != 0)
                     {
-                        variableInfo->peerId = (uint64_t)peerElement->integerValue64;
+                        variableInfo->peerId = (uint64_t) peerElement->integerValue64;
                     }
                     else continue;
 
@@ -229,14 +232,14 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
         }
 
         dataIterator = data->structValue->find("room");
-        if(dataIterator != data->structValue->end()) uiElement->roomId = (uint64_t)dataIterator->second->integerValue64;
+        if(dataIterator != data->structValue->end()) uiElement->roomId = (uint64_t) dataIterator->second->integerValue64;
 
         dataIterator = data->structValue->find("categories");
         if(dataIterator != data->structValue->end())
         {
             for(auto& categoryElement : *dataIterator->second->arrayValue)
             {
-                uiElement->categoryIds.emplace((uint64_t)categoryElement->integerValue64);
+                uiElement->categoryIds.emplace((uint64_t) categoryElement->integerValue64);
             }
         }
     }
@@ -374,21 +377,21 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
             elementInfo->structValue->emplace("categories", categories);
 
             //{{{ value
-                //Simple
-                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
-                else //Complex
+            //Simple
+            auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+            else //Complex
+            {
+                auto controlsIterator = elementInfo->structValue->find("controls");
+                if(controlsIterator != elementInfo->structValue->end())
                 {
-                    auto controlsIterator = elementInfo->structValue->find("controls");
-                    if(controlsIterator != elementInfo->structValue->end())
+                    for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        for(auto& control : *controlsIterator->second->arrayValue)
-                        {
-                            auto variableInputsIterator = control->structValue->find("variableInputs");
-                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
-                        };
-                    }
+                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                    };
                 }
+            }
             //}}}
 
             auto dataIterator = uiElement.second->data->structValue->find("metadata");
@@ -485,21 +488,21 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
             elementInfo->structValue->emplace("categories", categories);
 
             //{{{ value
-                //Simple
-                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
-                else //Complex
+            //Simple
+            auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+            else //Complex
+            {
+                auto controlsIterator = elementInfo->structValue->find("controls");
+                if(controlsIterator != elementInfo->structValue->end())
                 {
-                    auto controlsIterator = elementInfo->structValue->find("controls");
-                    if(controlsIterator != elementInfo->structValue->end())
+                    for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        for(auto& control : *controlsIterator->second->arrayValue)
-                        {
-                            auto variableInputsIterator = control->structValue->find("variableInputs");
-                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
-                        }
+                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
                     }
                 }
+            }
             //}}}
 
             uiElements->arrayValue->emplace_back(elementInfo);
@@ -563,21 +566,21 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
             elementInfo->structValue->emplace("categories", categories);
 
             //{{{ value
-                //Simple
-                auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-                if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
-                else //Complex
+            //Simple
+            auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+            else //Complex
+            {
+                auto controlsIterator = elementInfo->structValue->find("controls");
+                if(controlsIterator != elementInfo->structValue->end())
                 {
-                    auto controlsIterator = elementInfo->structValue->find("controls");
-                    if(controlsIterator != elementInfo->structValue->end())
+                    for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        for(auto& control : *controlsIterator->second->arrayValue)
-                        {
-                            auto variableInputsIterator = control->structValue->find("variableInputs");
-                            if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
-                        }
+                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
                     }
                 }
+            }
             //}}}
 
             uiElements->arrayValue->emplace_back(elementInfo);
@@ -615,7 +618,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
                 auto central = family.second->getCentral();
                 if(!central) continue;
 
-                auto peer = central->getPeer((uint64_t)variableInput->peerId);
+                auto peer = central->getPeer((uint64_t) variableInput->peerId);
                 if(!peer) continue;
 
                 if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
@@ -630,7 +633,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
                 auto central = family.second->getCentral();
                 if(!central) continue;
 
-                auto peer = central->getPeer((uint64_t)variableOutput->peerId);
+                auto peer = central->getPeer((uint64_t) variableOutput->peerId);
                 if(!peer) continue;
 
                 if(!clientInfo->acls->checkDeviceWriteAccess(peer)) return false;
@@ -715,4 +718,6 @@ BaseLib::PVariable UiController::removeUiElement(BaseLib::PRpcClientInfo clientI
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 }

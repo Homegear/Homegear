@@ -35,6 +35,9 @@
 
 #include <homegear-node/INode.h>
 
+namespace Homegear
+{
+
 class SimplePhpNode : public Flows::INode
 {
 private:
@@ -45,6 +48,8 @@ public:
 
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 };
+
+}
 
 #endif
 #endif

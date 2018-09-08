@@ -40,14 +40,23 @@
 #include "RpcClient.h"
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace Rpc
 {
+
+
 class Client
 {
 public:
 	struct Hint
 	{
-		enum Enum { updateHintAll = 0, updateHintLinks = 1 };
+		enum Enum
+		{
+			updateHintAll = 0,
+			updateHintLinks = 1
+		};
 	};
 
 	struct EventInfo
@@ -61,38 +70,67 @@ public:
 	};
 
 	Client();
+
 	virtual ~Client();
+
 	void dispose();
+
 	void init();
+
 	bool lifetick();
 
 	void disconnectRega();
+
 	void initServerMethods(std::pair<std::string, std::string> address);
+
 	void broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value);
+
 	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::string& deviceAddress, std::shared_ptr<std::vector<std::string>>& valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
+
 	void systemListMethods(std::pair<std::string, std::string>& address);
+
 	void listDevices(std::pair<std::string, std::string>& address);
+
 	void broadcastError(int32_t level, std::string message);
+
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+
 	void broadcastNewEvent(BaseLib::PVariable eventDescription);
+
 	void broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
+
 	void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
+
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
+
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
+
 	void sendUnknownDevices(std::pair<std::string, std::string>& address);
+
 	void sendError(std::pair<std::string, std::string> address, int32_t level, std::string message);
+
 	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string path, std::string id);
+
 	std::shared_ptr<RemoteRpcServer> addSingleConnectionServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string id);
+
 	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, BaseLib::PRpcClientInfo clientInfo, std::string address, bool nodeEvents);
+
 	void removeServer(std::pair<std::string, std::string> address);
+
 	void removeServer(int32_t uid);
+
 	std::shared_ptr<RemoteRpcServer> getServer(std::pair<std::string, std::string>);
+
 	BaseLib::PVariable listClientServers(std::string id);
+
 	BaseLib::PVariable clientServerInitialized(std::string id);
+
 	void reset();
 
 	BaseLib::PVariable getLastEvents(std::set<uint64_t> ids, uint32_t timespan);
+
 	BaseLib::PVariable getNodeEvents();
+
 private:
 	bool _disposing = false;
 	std::shared_ptr<RpcClient> _client;
@@ -113,8 +151,12 @@ private:
 	std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> _nodeEventCache;
 
 	void collectGarbage();
+
 	std::string getIPAddress(std::string address);
 };
 
 }
+
+}
+
 #endif

@@ -31,6 +31,9 @@
 #include "NodeBlueClientData.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -51,6 +54,8 @@ NodeBlueClientData::NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> 
 
 NodeBlueClientData::~NodeBlueClientData()
 {
+}
+
 }
 
 }

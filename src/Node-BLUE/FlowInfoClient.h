@@ -34,6 +34,9 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-node/NodeInfo.h>
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -43,19 +46,24 @@ public:
 	int32_t id = 0;
 
 	// {{{ Input parameters
-		Flows::PVariable flow;
+	Flows::PVariable flow;
 	// }}}
 
 	std::unordered_map<std::string, Flows::PNodeInfo> nodes;
 
 	FlowInfoClient() {}
+
 	virtual ~FlowInfoClient() {}
+
 protected:
 };
 
 typedef std::shared_ptr<FlowInfoClient> PFlowInfoClient;
 
 }
+
+}
+
 #endif
 
 

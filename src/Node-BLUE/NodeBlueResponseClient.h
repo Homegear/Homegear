@@ -35,6 +35,9 @@
 
 #include <atomic>
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -52,6 +55,8 @@ public:
 };
 
 typedef std::shared_ptr<NodeBlueResponseClient> PNodeBlueResponseClient;
+
+}
 
 }
 

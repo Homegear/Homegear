@@ -33,6 +33,9 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -50,6 +53,8 @@ public:
 };
 
 typedef std::shared_ptr<NodeBlueResponseServer> PNodeBlueResponseServer;
+
+}
 
 }
 

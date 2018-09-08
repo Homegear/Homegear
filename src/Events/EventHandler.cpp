@@ -34,6 +34,9 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 EventHandler::EventHandler() : BaseLib::IQueue(GD::bl.get(), 1, 1000)
 {
 	_disposing = false;
@@ -42,7 +45,7 @@ EventHandler::EventHandler() : BaseLib::IQueue(GD::bl.get(), 1, 1000)
 	_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
 	_dummyClientInfo->scriptEngineServer = true;
 	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
-	std::vector<uint64_t> groups{ 5 };
+	std::vector<uint64_t> groups{5};
 	_dummyClientInfo->acls->fromGroups(groups);
 	_dummyClientInfo->user = "SYSTEM (5)";
 }
@@ -93,7 +96,7 @@ void EventHandler::mainThread()
 				_eventsMutex.unlock();
 				if(event->enabled)
 				{
-					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(event->name, event->eventMethod,  event->eventMethodParameters));
+					std::shared_ptr<BaseLib::IQueueEntry> queueEntry(new QueueEntry(event->name, event->eventMethod, event->eventMethodParameters));
 					enqueue(0, queueEntry);
 					event->lastRaised = currentTime;
 				}
@@ -121,7 +124,7 @@ void EventHandler::mainThread()
 					while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 					_timedEvents[nextExecution] = event;
 					_eventsMutex.unlock();
-					if(event->enabled) GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+					if(event->enabled) GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t) event->type, event->peerID, event->peerChannel, event->variable);
 				}
 				else removeTimedEvent(event->id);
 			}
@@ -136,7 +139,7 @@ void EventHandler::mainThread()
 				event->lastReset = currentTime;
 				removeEventToReset(event->id);
 				save(event);
-				GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+				GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t) event->type, event->peerID, event->peerChannel, event->variable);
 			}
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
 			{
@@ -147,7 +150,7 @@ void EventHandler::mainThread()
 				event->lastReset = currentTime;
 				event->currentTime = 0;
 				save(event);
-				GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+				GD::rpcClient->broadcastUpdateEvent(event->name, (int32_t) event->type, event->peerID, event->peerChannel, event->variable);
 			}
 			else
 			{
@@ -186,7 +189,7 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 		if(eventDescription->structValue->find("TYPE") == eventDescription->structValue->end()) return BaseLib::Variable::createError(-5, "No type specified.");
 
 		std::shared_ptr<Event> event(new Event());
-		event->type = (Event::Type::Enum)eventDescription->structValue->at("TYPE")->integerValue;
+		event->type = (Event::Type::Enum) eventDescription->structValue->at("TYPE")->integerValue;
 		event->name = eventDescription->structValue->at("ID")->stringValue;
 		if(event->name.size() > 100) return BaseLib::Variable::createError(-5, "Event ID is too long.");
 		bool replace = false;
@@ -217,10 +220,10 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 			event->variable = eventDescription->structValue->at("VARIABLE")->stringValue;
 			if(event->variable.size() > 100) return BaseLib::Variable::createError(-5, "Variable string is too long.");
 			if(eventDescription->structValue->find("TRIGGER") == eventDescription->structValue->end()) return BaseLib::Variable::createError(-5, "No trigger specified.");
-			event->trigger = (Event::Trigger::Enum)eventDescription->structValue->at("TRIGGER")->integerValue;
+			event->trigger = (Event::Trigger::Enum) eventDescription->structValue->at("TRIGGER")->integerValue;
 			if(eventDescription->structValue->find("TRIGGERVALUE") != eventDescription->structValue->end())
 				event->triggerValue = eventDescription->structValue->at("TRIGGERVALUE");
-			if((int32_t)event->trigger >= (int32_t)Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == BaseLib::VariableType::tVoid)) return BaseLib::Variable::createError(-5, "No trigger value specified.");
+			if((int32_t) event->trigger >= (int32_t) Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == BaseLib::VariableType::tVoid)) return BaseLib::Variable::createError(-5, "No trigger value specified.");
 
 			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end() && (eventDescription->structValue->at("RESETAFTER")->integerValue > 0 || eventDescription->structValue->at("RESETAFTER")->type == BaseLib::VariableType::tStruct))
 			{
@@ -234,15 +237,15 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 
 				if(eventDescription->structValue->at("RESETAFTER")->type == BaseLib::VariableType::tInteger)
 				{
-					event->resetAfter = ((uint64_t)eventDescription->structValue->at("RESETAFTER")->integerValue) * 1000;
+					event->resetAfter = ((uint64_t) eventDescription->structValue->at("RESETAFTER")->integerValue) * 1000;
 				}
 				else if(eventDescription->structValue->at("RESETAFTER")->type == BaseLib::VariableType::tStruct)
 				{
 					BaseLib::PVariable resetStruct = eventDescription->structValue->at("RESETAFTER");
 					if(resetStruct->structValue->find("INITIALTIME") == resetStruct->structValue->end() || resetStruct->structValue->at("INITIALTIME")->integerValue == 0) return BaseLib::Variable::createError(-5, "Initial time in reset struct not specified.");
-					event->initialTime = ((uint64_t)resetStruct->structValue->at("INITIALTIME")->integerValue) * 1000;
+					event->initialTime = ((uint64_t) resetStruct->structValue->at("INITIALTIME")->integerValue) * 1000;
 					if(resetStruct->structValue->find("OPERATION") != resetStruct->structValue->end())
-						event->operation = (Event::Operation::Enum)resetStruct->structValue->at("OPERATION")->integerValue;
+						event->operation = (Event::Operation::Enum) resetStruct->structValue->at("OPERATION")->integerValue;
 					if(resetStruct->structValue->find("FACTOR") != resetStruct->structValue->end())
 					{
 						event->factor = resetStruct->structValue->at("FACTOR")->floatValue;
@@ -251,10 +254,10 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 					if(resetStruct->structValue->find("LIMIT") != resetStruct->structValue->end())
 					{
 						if(resetStruct->structValue->at("LIMIT")->integerValue < 0) return BaseLib::Variable::createError(-5, "Limit is negative. Please provide a positive value");
-						event->limit = ((uint64_t)resetStruct->structValue->at("LIMIT")->integerValue) * 1000;
+						event->limit = ((uint64_t) resetStruct->structValue->at("LIMIT")->integerValue) * 1000;
 					}
 					if(resetStruct->structValue->find("RESETAFTER") != resetStruct->structValue->end())
-						event->resetAfter = ((uint64_t)resetStruct->structValue->at("RESETAFTER")->integerValue) * 1000;
+						event->resetAfter = ((uint64_t) resetStruct->structValue->at("RESETAFTER")->integerValue) * 1000;
 					if(event->resetAfter == 0) return BaseLib::Variable::createError(-5, "RESETAFTER is not specified or 0.");
 				}
 			}
@@ -265,12 +268,12 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 		else
 		{
 			if(eventDescription->structValue->find("EVENTTIME") != eventDescription->structValue->end())
-				event->eventTime = ((uint64_t)eventDescription->structValue->at("EVENTTIME")->integerValue) * 1000;
+				event->eventTime = ((uint64_t) eventDescription->structValue->at("EVENTTIME")->integerValue) * 1000;
 			if(event->eventTime == 0) event->eventTime = BaseLib::HelperFunctions::getTimeSeconds();
 			if(eventDescription->structValue->find("ENDTIME") != eventDescription->structValue->end())
-				event->endTime = ((uint64_t)eventDescription->structValue->at("ENDTIME")->integerValue) * 1000;
+				event->endTime = ((uint64_t) eventDescription->structValue->at("ENDTIME")->integerValue) * 1000;
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
-				event->recurEvery = ((uint64_t)eventDescription->structValue->at("RECUREVERY")->integerValue) * 1000;
+				event->recurEvery = ((uint64_t) eventDescription->structValue->at("RECUREVERY")->integerValue) * 1000;
 			uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
 
 			{
@@ -293,18 +296,18 @@ BaseLib::PVariable EventHandler::add(BaseLib::PVariable eventDescription)
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable EventHandler::list(int32_t type, uint64_t peerID, int32_t peerChannel, std::string variable)
@@ -359,19 +362,19 @@ BaseLib::PVariable EventHandler::list(int32_t type, uint64_t peerID, int32_t pee
 		return eventList;
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable EventHandler::get(std::string name)
@@ -384,19 +387,19 @@ BaseLib::PVariable EventHandler::get(std::string name)
 		return getEventDescription(event);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable EventHandler::getEventDescription(std::shared_ptr<Event> event)
@@ -408,28 +411,28 @@ BaseLib::PVariable EventHandler::getEventDescription(std::shared_ptr<Event> even
 		BaseLib::PVariable eventDescription(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 		if(event->type == Event::Type::timed)
 		{
-			eventDescription->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable((int32_t)event->type))));
+			eventDescription->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable((int32_t) event->type))));
 			eventDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable(event->name))));
 			eventDescription->structValue->insert(BaseLib::StructElement("ENABLED", BaseLib::PVariable(new BaseLib::Variable(event->enabled))));
-			eventDescription->structValue->insert(BaseLib::StructElement("EVENTTIME", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->eventTime / 1000)))));
+			eventDescription->structValue->insert(BaseLib::StructElement("EVENTTIME", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->eventTime / 1000)))));
 			if(event->recurEvery > 0)
 			{
-				eventDescription->structValue->insert(BaseLib::StructElement("RECUREVERY", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->recurEvery / 1000)))));
-				if(event->endTime > 0) eventDescription->structValue->insert(BaseLib::StructElement("ENDTIME", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->endTime / 1000)))));
+				eventDescription->structValue->insert(BaseLib::StructElement("RECUREVERY", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->recurEvery / 1000)))));
+				if(event->endTime > 0) eventDescription->structValue->insert(BaseLib::StructElement("ENDTIME", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->endTime / 1000)))));
 			}
 			eventDescription->structValue->insert(BaseLib::StructElement("EVENTMETHOD", BaseLib::PVariable(new BaseLib::Variable(event->eventMethod))));
 			if(event->eventMethodParameters) eventDescription->structValue->insert(BaseLib::StructElement("EVENTMETHODPARAMS", event->eventMethodParameters));
-			eventDescription->structValue->insert(BaseLib::StructElement("LASTRAISED", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->lastRaised / 1000)))));
+			eventDescription->structValue->insert(BaseLib::StructElement("LASTRAISED", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->lastRaised / 1000)))));
 		}
 		else
 		{
-			eventDescription->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable((int32_t)event->type))));
+			eventDescription->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable((int32_t) event->type))));
 			eventDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable(event->name))));
 			eventDescription->structValue->insert(BaseLib::StructElement("ENABLED", BaseLib::PVariable(new BaseLib::Variable(event->enabled))));
-			eventDescription->structValue->insert(BaseLib::StructElement("PEERID", BaseLib::PVariable(new BaseLib::Variable((uint32_t)event->peerID))));
+			eventDescription->structValue->insert(BaseLib::StructElement("PEERID", BaseLib::PVariable(new BaseLib::Variable((uint32_t) event->peerID))));
 			if(event->peerChannel > -1) eventDescription->structValue->insert(BaseLib::StructElement("PEERCHANNEL", BaseLib::PVariable(new BaseLib::Variable(event->peerChannel))));
 			eventDescription->structValue->insert(BaseLib::StructElement("VARIABLE", BaseLib::PVariable(new BaseLib::Variable(event->variable))));
-			eventDescription->structValue->insert(BaseLib::StructElement("TRIGGER", BaseLib::PVariable(new BaseLib::Variable((int32_t)event->trigger))));
+			eventDescription->structValue->insert(BaseLib::StructElement("TRIGGER", BaseLib::PVariable(new BaseLib::Variable((int32_t) event->trigger))));
 			if(event->triggerValue) eventDescription->structValue->insert(BaseLib::StructElement("TRIGGERVALUE", event->triggerValue));
 			eventDescription->structValue->insert(BaseLib::StructElement("EVENTMETHOD", BaseLib::PVariable(new BaseLib::Variable(event->eventMethod))));
 			if(event->eventMethodParameters) eventDescription->structValue->insert(BaseLib::StructElement("EVENTMETHODPARAMS", event->eventMethodParameters));
@@ -439,38 +442,38 @@ BaseLib::PVariable EventHandler::getEventDescription(std::shared_ptr<Event> even
 				{
 					BaseLib::PVariable resetStruct(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 
-					resetStruct->structValue->insert(BaseLib::StructElement("INITIALTIME", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->initialTime / 1000)))));
-					resetStruct->structValue->insert(BaseLib::StructElement("RESETAFTER", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->resetAfter / 1000)))));
-					resetStruct->structValue->insert(BaseLib::StructElement("OPERATION", BaseLib::PVariable(new BaseLib::Variable((int32_t)event->operation))));
+					resetStruct->structValue->insert(BaseLib::StructElement("INITIALTIME", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->initialTime / 1000)))));
+					resetStruct->structValue->insert(BaseLib::StructElement("RESETAFTER", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->resetAfter / 1000)))));
+					resetStruct->structValue->insert(BaseLib::StructElement("OPERATION", BaseLib::PVariable(new BaseLib::Variable((int32_t) event->operation))));
 					resetStruct->structValue->insert(BaseLib::StructElement("FACTOR", BaseLib::PVariable(new BaseLib::Variable(event->factor))));
-					resetStruct->structValue->insert(BaseLib::StructElement("LIMIT", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->limit / 1000)))));
-					resetStruct->structValue->insert(BaseLib::StructElement("CURRENTTIME", BaseLib::PVariable(new BaseLib::Variable(event->currentTime == 0 ? (uint32_t)(event->initialTime / 1000) : (uint32_t)(event->currentTime / 1000)))));
+					resetStruct->structValue->insert(BaseLib::StructElement("LIMIT", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->limit / 1000)))));
+					resetStruct->structValue->insert(BaseLib::StructElement("CURRENTTIME", BaseLib::PVariable(new BaseLib::Variable(event->currentTime == 0 ? (uint32_t) (event->initialTime / 1000) : (uint32_t) (event->currentTime / 1000)))));
 
 					eventDescription->structValue->insert(BaseLib::StructElement("RESETAFTER", resetStruct));
 				}
-				else eventDescription->structValue->insert(BaseLib::StructElement("RESETAFTER", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->resetAfter / 1000)))));
+				else eventDescription->structValue->insert(BaseLib::StructElement("RESETAFTER", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->resetAfter / 1000)))));
 				eventDescription->structValue->insert(BaseLib::StructElement("RESETMETHOD", BaseLib::PVariable(new BaseLib::Variable(event->resetMethod))));
 				if(event->eventMethodParameters) eventDescription->structValue->insert(BaseLib::StructElement("RESETMETHODPARAMS", event->resetMethodParameters));
-				eventDescription->structValue->insert(BaseLib::StructElement("LASTRESET", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->lastReset / 1000)))));
+				eventDescription->structValue->insert(BaseLib::StructElement("LASTRESET", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->lastReset / 1000)))));
 			}
 			eventDescription->structValue->insert(BaseLib::StructElement("LASTVALUE", event->lastValue));
-			eventDescription->structValue->insert(BaseLib::StructElement("LASTRAISED", BaseLib::PVariable(new BaseLib::Variable((uint32_t)(event->lastRaised / 1000)))));
+			eventDescription->structValue->insert(BaseLib::StructElement("LASTRAISED", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (event->lastRaised / 1000)))));
 		}
 		return eventDescription;
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable EventHandler::remove(std::string name)
@@ -533,24 +536,24 @@ BaseLib::PVariable EventHandler::remove(std::string name)
 		_databaseMutex.lock();
 		GD::bl->db->deleteEvent(name);
 		_databaseMutex.unlock();
-		GD::rpcClient->broadcastDeleteEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+		GD::rpcClient->broadcastDeleteEvent(name, (int32_t) event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    _databaseMutex.unlock();
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	_databaseMutex.unlock();
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable EventHandler::enable(std::string name, bool enabled)
@@ -598,24 +601,24 @@ BaseLib::PVariable EventHandler::enable(std::string name, bool enabled)
 			removeEventToReset(event->id);
 		}
 		save(event);
-		GD::rpcClient->broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+		GD::rpcClient->broadcastUpdateEvent(name, (int32_t) event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    _databaseMutex.unlock();
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	_databaseMutex.unlock();
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable EventHandler::abortReset(std::string name)
@@ -660,20 +663,20 @@ BaseLib::PVariable EventHandler::abortReset(std::string name)
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    _databaseMutex.unlock();
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	_databaseMutex.unlock();
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values)
@@ -685,17 +688,17 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 		enqueue(0, queueEntry);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
@@ -709,18 +712,18 @@ uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
 		return time + (recurEvery - (difference % recurEvery));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return -1;
 }
 
 void EventHandler::trigger(std::string& variable, BaseLib::PVariable& value)
@@ -732,17 +735,17 @@ void EventHandler::trigger(std::string& variable, BaseLib::PVariable& value)
 		enqueue(0, queueEntry);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value)
@@ -754,17 +757,17 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 		enqueue(0, queueEntry);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::processTriggerMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, std::shared_ptr<std::vector<BaseLib::PVariable>>& values)
@@ -777,17 +780,17 @@ void EventHandler::processTriggerMultipleVariables(uint64_t peerID, int32_t chan
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::removeEventToReset(uint32_t id)
@@ -806,18 +809,18 @@ void EventHandler::removeEventToReset(uint32_t id)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
 }
 
 void EventHandler::removeTimeToReset(uint32_t id)
@@ -836,18 +839,18 @@ void EventHandler::removeTimeToReset(uint32_t id)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
 }
 
 void EventHandler::removeTimedEvent(uint32_t id)
@@ -860,7 +863,7 @@ void EventHandler::removeTimedEvent(uint32_t id)
 			if(i->second->id == id)
 			{
 				std::string name = i->second->name;
-				int32_t type = (int32_t)i->second->type;
+				int32_t type = (int32_t) i->second->type;
 				uint64_t peerID = i->second->peerID;
 				int32_t peerChannel = i->second->peerChannel;
 				std::string variable = i->second->variable;
@@ -872,18 +875,18 @@ void EventHandler::removeTimedEvent(uint32_t id)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
 }
 
 bool EventHandler::eventExists(uint32_t id)
@@ -918,19 +921,19 @@ bool EventHandler::eventExists(uint32_t id)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    return false;
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	return false;
 }
 
 bool EventHandler::eventExists(std::string name)
@@ -965,19 +968,19 @@ bool EventHandler::eventExists(std::string name)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    return false;
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	return false;
 }
 
 std::shared_ptr<Event> EventHandler::getEvent(std::string name)
@@ -1012,19 +1015,19 @@ std::shared_ptr<Event> EventHandler::getEvent(std::string name)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    return std::shared_ptr<Event>();
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	return std::shared_ptr<Event>();
 }
 
 BaseLib::PVariable EventHandler::trigger(std::string name)
@@ -1074,24 +1077,24 @@ BaseLib::PVariable EventHandler::trigger(std::string name)
 
 		postTriggerTasks(event, result, currentTime);
 
-		GD::rpcClient->broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
+		GD::rpcClient->broadcastUpdateEvent(name, (int32_t) event->type, event->peerID, event->peerChannel, event->variable);
 		return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventsMutex.unlock();
-    _databaseMutex.unlock();
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_eventsMutex.unlock();
+	_databaseMutex.unlock();
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void EventHandler::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
@@ -1115,17 +1118,17 @@ void EventHandler::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQu
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::processRpcCall(std::string& eventName, std::string& eventMethod, BaseLib::PVariable& eventMethodParameters)
@@ -1142,17 +1145,17 @@ void EventHandler::processRpcCall(std::string& eventName, std::string& eventMeth
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel, std::string& variable, BaseLib::PVariable& value)
@@ -1171,7 +1174,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 			if(channelIterator == peerIterator->second.end()) return;
 			std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variableIterator = channelIterator->second.find(variable);
 			if(variableIterator == channelIterator->second.end()) return;
-			for(std::vector<std::shared_ptr<Event>>::iterator i = variableIterator->second.begin(); i !=  variableIterator->second.end(); ++i)
+			for(std::vector<std::shared_ptr<Event>>::iterator i = variableIterator->second.begin(); i != variableIterator->second.end(); ++i)
 			{
 				//Don't raise the same event multiple times
 				if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 220)) continue;
@@ -1179,7 +1182,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 			}
 		}
 
-		for(std::vector<std::shared_ptr<Event>>::iterator i = triggeredEvents.begin(); i !=  triggeredEvents.end(); ++i)
+		for(std::vector<std::shared_ptr<Event>>::iterator i = triggeredEvents.begin(); i != triggeredEvents.end(); ++i)
 		{
 			BaseLib::PVariable eventMethodParameters(new BaseLib::Variable());
 			*eventMethodParameters = *(*i)->eventMethodParameters;
@@ -1191,7 +1194,7 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 				lastValue = (*i)->lastValue;
 			}
 
-			if(((int32_t)(*i)->trigger) < 8)
+			if(((int32_t) (*i)->trigger) < 8)
 			{
 				//Comparison with previous value
 				if((*i)->trigger == Event::Trigger::updated)
@@ -1321,21 +1324,21 @@ void EventHandler::processTriggerSingleVariable(uint64_t peerID, int32_t channel
 
 			postTriggerTasks(*i, result, currentTime);
 
-			GD::rpcClient->broadcastUpdateEvent((*i)->name, (int32_t)(*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
+			GD::rpcClient->broadcastUpdateEvent((*i)->name, (int32_t) (*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVariable& rpcResult, uint64_t currentTime)
@@ -1364,13 +1367,13 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 
 					_eventsMutex.lock();
 					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
-					_eventsToReset[resetTime] =  event;
+					_eventsToReset[resetTime] = event;
 					_eventsMutex.unlock();
 				}
 				else //Complex reset
 				{
 					removeTimeToReset(event->id);
-					GD::out.printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000)+ " seconds.");
+					GD::out.printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
 					_eventsMutex.lock();
 					while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
 					_timesToReset[resetTime] = event;
@@ -1384,7 +1387,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 					resetTime = currentTime + event->currentTime;
 					_eventsMutex.lock();
 					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
-					_eventsToReset[resetTime] =  event;
+					_eventsToReset[resetTime] = event;
 					_eventsMutex.unlock();
 					GD::out.printInfo("Info: Event \"" + event->name + "\" will be reset in " + std::to_string(event->currentTime / 1000) + " seconds.");
 					if(event->operation == Event::Operation::Enum::addition)
@@ -1448,17 +1451,17 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, BaseLib::PVar
 		save(event);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::load()
@@ -1473,23 +1476,24 @@ void EventHandler::load()
 
 		_databaseMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getEvents();
+        if(!rows->empty()) GD::out.printWarning("Warning: Homegear's event handler is deprecated and will be removed in future versions. Please use Node-BLUE.");
 		_databaseMutex.unlock();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			std::shared_ptr<Event> event(new Event());
 			event->id = row->second.at(0)->intValue;
 			event->name = row->second.at(1)->textValue;
-			event->type = (Event::Type::Enum)row->second.at(2)->intValue;
+			event->type = (Event::Type::Enum) row->second.at(2)->intValue;
 			event->peerID = row->second.at(3)->intValue;
 			event->peerChannel = row->second.at(4)->intValue;
 			event->variable = row->second.at(5)->textValue;
-			event->trigger = (Event::Trigger::Enum)row->second.at(6)->intValue;
+			event->trigger = (Event::Trigger::Enum) row->second.at(6)->intValue;
 			event->triggerValue = _rpcDecoder->decodeResponse(*row->second.at(7)->binaryValue);
 			event->eventMethod = row->second.at(8)->textValue;
 			event->eventMethodParameters = _rpcDecoder->decodeResponse(*row->second.at(9)->binaryValue);
 			event->resetAfter = row->second.at(10)->intValue;
 			event->initialTime = row->second.at(11)->intValue;
-			event->operation = (Event::Operation::Enum)row->second.at(12)->intValue;
+			event->operation = (Event::Operation::Enum) row->second.at(12)->intValue;
 			event->factor = row->second.at(13)->floatValue;
 			event->limit = row->second.at(14)->intValue;
 			event->resetMethod = row->second.at(15)->textValue;
@@ -1532,17 +1536,17 @@ void EventHandler::load()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void EventHandler::save(std::shared_ptr<Event> event)
@@ -1559,11 +1563,11 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		BaseLib::Database::DataRow data;
 		if(event->id > 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->id)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->name)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->type)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t) event->type)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->peerID)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->peerChannel)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->variable)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->trigger)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t) event->trigger)));
 		std::vector<char> value;
 		_rpcEncoder->encodeResponse(event->triggerValue, value);
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
@@ -1572,7 +1576,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->resetAfter)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->initialTime)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->operation)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t) event->operation)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->factor)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->limit)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->resetMethod)));
@@ -1590,16 +1594,19 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		GD::bl->db->saveEventAsynchronous(data);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
+
+}
+
 #endif

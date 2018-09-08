@@ -42,6 +42,9 @@
 #include <mutex>
 #include <map>
 
+namespace Homegear
+{
+
 namespace Rpc
 {
 
@@ -80,10 +83,12 @@ public:
 	int32_t lastPacketSent = -1;
 	std::set<uint64_t> subscribedPeers;
 
-    BaseLib::PRpcClientInfo& getServerClientInfo() { return _serverClientInfo; }
+	BaseLib::PRpcClientInfo& getServerClientInfo() { return _serverClientInfo; }
 
-    RemoteRpcServer(BaseLib::PRpcClientInfo& serverClientInfo);
+	RemoteRpcServer(BaseLib::PRpcClientInfo& serverClientInfo);
+
 	RemoteRpcServer(std::shared_ptr<RpcClient>& client, BaseLib::PRpcClientInfo& serverClientInfo);
+
 	virtual ~RemoteRpcServer();
 
 	/**
@@ -93,19 +98,20 @@ public:
 	 */
 	void queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> method);
 
-    /**
+	/**
      * Invokes a client RPC method.
      * @param methodName
      * @param parameters
      * @return Returns the result of the method call.
      */
-    BaseLib::PVariable invoke(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+	BaseLib::PVariable invoke(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+
 private:
 	std::shared_ptr<RpcClient> _client;
-    BaseLib::PRpcClientInfo _serverClientInfo;
-    std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-    std::shared_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-    std::shared_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
+	BaseLib::PRpcClientInfo _serverClientInfo;
+	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+	std::shared_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+	std::shared_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
 
 	//{{{ Method queue
 	static const int32_t _methodBufferSize = 1000;
@@ -120,11 +126,14 @@ private:
 
 	std::atomic<uint32_t> _droppedEntries;
 	std::atomic<int64_t> _lastQueueFullError;
-    //}}}
+	//}}}
 
 	void processMethods();
+
 	BaseLib::PVariable invokeClientMethod(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
 };
+
+}
 
 }
 

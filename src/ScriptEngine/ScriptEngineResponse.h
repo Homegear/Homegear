@@ -35,6 +35,9 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace ScriptEngine
 {
 
@@ -52,6 +55,8 @@ public:
 };
 
 typedef std::shared_ptr<ScriptEngineResponse> PScriptEngineResponse;
+
+}
 
 }
 

@@ -50,6 +50,9 @@
 #define MQTT_PACKET_PINGRESP 0xD0
 #define MQTT_PACKET_DISCONN  0xE0
 
+namespace Homegear
+{
+
 class Mqtt : public BaseLib::IQueue
 {
 public:
@@ -61,11 +64,15 @@ public:
 	};
 
 	Mqtt();
+
 	virtual ~Mqtt();
 
 	bool enabled() { return _settings.enabled(); }
+
 	void start();
+
 	void stop();
+
 	void loadSettings();
 
 	/**
@@ -104,12 +111,15 @@ public:
 	 * @param values The values of the variables.
 	 */
 	void queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values);
+
 private:
 	class QueueEntrySend : public BaseLib::IQueueEntry
 	{
 	public:
 		QueueEntrySend() {}
+
 		QueueEntrySend(std::shared_ptr<MqttMessage>& message) { this->message = message; }
+
 		virtual ~QueueEntrySend() {}
 
 		std::shared_ptr<MqttMessage> message;
@@ -119,7 +129,9 @@ private:
 	{
 	public:
 		QueueEntryReceived() {}
+
 		QueueEntryReceived(std::vector<char>& data) { this->data = data; }
+
 		virtual ~QueueEntryReceived() {}
 
 		std::vector<char> data;
@@ -132,9 +144,11 @@ private:
 		std::condition_variable conditionVariable;
 		bool mutexReady = false;
 		std::vector<char> response;
+
 		uint8_t getResponseControlByte() { return _responseControlByte; }
 
 		Request(uint8_t responseControlByte) { _responseControlByte = responseControlByte; };
+
 		virtual ~Request() {};
 	private:
 		uint8_t _responseControlByte;
@@ -149,6 +163,7 @@ private:
 		std::vector<char> response;
 
 		RequestByType() {};
+
 		virtual ~RequestByType() {};
 	};
 
@@ -174,14 +189,23 @@ private:
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 
 	Mqtt(const Mqtt&);
+
 	Mqtt& operator=(const Mqtt&);
+
 	void connect();
+
 	void reconnect();
+
 	void disconnect();
+
 	void processMessages();
+
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+
 	std::vector<char> getLengthBytes(uint32_t length);
+
 	uint32_t getLength(std::vector<char> packet, uint32_t& lengthBytes);
+
 	void printConnectionError(char resultCode);
 
 	/**
@@ -191,14 +215,24 @@ private:
 	 * @param data The data to publish.
 	 */
 	void publish(const std::string& topic, const std::vector<char>& data, bool retain);
+
 	void ping();
+
 	void getResponseByType(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, bool errors = true);
+
 	void getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, int16_t packetId, bool errors = true);
+
 	void listen();
+
 	void processData(std::vector<char>& data);
+
 	void processPublish(std::vector<char>& data);
+
 	void subscribe(std::string topic);
+
 	void send(const std::vector<char>& data);
 };
+
+}
 
 #endif

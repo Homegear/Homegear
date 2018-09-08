@@ -34,6 +34,9 @@
 #include "NodeBlueResponseServer.h"
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -41,7 +44,9 @@ class NodeBlueClientData
 {
 public:
 	NodeBlueClientData();
+
 	NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+
 	virtual ~NodeBlueClientData();
 
 	int32_t id = 0;
@@ -60,4 +65,7 @@ public:
 typedef std::shared_ptr<NodeBlueClientData> PNodeBlueClientData;
 
 }
+
+}
+
 #endif

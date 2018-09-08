@@ -31,6 +31,9 @@
 #include "Monitor.h"
 #include "GD/GD.h"
 
+namespace Homegear
+{
+
 Monitor::Monitor()
 {
 	_suspendMonitoring = true;
@@ -211,7 +214,7 @@ void Monitor::checkHealthThread(pid_t mainProcessId)
 			{
 				char buffer = 0;
 				int32_t bytesRead = read(_pipeFromChild[0], &buffer, 1);
-				if(bytesRead <= 0 || (unsigned)bytesRead > 1)
+				if(bytesRead <= 0 || (unsigned) bytesRead > 1)
 				{
 					if(bytesRead == -1)
 					{
@@ -250,16 +253,16 @@ void Monitor::checkHealthThread(pid_t mainProcessId)
 
 				switch(buffer)
 				{
-				case 'a': //Everything ok
-					if(GD::bl->debugLevel >= 6) GD::out.printDebug("Debug: checkHealth returned ok.");
-					break;
-				case 'n':
-					killChild(mainProcessId);
-					break;
-				case 's':
-					GD::out.printInfo("Info: Shutdown detected. Suspending monitoring.");
-					_suspendMonitoring = true;
-					break;
+					case 'a': //Everything ok
+						if(GD::bl->debugLevel >= 6) GD::out.printDebug("Debug: checkHealth returned ok.");
+						break;
+					case 'n':
+						killChild(mainProcessId);
+						break;
+					case 's':
+						GD::out.printInfo("Info: Shutdown detected. Suspending monitoring.");
+						_suspendMonitoring = true;
+						break;
 				}
 				return;
 			}
@@ -289,7 +292,7 @@ void Monitor::monitor()
 		while(!_stopMonitorThread)
 		{
 			bytesRead = read(_pipeToChild[0], &buffer, 1);
-			if(bytesRead <= 0 || (unsigned)bytesRead > 1)
+			if(bytesRead <= 0 || (unsigned) bytesRead > 1)
 			{
 				if(bytesRead == -1)
 				{
@@ -369,4 +372,6 @@ bool Monitor::lifetick()
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
+}
+
 }

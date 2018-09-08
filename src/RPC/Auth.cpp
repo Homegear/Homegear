@@ -31,6 +31,9 @@
 #include "Auth.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 namespace Rpc
 {
 
@@ -38,20 +41,20 @@ Auth::Auth(std::unordered_set<uint64_t>& validGroups)
 {
 	_authenticated = false;
 	_validGroups = validGroups;
-    if(_validGroups.empty()) _validGroups.emplace(1);
+	if(_validGroups.empty()) _validGroups.emplace(1);
 	_rpcEncoder = std::make_shared<BaseLib::Rpc::RpcEncoder>(GD::bl.get());
 	_jsonDecoder = std::make_shared<BaseLib::Rpc::JsonDecoder>(GD::bl.get());
 }
 
 bool Auth::validUser(std::string& userName)
 {
-    auto groups = User::getGroups(userName);
-    for(auto group : groups)
-    {
-        if(_validGroups.find(group) != _validGroups.end()) return true;
-    }
+	auto groups = User::getGroups(userName);
+	for(auto group : groups)
+	{
+		if(_validGroups.find(group) != _validGroups.end()) return true;
+	}
 
-    return false;
+	return false;
 }
 
 void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bool binary)
@@ -97,7 +100,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bo
 
 bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls)
 {
-    if(_authenticated) return true; //We might be authenticated through certificate authentication
+	if(_authenticated) return true; //We might be authenticated through certificate authentication
 	userName = "";
 	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
@@ -133,7 +136,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, std::shared_
 			_userName = "";
 			throw AuthException("Could not set ACLs.");
 		}
-        _authenticated = true;
+		_authenticated = true;
 		return true;
 	}
 	sendBasicUnauthorized(socket, true);
@@ -142,7 +145,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, std::shared_
 
 bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
-    if(_authenticated) return true; //We might be authenticated through certificate authentication
+	if(_authenticated) return true; //We might be authenticated through certificate authentication
 	userName = "";
 	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
@@ -201,11 +204,11 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Htt
 	BaseLib::Base64::decode(authData.second, decodedData);
 	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::splitLast(decodedData, ':');
 	BaseLib::HelperFunctions::toLower(credentials.first);
-    if(credentials.first.empty() || credentials.second.empty()) throw AuthException("User name or password is empty.");
+	if(credentials.first.empty() || credentials.second.empty()) throw AuthException("User name or password is empty.");
 	if(!validUser(credentials.first))
 	{
 		sendBasicUnauthorized(socket, false);
-        throw AuthException("User's " + credentials.first + " group is not in the list of valid groups in /etc/homegear/rpcservers.conf.");
+		throw AuthException("User's " + credentials.first + " group is not in the list of valid groups in /etc/homegear/rpcservers.conf.");
 	}
 	if(User::verify(credentials.first, credentials.second))
 	{
@@ -215,7 +218,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Htt
 			_userName = "";
 			throw AuthException("Could not set ACLs.");
 		}
-        _authenticated = true;
+		_authenticated = true;
 		return true;
 	}
 	sendBasicUnauthorized(socket, false);
@@ -224,11 +227,11 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Htt
 
 bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls)
 {
-    if(_authenticated) return true; //We might be authenticated through certificate authentication
+	if(_authenticated) return true; //We might be authenticated through certificate authentication
 	userName = "";
 	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
 	acls->clear();
-    if(_validGroups.empty()) throw AuthException("No valid groups specified in \"rpcservers.conf\".");
+	if(_validGroups.empty()) throw AuthException("No valid groups specified in \"rpcservers.conf\".");
 	if(webSocket.getContent().empty())
 	{
 		sendWebSocketUnauthorized(socket, "No data received.");
@@ -255,24 +258,24 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Web
 		return false;
 	}
 	BaseLib::HelperFunctions::toLower(variable->structValue->at("user")->stringValue);
-    std::string websocketUser = variable->structValue->at("user")->stringValue;
-    std::string websocketPassword = variable->structValue->at("password")->stringValue;
+	std::string websocketUser = variable->structValue->at("user")->stringValue;
+	std::string websocketPassword = variable->structValue->at("password")->stringValue;
 	if(websocketUser.empty() || websocketPassword.empty()) throw AuthException("User name or password is empty.");
-    if(!validUser(websocketUser))
-    {
-        sendBasicUnauthorized(socket, false);
-        throw AuthException("User's " + websocketUser + " group is not in the list of valid groups in /etc/homegear/rpcservers.conf.");
-    }
+	if(!validUser(websocketUser))
+	{
+		sendBasicUnauthorized(socket, false);
+		throw AuthException("User's " + websocketUser + " group is not in the list of valid groups in /etc/homegear/rpcservers.conf.");
+	}
 	if(User::verify(websocketUser, websocketPassword))
 	{
-        userName = websocketUser;
+		userName = websocketUser;
 		if(!acls->fromUser(websocketUser))
 		{
 			userName = "";
 			throw AuthException("Could not set ACLs.");
 		}
 		sendWebSocketAuthorized(socket);
-        _authenticated = true;
+		_authenticated = true;
 		return true;
 	}
 	sendWebSocketUnauthorized(socket, "Wrong user name or password.");
@@ -311,19 +314,19 @@ bool Auth::sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::W
 		BaseLib::HelperFunctions::toLower(webSocketUser);
 		if(!webSocketUser.empty())
 		{
-            if(!validUser(webSocketUser))
-            {
-                sendBasicUnauthorized(socket, false);
-                throw AuthException("User's " + webSocketUser + " group is not in the list of valid groups in /etc/homegear/rpcservers.conf.");
-            }
-            userName = webSocketUser;
+			if(!validUser(webSocketUser))
+			{
+				sendBasicUnauthorized(socket, false);
+				throw AuthException("User's " + webSocketUser + " group is not in the list of valid groups in /etc/homegear/rpcservers.conf.");
+			}
+			userName = webSocketUser;
 			if(!acls->fromUser(userName))
 			{
-                userName = "";
+				userName = "";
 				throw AuthException("Could not set ACLs (user: " + userName + ")");
 			}
 			sendWebSocketAuthorized(socket);
-            _authenticated = true;
+			_authenticated = true;
 			return true;
 		}
 		else
@@ -338,81 +341,81 @@ bool Auth::sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::W
 		return false;
 	}
 #else
-	sendWebSocketUnauthorized("Homegear is compiled without script engine. Session authentication is not possible.");
-	throw AuthException("Homegear is compiled without script engine. Session authentication is not possible.");
-	return false;
+    sendWebSocketUnauthorized("Homegear is compiled without script engine. Session authentication is not possible.");
+    throw AuthException("Homegear is compiled without script engine. Session authentication is not possible.");
+    return false;
 #endif
 }
 
 bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, BaseLib::Security::PAcls& acls, std::string& error)
 {
-    userName = "";
-    if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
-    acls->clear();
-    if(_validGroups.empty()) throw AuthException("No valid groups specified in \"rpcservers.conf\".");
-    const gnutls_datum_t* derClientCertificates = gnutls_certificate_get_peers(socketDescriptor->tlsSession, nullptr);
-    if(!derClientCertificates)
-    {
-        error = "Error retrieving client certificate.";
-        return false;
-    }
-    gnutls_x509_crt_t clientCertificates;
-    unsigned int certMax = 1;
-    if(gnutls_x509_crt_list_import(&clientCertificates, &certMax, derClientCertificates, GNUTLS_X509_FMT_DER, 0) < 1)
-    {
-        error = "Error importing client certificate.";
-        return false;
-    }
-    gnutls_datum_t distinguishedName;
-    if(gnutls_x509_crt_get_dn2(clientCertificates, &distinguishedName) != GNUTLS_E_SUCCESS)
-    {
-        error = "Error getting client certificate's distinguished name.";
-        return false;
-    }
+	userName = "";
+	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+	acls->clear();
+	if(_validGroups.empty()) throw AuthException("No valid groups specified in \"rpcservers.conf\".");
+	const gnutls_datum_t* derClientCertificates = gnutls_certificate_get_peers(socketDescriptor->tlsSession, nullptr);
+	if(!derClientCertificates)
+	{
+		error = "Error retrieving client certificate.";
+		return false;
+	}
+	gnutls_x509_crt_t clientCertificates;
+	unsigned int certMax = 1;
+	if(gnutls_x509_crt_list_import(&clientCertificates, &certMax, derClientCertificates, GNUTLS_X509_FMT_DER, 0) < 1)
+	{
+		error = "Error importing client certificate.";
+		return false;
+	}
+	gnutls_datum_t distinguishedName;
+	if(gnutls_x509_crt_get_dn2(clientCertificates, &distinguishedName) != GNUTLS_E_SUCCESS)
+	{
+		error = "Error getting client certificate's distinguished name.";
+		return false;
+	}
 
-    std::string certUserName = std::string((char*)distinguishedName.data, distinguishedName.size);
-    BaseLib::HelperFunctions::toLower(certUserName);
-    if(validUser(certUserName)) userName = certUserName;
-    else
-    {
-        bool userFound = false;
+	std::string certUserName = std::string((char*) distinguishedName.data, distinguishedName.size);
+	BaseLib::HelperFunctions::toLower(certUserName);
+	if(validUser(certUserName)) userName = certUserName;
+	else
+	{
+		bool userFound = false;
 
-        auto outerFields = BaseLib::HelperFunctions::splitAll(certUserName, ',');
-        for(auto& outerField : outerFields)
-        {
-            auto innerFields = BaseLib::HelperFunctions::splitFirst(outerField, '=');
-            BaseLib::HelperFunctions::trim(innerFields.first);
-            BaseLib::HelperFunctions::toLower(innerFields.first);
-            if(innerFields.first != "cn") continue;
-            BaseLib::HelperFunctions::trim(innerFields.second);
-            BaseLib::HelperFunctions::toLower(innerFields.second);
-            certUserName = innerFields.second;
-            userFound = true;
-            break;
-        }
+		auto outerFields = BaseLib::HelperFunctions::splitAll(certUserName, ',');
+		for(auto& outerField : outerFields)
+		{
+			auto innerFields = BaseLib::HelperFunctions::splitFirst(outerField, '=');
+			BaseLib::HelperFunctions::trim(innerFields.first);
+			BaseLib::HelperFunctions::toLower(innerFields.first);
+			if(innerFields.first != "cn") continue;
+			BaseLib::HelperFunctions::trim(innerFields.second);
+			BaseLib::HelperFunctions::toLower(innerFields.second);
+			certUserName = innerFields.second;
+			userFound = true;
+			break;
+		}
 
-        if(userFound && validUser(certUserName)) userName = certUserName;
-        else
-        {
-            error = "User name is not in a valid group as defined in \"rpcservers.conf\": " + certUserName;
-            return false;
-        }
-    }
+		if(userFound && validUser(certUserName)) userName = certUserName;
+		else
+		{
+			error = "User name is not in a valid group as defined in \"rpcservers.conf\": " + certUserName;
+			return false;
+		}
+	}
 
-    if(!acls->fromUser(userName))
-    {
-        userName = "";
-        error = "Error getting ACLs for client or the user doesn't exist. User (= common name or distinguished name): " + certUserName;
-        return false;
-    }
+	if(!acls->fromUser(userName))
+	{
+		userName = "";
+		error = "Error getting ACLs for client or the user doesn't exist. User (= common name or distinguished name): " + certUserName;
+		return false;
+	}
 
-    _authenticated = true;
-    return true;
+	_authenticated = true;
+	return true;
 }
 
 void Auth::sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket>& socket)
 {
-	std::vector <char> output;
+	std::vector<char> output;
 	std::string json("{\"auth\":\"success\"}");
 	std::vector<char> data(&json[0], &json[0] + json.size());
 	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
@@ -421,11 +424,13 @@ void Auth::sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket>& socket)
 
 void Auth::sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string reason)
 {
-	std::vector <char> output;
+	std::vector<char> output;
 	std::string json("{\"auth\":\"failure\",\"reason\":\"" + reason + "\"}");
 	std::vector<char> data(json.data(), json.data() + json.size());
 	BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
 	socket->proofwrite(output);
 }
 
-} /* namespace Rpc */
+}
+
+}

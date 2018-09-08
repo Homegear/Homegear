@@ -31,6 +31,9 @@
 #include "../GD/GD.h"
 #include "MqttSettings.h"
 
+namespace Homegear
+{
+
 MqttSettings::MqttSettings()
 {
 
@@ -52,18 +55,18 @@ void MqttSettings::reset()
 	_certPath = "";
 	_keyPath = "";
 
-    //{{{ BMX
-        _bmxTopic = false;
-        _bmxPrefix = "";
-        _bmxHostname = "";
-        _bmxPort = "";
-        _bmxOrgId = "";
-        _bmxDevTypeId = "";
-        _bmxGwTypeId = "";
-        _bmxDeviceId = "";
-        _bmxUsername = "";
-        _bmxToken = "";
-    //}}}
+	//{{{ BMX
+	_bmxTopic = false;
+	_bmxPrefix = "";
+	_bmxHostname = "";
+	_bmxPort = "";
+	_bmxOrgId = "";
+	_bmxDevTypeId = "";
+	_bmxGwTypeId = "";
+	_bmxDeviceId = "";
+	_bmxUsername = "";
+	_bmxToken = "";
+	//}}}
 }
 
 void MqttSettings::load(std::string filename)
@@ -72,27 +75,27 @@ void MqttSettings::load(std::string filename)
 	{
 		reset();
 		char input[1024];
-		FILE *fin;
+		FILE* fin;
 		int32_t len, ptr;
 		bool found = false;
 
-		if (!(fin = fopen(filename.c_str(), "r")))
+		if(!(fin = fopen(filename.c_str(), "r")))
 		{
 			GD::bl->out.printError("Unable to open config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
-		while (fgets(input, 1024, fin))
+		while(fgets(input, 1024, fin))
 		{
 			if(input[0] == '#') continue;
 			len = strlen(input);
-			if (len < 2) continue;
-			if (input[len-1] == '\n') input[len-1] = '\0';
+			if(len < 2) continue;
+			if(input[len - 1] == '\n') input[len - 1] = '\0';
 			ptr = 0;
 			found = false;
 			while(ptr < len)
 			{
-				if (input[ptr] == '=')
+				if(input[ptr] == '=')
 				{
 					found = true;
 					input[ptr++] = '\0';
@@ -204,63 +207,64 @@ void MqttSettings::load(std::string filename)
 					_keyPath = value;
 					GD::bl->out.printDebug("Debug (MQTT settings): keyPath set to " + _keyPath);
 				}
-                //{{{ BMX
-                    else if(name == "bmxtopic")
-                    {
-                        _bmxTopic = (BaseLib::HelperFunctions::toLower(value) == "true");
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxTopic set to " + std::to_string(_bmxTopic));
-                        if (_bmxTopic) {
-                            GD::bl->out.printWarning("Warning (MQTT settings): bmxTopic is enabled, so all other topics will be blocked.");
-                        }
-                    }
-                    else if(name == "bmxhostname")
-                    {
-                        _bmxHostname = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxHostname set to " + _bmxHostname);
-                    }
-                    else if(name == "bmxport")
-                    {
-                        _bmxPort = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxPort set to " + _bmxPort);
-                    }
-                    else if(name == "bmxprefix")
-                    {
-                        _bmxPrefix = value;
-                        if(!_bmxPrefix.empty() && _bmxPrefix.back() != '/') _bmxPrefix.push_back('/');
-                        if(_bmxPrefix == "/") _bmxPrefix = "";
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxPrefix set to " + _bmxPrefix);
-                    }
-                    else if(name == "bmxorgid")
-                    {
-                        _bmxOrgId = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxOrgId set to " + _bmxOrgId);
-                    }
-                    else if(name == "bmxdevtypeid")
-                    {
-                        _bmxDevTypeId = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxDevTypeId set to " + _bmxDevTypeId);
-                    }
-                    else if(name == "bmxgwtypeid")
-                    {
-                        _bmxGwTypeId = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxGwTypeId set to " + _bmxGwTypeId);
-                    }
-                    else if(name == "bmxdeviceid")
-                    {
-                        _bmxDeviceId = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxDeviceId set to " + _bmxDeviceId);
-                    }
-                    else if(name == "bmxusername")
-                    {
-                        _bmxUsername = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxUsername set to " + _bmxUsername);
-                    }
-                    else if(name == "bmxtoken")
-                    {
-                        _bmxToken = value;
-                        GD::bl->out.printDebug("Debug (MQTT settings): bmxToken set to " + _bmxToken );
-                    }
-                //}}}
+					//{{{ BMX
+				else if(name == "bmxtopic")
+				{
+					_bmxTopic = (BaseLib::HelperFunctions::toLower(value) == "true");
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxTopic set to " + std::to_string(_bmxTopic));
+					if(_bmxTopic)
+					{
+						GD::bl->out.printWarning("Warning (MQTT settings): bmxTopic is enabled, so all other topics will be blocked.");
+					}
+				}
+				else if(name == "bmxhostname")
+				{
+					_bmxHostname = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxHostname set to " + _bmxHostname);
+				}
+				else if(name == "bmxport")
+				{
+					_bmxPort = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxPort set to " + _bmxPort);
+				}
+				else if(name == "bmxprefix")
+				{
+					_bmxPrefix = value;
+					if(!_bmxPrefix.empty() && _bmxPrefix.back() != '/') _bmxPrefix.push_back('/');
+					if(_bmxPrefix == "/") _bmxPrefix = "";
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxPrefix set to " + _bmxPrefix);
+				}
+				else if(name == "bmxorgid")
+				{
+					_bmxOrgId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxOrgId set to " + _bmxOrgId);
+				}
+				else if(name == "bmxdevtypeid")
+				{
+					_bmxDevTypeId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxDevTypeId set to " + _bmxDevTypeId);
+				}
+				else if(name == "bmxgwtypeid")
+				{
+					_bmxGwTypeId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxGwTypeId set to " + _bmxGwTypeId);
+				}
+				else if(name == "bmxdeviceid")
+				{
+					_bmxDeviceId = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxDeviceId set to " + _bmxDeviceId);
+				}
+				else if(name == "bmxusername")
+				{
+					_bmxUsername = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxUsername set to " + _bmxUsername);
+				}
+				else if(name == "bmxtoken")
+				{
+					_bmxToken = value;
+					GD::bl->out.printDebug("Debug (MQTT settings): bmxToken set to " + _bmxToken);
+				}
+					//}}}
 				else
 				{
 					GD::bl->out.printWarning("Warning: Setting not found: " + std::string(input));
@@ -271,15 +275,17 @@ void MqttSettings::load(std::string filename)
 		fclose(fin);
 	}
 	catch(const std::exception& ex)
-    {
+	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-    	GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 }

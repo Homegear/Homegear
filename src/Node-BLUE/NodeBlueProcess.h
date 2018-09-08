@@ -35,6 +35,9 @@
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -56,30 +59,47 @@ private:
 	std::atomic_uint _nodeThreadCount;
 public:
 	NodeBlueProcess();
+
 	virtual ~NodeBlueProcess();
 
 	std::atomic<int64_t> lastExecution;
 	std::condition_variable requestConditionVariable;
 
 	pid_t getPid() { return _pid; }
+
 	void setPid(pid_t value) { _pid = value; }
+
 	PNodeBlueClientData& getClientData() { return _clientData; }
+
 	bool getExited() { return _exited; }
+
 	void setExited(bool value) { _exited = value; }
+
 	void setClientData(PNodeBlueClientData& value) { _clientData = value; }
 
 	void invokeFlowFinished(int32_t exitCode);
+
 	void invokeFlowFinished(int32_t id, int32_t exitCode);
+
 	uint32_t flowCount();
+
 	void reset();
+
 	uint32_t nodeThreadCount();
+
 	PFlowInfoServer getFlow(int32_t id);
+
 	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
+
 	void registerFlow(int32_t id, PFlowInfoServer& flowInfo);
+
 	void unregisterFlow(int32_t id);
 };
 
 typedef std::shared_ptr<NodeBlueProcess> PNodeBlueProcess;
 
 }
+
+}
+
 #endif

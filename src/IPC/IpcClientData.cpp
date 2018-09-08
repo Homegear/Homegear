@@ -31,6 +31,9 @@
 #include "IpcClientData.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 IpcClientData::IpcClientData()
 {
 	init();
@@ -54,3 +57,4 @@ void IpcClientData::init()
 	buffer.resize(1024);
 }
 
+}

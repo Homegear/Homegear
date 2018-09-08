@@ -55,7 +55,7 @@
 static bool _disposed = true;
 static zend_homegear_superglobals _superglobals;
 static std::mutex _scriptCacheMutex;
-static std::map<std::string, std::shared_ptr<ScriptEngine::CacheInfo>> _scriptCache;
+static std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>> _scriptCache;
 
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_gpio_class_entry = nullptr;
@@ -296,7 +296,7 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
 	{
         std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
 		zend_homegear_globals* globals = php_homegear_get_globals();
-        std::map<std::string, std::shared_ptr<ScriptEngine::CacheInfo>>::iterator scriptIterator = _scriptCache.find(file);
+        std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>>::iterator scriptIterator = _scriptCache.find(file);
         if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(file))
         {
 			globals->additionalStrings.push_front(scriptIterator->second->script);
@@ -326,20 +326,20 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
             }
             if(pos == -1)
             {
-                GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + file + "\"");
+				Homegear::GD::bl->out.printError("Error: License module id is missing in encrypted script file \"" + file + "\"");
                 return FAILURE;
             }
             std::string moduleIdString(&data.at(0), static_cast<unsigned long>(pos));
             int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
             std::vector<char> input(&data.at(static_cast<unsigned long>(pos + 1)), &data.at(data.size() - 1) + 1);
             if(input.empty()) return FAILURE;
-            std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
-            if(i == GD::licensingModules.end() || !i->second)
+            std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = Homegear::GD::licensingModules.find(moduleId);
+            if(i == Homegear::GD::licensingModules.end() || !i->second)
             {
-                GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+				Homegear::GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
                 return FAILURE;
             }
-            std::shared_ptr<ScriptEngine::CacheInfo> cacheInfo = std::make_shared<ScriptEngine::CacheInfo>();
+            std::shared_ptr<Homegear::ScriptEngine::CacheInfo> cacheInfo = std::make_shared<Homegear::ScriptEngine::CacheInfo>();
             i->second->decryptScript(input, cacheInfo->script);
             cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(file);
             if(!cacheInfo->script.empty())
@@ -382,7 +382,7 @@ static size_t php_homegear_read_post(char *buf, size_t count_bytes)
 	BaseLib::Http* http = &SEG(http);
 	if(!http || http->getContentSize() == 0) return 0;
 	size_t bytesRead = http->readContentStream(buf, count_bytes);
-	if(GD::bl->debugLevel >= 5 && bytesRead > 0) GD::out.printDebug("Debug: Raw post data: " + std::string(buf, bytesRead));
+	if(Homegear::GD::bl->debugLevel >= 5 && bytesRead > 0) Homegear::GD::out.printDebug("Debug: Raw post data: " + std::string(buf, bytesRead));
 	return bytesRead;
 }
 
@@ -411,8 +411,8 @@ static size_t php_homegear_ub_write_string(std::string& string)
 			if(string.at(string.size() - 2) == '\r') string.resize(string.size() - 2);
 			else string.resize(string.size() - 1);
 		}
-		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + string);
-		else GD::out.printMessage("Script output: " + string);
+		if(SEG(peerId) != 0) Homegear::GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + string);
+		else Homegear::GD::out.printMessage("Script output: " + string);
 	}
 	return string.size();
 }
@@ -433,8 +433,8 @@ static size_t php_homegear_ub_write(const char* str, size_t length)
 			if(*(str + length - 2) == '\r') length -= 2;
 			else length -= 1;
 		}
-		if(SEG(peerId) != 0) GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + output);
-		else GD::out.printMessage("Script output: " + output);
+		if(SEG(peerId) != 0) Homegear::GD::out.printMessage("Script output (peer id: " + std::to_string(SEG(peerId)) + "): " + output);
+		else Homegear::GD::out.printMessage("Script output: " + output);
 	}
 	return length;
 }
@@ -459,10 +459,10 @@ static int php_homegear_send_headers(sapi_headers_struct* sapi_headers)
 		//PHP returns this sometimes
 		if(temp.compare(0, 22, "Content-type: ext/html") == 0)
 		{
-			if(GD::bl->settings.devLog())
+			if(Homegear::GD::bl->settings.devLog())
 			{
-				GD::out.printError("PHP Content-Type error.");
-				if(SG(default_mimetype)) GD::out.printError("Default MIME type is: " + std::string(SG(default_mimetype)));
+                Homegear::GD::out.printError("PHP Content-Type error.");
+				if(SG(default_mimetype)) Homegear::GD::out.printError("Default MIME type is: " + std::string(SG(default_mimetype)));
 			}
 			temp = "Content-Type: text/html; charset=UTF-8";
 		}
@@ -543,7 +543,7 @@ static void php_homegear_log_message(char* message)
     {
         SEG(outputCallback)(messageString, true);
     }
-	GD::out.printError("Script engine" + (!additionalInfo.empty() ? std::string(" (") + additionalInfo + "): " : ": ") + messageString);
+    Homegear::GD::out.printError("Script engine" + (!additionalInfo.empty() ? std::string(" (") + additionalInfo + "): " : ": ") + messageString);
 }
 
 static void php_homegear_register_variables(zval* track_vars_array)
@@ -655,7 +655,7 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
 		RETURN_NULL()
 	}
-	PhpVariableConverter::getPHPVariable(result, return_value);
+    Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
 
 /* RPC functions */
@@ -678,7 +678,7 @@ ZEND_FUNCTION(print_v)
 
 	bool returnString = (Z_TYPE(args[1]) == IS_TRUE);
 
-	BaseLib::PVariable parameter = PhpVariableConverter::getVariable(&args[0]);
+	BaseLib::PVariable parameter = Homegear::PhpVariableConverter::getVariable(&args[0]);
 	if(!parameter) RETURN_FALSE;
 	std::string result = parameter->print();
 	if(returnString) ZVAL_STRINGL(return_value, result.c_str(), result.size());
@@ -711,11 +711,11 @@ ZEND_FUNCTION(hg_register_thread)
 	std::pair<std::string, std::string> tokenPair = BaseLib::HelperFunctions::splitFirst(tokenPairString, ',');
 	scriptId = BaseLib::Math::getNumber(tokenPair.first, false);
 	std::string token = tokenPair.second;
-	std::shared_ptr<PhpEvents> phpEvents;
+	std::shared_ptr<Homegear::PhpEvents> phpEvents;
 	{
-		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
-		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(scriptId);
-		if(eventsIterator == PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != token) RETURN_FALSE
+		std::lock_guard<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
+		std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(scriptId);
+		if(eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != token) RETURN_FALSE
 		phpEvents = eventsIterator->second;
 	}
 	SEG(id) = scriptId;
@@ -892,7 +892,7 @@ ZEND_FUNCTION(hg_register_thread)
 			if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type array.");
 			else
 			{
-				groups = PhpVariableConverter::getVariable(&args[2]);
+				groups = Homegear::PhpVariableConverter::getVariable(&args[2]);
 			}
 		}
         if(argc == 4)
@@ -900,7 +900,7 @@ ZEND_FUNCTION(hg_register_thread)
             if(Z_TYPE(args[3]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "metadata is not of type array.");
             else
             {
-                metadata = PhpVariableConverter::getVariable(&args[3]);
+                metadata = Homegear::PhpVariableConverter::getVariable(&args[3]);
             }
         }
 
@@ -986,7 +986,7 @@ ZEND_FUNCTION(hg_register_thread)
             if(Z_TYPE(args[1]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "metadata is not of type string.");
             else
             {
-                metadata = PhpVariableConverter::getVariable(&args[1]);
+                metadata = Homegear::PhpVariableConverter::getVariable(&args[1]);
             }
         }
         if(name.empty() || !metadata) RETURN_FALSE;
@@ -1084,7 +1084,7 @@ ZEND_FUNCTION(hg_register_thread)
             if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "groups is not of type array.");
             else
             {
-                groups = PhpVariableConverter::getVariable(&args[2]);
+                groups = Homegear::PhpVariableConverter::getVariable(&args[2]);
             }
 		}
 		if(name.empty() || password.empty()) RETURN_FALSE;
@@ -1155,20 +1155,20 @@ ZEND_FUNCTION(hg_poll_event)
 		else timeout = Z_LVAL(args[0]);
 	}
 
-	std::shared_ptr<PhpEvents> phpEvents;
+	std::shared_ptr<Homegear::PhpEvents> phpEvents;
 	{
-		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
-		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
-		if(eventsIterator == PhpEvents::eventsMap.end())
+		std::unique_lock<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
+		std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(SEG(id));
+		if(eventsIterator == Homegear::PhpEvents::eventsMap.end())
 		{
 			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second = std::make_shared<PhpEvents>(SEG(token), SEG(outputCallback), SEG(rpcCallback));
+		if(!eventsIterator->second) eventsIterator->second = std::make_shared<Homegear::PhpEvents>(SEG(token), SEG(outputCallback), SEG(rpcCallback));
 		phpEvents = eventsIterator->second;
 	}
-	std::shared_ptr<PhpEvents::EventData> eventData = phpEvents->poll(timeout);
+	std::shared_ptr<Homegear::PhpEvents::EventData> eventData = phpEvents->poll(timeout);
 	if(eventData)
 	{
 		array_init(return_value);
@@ -1206,7 +1206,7 @@ ZEND_FUNCTION(hg_poll_event)
 
 		if(eventData->value)
 		{
-			PhpVariableConverter::getPHPVariable(eventData->value, &element);
+            Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
 			add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
 		}
 	}
@@ -1277,17 +1277,17 @@ ZEND_FUNCTION(hg_subscribe_peer)
 		}
 	}
 
-	std::shared_ptr<PhpEvents> phpEvents;
+	std::shared_ptr<Homegear::PhpEvents> phpEvents;
 	{
-		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
-		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
-		if(eventsIterator == PhpEvents::eventsMap.end())
+		std::unique_lock<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
+		std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(SEG(id));
+		if(eventsIterator == Homegear::PhpEvents::eventsMap.end())
 		{
 			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
+		if(!eventsIterator->second) eventsIterator->second.reset(new Homegear::PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
 	phpEvents->addPeer(peerId, channel, variable);
@@ -1337,17 +1337,17 @@ ZEND_FUNCTION(hg_unsubscribe_peer)
 			peerId = Z_LVAL(args[0]);
 		}
 	}
-	std::shared_ptr<PhpEvents> phpEvents;
+	std::shared_ptr<Homegear::PhpEvents> phpEvents;
 	{
-		std::unique_lock<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
-		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
-		if(eventsIterator == PhpEvents::eventsMap.end())
+		std::unique_lock<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
+		std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(SEG(id));
+		if(eventsIterator == Homegear::PhpEvents::eventsMap.end())
 		{
 			eventsMapGuard.unlock();
 			zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
 			RETURN_FALSE
 		}
-		if(!eventsIterator->second) eventsIterator->second.reset(new PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
+		if(!eventsIterator->second) eventsIterator->second.reset(new Homegear::PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
 		phpEvents = eventsIterator->second;
 	}
 	phpEvents->removePeer(peerId, channel, variable);
@@ -1389,8 +1389,8 @@ ZEND_FUNCTION(hg_log)
 		else RETURN_TRUE;
 	}
 
-	if(SEG(peerId) != 0) GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, errorLog);
-	else GD::out.printMessage("Script log: " + message, logLevel, errorLog);
+	if(SEG(peerId) != 0) Homegear::GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, errorLog);
+	else Homegear::GD::out.printMessage("Script log: " + message, logLevel, errorLog);
 	RETURN_TRUE;
 }
 
@@ -1414,9 +1414,9 @@ ZEND_FUNCTION(hg_set_script_log_level)
 	SEG(logLevel) = logLevel;
 
 	{
-		std::lock_guard<std::mutex> eventsMapGuard(PhpEvents::eventsMapMutex);
-		std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator eventsIterator = PhpEvents::eventsMap.find(SEG(id));
-		if(eventsIterator == PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token)) RETURN_FALSE
+		std::lock_guard<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
+		std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(SEG(id));
+		if(eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token)) RETURN_FALSE
 		eventsIterator->second->setLogLevel(logLevel);
 	}
 
@@ -1472,12 +1472,12 @@ ZEND_FUNCTION(hg_get_http_contents)
 	std::string data;
 	try
 	{
-		BaseLib::HttpClient client(GD::bl.get(), hostname, port, false, true, caFile, verifyCertificate);
+		BaseLib::HttpClient client(Homegear::GD::bl.get(), hostname, port, false, true, caFile, verifyCertificate);
 		client.get(path, data);
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printError("Error downloading file: " + ex.what());
+        Homegear::GD::out.printError("Error downloading file: " + ex.what());
 		RETURN_FALSE;
 	}
 
@@ -1540,7 +1540,7 @@ ZEND_FUNCTION(hg_download)
 	BaseLib::Http http;
 	try
 	{
-		BaseLib::HttpClient client(GD::bl.get(), hostname, port, false, true, caFile, verifyCertificate);
+		BaseLib::HttpClient client(Homegear::GD::bl.get(), hostname, port, false, true, caFile, verifyCertificate);
 		client.get(path, http);
 
 		if(http.getHeader().responseCode != 200) RETURN_FALSE;
@@ -1549,7 +1549,7 @@ ZEND_FUNCTION(hg_download)
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printError("Error downloading file: " + ex.what());
+        Homegear::GD::out.printError("Error downloading file: " + ex.what());
 		RETURN_FALSE;
 	}
 
@@ -1584,7 +1584,7 @@ ZEND_FUNCTION(hg_ssdp_search)
 	auto result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     try
     {
-		BaseLib::Ssdp ssdp(GD::bl.get());
+		BaseLib::Ssdp ssdp(Homegear::GD::bl.get());
 		std::vector<BaseLib::SsdpInfo> searchResult;
         ssdp.searchDevices(stHeader, searchTime, searchResult);
 		result->arrayValue->reserve(searchResult.size());
@@ -1608,11 +1608,11 @@ ZEND_FUNCTION(hg_ssdp_search)
 			result->arrayValue->push_back(info);
 		}
 
-		PhpVariableConverter::getPHPVariable(result, return_value);
+        Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printError("Error searching devices: " + ex.what());
+        Homegear::GD::out.printError("Error searching devices: " + ex.what());
         RETURN_FALSE;
     }
 }
@@ -1672,8 +1672,8 @@ ZEND_FUNCTION(hg_configure_gateway)
 
     try
     {
-		BaseLib::Rpc::RpcEncoder rpcEncoder(GD::bl.get(), true, true);
-        BaseLib::Rpc::RpcDecoder rpcDecoder(GD::bl.get(), false, false);
+		BaseLib::Rpc::RpcEncoder rpcEncoder(Homegear::GD::bl.get(), true, true);
+        BaseLib::Rpc::RpcDecoder rpcDecoder(Homegear::GD::bl.get(), false, false);
 
         auto parameters = std::make_shared<BaseLib::Array>();
 
@@ -1689,7 +1689,7 @@ ZEND_FUNCTION(hg_configure_gateway)
         BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
 
         std::vector<uint8_t> key;
-        if(!BaseLib::Security::Hash::sha256(GD::bl->hf.getUBinary(password), key) || key.empty())
+        if(!BaseLib::Security::Hash::sha256(Homegear::GD::bl->hf.getUBinary(password), key) || key.empty())
         {
             zend_throw_exception(homegear_exception_class_entry, "Could not encrypt data.", -1);
             RETURN_NULL()
@@ -1714,7 +1714,7 @@ ZEND_FUNCTION(hg_configure_gateway)
         std::vector<char> encodedRequest;
         rpcEncoder.encodeRequest("configure", parameters, encodedRequest);
 
-		BaseLib::TcpSocket socket(GD::bl.get(), host, std::to_string(port));
+		BaseLib::TcpSocket socket(Homegear::GD::bl.get(), host, std::to_string(port));
 		socket.open();
 		if(!socket.connected())
 		{
@@ -1728,7 +1728,7 @@ ZEND_FUNCTION(hg_configure_gateway)
             const int32_t bufferSize = 1024;
             std::array<char, bufferSize + 1> buffer;
 
-            BaseLib::Rpc::BinaryRpc binaryRpc(GD::bl.get());
+            BaseLib::Rpc::BinaryRpc binaryRpc(Homegear::GD::bl.get());
 
             while(!binaryRpc.isFinished())
             {
@@ -1784,7 +1784,7 @@ ZEND_FUNCTION(hg_configure_gateway)
 
         socket.close();
 
-        PhpVariableConverter::getPHPVariable(result, return_value);
+        Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
     }
     catch(BaseLib::Exception& ex)
     {
@@ -1862,7 +1862,7 @@ ZEND_FUNCTION(hg_get_license_states)
 
 ZEND_FUNCTION(hg_shutting_down)
 {
-	if(_disposed || GD::bl->shuttingDown) RETURN_TRUE
+	if(_disposed || Homegear::GD::bl->shuttingDown) RETURN_TRUE
 	RETURN_FALSE
 }
 
@@ -2026,7 +2026,7 @@ ZEND_FUNCTION(hg_serial_open)
 		}
 		if(device.empty()) RETURN_FALSE;
 
-		std::shared_ptr<BaseLib::SerialReaderWriter> serialDevice(new BaseLib::SerialReaderWriter(GD::bl.get(), device, baudrate, 0, true, -1));
+		std::shared_ptr<BaseLib::SerialReaderWriter> serialDevice(new BaseLib::SerialReaderWriter(Homegear::GD::bl.get(), device, baudrate, 0, true, -1));
 		serialDevice->openDevice(evenParity, oddParity, false, characterSize, twoStopBits);
 		if(serialDevice->isOpen())
 		{
@@ -2043,7 +2043,7 @@ ZEND_FUNCTION(hg_serial_open)
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
-		GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + ex.what());
 		ZVAL_LONG(return_value, -1);
 	}
 }
@@ -2067,7 +2067,7 @@ ZEND_FUNCTION(hg_serial_close)
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
-		GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + ex.what());
 		RETURN_FALSE;
 	}
 }
@@ -2115,7 +2115,7 @@ ZEND_FUNCTION(hg_serial_read)
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
-		GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + ex.what());
 		ZVAL_LONG(return_value, -1);
 	}
 }
@@ -2164,7 +2164,7 @@ ZEND_FUNCTION(hg_serial_readline)
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
-		GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + ex.what());
 		ZVAL_LONG(return_value, -1);
 	}
 }
@@ -2212,7 +2212,7 @@ ZEND_FUNCTION(hg_serial_write)
 	}
 	catch(BaseLib::SerialReaderWriterException& ex)
 	{
-		GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + ex.what());
 		RETURN_FALSE;
 	}
 }
@@ -2335,7 +2335,7 @@ ZEND_FUNCTION(hg_i2c_write)
 			else
 			{
 				std::string hexData(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
-				data = GD::bl->hf.getUBinary(hexData);
+				data = Homegear::GD::bl->hf.getUBinary(hexData);
 			}
 		}
 	}
@@ -2353,7 +2353,7 @@ ZEND_METHOD(Homegear, __call)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName));
-	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
+	BaseLib::PVariable parameters = Homegear::PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
@@ -2364,7 +2364,7 @@ ZEND_METHOD(Homegear, __callStatic)
 	zval* args = nullptr;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
 	std::string methodName(Z_STRVAL_P(zMethodName), Z_STRLEN_P(zMethodName));
-	BaseLib::PVariable parameters = PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
+	BaseLib::PVariable parameters = Homegear::PhpVariableConverter::getVariable(args, false, methodName == "createGroup" || methodName == "updateGroup");
 	php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
@@ -2427,24 +2427,24 @@ static const zend_function_entry homegear_i2c_methods[] = {
 int php_homegear_init()
 {
 	_superglobals.http = new BaseLib::Http();
-	_superglobals.gpio = new BaseLib::LowLevel::Gpio(GD::bl.get(), GD::bl->settings.gpioPath());
+	_superglobals.gpio = new BaseLib::LowLevel::Gpio(Homegear::GD::bl.get(), Homegear::GD::bl->settings.gpioPath());
 	_disposed = false;
 	pthread_key_create(php_homegear_get_pthread_key(), pthread_data_destructor);
-	int32_t maxScriptsPerProcess = GD::bl->settings.scriptEngineMaxScriptsPerProcess();
+	int32_t maxScriptsPerProcess = Homegear::GD::bl->settings.scriptEngineMaxScriptsPerProcess();
 	if(maxScriptsPerProcess < 1) maxScriptsPerProcess = 20;
-	int32_t maxThreadsPerScript = GD::bl->settings.scriptEngineMaxThreadsPerScript();
+	int32_t maxThreadsPerScript = Homegear::GD::bl->settings.scriptEngineMaxThreadsPerScript();
 	if(maxThreadsPerScript < 1) maxThreadsPerScript = 4;
 	int32_t threadCount = maxScriptsPerProcess * maxThreadsPerScript;
 	if(tsrm_startup(threadCount, threadCount, 0, NULL) != 1) //Needs to be called once for the entire process (see TSRM.c)
 	{
-		GD::out.printCritical("Critical: Could not start script engine. tsrm_startup returned error.");
+		Homegear::GD::out.printCritical("Critical: Could not start script engine. tsrm_startup returned error.");
 		return FAILURE;
 	}
 #ifdef ZEND_SIGNALS
 	zend_signal_startup();
 #endif
 	php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
-	ini_path_override = strndup(GD::bl->settings.phpIniPath().c_str(), GD::bl->settings.phpIniPath().size());
+	ini_path_override = strndup(Homegear::GD::bl->settings.phpIniPath().c_str(), Homegear::GD::bl->settings.phpIniPath().size());
 	php_homegear_sapi_module.php_ini_path_override = ini_path_override;
 	php_homegear_sapi_module.phpinfo_as_text = 0;
 	php_homegear_sapi_module.php_ini_ignore_cwd = 1;
@@ -2459,7 +2459,7 @@ int php_homegear_init()
 	return SUCCESS;
 }
 
-void php_homegear_shutdown()
+void php_homegear_deinit()
 {
 	_disposed = true;
 	if(_disposed) return;
@@ -2613,13 +2613,13 @@ static PHP_MINIT_FUNCTION(homegear)
 	zend_class_entry homegearCe{};
 	INIT_CLASS_ENTRY(homegearCe, "Homegear\\Homegear", homegear_methods);
 	homegear_class_entry = zend_register_internal_class(&homegearCe);
-	zend_declare_class_constant_stringl(homegear_class_entry, "TEMP_PATH", sizeof("TEMP_PATH") - 1, GD::bl->settings.tempPath().c_str(), GD::bl->settings.tempPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, GD::bl->settings.scriptPath().c_str(), GD::bl->settings.scriptPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "MODULE_PATH", sizeof("MODULE_PATH") - 1, GD::bl->settings.modulePath().c_str(), GD::bl->settings.modulePath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "DATA_PATH", sizeof("DATA_PATH") - 1, GD::bl->settings.dataPath().c_str(), GD::bl->settings.dataPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, GD::bl->settings.socketPath().c_str(), GD::bl->settings.socketPath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, GD::bl->settings.logfilePath().c_str(), GD::bl->settings.logfilePath().size());
-	zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, GD::bl->settings.workingDirectory().c_str(), GD::bl->settings.workingDirectory().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "TEMP_PATH", sizeof("TEMP_PATH") - 1, Homegear::GD::bl->settings.tempPath().c_str(), Homegear::GD::bl->settings.tempPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, Homegear::GD::bl->settings.scriptPath().c_str(), Homegear::GD::bl->settings.scriptPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "MODULE_PATH", sizeof("MODULE_PATH") - 1, Homegear::GD::bl->settings.modulePath().c_str(), Homegear::GD::bl->settings.modulePath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "DATA_PATH", sizeof("DATA_PATH") - 1, Homegear::GD::bl->settings.dataPath().c_str(), Homegear::GD::bl->settings.dataPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, Homegear::GD::bl->settings.socketPath().c_str(), Homegear::GD::bl->settings.socketPath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, Homegear::GD::bl->settings.logfilePath().c_str(), Homegear::GD::bl->settings.logfilePath().size());
+	zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, Homegear::GD::bl->settings.workingDirectory().c_str(), Homegear::GD::bl->settings.workingDirectory().size());
 
 	zend_class_entry homegearGpioCe{};
 	INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);

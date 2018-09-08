@@ -43,13 +43,18 @@
 
 #include <dlfcn.h>
 
+namespace Homegear
+{
+
 class NodeLoader
 {
 public:
 	NodeLoader(std::string nodeNamespace, std::string type, std::string path);
+
 	virtual ~NodeLoader();
 
 	Flows::PINode createNode(const std::atomic_bool* nodeEventsEnabled);
+
 private:
 	std::string _filename;
 	std::string _path;
@@ -59,6 +64,7 @@ private:
 	std::unique_ptr<Flows::NodeFactory> _factory;
 
 	NodeLoader(const NodeLoader&) = delete;
+
 	NodeLoader& operator=(const NodeLoader&) = delete;
 };
 
@@ -87,6 +93,7 @@ public:
 	typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
 
 	NodeManager(const std::atomic_bool* nodeEventsEnabled);
+
 	virtual ~NodeManager();
 
 	/**
@@ -117,6 +124,7 @@ public:
 	 * Returns the node specified by id.
 	 */
 	Flows::PINode getNode(std::string& id);
+
 private:
 	std::mutex _nodeLoadersMutex;
 	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
@@ -131,7 +139,10 @@ private:
 	const std::atomic_bool* _nodeEventsEnabled;
 
 	NodeManager(const NodeManager&) = delete;
+
 	NodeManager& operator=(const NodeManager&) = delete;
 };
+
+}
 
 #endif

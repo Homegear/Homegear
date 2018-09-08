@@ -40,40 +40,61 @@
 #include <gcrypt.h>
 #include <homegear-base/Variable.h>
 
+namespace Homegear
+{
+
 class User
 {
 public:
-    struct UserInfo
-    {
-        std::string name;
-        std::vector<uint64_t> groups;
-        BaseLib::PVariable metadata;
-    };
+	struct UserInfo
+	{
+		std::string name;
+		std::vector<uint64_t> groups;
+		BaseLib::PVariable metadata;
+	};
 
 	User() {}
+
 	virtual ~User() {}
+
 	static std::vector<unsigned char> generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt);
+
 	static uint64_t getId(const std::string& userName);
+
 	static std::vector<uint64_t> getGroups(const std::string& userName);
+
 	static bool verify(const std::string& userName, const std::string& password);
+
 	static bool exists(const std::string& userName);
+
 	static bool create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
-    static bool update(const std::string& userName, const std::string& password);
-    static bool update(const std::string& userName, const std::vector<uint64_t>& groups);
+
+	static bool update(const std::string& userName, const std::string& password);
+
+	static bool update(const std::string& userName, const std::vector<uint64_t>& groups);
+
 	static bool update(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
+
 	static bool remove(const std::string& userName);
-    static BaseLib::PVariable getMetadata(const std::string& userName);
-    static bool setMetadata(const std::string& userName, BaseLib::PVariable metadata);
+
+	static BaseLib::PVariable getMetadata(const std::string& userName);
+
+	static bool setMetadata(const std::string& userName, BaseLib::PVariable metadata);
+
 	static bool getAll(std::map<uint64_t, UserInfo>& users);
 
-    // {{{ OAuth
-        static bool oauthCreate(const std::string& userName, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey);
-        static bool oauthVerify(const std::string& key, const std::string& privateKey, const std::string& publicKey, std::string& userName);
-        static bool oauthRefresh(const std::string& refreshKey, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey, std::string& userName);
-    // }}}
+	// {{{ OAuth
+	static bool oauthCreate(const std::string& userName, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey);
+
+	static bool oauthVerify(const std::string& key, const std::string& privateKey, const std::string& publicKey, std::string& userName);
+
+	static bool oauthRefresh(const std::string& refreshKey, const std::string& privateKey, const std::string& publicKey, int32_t tokenLifetime, int32_t refreshTokenLifetime, std::string& newKey, std::string& newRefreshKey, std::string& userName);
+	// }}}
 
 private:
-    static std::string generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime);
+	static std::string generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime);
 };
+
+}
 
 #endif

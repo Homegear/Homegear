@@ -1,8 +1,12 @@
 #include "../GD/GD.h"
 #include "RestServer.h"
 
+namespace Homegear
+{
+
 namespace Rpc
 {
+
 RestServer::RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo)
 {
 	_out.init(GD::bl.get());
@@ -31,17 +35,17 @@ void RestServer::getError(int32_t code, std::string codeDescription, std::string
 		content.insert(content.end(), contentString.begin(), contentString.end());
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void RestServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders)
@@ -55,17 +59,17 @@ void RestServer::getError(int32_t code, std::string codeDescription, std::string
 		content.insert(content.end(), contentString.begin(), contentString.end());
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
@@ -74,7 +78,8 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 	try
 	{
 		if(!socket)
-		{	_out.printError("Error: Socket is nullptr.");
+		{
+			_out.printError("Error: Socket is nullptr.");
 			return;
 		}
 
@@ -115,10 +120,10 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				GD::out.printInfo("Info: REST RPC call received. Method: getValue");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(3);
-				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
-                std::string methodName = "getValue";
+				std::string methodName = "getValue";
 				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 				else
@@ -159,11 +164,11 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				{
 					BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 					parameters->arrayValue->reserve(4);
-					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 					parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
 					parameters->arrayValue->push_back(structIterator->second);
-                    std::string methodName = "setValue";
+					std::string methodName = "setValue";
 					BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 					if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 					else contentString = "{\"result\":\"success\"}";
@@ -174,12 +179,12 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				GD::out.printInfo("Info: REST RPC call received. Method: putParamset");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(4);
-				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
 				BaseLib::PVariable value = structIterator->second;
 				if(value) parameters->arrayValue->push_back(value);
-                std::string methodName = "putParamset";
+				std::string methodName = "putParamset";
 				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
 				else contentString = "{\"result\":\"success\"}";
@@ -196,23 +201,23 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 		send(socket, content);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	getError(500, "Server error", ex.what(), content);
-    	send(socket, content);
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	getError(500, "Server error", ex.what(), content);
-    	send(socket, content);
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    	getError(500, "Server error", "Unknown error.", content);
-    	send(socket, content);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		getError(500, "Server error", ex.what(), content);
+		send(socket, content);
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		getError(500, "Server error", ex.what(), content);
+		send(socket, content);
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		getError(500, "Server error", "Unknown error.", content);
+		send(socket, content);
+	}
 }
 
 void RestServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data)
@@ -234,18 +239,20 @@ void RestServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<c
 		}
 		socket->close();
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 }
 
 }
