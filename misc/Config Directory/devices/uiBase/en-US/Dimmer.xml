@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearUiElements lang="en-US">
+	<homegearUiElement>
+		<uniqueUiElementId>Base.Dimmer</uniqueUiElementId>
+		<type>simple</type>
+		<control>dimmer</control>
+		<variableInputs>
+			<variable>
+				<familyId>*</familyId>
+				<deviceTypeId>*</deviceTypeId>
+				<channel>*</channel>
+				<name>*</name>
+				<visualizeInOverview>true</visualizeInOverview>
+				<unit>%</unit>
+				<minimumScaled>0</minimumScaled>
+				<maximumScaled>100</maximumScaled>
+				<rendering>
+					<condition operator="not" value="0">
+						<icons>
+							<icon id="state">
+								<name>dimmerOn</name>
+								<color>colorOn</color>
+							</icon>
+						</icons>
+						<texts>
+							<text id="state">
+								<content>on</content>
+								<color>colorOn</color>
+							</text>
+						</texts>
+					</condition>
+					<condition operator="e" value="0">
+						<icons>
+							<icon id="state">
+								<name>dimmerOff</name>
+								<color>colorOff</color>
+							</icon>
+						</icons>
+						<texts>
+							<text id="state">
+								<content>off</content>
+								<color>colorOff</color>
+							</text>
+						</texts>
+					</condition>
+				</rendering>
+			</variable>
+		</variableInputs>
+		<variableOutputs>
+			<variable>
+				<familyId>*</familyId>
+				<deviceTypeId>*</deviceTypeId>
+				<channel>*</channel>
+				<name>*</name>
+				<minimumScaled>0</minimumScaled>
+				<maximumScaled>100</maximumScaled>
+			</variable>
+		</variableOutputs>
+		<metadata>
+		</metadata>
+	</homegearUiElement>
+</homegearUiElements>
