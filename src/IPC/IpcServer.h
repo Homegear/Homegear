@@ -156,6 +156,8 @@ private:
 	BaseLib::PVariable cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 
 	BaseLib::PVariable cliPeerCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
+	BaseLib::PVariable ptyOutput(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	// }}}
 };
 

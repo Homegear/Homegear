@@ -1439,6 +1439,32 @@ BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData& clientData, int32_t
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
+
+BaseLib::PVariable IpcServer::ptyOutput(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->empty()) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+
+		GD::rpcClient->broadcastPtyOutput(parameters->at(0)->stringValue);
+
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 // }}}
 
 }

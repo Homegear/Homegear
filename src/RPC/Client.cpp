@@ -946,6 +946,35 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
     }
 }
 
+void Client::broadcastPtyOutput(std::string& output)
+{
+    try
+    {
+        if(output.empty()) return;
+        std::lock_guard<std::mutex> serversGuard(_serversMutex);
+        for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
+        {
+            if(!server->second->webSocket || !server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("ptyOutput") == server->second->knownMethods.end())) continue;
+            if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("ptyOutput")) continue;
+            std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
+            parameters->push_back(std::make_shared<BaseLib::Variable>(output));
+            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("ptyOutput", parameters)));
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Client::reset()
 {
     try

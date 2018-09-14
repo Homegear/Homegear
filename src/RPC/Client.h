@@ -105,6 +105,8 @@ public:
 
 	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 
+	void broadcastPtyOutput(std::string& output);
+
 	void sendUnknownDevices(std::pair<std::string, std::string>& address);
 
 	void sendError(std::pair<std::string, std::string> address, int32_t level, std::string message);

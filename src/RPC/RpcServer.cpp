@@ -1214,7 +1214,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
             std::string protocol = http.getHeader().fields["sec-websocket-protocol"];
             BaseLib::HelperFunctions::toLower(protocol);
             std::string websocketKey = http.getHeader().fields["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-            std::vector<char> data(&websocketKey[0], &websocketKey[0] + websocketKey.size());
+            std::vector<char> data(websocketKey.begin(), websocketKey.end());
             std::vector<char> sha1;
             BaseLib::Security::Hash::sha1(data, sha1);
             std::string websocketAccept;
@@ -1263,7 +1263,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
                 header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
                 if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: " + protocol + "\r\n");
                 header.append("\r\n");
-                std::vector<char> data(&header[0], &header[0] + header.size());
+                std::vector<char> data(header.begin(), header.end());
                 sendRPCResponseToClient(client, data, true);
                 if(protocol == "server2" || pathProtocol == "server2" || protocol == "nodeserver" || pathProtocol == "nodeserver")
                 {
@@ -1284,7 +1284,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
                 header.append("Sec-WebSocket-Accept: ").append(websocketAccept).append("\r\n");
                 if(!protocol.empty()) header.append("Sec-WebSocket-Protocol: " + protocol + "\r\n");
                 header.append("\r\n");
-                std::vector<char> data(&header[0], &header[0] + header.size());
+                std::vector<char> data(header.begin(), header.end());
                 sendRPCResponseToClient(client, data, true);
                 if(_info->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
                 {
