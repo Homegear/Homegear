@@ -162,6 +162,8 @@ void MiscPeer::stopScript(bool callStop)
                 i++;
             }
             if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+            std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
+            if(_scriptInfo) _scriptInfo->scriptFinishedCallback = nullptr;
         }
 
         if(_programPID != -1)
