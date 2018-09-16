@@ -153,7 +153,7 @@ void MiscPeer::stopScript(bool callStop)
 
         int32_t i = 0;
         _stopRunProgramThread = true;
-        if(!(!_rpcDevice->runProgram->script2.empty() && _shuttingDown && !GD::bl->shuttingDown))
+        if(!_rpcDevice->runProgram->script2.empty())
         {
             while(_scriptRunning && i < 30)
             {
