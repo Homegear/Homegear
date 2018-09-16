@@ -2558,7 +2558,7 @@ BaseLib::PVariable ScriptEngineServer::mqttPublish(PScriptEngineClientData& clie
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("mqttPublish")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters (topic and payload).");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type String.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Topic is empty.");
 		if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Payload is empty.");
 
@@ -2588,7 +2588,7 @@ BaseLib::PVariable ScriptEngineServer::auth(PScriptEngineClientData& clientData,
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("auth")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type String.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 		if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
 
@@ -2655,7 +2655,7 @@ BaseLib::PVariable ScriptEngineServer::deleteUser(PScriptEngineClientData& clien
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
 
 		return std::make_shared<BaseLib::Variable>(User::remove(parameters->at(0)->stringValue));
@@ -2681,7 +2681,7 @@ BaseLib::PVariable ScriptEngineServer::getUserMetadata(PScriptEngineClientData& 
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
 
 		return User::getMetadata(parameters->at(0)->stringValue);
 	}
@@ -2706,7 +2706,7 @@ BaseLib::PVariable ScriptEngineServer::getUsersGroups(PScriptEngineClientData& c
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUsersGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
 
 		auto groups = User::getGroups(parameters->at(0)->stringValue);
 		if(groups.empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
@@ -2742,8 +2742,8 @@ BaseLib::PVariable ScriptEngineServer::setUserMetadata(PScriptEngineClientData& 
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-		if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type String.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Struct.");
 
 		return std::make_shared<BaseLib::Variable>(User::setMetadata(parameters->at(0)->stringValue, parameters->at(1)));
 	}
@@ -2768,7 +2768,7 @@ BaseLib::PVariable ScriptEngineServer::updateUser(PScriptEngineClientData& clien
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects two or three parameters.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type String.");
 		if(parameters->at(1)->type != BaseLib::VariableType::tString && parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string or array.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 		if(parameters->at(1)->type == BaseLib::VariableType::tArray && parameters->at(1)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
@@ -2811,7 +2811,7 @@ BaseLib::PVariable ScriptEngineServer::userExists(PScriptEngineClientData& clien
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("userExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
 
 		BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
