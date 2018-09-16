@@ -534,6 +534,7 @@ fi
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 createPackage Homegear $1 homegear 0
 if test -f homegear*.deb; then
+	dpkg --purge php7-homegear-dev
 	dpkg -i homegear*.deb
 else
 	echo "Error building Homegear."
