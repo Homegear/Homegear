@@ -135,7 +135,7 @@ bool User::remove(const std::string& userName)
     return false;
 }
 
-bool User::create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups)
+bool User::create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups, const BaseLib::PVariable metadata)
 {
     try
     {
@@ -144,7 +144,11 @@ bool User::create(const std::string& userName, const std::string& password, cons
         std::vector<uint8_t> salt;
         std::vector<uint8_t> passwordHash = password.empty() ? std::vector<uint8_t>() : generateWHIRLPOOL(password, salt);
 
-        if(GD::bl->db->createUser(userName, passwordHash, salt, groups)) return true;
+        if(GD::bl->db->createUser(userName, passwordHash, salt, groups))
+        {
+            if(metadata) setMetadata(userName, metadata);
+            return true;
+        }
     }
     catch(std::exception& ex)
     {

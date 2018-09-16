@@ -2616,10 +2616,11 @@ BaseLib::PVariable ScriptEngineServer::createUser(PScriptEngineClientData& clien
 	try
 	{
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+		if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters.");
 		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
 		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
 		if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
+		if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type Struct.");
 
 		BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
 
@@ -2631,7 +2632,7 @@ BaseLib::PVariable ScriptEngineServer::createUser(PScriptEngineClientData& clien
 		}
 		if(groups.empty()) return BaseLib::Variable::createError(-1, "No groups specified.");
 
-		return std::make_shared<BaseLib::Variable>(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups));
+		return std::make_shared<BaseLib::Variable>(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups, parameters->size() == 4 ? parameters->at(4) : BaseLib::PVariable()));
 	}
 	catch(const std::exception& ex)
 	{
@@ -2986,7 +2987,11 @@ BaseLib::PVariable ScriptEngineServer::verifyOauthKey(PScriptEngineClientData& c
 
 		auto key = parameters->at(0)->stringValue;
 
-		if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+		if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty())
+		{
+			GD::out.printError("Error: No OAuth certificates specified in \"main.conf\".");
+			return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+		}
 		std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
 		std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
 		if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");

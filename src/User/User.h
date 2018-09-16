@@ -67,7 +67,7 @@ public:
 
 	static bool exists(const std::string& userName);
 
-	static bool create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups);
+	static bool create(const std::string& userName, const std::string& password, const std::vector<uint64_t>& groups, const BaseLib::PVariable metadata = BaseLib::PVariable());
 
 	static bool update(const std::string& userName, const std::string& password);
 

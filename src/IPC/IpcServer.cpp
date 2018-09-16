@@ -222,6 +222,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliGeneralCommand", std::bind(&IpcServer::cliGeneralCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliFamilyCommand", std::bind(&IpcServer::cliFamilyCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliPeerCommand", std::bind(&IpcServer::cliPeerCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("ptyOutput", std::bind(&IpcServer::ptyOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 }
 
 IpcServer::~IpcServer()
