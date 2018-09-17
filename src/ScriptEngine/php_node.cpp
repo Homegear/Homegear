@@ -52,7 +52,7 @@ void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& p
 		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
 		RETURN_NULL()
 	}
-	PhpVariableConverter::getPHPVariable(result, return_value);
+	Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
 
 ZEND_FUNCTION(hg_node_log);
@@ -136,7 +136,7 @@ ZEND_FUNCTION(hg_node_invoke_node_method)
 		if(Z_TYPE(args[2]) != IS_ARRAY) php_error_docref(NULL, E_WARNING, "parameters are not of type array.");
 		else
 		{
-			nodeMethodParameters = PhpVariableConverter::getVariable(&(args[2]));
+			nodeMethodParameters = Homegear::PhpVariableConverter::getVariable(&(args[2]));
 		}
 	}
 	if(nodeId.empty() || nodeMethodName.empty()) RETURN_FALSE;
@@ -173,7 +173,7 @@ ZEND_FUNCTION(hg_node_output)
 			outputIndex = Z_LVAL(args[0]);
 		}
 
-		message = PhpVariableConverter::getVariable(&(args[1]));
+		message = Homegear::PhpVariableConverter::getVariable(&(args[1]));
 
 		if(argc == 3)
 		{
@@ -212,7 +212,7 @@ ZEND_FUNCTION(hg_node_node_event)
 			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
 		}
 
-		value = PhpVariableConverter::getVariable(&(args[1]));
+		value = Homegear::PhpVariableConverter::getVariable(&(args[1]));
 	}
 
 	std::string methodName("executePhpNodeBaseMethod");
@@ -271,7 +271,7 @@ ZEND_FUNCTION(hg_node_set_node_data)
 			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
 		}
 
-		value = PhpVariableConverter::getVariable(&(args[1]));
+		value = Homegear::PhpVariableConverter::getVariable(&(args[1]));
 	}
 
 	std::string methodName("setNodeData");
@@ -325,7 +325,7 @@ ZEND_FUNCTION(hg_node_set_flow_data)
 			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
 		}
 
-		value = PhpVariableConverter::getVariable(&(args[1]));
+		value = Homegear::PhpVariableConverter::getVariable(&(args[1]));
 	}
 
 	std::string methodName("setFlowData");
@@ -377,7 +377,7 @@ ZEND_FUNCTION(hg_node_set_global_data)
 			if(Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
 		}
 
-		value = PhpVariableConverter::getVariable(&(args[1]));
+		value = Homegear::PhpVariableConverter::getVariable(&(args[1]));
 	}
 
 	std::string methodName("setGlobalData");
@@ -396,7 +396,7 @@ ZEND_FUNCTION(hg_node_set_internal_message)
 	BaseLib::PVariable value;
 	if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::setInternalMessage().");
 	else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::setInternalMessage().");
-	else value = PhpVariableConverter::getVariable(&(args[0]));
+	else value = Homegear::PhpVariableConverter::getVariable(&(args[0]));
 
 	std::string methodName("executePhpNodeBaseMethod");
 	BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -482,7 +482,7 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 
 		if(!homegearNodeClassEntry)
 		{
-			GD::out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
 			return false;
 		}
 
@@ -498,22 +498,22 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 		{
 			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "init", sizeof("init") - 1))
 			{
-				GD::out.printError("Error: Mandatory method \"init\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				Homegear::GD::out.printError("Error: Mandatory method \"init\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
 				stop = true;
 			}
 			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "start", sizeof("start") - 1))
 			{
-				GD::out.printError("Error: Mandatory method \"start\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				Homegear::GD::out.printError("Error: Mandatory method \"start\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
 				stop = true;
 			}
 			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "stop", sizeof("stop") - 1))
 			{
-				GD::out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				Homegear::GD::out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
 				stop = true;
 			}
 			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "waitforstop", sizeof("waitforstop") - 1))
 			{
-				GD::out.printError("Error: Mandatory method \"waitForStop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				Homegear::GD::out.printError("Error: Mandatory method \"waitForStop\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
 				stop = true;
 			}
 		}
@@ -521,7 +521,7 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 		{
 			if(!zend_hash_str_find_ptr(&(homegearNodeClassEntry->function_table), "input", sizeof("input") - 1))
 			{
-				GD::out.printError("Error: Mandatory method \"input\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
+				Homegear::GD::out.printError("Error: Mandatory method \"input\" not found in class \"HomegearNode\". File: " + scriptInfo->fullPath);
 				stop = true;
 			}
 		}
@@ -542,7 +542,7 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 			}
 			zend_end_try();
 
-			if(result != 0) GD::out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
+			if(result != 0) Homegear::GD::out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
 			zval_ptr_dtor(&function);
 			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 		}
@@ -551,15 +551,15 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry* homegearNodeClassEn
 	}
 	catch(const std::exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
 }
@@ -596,7 +596,7 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 			zval parameters[methodParameters->size()];
 			for(uint32_t i = 0; i < methodParameters->size(); i++)
 			{
-				PhpVariableConverter::getPHPVariable(methodParameters->at(i), &parameters[i]);
+				Homegear::PhpVariableConverter::getPHPVariable(methodParameters->at(i), &parameters[i]);
 			}
 
 			zend_try
@@ -613,25 +613,25 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo& scriptInfo, zval* h
 		BaseLib::PVariable response;
 		if(result != 0)
 		{
-			GD::out.printError("Error calling function \"" + methodName + "\" in file: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error calling function \"" + methodName + "\" in file: " + scriptInfo->fullPath);
 			response = BaseLib::Variable::createError(-3, "Error calling method: " + methodName);
 		}
-		else response = PhpVariableConverter::getVariable(&returnValue);
+		else response = Homegear::PhpVariableConverter::getVariable(&returnValue);
 		zval_ptr_dtor(&function);
 		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 		return response;
 	}
 	catch(const std::exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

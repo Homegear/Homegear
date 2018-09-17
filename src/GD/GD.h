@@ -50,7 +50,11 @@
 #include <string>
 #include <memory>
 
+namespace Homegear
+{
+
 class UPnP;
+
 class Mqtt;
 
 class GD
@@ -88,9 +92,12 @@ public:
 #endif
 
 	virtual ~GD() {}
+
 private:
 	//Non public constructor
 	GD();
 };
+
+}
 
 #endif /* GD_H_ */

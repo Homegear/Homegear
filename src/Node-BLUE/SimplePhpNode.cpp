@@ -33,7 +33,11 @@
 #include "SimplePhpNode.h"
 #include "../GD/GD.h"
 
-SimplePhpNode::SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected) : INode(path, nodeNamespace, type, frontendConnected)
+namespace Homegear
+{
+
+SimplePhpNode::SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected)
+		: INode(path, nodeNamespace, type, frontendConnected)
 {
 }
 
@@ -57,18 +61,20 @@ void SimplePhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVar
 		Flows::PVariable result = invoke("executePhpNode", parameters);
 		if(result->errorStruct) GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
 	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 }
 
 #endif

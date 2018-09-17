@@ -36,6 +36,9 @@
 #include "ScriptEngineResponse.h"
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace ScriptEngine
 {
 
@@ -43,7 +46,9 @@ class ScriptEngineClientData
 {
 public:
 	ScriptEngineClientData();
+
 	ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+
 	virtual ~ScriptEngineClientData();
 
 	int32_t id = 0;
@@ -63,5 +68,8 @@ public:
 typedef std::shared_ptr<ScriptEngineClientData> PScriptEngineClientData;
 
 }
+
+}
+
 #endif
 #endif

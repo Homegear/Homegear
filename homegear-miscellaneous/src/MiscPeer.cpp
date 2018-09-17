@@ -88,7 +88,7 @@ MiscPeer::~MiscPeer()
 		if(_scriptInfo)
 		{
 			int32_t i = 0;
-			while(!_scriptInfo->finished && i < 30)
+			while(_scriptRunning && !_scriptInfo->finished && i < 30)
 			{
 				GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -153,7 +153,7 @@ void MiscPeer::stopScript(bool callStop)
 
         int32_t i = 0;
         _stopRunProgramThread = true;
-        if(!(!_rpcDevice->runProgram->script2.empty() && _shuttingDown && !GD::bl->shuttingDown))
+        if(!_rpcDevice->runProgram->script2.empty())
         {
             while(_scriptRunning && i < 30)
             {
@@ -162,6 +162,8 @@ void MiscPeer::stopScript(bool callStop)
                 i++;
             }
             if(i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+            std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
+            if(_scriptInfo) _scriptInfo->scriptFinishedCallback = nullptr;
         }
 
         if(_programPID != -1)
@@ -357,7 +359,7 @@ void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, in
             _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, BaseLib::HelperFunctions::getTime() - _lastScriptFinished.load() < 10000 ? 10000 : 0);
             _lastScriptFinished.store(BaseLib::HelperFunctions::getTime());
 		}
-		else if(deleting) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
+		else GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
 	}
 	catch(const std::exception& ex)
 	{

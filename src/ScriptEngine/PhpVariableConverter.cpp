@@ -33,6 +33,9 @@
 #include "../GD/GD.h"
 #include "PhpVariableConverter.h"
 
+namespace Homegear
+{
+
 PhpVariableConverter::PhpVariableConverter()
 {
 }
@@ -42,6 +45,7 @@ PhpVariableConverter::~PhpVariableConverter()
 }
 
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAreStructs, bool subArraysAreStructs)
 {
 	try
@@ -55,7 +59,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 		}
 		else if(Z_TYPE_P(value) == IS_DOUBLE)
 		{
-			variable.reset(new BaseLib::Variable((double)Z_DVAL_P(value)));
+			variable.reset(new BaseLib::Variable((double) Z_DVAL_P(value)));
 		}
 		else if(Z_TYPE_P(value) == IS_TRUE)
 		{
@@ -81,45 +85,45 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 				variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				return variable;
 			}
-            bool arraysAreStructsLocal = arraysAreStructs;
-            for(int32_t i = 0; i < 2; i++)
-            {
-                int64_t indexSum = 0;
-                ZEND_HASH_FOREACH_KEY_VAL(ht, keyIndex, key, element)
-                {
-                    if(!variable)
-                    {
-                        if(key || arraysAreStructsLocal) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-                        else
+			bool arraysAreStructsLocal = arraysAreStructs;
+			for(int32_t i = 0; i < 2; i++)
+			{
+				int64_t indexSum = 0;
+				ZEND_HASH_FOREACH_KEY_VAL(ht, keyIndex, key, element)
 						{
-							variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
-							variable->arrayValue->reserve(zend_hash_num_elements(ht));
-						}
-                    }
-                    BaseLib::PVariable arrayElement = getVariable(element, subArraysAreStructs, subArraysAreStructs);
-                    if(!arrayElement) continue;
-                    if(key || arraysAreStructsLocal)
-                    {
-                        std::string keyName;
-                        keyName = key ? std::string(key->val, key->len) : std::to_string((int64_t)keyIndex);
-                        if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
-                        variable->structValue->emplace(keyName, arrayElement);
-                    }
-                    else
-                    {
-                        if(keyIndex < 0) indexSum = -1;
-                        if(indexSum >= 0) indexSum += keyIndex;
-                        variable->arrayValue->push_back(arrayElement);
-                    }
-                } ZEND_HASH_FOREACH_END();
+							if(!variable)
+							{
+								if(key || arraysAreStructsLocal) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+								else
+								{
+									variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+									variable->arrayValue->reserve(zend_hash_num_elements(ht));
+								}
+							}
+							BaseLib::PVariable arrayElement = getVariable(element, subArraysAreStructs, subArraysAreStructs);
+							if(!arrayElement) continue;
+							if(key || arraysAreStructsLocal)
+							{
+								std::string keyName;
+								keyName = key ? std::string(key->val, key->len) : std::to_string((int64_t) keyIndex);
+								if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
+								variable->structValue->emplace(keyName, arrayElement);
+							}
+							else
+							{
+								if(keyIndex < 0) indexSum = -1;
+								if(indexSum >= 0) indexSum += keyIndex;
+								variable->arrayValue->push_back(arrayElement);
+							}
+						}ZEND_HASH_FOREACH_END();
 
-                if(variable->type == BaseLib::VariableType::tArray && (uint64_t)indexSum * 2 != (variable->arrayValue->size() - 1) * variable->arrayValue->size())
-                {
-                    arraysAreStructsLocal = true;
-                    variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-                }
-                else break;
-            }
+				if(variable->type == BaseLib::VariableType::tArray && (uint64_t) indexSum * 2 != (variable->arrayValue->size() - 1) * variable->arrayValue->size())
+				{
+					arraysAreStructsLocal = true;
+					variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+				}
+				else break;
+			}
 		}
 		else
 		{
@@ -142,6 +146,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 	}
 	return BaseLib::PVariable();
 }
+
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
 
 void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output)
@@ -196,12 +201,14 @@ void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output
 		else if(input->type == BaseLib::VariableType::tString || input->type == BaseLib::VariableType::tBase64)
 		{
 			if(input->stringValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
-			else ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size());
+			else
+				ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size());
 		}
 		else if(input->type == BaseLib::VariableType::tBinary)
 		{
 			if(input->binaryValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
-			else ZVAL_STRINGL(output, (char*)input->binaryValue.data(), input->binaryValue.size());
+			else
+				ZVAL_STRINGL(output, (char*) input->binaryValue.data(), input->binaryValue.size());
 		}
 		else
 		{
@@ -220,6 +227,8 @@ void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
 }
 
 #endif

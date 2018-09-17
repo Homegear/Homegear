@@ -47,6 +47,9 @@ using namespace BaseLib::ScriptEngine;
 
 typedef struct _zend_homegear_globals zend_homegear_globals;
 
+namespace Homegear
+{
+
 namespace ScriptEngine
 {
 
@@ -54,10 +57,13 @@ class ScriptEngineClient : public BaseLib::IQueue
 {
 public:
 	ScriptEngineClient();
+
 	virtual ~ScriptEngineClient();
+
 	void dispose(bool broadcastShutdown);
 
 	void start();
+
 private:
 	struct ThreadInfo
 	{
@@ -68,6 +74,7 @@ private:
 
 		ThreadInfo() : running(true) {}
 	};
+
 	typedef std::shared_ptr<ThreadInfo> PThreadInfo;
 
 	struct RequestInfo
@@ -85,7 +92,9 @@ private:
 		int32_t _scriptId = 0;
 		PScriptInfo _scriptInfo;
 	public:
-		ScriptGuard(ScriptEngineClient* client, zend_homegear_globals* globals, int32_t scriptId, PScriptInfo& scriptInfo) : _client(client), _scriptId(scriptId), _scriptInfo(scriptInfo) {}
+		ScriptGuard(ScriptEngineClient* client, zend_homegear_globals* globals, int32_t scriptId, PScriptInfo& scriptInfo)
+				: _client(client), _scriptId(scriptId), _scriptInfo(scriptInfo) {}
+
 		~ScriptGuard();
 	};
 
@@ -93,17 +102,24 @@ private:
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::string& methodName, BaseLib::PArray parameters) { this->methodName = methodName; this->parameters = parameters; }
+
+		QueueEntry(std::string& methodName, BaseLib::PArray parameters)
+		{
+			this->methodName = methodName;
+			this->parameters = parameters;
+		}
+
 		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
+
 		virtual ~QueueEntry() {}
 
 		//{{{ Request
-			std::string methodName;
-			BaseLib::PArray parameters;
+		std::string methodName;
+		BaseLib::PArray parameters;
 		//}}}
 
 		//{{{ Response
-			std::vector<char> packet;
+		std::vector<char> packet;
 		//}}}
 	};
 
@@ -119,17 +135,17 @@ private:
 	};
 	typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
-    struct DeviceInfo
-    {
-        std::mutex requestMutex;
-        std::mutex waitMutex;
-        std::condition_variable conditionVariable;
-        bool ready = false;
-        std::string methodName;
-        BaseLib::PArray parameters;
-        BaseLib::PVariable response;
-    };
-    typedef std::shared_ptr<DeviceInfo> PDeviceInfo;
+	struct DeviceInfo
+	{
+		std::mutex requestMutex;
+		std::mutex waitMutex;
+		std::condition_variable conditionVariable;
+		bool ready = false;
+		std::string methodName;
+		BaseLib::PArray parameters;
+		BaseLib::PVariable response;
+	};
+	typedef std::shared_ptr<DeviceInfo> PDeviceInfo;
 
 	BaseLib::Output _out;
 	std::atomic_int _threadCount;
@@ -155,97 +171,125 @@ private:
 	std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>> _localRpcMethods;
 	std::mutex _maintenanceThreadMutex;
 	std::thread _maintenanceThread;
-    std::thread _watchdogThread;
+	std::thread _watchdogThread;
 	std::mutex _scriptThreadMutex;
 	std::map<int32_t, PThreadInfo> _scriptThreads;
 	std::mutex _requestInfoMutex;
 	std::map<int32_t, PRequestInfo> _requestInfo;
-    std::mutex _scriptCacheMutex;
+	std::mutex _scriptCacheMutex;
 	std::map<std::string, std::shared_ptr<CacheInfo>> _scriptCache;
 	std::mutex _packetIdMutex;
 	int32_t _currentPacketId = 0;
 	std::atomic_bool _nodesStopped;
 	static std::mutex _nodeInfoMutex;
 	static std::unordered_map<std::string, PNodeInfo> _nodeInfo;
-    static std::mutex _deviceInfoMutex;
-    static std::unordered_map<uint64_t, PDeviceInfo> _deviceInfo;
+	static std::mutex _deviceInfoMutex;
+	static std::unordered_map<uint64_t, PDeviceInfo> _deviceInfo;
 
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-    void watchdog();
+	void watchdog();
 
 	void collectGarbage();
+
 	std::vector<std::string> getArgs(const std::string& path, const std::string& args);
+
 	void registerClient();
+
 	void sendOutput(std::string output, bool error);
+
 	void sendHeaders(BaseLib::PVariable headers);
+
 	BaseLib::PVariable callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait);
+
 	BaseLib::PVariable sendRequest(int32_t scriptId, uint64_t peerId, std::string& user, std::string& language, std::string methodName, BaseLib::PArray& parameters, bool wait);
+
 	BaseLib::PVariable sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters);
+
 	void sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+
 	void sendScriptFinished(int32_t exitCode);
+
 	void setThreadNotRunning(int32_t threadId);
+
 	void stopEventThreads();
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+
 	void scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput);
+
 	void runScript(int32_t id, PScriptInfo scriptInfo);
+
 	void runNode(int32_t id, PScriptInfo scriptInfo);
+
 	void runDevice(int32_t id, PScriptInfo scriptInfo);
+
 	void checkSessionIdThread(std::string sessionId, std::string* result);
+
 	BaseLib::PVariable send(std::vector<char>& data);
 
 #ifdef DEBUGSESOCKET
-	std::mutex _socketOutputMutex;
-	void socketOutput(int32_t packetId, bool clientRequest, bool request, std::vector<char> data);
+    std::mutex _socketOutputMutex;
+    void socketOutput(int32_t packetId, bool clientRequest, bool request, std::vector<char> data);
 #endif
 
 	// {{{ RPC methods
-		/**
-		 * Causes the log files to be reopened.
-		 * @param parameters Irrelevant for this method.
-		 */
-		BaseLib::PVariable reload(BaseLib::PArray& parameters);
+	/**
+     * Causes the log files to be reopened.
+     * @param parameters Irrelevant for this method.
+     */
+	BaseLib::PVariable reload(BaseLib::PArray& parameters);
 
-		/**
-		 * Causes the script engine client to exit.
-		 * @param parameters Irrelevant for this method.
-		 */
-		BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
+	/**
+     * Causes the script engine client to exit.
+     * @param parameters Irrelevant for this method.
+     */
+	BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 
-		/**
-		 * Executes a new script.
-		 * @param parameters The parameters depend on the script type. See source code.
-		 */
-		BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
+	/**
+     * Executes a new script.
+     * @param parameters The parameters depend on the script type. See source code.
+     */
+	BaseLib::PVariable executeScript(BaseLib::PArray& parameters);
 
-		BaseLib::PVariable devTest(BaseLib::PArray& parameters);
+	BaseLib::PVariable devTest(BaseLib::PArray& parameters);
 
-        /**
-         * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
-         * @param parameters
-         */
-        BaseLib::PVariable stopDevices(BaseLib::PArray& parameters);
+	/**
+     * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
+     * @param parameters
+     */
+	BaseLib::PVariable stopDevices(BaseLib::PArray& parameters);
 
-		/**
-		 * Returns the number of scripts currently running.
-		 * @param parameters Irrelevant for this method.
-		 * @return Returns the number of running scripts.
-		 */
-		BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
-		BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
-		BaseLib::PVariable checkSessionId(BaseLib::PArray& parameters);
-		BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
-        BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
-		BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
+	/**
+     * Returns the number of scripts currently running.
+     * @param parameters Irrelevant for this method.
+     * @return Returns the number of running scripts.
+     */
+	BaseLib::PVariable scriptCount(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable getRunningScripts(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable checkSessionId(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable broadcastEvent(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable broadcastNewDevices(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
+
+	BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
 	// }}}
 };
 
 }
+
+}
+
 #endif
 #endif

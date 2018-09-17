@@ -39,6 +39,9 @@
 #include <vector>
 #include <homegear-base/Security/Acls.h>
 
+namespace Homegear
+{
+
 namespace Rpc
 {
 
@@ -52,20 +55,31 @@ class Auth
 {
 public:
 	Auth(std::unordered_set<uint64_t>& validGroups);
+
 	virtual ~Auth() {}
 
 	bool authenticated() { return _authenticated; }
+
 	void setAuthenticated(bool value) { _authenticated = value; }
-    bool validUser(std::string& userName);
+
+	bool validUser(std::string& userName);
+
 	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls);
+
 	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls);
+
 	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
+
 	bool sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
-    bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, BaseLib::Security::PAcls& acls, std::string& error);
+
+	bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, BaseLib::Security::PAcls& acls, std::string& error);
 
 	void sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bool binary);
+
 	void sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket>& socket);
+
 	void sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string reason);
+
 protected:
 	std::atomic_bool _authenticated;
 	std::string _hostname;
@@ -82,4 +96,7 @@ protected:
 };
 
 }
+
+}
+
 #endif

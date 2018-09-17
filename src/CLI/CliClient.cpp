@@ -34,10 +34,13 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+namespace Homegear
+{
+
 CliClient::CliClient(std::string socketPath) : IIpcClient(socketPath)
 {
-	_localRpcMethods.emplace("broadcastEvent", std::bind(&CliClient::broadcastEvent, this, std::placeholders::_1));
-	_localRpcMethods.emplace("cliOutput", std::bind(&CliClient::output, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastEvent", std::bind(&CliClient::broadcastEvent, this, std::placeholders::_1));
+    _localRpcMethods.emplace("cliOutput", std::bind(&CliClient::output, this, std::placeholders::_1));
 
     _printEvents = false;
 }
@@ -62,21 +65,21 @@ void CliClient::onConnect()
         signature->arrayValue->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tString)); //1st parameter
         parameters->back()->arrayValue->push_back(signature);
         auto result = invoke("registerRpcMethod", parameters);
-        if (result->errorStruct)
+        if(result->errorStruct)
         {
             error = true;
             Ipc::Output::printCritical("Critical: Could not register RPC method cliOutput: " + result->structValue->at("faultString")->stringValue);
         }
-        if (error) return;
+        if(error) return;
 
         parameters = std::make_shared<Ipc::Array>();
         result = invoke("getClientId", parameters);
-        if (result->errorStruct)
+        if(result->errorStruct)
         {
             error = true;
             Ipc::Output::printCritical("Critical: Could not get my own client ID: " + result->structValue->at("faultString")->stringValue);
         }
-        if (error) return;
+        if(error) return;
         int32_t clientId = result->integerValue;
 
         parameters = std::make_shared<Ipc::Array>();
@@ -89,12 +92,12 @@ void CliClient::onConnect()
         signature->arrayValue->push_back(std::make_shared<Ipc::Variable>(Ipc::VariableType::tString)); //1st parameter
         parameters->back()->arrayValue->push_back(signature);
         result = invoke("registerRpcMethod", parameters);
-        if (result->errorStruct)
+        if(result->errorStruct)
         {
             error = true;
             Ipc::Output::printCritical("Critical: Could not register RPC method cliOutput-" + std::to_string(clientId) + ": " + result->structValue->at("faultString")->stringValue);
         }
-        if (error) return;
+        if(error) return;
 
         //Does not invalidate iterators or references so no mutex is needed
         _localRpcMethods.emplace("cliOutput-" + std::to_string(clientId), std::bind(&CliClient::output, this, std::placeholders::_1));
@@ -103,15 +106,15 @@ void CliClient::onConnect()
         waitLock.unlock();
         _onConnectConditionVariable.notify_all();
     }
-    catch (const std::exception& ex)
+    catch(const std::exception& ex)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch (Ipc::IpcException& ex)
+    catch(Ipc::IpcException& ex)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch (...)
+    catch(...)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
@@ -150,7 +153,7 @@ int32_t CliClient::terminal(std::string& command)
 
         std::unique_lock<std::mutex> waitLock(_onConnectWaitMutex);
         int64_t startTime = Ipc::HelperFunctions::getTime();
-        while (!_onConnectConditionVariable.wait_for(waitLock, std::chrono::milliseconds(2000), [&]
+        while(!_onConnectConditionVariable.wait_for(waitLock, std::chrono::milliseconds(2000), [&]
         {
             if(Ipc::HelperFunctions::getTime() - startTime > 2000) return true;
             else return connected();
@@ -226,7 +229,9 @@ int32_t CliClient::terminal(std::string& command)
                     stringStream << "Description: This command selects a device family." << std::endl;
                     stringStream << "Usage: families select FAMILYID" << std::endl << std::endl;
                     stringStream << "Parameters:" << std::endl;
-                    stringStream << "  FAMILYID:\tThe id of the family to select. Type >>families list<< to get a list of supported families. Example: 1" << std::endl;
+                    stringStream
+                            << "  FAMILYID:\tThe id of the family to select. Type >>families list<< to get a list of supported families. Example: 1"
+                            << std::endl;
                     standardOutput(stringStream.str() + "\n");
                 }
                 else
@@ -281,7 +286,9 @@ int32_t CliClient::terminal(std::string& command)
             {
                 if(showHelp)
                 {
-                    stringStream << "Description: This command prints events from Homegear to the standard output. When no family and no peer is selected, updates from all devices and including system variables are output. When a family or peer is selected, only events from this family or peer are output." << std::endl << std::endl;
+                    stringStream
+                            << "Description: This command prints events from Homegear to the standard output. When no family and no peer is selected, updates from all devices and including system variables are output. When a family or peer is selected, only events from this family or peer are output."
+                            << std::endl << std::endl;
                     stringStream << "Usage: events" << std::endl;
                     standardOutput(stringStream.str() + "\n");
                 }
@@ -518,7 +525,7 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
 
         if(_printEvents)
         {
-            uint64_t peerId = (uint64_t)parameters->at(1)->integerValue64;
+            uint64_t peerId = (uint64_t) parameters->at(1)->integerValue64;
 
             if(_currentPeer != 0 && peerId != _currentPeer) return std::make_shared<Ipc::Variable>();
             else if(_currentFamily != -1)
@@ -561,3 +568,5 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
     return Ipc::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
+
+}

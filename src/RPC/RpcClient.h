@@ -54,17 +54,25 @@
 #include <poll.h>
 #include <signal.h>
 
+namespace Homegear
+{
+
 namespace Rpc
 {
-class RpcClient {
+
+class RpcClient
+{
 public:
 	RpcClient();
+
 	virtual ~RpcClient();
 
 	void invokeBroadcast(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
+
 	BaseLib::PVariable invoke(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
 
 	void reset();
+
 protected:
 	BaseLib::Output _out;
 	BaseLib::WebSocket _webSocket;
@@ -81,4 +89,7 @@ protected:
 };
 
 }
+
+}
+
 #endif

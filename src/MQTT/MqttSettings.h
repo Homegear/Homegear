@@ -39,44 +39,74 @@
 #include <map>
 #include <cstring>
 
+namespace Homegear
+{
+
 class MqttSettings
 {
 public:
     MqttSettings();
+
     virtual ~MqttSettings() {}
+
     void load(std::string filename);
 
     bool enabled() { return _enabled; }
+
     int32_t processingThreadCount() { return _processingThreadCount; }
+
     std::string brokerHostname() { return _brokerHostname; }
+
     std::string brokerPort() { return _brokerPort; }
+
     std::string clientName() { return _clientName; }
+
     std::string prefix() { return _prefix; }
+
     std::string homegearId() { return _homegearId; }
+
     std::string username() { return _username; }
+
     std::string password() { return _password; }
 
     bool retain() { return _retain; }
+
     bool plainTopic() { return _plainTopic; }
+
     bool jsonTopic() { return _jsonTopic; }
+
     bool jsonobjTopic() { return _jsonobjTopic; }
+
     bool enableSSL() { return _enableSSL; }
+
     std::string caFile() { return _caFile; }
+
     bool verifyCertificate() { return _verifyCertificate; }
+
     std::string certPath() { return _certPath; }
+
     std::string keyPath() { return _keyPath; }
 
     //{{{ BMX
-        bool bmxTopic() { return _bmxTopic; }
-        std::string bmxPrefix() { return _bmxPrefix; }
-        std::string bmxHostname() { return _bmxHostname; }
-        std::string bmxPort() { return _bmxPort; }
-        std::string bmxOrgId() { return _bmxOrgId; }
-        std::string bmxDevTypeId() { return _bmxDevTypeId; }
-        std::string bmxGwTypeId() { return _bmxGwTypeId; }
-        std::string bmxDeviceId() { return _bmxDeviceId; }
-        std::string bmxUsername() { return _bmxUsername; }
-        std::string bmxToken() { return _bmxToken; }
+    bool bmxTopic() { return _bmxTopic; }
+
+    std::string bmxPrefix() { return _bmxPrefix; }
+
+    std::string bmxHostname() { return _bmxHostname; }
+
+    std::string bmxPort() { return _bmxPort; }
+
+    std::string bmxOrgId() { return _bmxOrgId; }
+
+    std::string bmxDevTypeId() { return _bmxDevTypeId; }
+
+    std::string bmxGwTypeId() { return _bmxGwTypeId; }
+
+    std::string bmxDeviceId() { return _bmxDeviceId; }
+
+    std::string bmxUsername() { return _bmxUsername; }
+
+    std::string bmxToken() { return _bmxToken; }
     //}}}
 private:
     bool _enabled = false;
@@ -99,18 +129,21 @@ private:
     std::string _keyPath;
 
     //{{{ BMX
-        bool _bmxTopic = false;
-        std::string _bmxPrefix;
-        std::string _bmxHostname;
-        std::string _bmxPort;
-        std::string _bmxOrgId;
-        std::string _bmxDevTypeId;
-        std::string _bmxGwTypeId;
-        std::string _bmxDeviceId;
-        std::string _bmxUsername;
-        std::string _bmxToken;
+    bool _bmxTopic = false;
+    std::string _bmxPrefix;
+    std::string _bmxHostname;
+    std::string _bmxPort;
+    std::string _bmxOrgId;
+    std::string _bmxDevTypeId;
+    std::string _bmxGwTypeId;
+    std::string _bmxDeviceId;
+    std::string _bmxUsername;
+    std::string _bmxToken;
     //}}}
 
     void reset();
 };
+
+}
+
 #endif

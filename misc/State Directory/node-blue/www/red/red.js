@@ -12791,9 +12791,9 @@ RED.view = (function() {
                     //node.append("path").attr("class","node_error").attr("d","M 3,-3 l 10,0 l -5,-8 z");
 
                     //TODO: these ought to be SVG
-                    node.append("image").attr("class","node_fixed_input hidden").attr("xlink:href","icons/node-red/node-fixed-input.svg").attr("x",0).attr("y",-6).attr("width",10).attr("height",10);
-                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.svg").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
-                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.svg").attr("x",24).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_fixed_input hidden").attr("xlink:href","icons/node-red/node-fixed-input.png").attr("x",0).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.png").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.png").attr("x",24).attr("y",-6).attr("width",10).attr("height",10);
             });
 
             node.each(function(d,i) {

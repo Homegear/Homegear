@@ -30,6 +30,9 @@
 #include "Mqtt.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 {
 	try
@@ -77,8 +80,8 @@ Mqtt::~Mqtt()
 void Mqtt::loadSettings()
 {
 	_settings.load(GD::bl->settings.mqttSettingsPath());
-    auto parts = BaseLib::HelperFunctions::splitAll(_settings.bmxTopic() ? _settings.bmxPrefix() : _settings.prefix(), '/');
-    _prefixParts = parts.size() > 0 ? parts.size() - 1 : 0;
+	auto parts = BaseLib::HelperFunctions::splitAll(_settings.bmxTopic() ? _settings.bmxPrefix() : _settings.prefix(), '/');
+	_prefixParts = parts.size() > 0 ? parts.size() - 1 : 0;
 }
 
 void Mqtt::start()
@@ -88,13 +91,13 @@ void Mqtt::start()
 		if(_started) return;
 		_started = true;
 
-        _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-        _dummyClientInfo->mqttClient = true;
+		_dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+		_dummyClientInfo->mqttClient = true;
 		_dummyClientInfo->initInterfaceId = "mqtt";
-        _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
-        std::vector<uint64_t> groups{ 6 };
-        _dummyClientInfo->acls->fromGroups(groups);
-        _dummyClientInfo->user = "SYSTEM (6)";
+		_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+		std::vector<uint64_t> groups{6};
+		_dummyClientInfo->acls->fromGroups(groups);
+		_dummyClientInfo->user = "SYSTEM (6)";
 
 		startQueue(0, false, 1, 0, SCHED_OTHER);
 		startQueue(1, false, _settings.processingThreadCount(), 0, SCHED_OTHER);
@@ -172,11 +175,11 @@ uint32_t Mqtt::getLength(std::vector<char> packet, uint32_t& lengthBytes)
 		if(pos >= packet.size()) return 0;
 		encodedByte = packet[pos];
 		lengthBytes++;
-		value += ((uint32_t)(encodedByte & 127)) * multiplier;
+		value += ((uint32_t) (encodedByte & 127)) * multiplier;
 		multiplier *= 128;
 		pos++;
 		if(multiplier > 128 * 128 * 128) return 0;
-	} while ((encodedByte & 128) != 0);
+	} while((encodedByte & 128) != 0);
 	return value;
 }
 
@@ -188,7 +191,7 @@ std::vector<char> Mqtt::getLengthBytes(uint32_t length)
 	{
 		char byte = length % 128;
 		length = length / 128;
-		if (length > 0) byte = byte | 128;
+		if(length > 0) byte = byte | 128;
 		result.push_back(byte);
 	} while(length > 0);
 	return result;
@@ -198,26 +201,26 @@ void Mqtt::printConnectionError(char resultCode)
 {
 	switch(resultCode)
 	{
-	case 0: //No error
-		break;
-	case 1:
-		_out.printError("Error: Connection refused. Unacceptable protocol version.");
-		break;
-	case 2:
-		_out.printError("Error: Connection refused. Client identifier rejected. Please change the client identifier in mqtt.conf.");
-		break;
-	case 3:
-		_out.printError("Error: Connection refused. Server unavailable.");
-		break;
-	case 4:
-		_out.printError("Error: Connection refused. Bad username or password.");
-		break;
-	case 5:
-		_out.printError("Error: Connection refused. Unauthorized.");
-		break;
-	default:
-		_out.printError("Error: Connection refused. Unknown error: " + std::to_string(resultCode));
-		break;
+		case 0: //No error
+			break;
+		case 1:
+			_out.printError("Error: Connection refused. Unacceptable protocol version.");
+			break;
+		case 2:
+			_out.printError("Error: Connection refused. Client identifier rejected. Please change the client identifier in mqtt.conf.");
+			break;
+		case 3:
+			_out.printError("Error: Connection refused. Server unavailable.");
+			break;
+		case 4:
+			_out.printError("Error: Connection refused. Bad username or password.");
+			break;
+		case 5:
+			_out.printError("Error: Connection refused. Unauthorized.");
+			break;
+		default:
+			_out.printError("Error: Connection refused. Unknown error: " + std::to_string(resultCode));
+			break;
 	}
 }
 
@@ -330,7 +333,7 @@ void Mqtt::ping()
 {
 	try
 	{
-		std::vector<char> ping { (char)MQTT_PACKET_PINGREQ, 0 };
+		std::vector<char> ping{(char) MQTT_PACKET_PINGREQ, 0};
 		std::vector<char> pong(5);
 		int32_t i = 0;
 		while(_started)
@@ -422,12 +425,12 @@ void Mqtt::listen()
 						length = getLength(data, lengthBytes);
 						dataLength = length + lengthBytes + 1;
 					}
-					if(bytesReceived == (unsigned)bufferMax)
+					if(bytesReceived == (unsigned) bufferMax)
 					{
 						//Check if packet size is exactly a multiple of bufferMax
 						if(data.size() == dataLength) break;
 					}
-				} while(bytesReceived == (unsigned)bufferMax || dataLength > data.size());
+				} while(bytesReceived == (unsigned) bufferMax || dataLength > data.size());
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
@@ -483,7 +486,7 @@ void Mqtt::processData(std::vector<char>& data)
 	{
 		int16_t id = 0;
 		uint8_t type = 0;
-		if(data.size() == 2 && data.at(0) == (char)MQTT_PACKET_PINGRESP && data.at(1) == 0)
+		if(data.size() == 2 && data.at(0) == (char) MQTT_PACKET_PINGRESP && data.at(1) == 0)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received ping response.");
 			type = MQTT_PACKET_PINGRESP;
@@ -496,12 +499,12 @@ void Mqtt::processData(std::vector<char>& data)
 		else if(data.size() == 4 && data[0] == MQTT_PACKET_PUBACK && data[1] == 2) //PUBACK
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received PUBACK.");
-			id = (((uint16_t)data[2]) << 8) + (uint8_t)data[3];
+			id = (((uint16_t) data[2]) << 8) + (uint8_t) data[3];
 		}
-		else if(data.size() == 5 && data[0] == (char)MQTT_PACKET_SUBACK && data[1] == 3) //SUBACK
+		else if(data.size() == 5 && data[0] == (char) MQTT_PACKET_SUBACK && data[1] == 3) //SUBACK
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Received SUBACK.");
-			id = (((uint16_t)data[2]) << 8) + (uint8_t)data[3];
+			id = (((uint16_t) data[2]) << 8) + (uint8_t) data[3];
 		}
 		if(type != 0)
 		{
@@ -529,7 +532,7 @@ void Mqtt::processData(std::vector<char>& data)
 			{
 				std::shared_ptr<Request> request = requestIterator->second;
 				_requestsMutex.unlock();
-				if(data[0] == (char)request->getResponseControlByte())
+				if(data[0] == (char) request->getResponseControlByte())
 				{
 					request->response = data;
 					{
@@ -574,7 +577,8 @@ void Mqtt::processPublish(std::vector<char>& data)
 			return;
 		}
 		uint8_t qos = data[0] & 6;
-		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t)data[1 + lengthBytes]) << 8) + (uint8_t)data[1 + lengthBytes + 1];
+		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t) data[1 + lengthBytes])
+				<< 8) + (uint8_t) data[1 + lengthBytes + 1];
 		uint32_t payloadPos = (qos > 0) ? topicLength + 2 : topicLength;
 		if(payloadPos >= data.size())
 		{
@@ -587,7 +591,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 		}
 		else if(qos == 2)
 		{
-			std::vector<char> puback { MQTT_PACKET_PUBACK, 2, data[topicLength], data[topicLength + 1] };
+			std::vector<char> puback{MQTT_PACKET_PUBACK, 2, data[topicLength], data[topicLength + 1]};
 			send(puback);
 		}
 		std::string topic(&data[1 + lengthBytes + 2], topicLength - (1 + lengthBytes + 2));
@@ -654,7 +658,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				GD::out.printInfo("Info: MQTT RPC call received. Method: setMetadata");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(3);
-				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
 				std::string methodName = "setMetadata";
@@ -665,7 +669,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				GD::out.printInfo("Info: MQTT RPC call received. Method: setValue");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(4);
-				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 				parameters->arrayValue->push_back(value);
@@ -680,7 +684,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			GD::out.printInfo("Info: MQTT RPC call received. Method: putParamset");
 			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 			parameters->arrayValue->reserve(4);
-			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t)peerId)));
+			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
 			BaseLib::PVariable value;
@@ -804,9 +808,9 @@ void Mqtt::subscribe(std::string topic)
 				{
 					//Ignore for Mosquitto, it does not send SUBACK
 					if(_settings.bmxTopic())
-                    {
+					{
 						//IBM Bluemix sends SUBACK, so we need to check if SUB failed
-						if (response.at(4) == 0x80)  //Failure
+						if(response.at(4) == 0x80)  //Failure
 						{
 							_out.printError("Error: Subscribe request failed for: " + topic);
 						}
@@ -851,18 +855,18 @@ void Mqtt::reconnect()
 		GD::bl->threadManager.join(_reconnectThread);
 		GD::bl->threadManager.start(_reconnectThread, true, &Mqtt::connect, this);
 	}
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void Mqtt::connect()
@@ -893,12 +897,12 @@ void Mqtt::connect()
 			payload.push_back(4); //Protocol level
 			payload.push_back(2); //Connect flags (Clean session)
 			if(_settings.bmxTopic())
-            {
+			{
 				if(!_settings.bmxUsername().empty()) payload.at(7) |= 0x80;
 				if(!_settings.bmxToken().empty()) payload.at(7) |= 0x40;
 			}
-            else
-            {
+			else
+			{
 				if(!_settings.username().empty()) payload.at(7) |= 0x80;
 				if(!_settings.password().empty()) payload.at(7) |= 0x40;
 			}
@@ -906,12 +910,12 @@ void Mqtt::connect()
 			payload.push_back(0x3C); //Keep alive LSB
 
 			std::string temp;
-            if(_settings.bmxTopic())
-            {
+			if(_settings.bmxTopic())
+			{
 				//IBM Bluemix Watson IOT Platform uses different client naming, so we will not use the clientName field.
 				temp = "g:" + _settings.bmxOrgId() + ':' + _settings.bmxGwTypeId() + ':' + _settings.bmxDeviceId();
 			}
-            else temp = _settings.clientName();
+			else temp = _settings.clientName();
 
 			if(temp.empty()) temp = "Homegear";
 			payload.push_back(temp.size() >> 8);
@@ -919,7 +923,7 @@ void Mqtt::connect()
 			payload.insert(payload.end(), temp.begin(), temp.end());
 
 			if(_settings.bmxTopic())
-            {
+			{
 				if(!_settings.bmxUsername().empty())
 				{
 					temp = _settings.bmxUsername();
@@ -935,8 +939,8 @@ void Mqtt::connect()
 					payload.insert(payload.end(), temp.begin(), temp.end());
 				}
 			}
-            else
-            {
+			else
+			{
 				if(!_settings.username().empty())
 				{
 					temp = _settings.username();
@@ -976,18 +980,18 @@ void Mqtt::connect()
 				_connected = true;
 				_connectMutex.unlock();
 				if(_settings.bmxTopic())
-                {
+				{
 					//Subscribe format for IBM Bluemix Watson IOT Platform is pre-set by IBM, we have to adhere gateway commands
-                    subscribe(_settings.bmxPrefix() + _settings.bmxGwTypeId() + "/id/" + _settings.bmxDeviceId() + "/cmd/+/fmt/+");
-                    subscribe("iotdm-1/response");
-                }
-                else
-                {
-				    subscribe(_settings.prefix() + _settings.homegearId() + "/rpc/#");
-				    subscribe(_settings.prefix() + _settings.homegearId() + "/set/#");
-				    subscribe(_settings.prefix() + _settings.homegearId() + "/value/#");
-				    subscribe(_settings.prefix() + _settings.homegearId() + "/config/#");
-                }
+					subscribe(_settings.bmxPrefix() + _settings.bmxGwTypeId() + "/id/" + _settings.bmxDeviceId() + "/cmd/+/fmt/+");
+					subscribe("iotdm-1/response");
+				}
+				else
+				{
+					subscribe(_settings.prefix() + _settings.homegearId() + "/rpc/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/set/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/value/#");
+					subscribe(_settings.prefix() + _settings.homegearId() + "/config/#");
+				}
 				_reconnecting = false;
 				return;
 			}
@@ -1008,12 +1012,12 @@ void Mqtt::connect()
 				payload.push_back(2); //Connect flags (Clean session)
 
 				if(_settings.bmxTopic())
-                {
+				{
 					if(!_settings.bmxUsername().empty()) payload.at(7) |= 0x80;
 					if(!_settings.bmxToken().empty()) payload.at(7) |= 0x40;
 				}
-                else
-                {
+				else
+				{
 					if(!_settings.username().empty()) payload.at(7) |= 0x80;
 					if(!_settings.password().empty()) payload.at(7) |= 0x40;
 				}
@@ -1022,19 +1026,19 @@ void Mqtt::connect()
 				payload.push_back(0x3C); //Keep alive LSB
 
 				if(_settings.bmxTopic())
-                {
+				{
 					//IBM Bluemix Watson IOT Platform uses different client naming, so we will not use the clientName field.
 					temp = "g:" + _settings.bmxOrgId() + ':' + _settings.bmxGwTypeId() + ':' + _settings.bmxDeviceId();
 				}
-                else temp = _settings.clientName();
+				else temp = _settings.clientName();
 
 				if(temp.empty()) temp = "Homegear";
 				payload.push_back(temp.size() >> 8);
 				payload.push_back(temp.size() & 0xFF);
 				payload.insert(payload.end(), temp.begin(), temp.end());
 
-                if(_settings.bmxTopic())
-                {
+				if(_settings.bmxTopic())
+				{
 					if(!_settings.bmxUsername().empty())
 					{
 						temp = _settings.bmxUsername();
@@ -1050,16 +1054,16 @@ void Mqtt::connect()
 						payload.insert(payload.end(), temp.begin(), temp.end());
 					}
 				}
-                else
-                {
-				    if(!_settings.username().empty())
+				else
+				{
+					if(!_settings.username().empty())
 					{
 						temp = _settings.username();
 						payload.push_back(temp.size() >> 8);
 						payload.push_back(temp.size() & 0xFF);
 						payload.insert(payload.end(), temp.begin(), temp.end());
 					}
-				    if(!_settings.password().empty())
+					if(!_settings.password().empty())
 					{
 						temp = _settings.password();
 						payload.push_back(temp.size() >> 8);
@@ -1088,13 +1092,13 @@ void Mqtt::connect()
 					_connected = true;
 					_connectMutex.unlock();
 					if(_settings.bmxTopic())
-                    {
+					{
 						//subscribe format for IBM Bluemix Watson IOT Platform is pre-set by IBM, we have to adhere gateway commands
 						subscribe(_settings.bmxPrefix() + _settings.bmxGwTypeId() + "/id/" + _settings.bmxDeviceId() + "/cmd/+/fmt/+");
-                        subscribe("iotdm-1/response");
-	                }
-                    else
-                    {
+						subscribe("iotdm-1/response");
+					}
+					else
+					{
 						subscribe(_settings.prefix() + _settings.homegearId() + "/rpc/#");
 						subscribe(_settings.prefix() + _settings.homegearId() + "/set/#");
 						subscribe(_settings.prefix() + _settings.homegearId() + "/value/#");
@@ -1129,7 +1133,7 @@ void Mqtt::disconnect()
 	try
 	{
 		_connected = false;
-		std::vector<char> disconnect = { (char)MQTT_PACKET_DISCONN, 0 };
+		std::vector<char> disconnect = {(char) MQTT_PACKET_DISCONN, 0};
 		if(_socket->connected()) _socket->proofwrite(disconnect);
 		_socket->close();
 	}
@@ -1150,7 +1154,7 @@ void Mqtt::disconnect()
 void Mqtt::queueMessage(std::string topic, std::string& payload)
 {
 
-	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(topic, payload)-> topic:" + topic + " payload:"+payload);
+	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(topic, payload)-> topic:" + topic + " payload:" + payload);
 
 	try
 	{
@@ -1176,16 +1180,16 @@ void Mqtt::queueMessage(std::string topic, std::string& payload)
 void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
 {
 
-	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, key, value) -> peerId="+std::to_string(peerId)+", channel="+std::to_string(channel)+", key="+key+", value="+value->stringValue);
+	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, key, value) -> peerId=" + std::to_string(peerId) + ", channel=" + std::to_string(channel) + ", key=" + key + ", value=" + value->stringValue);
 
 	try
 	{
 		bool retain = key.compare(0, 5, "PRESS") != 0;
 
 		if(_settings.bmxTopic())
-        {
+		{
 			//Topic has to be set to: id/deviceName/evt/eventName/fmt/json
-            //Never send different message formats to Bluemix IOT platform as it will drop the connection
+			//Never send different message formats to Bluemix IOT platform as it will drop the connection
 			std::shared_ptr<MqttMessage> messageJson = std::make_shared<MqttMessage>();
 			messageJson->topic = "id/" + std::to_string(peerId) + "/evt/ch-" + std::to_string(channel) + "/fmt/json";
 			BaseLib::PVariable structValue = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -1195,9 +1199,9 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 			messageJson->retain = retain;
 			queueMessage(messageJson);
 		}
-        else
-        {
-            std::shared_ptr<MqttMessage> messageJson1;
+		else
+		{
+			std::shared_ptr<MqttMessage> messageJson1;
 			if(_settings.jsonTopic())
 			{
 				messageJson1.reset(new MqttMessage());
@@ -1250,7 +1254,7 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 
 void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values)
 {
-	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, keys, values) -> peerId="+std::to_string(peerId)+", channel="+std::to_string(channel)+", keys, values");
+	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, keys, values) -> peerId=" + std::to_string(peerId) + ", channel=" + std::to_string(channel) + ", keys, values");
 	try
 	{
 		if(keys.empty() || keys.size() != values.size()) return;
@@ -1260,33 +1264,33 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 		std::shared_ptr<MqttMessage> messageJson2;
 		BaseLib::PVariable jsonObj;
 		if(_settings.bmxTopic())
-        {
+		{
 			//Topic has to be set to: id/deviceName/evt/eventName/fmt/json
 			messageJson2.reset(new MqttMessage());
 			messageJson2->topic = "id/" + std::to_string(peerId) + "/evt/ch-" + std::to_string(channel) + "/fmt/json";
 			jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		}
-        else if(_settings.jsonobjTopic())
+		else if(_settings.jsonobjTopic())
 		{
 			messageJson2.reset(new MqttMessage());
 			messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel);
-            jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		}
 
-        bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
-        std::shared_ptr<BaseLib::Systems::Peer> peer;
-        if(checkAcls && peerId != 0)
-        {
-            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-            {
-                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-                if(central) peer = central->getPeer(peerId);
-                if(peer) break;
-            }
-        }
+		bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
+		if(checkAcls && peerId != 0)
+		{
+			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+				if(central) peer = central->getPeer(peerId);
+				if(peer) break;
+			}
+		}
 
-		for(int32_t i = 0; i < (signed)keys.size(); i++)
+		for(int32_t i = 0; i < (signed) keys.size(); i++)
 		{
 			if(checkAcls)
 			{
@@ -1305,12 +1309,12 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 
 			std::shared_ptr<MqttMessage> messageJson1;
 			if(_settings.bmxTopic())
-            {
+			{
 				jsonObj->structValue->emplace(keys.at(i), values.at(i));
 				if(!retain) messageJson2->retain = false;
 			}
-            else
-            {
+			else
+			{
 				//never send different format of message to bluemix IOT platform as it will drop the Connection
 				//if we are using bluemix formatting we have to disable all other data formatting
 				if(_settings.jsonTopic())
@@ -1366,7 +1370,7 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 
 void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
 {
-	if(GD::bl->debugLevel >= 4) _out.printDebug("Debug: queueMessage (message) topic: "+message->topic+" message:"+ std::string(message->message.begin(), message->message.end()));
+	if(GD::bl->debugLevel >= 4) _out.printDebug("Debug: queueMessage (message) topic: " + message->topic + " message:" + std::string(message->message.begin(), message->message.end()));
 	try
 	{
 		if(!_started || !message) return;
@@ -1389,96 +1393,96 @@ void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
 
 void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool retain)
 {
-try
-{
-	if(data.empty() || !_started) return;
-
-	std::vector<char> packet;
-	std::vector<char> payload;
-	std::string fullTopic;
-
-	if(_settings.bmxTopic())
-    {
-		//Format for IBM Bluemix topic in gateway mode is: iot-2/type/mydevice/id/device1/evt/status/fmt/json
-		//Format of topic received by method is: id/deviceName/evt/eventName/fmt/json
-		fullTopic = _settings.bmxPrefix() + _settings.bmxDevTypeId() + '/' + topic;
-		payload.reserve(fullTopic.size() + 2 + 2 + data.size());  // fixed header (2) + varheader (2) + topic + payload.
-	}
-    else
-    {
-		fullTopic = _settings.prefix() + _settings.homegearId() + "/" + topic;
-		payload.reserve(fullTopic.size() + 2 + 2 + data.size());  // fixed header (2) + varheader (2) + topic + payload.
-	}
-
-	payload.push_back(fullTopic.size() >> 8);
-	payload.push_back(fullTopic.size() & 0xFF);
-	payload.insert(payload.end(), fullTopic.begin(), fullTopic.end());
-	int16_t id = 0;
-	while(id == 0) id = _packetId++;
-	payload.push_back(id >> 8);
-	payload.push_back(id & 0xFF);
-
-	std::vector<char> lengthBytes;
-
-	payload.insert(payload.end(), data.begin(), data.end());
-	lengthBytes = getLengthBytes(payload.size());
-
-	packet.reserve(1 + lengthBytes.size() + payload.size());
-	retain && _settings.retain() ? packet.push_back(0x33) : packet.push_back(0x32);
-	packet.insert(packet.end(), lengthBytes.begin(), lengthBytes.end());
-	packet.insert(packet.end(), payload.begin(), payload.end());
-	int32_t j = 0;
-	std::vector<char> response(7);
-	if(GD::bl->debugLevel >= 4) GD::out.printInfo("MQTT Client Info: Publishing topic   " + fullTopic);
-	for(int32_t i = 0; i < 25; i++)
+	try
 	{
-		if(_reconnecting)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			if(!_started) return;
-			continue;
-		}
-		if(!_socket->connected()) reconnect();
-		if(!_started) break;
-		if(i == 1) packet[0] |= 8;
-		getResponse(packet, response, MQTT_PACKET_PUBACK, id, true);
-		if(response.empty())
-		{
-			//_socket->close();
-			//reconnect();
-			if(i >= 5) _out.printWarning("MQTT Client Warning: No PUBACK received.");
-		}
-		else return;
+		if(data.empty() || !_started) return;
 
-		j = 0;
-		while(_started && j < 5)
-		{
+		std::vector<char> packet;
+		std::vector<char> payload;
+		std::string fullTopic;
 
-			if(i < 5)
+		if(_settings.bmxTopic())
+		{
+			//Format for IBM Bluemix topic in gateway mode is: iot-2/type/mydevice/id/device1/evt/status/fmt/json
+			//Format of topic received by method is: id/deviceName/evt/eventName/fmt/json
+			fullTopic = _settings.bmxPrefix() + _settings.bmxDevTypeId() + '/' + topic;
+			payload.reserve(fullTopic.size() + 2 + 2 + data.size());  // fixed header (2) + varheader (2) + topic + payload.
+		}
+		else
+		{
+			fullTopic = _settings.prefix() + _settings.homegearId() + "/" + topic;
+			payload.reserve(fullTopic.size() + 2 + 2 + data.size());  // fixed header (2) + varheader (2) + topic + payload.
+		}
+
+		payload.push_back(fullTopic.size() >> 8);
+		payload.push_back(fullTopic.size() & 0xFF);
+		payload.insert(payload.end(), fullTopic.begin(), fullTopic.end());
+		int16_t id = 0;
+		while(id == 0) id = _packetId++;
+		payload.push_back(id >> 8);
+		payload.push_back(id & 0xFF);
+
+		std::vector<char> lengthBytes;
+
+		payload.insert(payload.end(), data.begin(), data.end());
+		lengthBytes = getLengthBytes(payload.size());
+
+		packet.reserve(1 + lengthBytes.size() + payload.size());
+		retain && _settings.retain() ? packet.push_back(0x33) : packet.push_back(0x32);
+		packet.insert(packet.end(), lengthBytes.begin(), lengthBytes.end());
+		packet.insert(packet.end(), payload.begin(), payload.end());
+		int32_t j = 0;
+		std::vector<char> response(7);
+		if(GD::bl->debugLevel >= 4) GD::out.printInfo("MQTT Client Info: Publishing topic   " + fullTopic);
+		for(int32_t i = 0; i < 25; i++)
+		{
+			if(_reconnecting)
 			{
-				j += 5;
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			}
-			else
-			{
-				j++;
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				if(!_started) return;
+				continue;
+			}
+			if(!_socket->connected()) reconnect();
+			if(!_started) break;
+			if(i == 1) packet[0] |= 8;
+			getResponse(packet, response, MQTT_PACKET_PUBACK, id, true);
+			if(response.empty())
+			{
+				//_socket->close();
+				//reconnect();
+				if(i >= 5) _out.printWarning("MQTT Client Warning: No PUBACK received.");
+			}
+			else return;
+
+			j = 0;
+			while(_started && j < 5)
+			{
+
+				if(i < 5)
+				{
+					j += 5;
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+				else
+				{
+					j++;
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				}
 			}
 		}
 	}
-}
-catch(const std::exception& ex)
-{
-	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-}
-catch(BaseLib::Exception& ex)
-{
-	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-}
-catch(...)
-{
-	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 
 
 }
@@ -1514,4 +1518,6 @@ void Mqtt::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
 }

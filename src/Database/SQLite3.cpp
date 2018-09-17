@@ -31,10 +31,7 @@
 #include "SQLite3.h"
 #include "../GD/GD.h"
 
-namespace BaseLib
-{
-
-namespace Database
+namespace Homegear
 {
 
 SQLite3::SQLite3()
@@ -177,7 +174,7 @@ void SQLite3::hotBackup()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -199,7 +196,7 @@ bool SQLite3::checkIntegrity(std::string databasePath)
 			return true;
 		}
 
-		std::shared_ptr<DataTable> integrityResult(new DataTable());
+		std::shared_ptr<BaseLib::Database::DataTable> integrityResult(new BaseLib::Database::DataTable());
 
 		sqlite3_stmt* statement = nullptr;
 		result = sqlite3_prepare_v2(database, "PRAGMA integrity_check", -1, &statement, NULL);
@@ -212,7 +209,7 @@ bool SQLite3::checkIntegrity(std::string databasePath)
 		{
 			getDataRows(statement, integrityResult);
 		}
-		catch(const Exception& ex)
+		catch(const BaseLib::Exception& ex)
 		{
 			sqlite3_close(database);
 			return false;
@@ -235,7 +232,7 @@ bool SQLite3::checkIntegrity(std::string databasePath)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -315,7 +312,7 @@ void SQLite3::openDatabase(bool lockMutex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -360,7 +357,7 @@ void SQLite3::closeDatabase(bool lockMutex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -371,7 +368,7 @@ void SQLite3::closeDatabase(bool lockMutex)
     if(lockMutex) _databaseMutex.unlock();
 }
 
-void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& dataRows)
+void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<BaseLib::Database::DataTable>& dataRows)
 {
 	int32_t result;
 	int32_t row = 0;
@@ -379,81 +376,81 @@ void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& d
 	{
 		for(int32_t i = 0; i < sqlite3_column_count(statement); i++)
 		{
-			std::shared_ptr<DataColumn> col(new DataColumn());
+			std::shared_ptr<BaseLib::Database::DataColumn> col(new BaseLib::Database::DataColumn());
 			col->index = i;
 			int32_t columnType = sqlite3_column_type(statement, i);
 			if(columnType == SQLITE_INTEGER)
 			{
-				col->dataType = DataColumn::DataType::Enum::INTEGER;
+				col->dataType = BaseLib::Database::DataColumn::DataType::Enum::INTEGER;
 				col->intValue = sqlite3_column_int64(statement, i);
 			}
 			else if(columnType == SQLITE_FLOAT)
 			{
-				col->dataType = DataColumn::DataType::Enum::FLOAT;
+				col->dataType = BaseLib::Database::DataColumn::DataType::Enum::FLOAT;
 				col->floatValue = sqlite3_column_double(statement, i);
 			}
 			else if(columnType == SQLITE_BLOB)
 			{
-				col->dataType = DataColumn::DataType::Enum::BLOB;
+				col->dataType = BaseLib::Database::DataColumn::DataType::Enum::BLOB;
 				char* binaryData = (char*)sqlite3_column_blob(statement, i);
 				int32_t size = sqlite3_column_bytes(statement, i);
 				if(size > 0) col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
 			}
 			else if(columnType == SQLITE_NULL)
 			{
-				col->dataType = DataColumn::DataType::Enum::NODATA;
+				col->dataType = BaseLib::Database::DataColumn::DataType::Enum::NODATA;
 			}
 			else if(columnType == SQLITE_TEXT) //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
 			{
-				col->dataType = DataColumn::DataType::Enum::TEXT;
+				col->dataType = BaseLib::Database::DataColumn::DataType::Enum::TEXT;
 				col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
 			}
-			if(i == 0) dataRows->insert(std::pair<uint32_t, std::map<uint32_t, std::shared_ptr<DataColumn>>>(row, std::map<uint32_t, std::shared_ptr<DataColumn>>()));
+			if(i == 0) dataRows->insert(std::pair<uint32_t, std::map<uint32_t, std::shared_ptr<BaseLib::Database::DataColumn>>>(row, std::map<uint32_t, std::shared_ptr<BaseLib::Database::DataColumn>>()));
 			dataRows->at(row)[i] = col;
 		}
 		row++;
 	}
 	if(result != SQLITE_DONE)
 	{
-		throw Exception("Can't execute command (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
+		throw BaseLib::Exception("Can't execute command (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
 	}
 }
 
-void SQLite3::bindData(sqlite3_stmt* statement, DataRow& dataToEscape)
+void SQLite3::bindData(sqlite3_stmt* statement, BaseLib::Database::DataRow& dataToEscape)
 {
 	//There is no try/catch block on purpose!
 	int32_t result = 0;
 	int32_t index = 1;
-	std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<DataColumn> col)
+	std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<BaseLib::Database::DataColumn> col)
 	{
 		switch(col->dataType)
 		{
-			case DataColumn::DataType::Enum::NODATA:
+			case BaseLib::Database::DataColumn::DataType::Enum::NODATA:
 				result = sqlite3_bind_null(statement, index);
 				break;
-			case DataColumn::DataType::Enum::INTEGER:
+			case BaseLib::Database::DataColumn::DataType::Enum::INTEGER:
 				result = sqlite3_bind_int64(statement, index, col->intValue);
 				break;
-			case DataColumn::DataType::Enum::FLOAT:
+			case BaseLib::Database::DataColumn::DataType::Enum::FLOAT:
 				result = sqlite3_bind_double(statement, index, col->floatValue);
 				break;
-			case DataColumn::DataType::Enum::BLOB:
+			case BaseLib::Database::DataColumn::DataType::Enum::BLOB:
 				if(col->binaryValue->empty()) result = sqlite3_bind_null(statement, index);
 				else result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
 				break;
-			case DataColumn::DataType::Enum::TEXT:
+			case BaseLib::Database::DataColumn::DataType::Enum::TEXT:
 				result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);
 				break;
 		}
 		if(result)
 		{
-			throw(Exception(std::string(sqlite3_errmsg(_database))));
+			throw(BaseLib::Exception(std::string(sqlite3_errmsg(_database))));
 		}
 		index++;
 	});
 }
 
-uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, DataRow>> command)
+uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> command)
 {
 	try
 	{
@@ -492,7 +489,7 @@ uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, Dat
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -503,7 +500,7 @@ uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, Dat
 	return 0;
 }
 
-uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape)
+uint32_t SQLite3::executeWriteCommand(std::string command, BaseLib::Database::DataRow& dataToEscape)
 {
 	try
 	{
@@ -541,7 +538,7 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -552,9 +549,9 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 	return 0;
 }
 
-std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow& dataToEscape)
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::string command, BaseLib::Database::DataRow& dataToEscape)
 {
-	std::shared_ptr<DataTable> dataRows(new DataTable());
+	std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
 	try
 	{
 		std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -575,7 +572,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		{
 			getDataRows(statement, dataRows);
 		}
-		catch(const Exception& ex)
+		catch(const BaseLib::Exception& ex)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
@@ -593,7 +590,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -604,9 +601,9 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 	return dataRows;
 }
 
-std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::string command)
 {
-    std::shared_ptr<DataTable> dataRows(new DataTable());
+    std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
     try
     {
     	std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -626,7 +623,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 		{
 			getDataRows(statement, dataRows);
 		}
-		catch(const Exception& ex)
+		catch(const BaseLib::Exception& ex)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
@@ -647,7 +644,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -904,5 +901,5 @@ void SQLite3::benchmark4()
     }
 }
 */
-}
+
 }

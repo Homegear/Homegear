@@ -184,6 +184,7 @@ sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/cont
 sed -i 's/libtidy-dev.*,/libtidy-dev,/g' $rootfs/PHPBuild/debian/control
 sed -i 's/libzip-dev.*,/libzip-dev,/g' $rootfs/PHPBuild/debian/control
 sed -i '/.*libsystemd-daemon-dev,.*/d' $rootfs/PHPBuild/debian/control
+sed -i '/.*libxml2-dev/a\\t       libicu-dev,' $rootfs/PHPBuild/debian/control
 if [ "$distver" == "wheezy" ]; then
 	sed -i 's/apache2-dev.*,//g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*dh-apache2,.*/d' $rootfs/PHPBuild/debian/control
@@ -248,11 +249,13 @@ if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
 git clone https://github.com/krakjoe/pthreads.git pthreads
-# Todo: Remove the next two lines when fixed (probably in RC6)
+# Todo: Remove the next three lines when fixed (not the case in 7.2.9)
 sed -i '/.*#include <ctype.h>/a#include <limits.h>' xmlrpc/libxmlrpc/base64.c
+sed -i '/.*#include <string.h>/a#include <stdlib.h>' xmlrpc/libxmlrpc/encodings.c
 sed -i "s/if(queue_index == NULL)/if(index == NULL)/g" xmlrpc/libxmlrpc/queue.c
+# Add Homegear to allowed OPcode cache modules
+sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
 cd ..
-
 autoconf
 version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`

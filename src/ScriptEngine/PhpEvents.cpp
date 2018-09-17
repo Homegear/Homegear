@@ -32,6 +32,9 @@
 #include "../GD/GD.h"
 #include "PhpEvents.h"
 
+namespace Homegear
+{
+
 std::mutex PhpEvents::eventsMapMutex;
 std::map<int32_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 
@@ -101,7 +104,7 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
 		{
 			std::unique_lock<std::mutex> lock(_queueMutex);
 
-			if(!_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&]{ return _bufferCount > 0 || _stopProcessing; })) return eventData;
+			if(!_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return _bufferCount > 0 || _stopProcessing; })) return eventData;
 			if(_stopProcessing) return eventData;
 
 			std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
@@ -204,6 +207,8 @@ bool PhpEvents::peerSubscribed(uint64_t peerId, int32_t channel, std::string& va
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
+}
+
 }
 
 #endif

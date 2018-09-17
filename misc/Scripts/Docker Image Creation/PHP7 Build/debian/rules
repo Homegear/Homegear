@@ -1,11 +1,13 @@
 #!/usr/bin/make -f
 
+PHP_ZEND_VERSION     := $(shell sed -ne 's/\#define ZEND_MODULE_API_NO //p' Zend/zend_modules.h)-zts
+
 override_dh_auto_configure:
 	# We can for example download needed files here.
 	# All shell commands are supported
 
 override_dh_auto_build:
-	./configure  --prefix /usr/share/homegear/php --enable-embed=static --with-config-file-path=/etc/homegear --with-config-file-scan-dir=/etc/homegear/php.conf.d --includedir=/usr/include/php7-homegear --libdir=/usr/share/homegear/php --libexecdir=${prefix}/lib --datadir=${prefix}/share --program-suffix=-homegear --sysconfdir=/etc/homegear --localstatedir=/var --mandir=${prefix}/man --disable-debug --disable-rpath --with-pic --with-layout=GNU --enable-bcmath --enable-calendar --enable-ctype --enable-dba --without-gdbm --without-qdbm --enable-inifile --enable-flatfile --enable-dom --with-enchant=/usr --enable-exif --with-gettext=/usr --with-gmp=/usr/include/%target% --enable-fileinfo --enable-filter --enable-ftp --enable-hash --enable-json --enable-pdo --enable-mbregex --enable-mbregex-backtrack --enable-mbstring --disable-opcache --enable-phar --enable-posix --with-mysqli=mysqlnd --with-curl --with-zlib-dir=/usr --with-openssl --with-libedit=/usr --enable-libxml --enable-session --enable-simplexml --enable-pthreads --with-xmlrpc --enable-soap --enable-sockets --enable-tokenizer --enable-xml --enable-xmlreader --enable-xmlwriter --with-mhash=yes --enable-sysvmsg --enable-sysvsem --enable-sysvshm --enable-zip --disable-cli --disable-cgi --enable-pcntl --enable-maintainer-zts
+	./configure  --prefix /usr/share/homegear/php --enable-embed=static --with-config-file-path=/etc/homegear --with-config-file-scan-dir=/etc/homegear/php.conf.d --includedir=/usr/include/php7-homegear --libdir=/usr/share/homegear/php --libexecdir=${prefix}/lib --datadir=${prefix}/share --program-suffix=-homegear --sysconfdir=/etc/homegear --localstatedir=/var --mandir=${prefix}/man --disable-debug --disable-rpath --with-pic --with-layout=GNU --enable-bcmath --enable-calendar --enable-ctype --enable-dba --without-gdbm --without-qdbm --enable-inifile --enable-flatfile --enable-dom --with-enchant=/usr --enable-exif --with-gettext=/usr --with-gmp=/usr/include/%target% --enable-fileinfo --enable-filter --enable-ftp --enable-hash --enable-json --enable-pdo --enable-mbregex --enable-mbregex-backtrack --enable-mbstring --enable-phar --enable-posix --with-mysqli=mysqlnd --with-curl --with-zlib-dir=/usr --with-openssl --with-libedit=/usr --enable-libxml --enable-session --enable-simplexml --enable-pthreads --with-xmlrpc --enable-soap --enable-sockets --enable-tokenizer --enable-xml --enable-xmlreader --enable-xmlwriter --with-mhash=yes --enable-sysvmsg --enable-sysvsem --enable-sysvshm --enable-zip --disable-cli --disable-cgi --enable-pcntl --enable-intl --enable-opcache --enable-maintainer-zts
 	make
 	make install
 
@@ -18,5 +20,7 @@ override_dh_auto_install:
 	cp -r /usr/include/php7-homegear/php/*/* $(CURDIR)/debian/php7-homegear-dev/usr/include/php7-homegear
 	mkdir -p $(CURDIR)/debian/php7-homegear-dev/usr/lib
 	cp /usr/share/homegear/php/lib/libphp7.a $(CURDIR)/debian/php7-homegear-dev/usr/lib/libphp7-homegear.a
+	mkdir -p $(CURDIR)/debian/php7-homegear-dev/usr/share/homegear/php/$(PHP_ZEND_VERSION)
+	cp /usr/share/homegear/php/$(PHP_ZEND_VERSION)/opcache.* $(CURDIR)/debian/php7-homegear-dev/usr/share/homegear/php/$(PHP_ZEND_VERSION)/
 %:
 	dh $@

@@ -110,6 +110,6 @@ set(SOURCE_FILES
         src/Monitor.h
         config.h src/ScriptEngine/CacheInfo.h)
 
-add_custom_target(homegear COMMAND ../../makeAll.sh SOURCES ${SOURCE_FILES})
+add_custom_target(homegear COMMAND ../../devscripts/makeAll.sh SOURCES ${SOURCE_FILES})
 
 add_library(homegear-dummy ${SOURCE_FILES})

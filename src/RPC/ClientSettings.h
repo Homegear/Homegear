@@ -39,14 +39,23 @@
 #include <map>
 #include <cstring>
 
+namespace Homegear
+{
+
 namespace Rpc
 {
+
 class ClientSettings
 {
 public:
 	struct Settings
 	{
-		enum AuthType { none, basic, cert };
+		enum AuthType
+		{
+			none,
+			basic,
+			cert
+		};
 
 		std::string name;
 		std::string hostname;
@@ -64,14 +73,20 @@ public:
 	};
 
 	ClientSettings();
+
 	virtual ~ClientSettings() {}
+
 	void load(std::string filename);
 
 	std::shared_ptr<Settings> get(std::string& hostname) { if(_clients.find(hostname) != _clients.end()) return _clients[hostname]; else return std::shared_ptr<Settings>(); }
+
 private:
 	std::map<std::string, std::shared_ptr<Settings>> _clients;
 
 	void reset();
 };
+
+}
+
 }
 #endif

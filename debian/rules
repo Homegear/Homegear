@@ -50,8 +50,11 @@ override_dh_auto_install:
 	chmod 755 $(CURDIR)/debian/homegear/var/lib/homegear/scripts/*.sh
 
 	mkdir -p $(CURDIR)/debian/homegear/usr/share/homegear
+	cp -R /usr/share/homegear/php/ $(CURDIR)/debian/homegear/usr/share/homegear
+	rm -f $(CURDIR)/debian/homegear/usr/share/homegear/php/*/*.a
 	chown -R root:root $(CURDIR)/debian/homegear/usr/share/homegear
-	chmod -R 550 $(CURDIR)/debian/homegear/usr/share/homegear
+	find $(CURDIR)/debian/homegear/usr/share/homegear -type d -exec chmod 555 {} \;
+	find $(CURDIR)/debian/homegear/usr/share/homegear -type f -exec chmod 444 {} \;
 
 override_dh_strip:
 	dh_strip --dbg-package=homegear

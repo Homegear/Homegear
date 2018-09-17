@@ -50,7 +50,7 @@ zend_homegear_globals* php_homegear_get_globals()
 		data = new zend_homegear_globals();
 		if(!data || pthread_setspecific(pthread_key, data) != 0)
 		{
-			GD::out.printCritical("Critical: Could not set PHP globals data - out of memory?.");
+			Homegear::GD::out.printCritical("Critical: Could not set PHP globals data - out of memory?.");
 			if(data) delete data;
 			data = nullptr;
 			return data;

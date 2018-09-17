@@ -52,7 +52,7 @@ void php_homegear_device_invoke_rpc(std::string& methodName, BaseLib::PVariable&
 		zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
 		RETURN_NULL()
 	}
-	PhpVariableConverter::getPHPVariable(result, return_value);
+	Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
 
 static const zend_function_entry homegear_device_base_methods[] = {
@@ -82,7 +82,7 @@ bool php_init_device(PScriptInfo scriptInfo, zend_class_entry* homegearDeviceCla
 
 		if(!homegearDeviceClassEntry)
 		{
-			GD::out.printError("Error: Class HomegearDevice not found in file: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error: Class HomegearDevice not found in file: " + scriptInfo->fullPath);
 			return false;
 		}
 
@@ -96,22 +96,22 @@ bool php_init_device(PScriptInfo scriptInfo, zend_class_entry* homegearDeviceCla
 		bool stop = false;
 		if(!zend_hash_str_find_ptr(&(homegearDeviceClassEntry->function_table), "init", sizeof("init") - 1))
 		{
-			GD::out.printError("Error: Mandatory method \"init\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error: Mandatory method \"init\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
 			stop = true;
 		}
 		if(!zend_hash_str_find_ptr(&(homegearDeviceClassEntry->function_table), "start", sizeof("start") - 1))
 		{
-			GD::out.printError("Error: Mandatory method \"start\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error: Mandatory method \"start\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
 			stop = true;
 		}
 		if(!zend_hash_str_find_ptr(&(homegearDeviceClassEntry->function_table), "stop", sizeof("stop") - 1))
 		{
-			GD::out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error: Mandatory method \"stop\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
 			stop = true;
 		}
 		if(!zend_hash_str_find_ptr(&(homegearDeviceClassEntry->function_table), "waitforstop", sizeof("waitforstop") - 1))
 		{
-			GD::out.printError("Error: Mandatory method \"waitForStop\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error: Mandatory method \"waitForStop\" not found in class \"HomegearDevice\". File: " + scriptInfo->fullPath);
 			stop = true;
 		}
 		if(stop) return false;
@@ -130,7 +130,7 @@ bool php_init_device(PScriptInfo scriptInfo, zend_class_entry* homegearDeviceCla
 			}
 			zend_end_try();
 
-			if(result != 0) GD::out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
+			if(result != 0) Homegear::GD::out.printError("Error calling function \"__construct\" in file: " + scriptInfo->fullPath);
 			zval_ptr_dtor(&function);
 			zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 		}
@@ -139,15 +139,15 @@ bool php_init_device(PScriptInfo scriptInfo, zend_class_entry* homegearDeviceCla
 	}
 	catch(const std::exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
 }
@@ -184,7 +184,7 @@ BaseLib::PVariable php_device_object_invoke_local(PScriptInfo& scriptInfo, zval*
 			zval parameters[methodParameters->size()];
 			for(uint32_t i = 0; i < methodParameters->size(); i++)
 			{
-				PhpVariableConverter::getPHPVariable(methodParameters->at(i), &parameters[i]);
+				Homegear::PhpVariableConverter::getPHPVariable(methodParameters->at(i), &parameters[i]);
 			}
 
 			zend_try
@@ -201,25 +201,25 @@ BaseLib::PVariable php_device_object_invoke_local(PScriptInfo& scriptInfo, zval*
 		BaseLib::PVariable response;
 		if(result != 0)
 		{
-			GD::out.printError("Error calling function \"" + methodName + "\" in file: " + scriptInfo->fullPath);
+			Homegear::GD::out.printError("Error calling function \"" + methodName + "\" in file: " + scriptInfo->fullPath);
 			response = BaseLib::Variable::createError(-3, "Error calling method: " + methodName);
 		}
-		else response = PhpVariableConverter::getVariable(&returnValue);
+		else response = Homegear::PhpVariableConverter::getVariable(&returnValue);
 		zval_ptr_dtor(&function);
 		zval_ptr_dtor(&returnValue); //Not really necessary as returnValue is of primitive type
 		return response;
 	}
 	catch(const std::exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Homegear::GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

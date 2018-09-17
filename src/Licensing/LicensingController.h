@@ -41,19 +41,25 @@
 
 #include <dlfcn.h>
 
+namespace Homegear
+{
+
 class LicensingModuleLoader
 {
 public:
 	LicensingModuleLoader(std::string name, std::string path);
+
 	virtual ~LicensingModuleLoader();
 
 	std::unique_ptr<BaseLib::Licensing::Licensing> createModule();
+
 private:
 	std::string _name;
 	void* _handle = nullptr;
 	std::unique_ptr<BaseLib::Licensing::LicensingFactory> _factory;
 
 	LicensingModuleLoader(const LicensingModuleLoader&);
+
 	LicensingModuleLoader& operator=(const LicensingModuleLoader&);
 };
 
@@ -61,21 +67,29 @@ class LicensingController
 {
 public:
 	LicensingController();
+
 	virtual ~LicensingController();
+
 	void init();
+
 	void dispose();
 
 	void load();
+
 	void loadModules();
 
 	bool moduleAvailable(int32_t moduleId);
+
 private:
 	bool _disposed = false;
 
 	std::map<std::string, std::unique_ptr<LicensingModuleLoader>> moduleLoaders;
 
 	LicensingController(const LicensingController&);
+
 	LicensingController& operator=(const LicensingController&);
 };
+
+}
 
 #endif

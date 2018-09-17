@@ -40,15 +40,24 @@
 #include <stdlib.h>
 #include <zend_API.h>
 
+namespace Homegear
+{
+
 class PhpVariableConverter
 {
 public:
 	PhpVariableConverter();
+
 	virtual ~PhpVariableConverter();
 
 	static BaseLib::PVariable getVariable(zval* value, bool arraysAreStructs = false, bool subArraysAreStructs = false);
+
 	static void getPHPVariable(BaseLib::PVariable input, zval* output);
+
 protected:
 };
+
+}
+
 #endif
 #endif

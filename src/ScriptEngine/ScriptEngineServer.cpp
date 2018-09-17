@@ -34,12 +34,11 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-namespace ScriptEngine
+namespace Homegear
 {
 
-pid_t _manualClientCurrentProcessId = 1;
-std::mutex _unconnectedProcessesMutex;
-std::queue<pid_t> _unconnectedProcesses;
+namespace ScriptEngine
+{
 
 ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 {
@@ -47,10 +46,10 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_out.setPrefix("Script Engine Server: ");
 
 #ifdef DEBUGSESOCKET
-	BaseLib::Io::deleteFile(GD::bl->settings.logfilePath() + "homegear-socket.pcap");
-	_socketOutput.open(GD::bl->settings.logfilePath() + "homegear-socket.pcap", std::ios::app | std::ios::binary);
-	std::vector<uint8_t> buffer{ 0xa1, 0xb2, 0xc3, 0xd4, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xe4 };
-	_socketOutput.write((char*)buffer.data(), buffer.size());
+    BaseLib::Io::deleteFile(GD::bl->settings.logfilePath() + "homegear-socket.pcap");
+    _socketOutput.open(GD::bl->settings.logfilePath() + "homegear-socket.pcap", std::ios::app | std::ios::binary);
+    std::vector<uint8_t> buffer{ 0xa1, 0xb2, 0xc3, 0xd4, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xe4 };
+    _socketOutput.write((char*)buffer.data(), buffer.size());
 #endif
 
 	_shuttingDown = false;
@@ -58,13 +57,13 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
-    _scriptEngineClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-    _scriptEngineClientInfo->scriptEngineServer = true;
-    _scriptEngineClientInfo->initInterfaceId = "scriptEngine";
-    _scriptEngineClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
-    std::vector<uint64_t> groups{ 2 };
-    _scriptEngineClientInfo->acls->fromGroups(groups);
-    _scriptEngineClientInfo->user = "SYSTEM (2)";
+	_scriptEngineClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+	_scriptEngineClientInfo->scriptEngineServer = true;
+	_scriptEngineClientInfo->initInterfaceId = "scriptEngine";
+	_scriptEngineClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+	std::vector<uint64_t> groups{2};
+	_scriptEngineClientInfo->acls->fromGroups(groups);
+	_scriptEngineClientInfo->user = "SYSTEM (2)";
 
 	_rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
 	_rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -88,8 +87,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteNodeData()));
 	_rpcMethods.emplace("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable()));
 	_rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
-    _rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
-    _rpcMethods.emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
+	_rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
+	_rpcMethods.emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
 	_rpcMethods.emplace("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig()));
 	_rpcMethods.emplace("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata()));
 	_rpcMethods.emplace("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts()));
@@ -117,7 +116,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId()));
 	_rpcMethods.emplace("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPeerId()));
 	_rpcMethods.emplace("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetServiceMessages()));
-    _rpcMethods.emplace("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSniffedDevices()));
+	_rpcMethods.emplace("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSniffedDevices()));
 	_rpcMethods.emplace("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariable()));
 	_rpcMethods.emplace("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUpdateStatus()));
 	_rpcMethods.emplace("getValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetValue()));
@@ -143,9 +142,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo()));
 	_rpcMethods.emplace("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript()));
 	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
-    _rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
+	_rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
 	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
-    _rpcMethods.emplace("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalServiceMessage()));
+	_rpcMethods.emplace("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalServiceMessage()));
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
 	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
@@ -160,8 +159,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
 	_rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
 	_rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));
-    _rpcMethods.emplace("startSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStartSniffing()));
-    _rpcMethods.emplace("stopSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStopSniffing()));
+	_rpcMethods.emplace("startSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStartSniffing()));
+	_rpcMethods.emplace("stopSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStopSniffing()));
 	_rpcMethods.emplace("subscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSubscribePeers()));
 	_rpcMethods.emplace("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
 	_rpcMethods.emplace("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerRpcEvent()));
@@ -169,17 +168,17 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
-    { // Stories
-        _rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
-        _rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
-        _rpcMethods.emplace("deleteStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteStory()));
-        _rpcMethods.emplace("getRoomsInStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomsInStory()));
-        _rpcMethods.emplace("getStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStoryMetadata()));
-        _rpcMethods.emplace("getStories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStories()));
-        _rpcMethods.emplace("removeRoomFromStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveRoomFromStory()));
-        _rpcMethods.emplace("setStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetStoryMetadata()));
-        _rpcMethods.emplace("updateStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateStory()));
-    }
+	{ // Stories
+		_rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
+		_rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
+		_rpcMethods.emplace("deleteStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteStory()));
+		_rpcMethods.emplace("getRoomsInStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomsInStory()));
+		_rpcMethods.emplace("getStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStoryMetadata()));
+		_rpcMethods.emplace("getStories", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetStories()));
+		_rpcMethods.emplace("removeRoomFromStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveRoomFromStory()));
+		_rpcMethods.emplace("setStoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetStoryMetadata()));
+		_rpcMethods.emplace("updateStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateStory()));
+	}
 
 	{ // Rooms
 		_rpcMethods.emplace("addChannelToRoom", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddChannelToRoom()));
@@ -223,14 +222,14 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
 	}
 
-    { // UI
+	{ // UI
 		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
 		_rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
 		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
 		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
 		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
 		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
-    }
+	}
 
 	_localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("scriptHeaders", std::bind(&ScriptEngineServer::scriptHeaders, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -244,26 +243,30 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	_localRpcMethods.emplace("mqttPublish", std::bind(&ScriptEngineServer::mqttPublish, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-    //{{{ Users
-	    _localRpcMethods.emplace("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	    _localRpcMethods.emplace("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	    _localRpcMethods.emplace("deleteUser", std::bind(&ScriptEngineServer::deleteUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("getUserMetadata", std::bind(&ScriptEngineServer::getUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("setUserMetadata", std::bind(&ScriptEngineServer::setUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("getUsersGroups", std::bind(&ScriptEngineServer::getUsersGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	    _localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-	    _localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    //}}}
+	//{{{ Users
+	_localRpcMethods.emplace("auth", std::bind(&ScriptEngineServer::auth, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("createUser", std::bind(&ScriptEngineServer::createUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("deleteUser", std::bind(&ScriptEngineServer::deleteUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getUserMetadata", std::bind(&ScriptEngineServer::getUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("listUsers", std::bind(&ScriptEngineServer::listUsers, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("setUserMetadata", std::bind(&ScriptEngineServer::setUserMetadata, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getUsersGroups", std::bind(&ScriptEngineServer::getUsersGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("updateUser", std::bind(&ScriptEngineServer::updateUser, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("userExists", std::bind(&ScriptEngineServer::userExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-    //{{{ Groups
-        _localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-		_localRpcMethods.emplace("getGroup", std::bind(&ScriptEngineServer::getGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("getGroups", std::bind(&ScriptEngineServer::getGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("groupExists", std::bind(&ScriptEngineServer::groupExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        _localRpcMethods.emplace("updateGroup", std::bind(&ScriptEngineServer::updateGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    //}}}
+	_localRpcMethods.emplace("createOauthKeys", std::bind(&ScriptEngineServer::createOauthKeys, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("refreshOauthKey", std::bind(&ScriptEngineServer::refreshOauthKey, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("verifyOauthKey", std::bind(&ScriptEngineServer::verifyOauthKey, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//}}}
+
+	//{{{ Groups
+	_localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getGroup", std::bind(&ScriptEngineServer::getGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("getGroups", std::bind(&ScriptEngineServer::getGroups, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("groupExists", std::bind(&ScriptEngineServer::groupExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	_localRpcMethods.emplace("updateGroup", std::bind(&ScriptEngineServer::updateGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//}}}
 
 	_localRpcMethods.emplace("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	_localRpcMethods.emplace("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -292,142 +295,142 @@ ScriptEngineServer::~ScriptEngineServer()
 #ifdef DEBUGSESOCKET
 void ScriptEngineServer::socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data)
 {
-	try
-	{
-		int64_t time = BaseLib::HelperFunctions::getTimeMicroseconds();
-		int32_t timeSeconds = time / 1000000;
-		int32_t timeMicroseconds = time % 1000000;
-
-		uint32_t length = 20 + 8 + data.size();
-
-		std::vector<uint8_t> buffer;
-		buffer.reserve(length);
-		buffer.push_back((uint8_t)(timeSeconds >> 24));
-		buffer.push_back((uint8_t)(timeSeconds >> 16));
-		buffer.push_back((uint8_t)(timeSeconds >> 8));
-		buffer.push_back((uint8_t)timeSeconds);
-
-		buffer.push_back((uint8_t)(timeMicroseconds >> 24));
-		buffer.push_back((uint8_t)(timeMicroseconds >> 16));
-		buffer.push_back((uint8_t)(timeMicroseconds >> 8));
-		buffer.push_back((uint8_t)timeMicroseconds);
-
-		buffer.push_back((uint8_t)(length >> 24)); //incl_len
-		buffer.push_back((uint8_t)(length >> 16));
-		buffer.push_back((uint8_t)(length >> 8));
-		buffer.push_back((uint8_t)length);
-
-		buffer.push_back((uint8_t)(length >> 24)); //orig_len
-		buffer.push_back((uint8_t)(length >> 16));
-		buffer.push_back((uint8_t)(length >> 8));
-		buffer.push_back((uint8_t)length);
-
-		//{{{ IPv4 header
-			buffer.push_back(0x45); //Version 4 (0100....); Header length 20 (....0101)
-			buffer.push_back(0); //Differentiated Services Field
-
-			buffer.push_back((uint8_t)(length >> 8)); //Length
-			buffer.push_back((uint8_t)length);
-
-			buffer.push_back((uint8_t)((packetId % 65536) >> 8)); //Identification
-			buffer.push_back((uint8_t)(packetId % 65536));
-
-			buffer.push_back(0); //Flags: 0 (000.....); Fragment offset 0 (...00000 00000000)
-			buffer.push_back(0);
-
-			buffer.push_back(0x80); //TTL
-
-			buffer.push_back(17); //Protocol UDP
-
-			buffer.push_back(0); //Header checksum
-			buffer.push_back(0);
-
-			if(request)
-			{
-				if(serverRequest)
-				{
-					buffer.push_back(1); //Source
-					buffer.push_back(1);
-					buffer.push_back(1);
-					buffer.push_back(1);
-
-					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
-					buffer.push_back((uint8_t)(clientData->pid >> 16));
-					buffer.push_back((uint8_t)(clientData->pid >> 8));
-					buffer.push_back((uint8_t)clientData->pid);
-				}
-				else
-				{
-					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
-					buffer.push_back((uint8_t)(clientData->pid >> 16));
-					buffer.push_back((uint8_t)(clientData->pid >> 8));
-					buffer.push_back((uint8_t)clientData->pid);
-
-					buffer.push_back(2); //Destination
-					buffer.push_back(2);
-					buffer.push_back(2);
-					buffer.push_back(2);
-				}
-			}
-			else
-			{
-				if(serverRequest)
-				{
-					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
-					buffer.push_back((uint8_t)(clientData->pid >> 16));
-					buffer.push_back((uint8_t)(clientData->pid >> 8));
-					buffer.push_back((uint8_t)clientData->pid);
-
-					buffer.push_back(1); //Destination
-					buffer.push_back(1);
-					buffer.push_back(1);
-					buffer.push_back(1);
-				}
-				else
-				{
-					buffer.push_back(2); //Source
-					buffer.push_back(2);
-					buffer.push_back(2);
-					buffer.push_back(2);
-
-					buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
-					buffer.push_back((uint8_t)(clientData->pid >> 16));
-					buffer.push_back((uint8_t)(clientData->pid >> 8));
-					buffer.push_back((uint8_t)clientData->pid);
-				}
-			}
-		// }}}
-		// {{{ UDP header
-			buffer.push_back(0); //Source port
-			buffer.push_back(1);
-
-			buffer.push_back((uint8_t)(clientData->pid >> 8)); //Destination port
-			buffer.push_back((uint8_t)clientData->pid);
-
-			length -= 20;
-			buffer.push_back((uint8_t)(length >> 8)); //Length
-			buffer.push_back((uint8_t)length);
-
-			buffer.push_back(0); //Checksum
-			buffer.push_back(0);
-		// }}}
-
-		buffer.insert(buffer.end(), data.begin(), data.end());
-
-		std::lock_guard<std::mutex> socketOutputGuard(_socketOutputMutex);
-		_socketOutput.write((char*)buffer.data(), buffer.size());
-	}
-	catch(const std::exception& ex)
+    try
     {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        int64_t time = BaseLib::HelperFunctions::getTimeMicroseconds();
+        int32_t timeSeconds = time / 1000000;
+        int32_t timeMicroseconds = time % 1000000;
+
+        uint32_t length = 20 + 8 + data.size();
+
+        std::vector<uint8_t> buffer;
+        buffer.reserve(length);
+        buffer.push_back((uint8_t)(timeSeconds >> 24));
+        buffer.push_back((uint8_t)(timeSeconds >> 16));
+        buffer.push_back((uint8_t)(timeSeconds >> 8));
+        buffer.push_back((uint8_t)timeSeconds);
+
+        buffer.push_back((uint8_t)(timeMicroseconds >> 24));
+        buffer.push_back((uint8_t)(timeMicroseconds >> 16));
+        buffer.push_back((uint8_t)(timeMicroseconds >> 8));
+        buffer.push_back((uint8_t)timeMicroseconds);
+
+        buffer.push_back((uint8_t)(length >> 24)); //incl_len
+        buffer.push_back((uint8_t)(length >> 16));
+        buffer.push_back((uint8_t)(length >> 8));
+        buffer.push_back((uint8_t)length);
+
+        buffer.push_back((uint8_t)(length >> 24)); //orig_len
+        buffer.push_back((uint8_t)(length >> 16));
+        buffer.push_back((uint8_t)(length >> 8));
+        buffer.push_back((uint8_t)length);
+
+        //{{{ IPv4 header
+            buffer.push_back(0x45); //Version 4 (0100....); Header length 20 (....0101)
+            buffer.push_back(0); //Differentiated Services Field
+
+            buffer.push_back((uint8_t)(length >> 8)); //Length
+            buffer.push_back((uint8_t)length);
+
+            buffer.push_back((uint8_t)((packetId % 65536) >> 8)); //Identification
+            buffer.push_back((uint8_t)(packetId % 65536));
+
+            buffer.push_back(0); //Flags: 0 (000.....); Fragment offset 0 (...00000 00000000)
+            buffer.push_back(0);
+
+            buffer.push_back(0x80); //TTL
+
+            buffer.push_back(17); //Protocol UDP
+
+            buffer.push_back(0); //Header checksum
+            buffer.push_back(0);
+
+            if(request)
+            {
+                if(serverRequest)
+                {
+                    buffer.push_back(1); //Source
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+
+                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
+                    buffer.push_back((uint8_t)(clientData->pid >> 16));
+                    buffer.push_back((uint8_t)(clientData->pid >> 8));
+                    buffer.push_back((uint8_t)clientData->pid);
+                }
+                else
+                {
+                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
+                    buffer.push_back((uint8_t)(clientData->pid >> 16));
+                    buffer.push_back((uint8_t)(clientData->pid >> 8));
+                    buffer.push_back((uint8_t)clientData->pid);
+
+                    buffer.push_back(2); //Destination
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+                }
+            }
+            else
+            {
+                if(serverRequest)
+                {
+                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
+                    buffer.push_back((uint8_t)(clientData->pid >> 16));
+                    buffer.push_back((uint8_t)(clientData->pid >> 8));
+                    buffer.push_back((uint8_t)clientData->pid);
+
+                    buffer.push_back(1); //Destination
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+                }
+                else
+                {
+                    buffer.push_back(2); //Source
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+
+                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
+                    buffer.push_back((uint8_t)(clientData->pid >> 16));
+                    buffer.push_back((uint8_t)(clientData->pid >> 8));
+                    buffer.push_back((uint8_t)clientData->pid);
+                }
+            }
+        // }}}
+        // {{{ UDP header
+            buffer.push_back(0); //Source port
+            buffer.push_back(1);
+
+            buffer.push_back((uint8_t)(clientData->pid >> 8)); //Destination port
+            buffer.push_back((uint8_t)clientData->pid);
+
+            length -= 20;
+            buffer.push_back((uint8_t)(length >> 8)); //Length
+            buffer.push_back((uint8_t)length);
+
+            buffer.push_back(0); //Checksum
+            buffer.push_back(0);
+        // }}}
+
+        buffer.insert(buffer.end(), data.begin(), data.end());
+
+        std::lock_guard<std::mutex> socketOutputGuard(_socketOutputMutex);
+        _socketOutput.write((char*)buffer.data(), buffer.size());
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 #endif
@@ -489,17 +492,17 @@ void ScriptEngineServer::collectGarbage()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 bool ScriptEngineServer::start()
@@ -519,19 +522,19 @@ bool ScriptEngineServer::start()
 		GD::bl->threadManager.start(_mainThread, true, &ScriptEngineServer::mainThread, this);
 		return true;
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return false;
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
 }
 
 void ScriptEngineServer::stop()
@@ -619,17 +622,17 @@ void ScriptEngineServer::homegearShuttingDown()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::homegearReloading()
@@ -652,17 +655,17 @@ void ScriptEngineServer::homegearReloading()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
@@ -690,6 +693,9 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
 
 			if(signal != -1 && signal != 15) exitCode = -32500;
 
+			process->setExited(true);
+			process->requestConditionVariable.notify_all();
+
 			{
 				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
 				GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, -1, exitCode);
@@ -697,17 +703,17 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::devTestClient()
@@ -725,7 +731,7 @@ void ScriptEngineServer::devTestClient()
 			}
 		}
 
-		BaseLib::Array parameterArray{ std::make_shared<BaseLib::Variable>(6) };
+		BaseLib::Array parameterArray{std::make_shared<BaseLib::Variable>(6)};
 		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>(std::move(parameterArray));
 		for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
@@ -733,17 +739,17 @@ void ScriptEngineServer::devTestClient()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 uint32_t ScriptEngineServer::scriptCount()
@@ -771,18 +777,18 @@ uint32_t ScriptEngineServer::scriptCount()
 		return count;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
 }
 
 std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
@@ -808,24 +814,24 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
 			if(runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
 			for(auto& script : *(response->arrayValue))
 			{
-				runningScripts.push_back(std::tuple<int32_t, uint64_t, int32_t, std::string>((int32_t)(*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->integerValue, script->arrayValue->at(2)->stringValue));
+				runningScripts.push_back(std::tuple<int32_t, uint64_t, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->integerValue, script->arrayValue->at(2)->stringValue));
 			}
 		}
 		return runningScripts;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
 }
 
 BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& parameters)
@@ -853,57 +859,57 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& par
 		return result;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineServer::executeDeviceMethod(BaseLib::PArray& parameters)
 {
-    try
-    {
-        if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
-        PScriptEngineClientData clientData;
-        int32_t clientId = 0;
-        {
-            std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
-            auto deviceClientIdIterator = _deviceClientIdMap.find(parameters->at(0)->integerValue64);
-            if(deviceClientIdIterator == _deviceClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown device.");
-            clientId = deviceClientIdIterator->second;
-        }
-        {
-            std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            auto clientIterator = _clients.find(clientId);
-            if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Device's process not found.");
-            clientData = clientIterator->second;
-        }
+		PScriptEngineClientData clientData;
+		int32_t clientId = 0;
+		{
+			std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+			auto deviceClientIdIterator = _deviceClientIdMap.find(parameters->at(0)->integerValue64);
+			if(deviceClientIdIterator == _deviceClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown device.");
+			clientId = deviceClientIdIterator->second;
+		}
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			auto clientIterator = _clients.find(clientId);
+			if(clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Device's process not found.");
+			clientData = clientIterator->second;
+		}
 
-        BaseLib::PVariable result = sendRequest(clientData, "executeDeviceMethod", parameters, true);
-        return result;
-    }
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		BaseLib::PVariable result = sendRequest(clientData, "executeDeviceMethod", parameters, true);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values)
@@ -931,19 +937,19 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
 			BaseLib::PArray newValues;
 			newVariables->reserve(variables->size());
 			newValues->reserve(values->size());
-			for(int32_t i = 0; i < (int32_t)variables->size(); i++)
+			for(int32_t i = 0; i < (int32_t) variables->size(); i++)
 			{
 				if(id == 0)
 				{
-                    if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesReadSet())
-                    {
-                        auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
-                        if(systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
-                        {
-                            newVariables->push_back(variables->at(i));
-                            newValues->push_back(values->at(i));
-                        }
-                    }
+					if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesReadSet())
+					{
+						auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+						if(systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
+						{
+							newVariables->push_back(variables->at(i));
+							newValues->push_back(values->at(i));
+						}
+					}
 				}
 				else if(peer && _scriptEngineClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i)))
 				{
@@ -979,17 +985,17 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
@@ -1005,11 +1011,11 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib
 			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
 				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-				if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+				if(central && central->peerExists((uint64_t) ids.front())) //All ids are from the same family
 				{
 					for(auto id : ids)
 					{
-						auto peer = central->getPeer((uint64_t)id);
+						auto peer = central->getPeer((uint64_t) id);
 						if(!peer || !_scriptEngineClientInfo->acls->checkDeviceReadAccess(peer)) return;
 					}
 				}
@@ -1034,17 +1040,17 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
@@ -1070,17 +1076,17 @@ void ScriptEngineServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
@@ -1120,17 +1126,17 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::closeClientConnection(PScriptEngineClientData client)
@@ -1142,17 +1148,17 @@ void ScriptEngineServer::closeClientConnection(PScriptEngineClientData client)
 		client->closed = true;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::stopDevices()
@@ -1205,29 +1211,29 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-            PClientScriptInfo scriptInfo = std::make_shared<ClientScriptInfo>();
+			PClientScriptInfo scriptInfo = std::make_shared<ClientScriptInfo>();
 			auto scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId");
-            scriptInfo->scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId")->integerValue;
-            std::string user = queueEntry->parameters->at(0)->structValue->at("user")->stringValue;
+			scriptInfo->scriptId = queueEntry->parameters->at(0)->structValue->at("scriptId")->integerValue;
+			std::string user = queueEntry->parameters->at(0)->structValue->at("user")->stringValue;
 			std::string language = queueEntry->parameters->at(0)->structValue->at("language")->stringValue;
 
-            scriptInfo->clientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-            *scriptInfo->clientInfo = *_scriptEngineClientInfo;
+			scriptInfo->clientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+			*scriptInfo->clientInfo = *_scriptEngineClientInfo;
 
-            scriptInfo->clientInfo->peerId = queueEntry->parameters->at(0)->structValue->at("peerId")->integerValue64;
-            if(scriptInfo->clientInfo->peerId != 0) scriptInfo->clientInfo->addon = true;
+			scriptInfo->clientInfo->peerId = queueEntry->parameters->at(0)->structValue->at("peerId")->integerValue64;
+			if(scriptInfo->clientInfo->peerId != 0) scriptInfo->clientInfo->addon = true;
 
-            if(!user.empty())
-            {
-                scriptInfo->clientInfo->user = user;
-                scriptInfo->clientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), scriptInfo->scriptId);
-                if(!scriptInfo->clientInfo->acls->fromUser(user))
+			if(!user.empty())
+			{
+				scriptInfo->clientInfo->user = user;
+				scriptInfo->clientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), scriptInfo->scriptId);
+				if(!scriptInfo->clientInfo->acls->fromUser(user))
 				{
 					_out.printError("Error: Could not get ACLs for user \"" + user + "\".");
 					auto result = BaseLib::Variable::createError(-32603, "Unauthorized.");
 					sendResponse(queueEntry->clientData, scriptId, queueEntry->parameters->at(1), result);
 				}
-            }
+			}
 
 			if(!language.empty()) scriptInfo->clientInfo->language = language;
 
@@ -1236,7 +1242,7 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			{
 				if(GD::bl->debugLevel >= 4)
 				{
-                    if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "peerExists") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "peerExists") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
 					if(GD::bl->debugLevel >= 5)
 					{
 						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
@@ -1313,17 +1319,17 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData, std::vector<char>& data)
@@ -1332,7 +1338,7 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
 	{
 		int32_t totallySentBytes = 0;
 		std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
-		while (totallySentBytes < (signed)data.size())
+		while(totallySentBytes < (signed) data.size())
 		{
 			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
 			if(sentBytes <= 0)
@@ -1345,18 +1351,18 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::PVariable(new BaseLib::Variable());
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::PVariable(new BaseLib::Variable());
 }
 
 BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
@@ -1405,7 +1411,8 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 		}
 
 		int32_t i = 0;
-		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
+		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+		{
 			return response->finished || clientData->closed || _stopServer;
 		}))
 		{
@@ -1419,8 +1426,8 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 
 		if(!response->finished || (response->response && response->response->arrayValue->size() != 2) || response->packetId != packetId)
 		{
-            _out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + "." + (response->response ? " Response was: " + response->response->print(false, false, true) : ""));
-			 result = BaseLib::Variable::createError(-1, "No response received.");
+			_out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + "." + (response->response ? " Response was: " + response->response->print(false, false, true) : ""));
+			result = BaseLib::Variable::createError(-1, "No response received.");
 		}
 		else result = response->response->arrayValue->at(1);
 
@@ -1432,25 +1439,25 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
 		return result;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void ScriptEngineServer::sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
 {
 	try
 	{
-		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ scriptId, packetId, variable })));
+		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
 #ifdef DEBUGSESOCKET
@@ -1459,17 +1466,17 @@ void ScriptEngineServer::sendResponse(PScriptEngineClientData& clientData, BaseL
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineServer::mainThread()
@@ -1537,11 +1544,11 @@ void ScriptEngineServer::mainThread()
 				continue;
 			}
 
-			if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
+			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
 			{
 				sockaddr_un clientAddress;
 				socklen_t addressSize = sizeof(addressSize);
-				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize));
+				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr*) &clientAddress, &addressSize));
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
 
@@ -1590,18 +1597,18 @@ void ScriptEngineServer::mainThread()
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32_t maxThreadCount)
@@ -1610,7 +1617,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 	{
 		std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 
-		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount + 1 > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+		if(nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount + 1 > (unsigned) GD::bl->settings.maxNodeThreadsPerProcess())
 		{
 			GD::out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
 			return std::shared_ptr<ScriptEngineProcess>();
@@ -1621,12 +1628,12 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 			for(std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
 				if(i->second->getClientData()->closed) continue;
-				if(nodeProcess && i->second->isNodeProcess() && (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()))
+				if(nodeProcess && i->second->isNodeProcess() && (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount + 1 <= (unsigned) GD::bl->settings.maxNodeThreadsPerProcess()))
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
 				}
-				else if(!nodeProcess && !i->second->isNodeProcess() && i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned)GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
+				else if(!nodeProcess && !i->second->isNodeProcess() && i->second->scriptCount() < GD::bl->threadManager.getMaxThreadCount() / GD::bl->settings.scriptEngineMaxThreadsPerScript() && (GD::bl->settings.scriptEngineMaxScriptsPerProcess() == -1 || i->second->scriptCount() < (unsigned) GD::bl->settings.scriptEngineMaxScriptsPerProcess()))
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
@@ -1635,7 +1642,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		}
 		_out.printInfo("Info: Spawning new script engine process.");
 		std::shared_ptr<ScriptEngineProcess> process(new ScriptEngineProcess(nodeProcess));
-		std::vector<std::string> arguments{ "-c", GD::configPath, "-rse" };
+		std::vector<std::string> arguments{"-c", GD::configPath, "-rse"};
 		if(GD::bl->settings.scriptEngineManualClientStart())
 		{
 			pid_t currentProcessId = _manualClientCurrentProcessId++;
@@ -1653,8 +1660,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 		{
 			std::unique_lock<std::mutex> processGuard(_processMutex);
 			_processes[process->getPid()] = process;
-
-			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(processGuard, std::chrono::milliseconds(120000), [&] { return (bool) (process->getClientData() || process->getExited()); });
 
 			if(!process->getClientData())
 			{
@@ -1663,24 +1669,24 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
 				return std::shared_ptr<ScriptEngineProcess>();
 			}
 			process->setUnregisterNode(std::function<void(std::string)>(std::bind(&ScriptEngineServer::unregisterNode, this, std::placeholders::_1)));
-            process->setUnregisterDevice(std::function<void(uint64_t)>(std::bind(&ScriptEngineServer::unregisterDevice, this, std::placeholders::_1)));
+			process->setUnregisterDevice(std::function<void(uint64_t)>(std::bind(&ScriptEngineServer::unregisterDevice, this, std::placeholders::_1)));
 			_out.printInfo("Info: Script engine process successfully spawned. Process id is " + std::to_string(process->getPid()) + ". Client id is: " + std::to_string(process->getClientData()->id) + ".");
 			return process;
 		}
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::shared_ptr<ScriptEngineProcess>();
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<ScriptEngineProcess>();
 }
 
 void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
@@ -1697,7 +1703,7 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 			return;
 		}
 
-		if(bytesRead > (signed)clientData->buffer.size()) bytesRead = clientData->buffer.size();
+		if(bytesRead > (signed) clientData->buffer.size()) bytesRead = clientData->buffer.size();
 
 		try
 		{
@@ -1708,17 +1714,17 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 				if(clientData->binaryRpc->isFinished())
 				{
 #ifdef DEBUGSESOCKET
-					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
-					{
-						std::string methodName;
-						BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
-						socketOutput(request->at(1)->integerValue, clientData, false, true, clientData->binaryRpc->getData());
-					}
-					else
-					{
-						BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
-						socketOutput(response->arrayValue->at(0)->integerValue, clientData, true, false, clientData->binaryRpc->getData());
-					}
+                    if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                    {
+                        std::string methodName;
+                        BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+                        socketOutput(request->at(1)->integerValue, clientData, false, true, clientData->binaryRpc->getData());
+                    }
+                    else
+                    {
+                        BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
+                        socketOutput(response->arrayValue->at(0)->integerValue, clientData, true, false, clientData->binaryRpc->getData());
+                    }
 #endif
 
 					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
@@ -1756,18 +1762,18 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
 			clientData->binaryRpc->reset();
 		}
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
@@ -1806,7 +1812,7 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 			return false;
 		}
 		int32_t reuseAddress = 1;
-		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
+		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*) &reuseAddress, sizeof(int32_t)) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			_out.printCritical("Critical: Couldn't set socket options: " + _socketPath + ". The script engine won't work correctly. Error: " + strerror(errno));
@@ -1823,7 +1829,7 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 		}
 		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
@@ -1834,21 +1840,21 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
 			_out.printError("Error: chmod failed on unix socket \"" + _socketPath + "\".");
 		}
 		return true;
-    }
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-    return false;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+	return false;
 }
 
 std::string ScriptEngineServer::checkSessionId(const std::string& sessionId)
@@ -1955,12 +1961,21 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		std::unique_lock<std::mutex> executeScriptGuard(_executeScriptMutex);
 		if(_shuttingDown || GD::bl->shuttingDown) return;
 		PScriptEngineProcess process = getFreeProcess(scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, scriptInfo->maxThreadCount);
-		if(_shuttingDown || GD::bl->shuttingDown) return;
-		if(!process)
+		if(!process || _shuttingDown || GD::bl->shuttingDown)
 		{
-			_out.printError("Error: Could not get free process. Not executing script.");
-			if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
-			scriptInfo->exitCode = -1;
+			if(!_shuttingDown && !GD::bl->shuttingDown)
+			{
+				_out.printError("Error: Could not get free process. Not executing script.");
+				if(scriptInfo->returnOutput) scriptInfo->output.append("Error: Could not get free process. Not executing script.\n");
+				scriptInfo->exitCode = -1;
+			}
+			else
+			{
+				_out.printInfo("Info: Not executing script, because I'm shutting down.");
+				scriptInfo->exitCode = 0;
+			}
+
+			scriptInfo->finished = true;
 
 			{
 				std::lock_guard<std::mutex> scriptFinishedGuard(_scriptFinishedThreadMutex);
@@ -1995,63 +2010,63 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		if(scriptType == ScriptInfo::ScriptType::cli)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-				BaseLib::PVariable(new BaseLib::Variable((bool)scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+					BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
+					BaseLib::PVariable(new BaseLib::Variable((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
 		}
 		else if(scriptType == ScriptInfo::ScriptType::web)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->contentPath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-				scriptInfo->http.serialize(),
-				scriptInfo->serverInfo->serialize()}));
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+					BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->contentPath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+					scriptInfo->http.serialize(),
+					scriptInfo->serverInfo->serialize()}));
 		}
 		else if(scriptType == ScriptInfo::ScriptType::device || scriptType == ScriptInfo::ScriptType::device2)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+					BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
 
-            if(scriptType == ScriptInfo::ScriptType::device2)
-            {
-                std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
-                _deviceClientIdMap.erase(scriptInfo->peerId);
-                _deviceClientIdMap.emplace(scriptInfo->peerId, clientData->id);
-            }
+			if(scriptType == ScriptInfo::ScriptType::device2)
+			{
+				std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+				_deviceClientIdMap.erase(scriptInfo->peerId);
+				_deviceClientIdMap.emplace(scriptInfo->peerId, clientData->id);
+			}
 		}
 		else if(scriptType == ScriptInfo::ScriptType::simpleNode)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				scriptInfo->nodeInfo,
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
-				scriptInfo->message}));
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+					BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+					scriptInfo->nodeInfo,
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
+					scriptInfo->message}));
 		}
 		else if(scriptType == ScriptInfo::ScriptType::statefulNode)
 		{
 			parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-				BaseLib::PVariable(new BaseLib::Variable((int32_t)scriptInfo->getType())),
-				scriptInfo->nodeInfo,
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-				BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
+					BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+					scriptInfo->nodeInfo,
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+					BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
 
 			{
 				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -2076,11 +2091,11 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 				std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
 				_nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
 			}
-            else if(scriptType == ScriptInfo::ScriptType::device2)
-            {
-                std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
-                _deviceClientIdMap.erase(scriptInfo->peerId);
-            }
+			else if(scriptType == ScriptInfo::ScriptType::device2)
+			{
+				std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+				_deviceClientIdMap.erase(scriptInfo->peerId);
+			}
 
 			return;
 		}
@@ -2088,21 +2103,21 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
 		if(wait)
 		{
 			executeScriptGuard.unlock();
-			while(!scriptFinishedInfo->conditionVariable.wait_for(scriptFinishedLock, std::chrono::milliseconds(10000), [&]{ return scriptFinishedInfo->finished || clientData->closed || _stopServer; }));
+			while(!scriptFinishedInfo->conditionVariable.wait_for(scriptFinishedLock, std::chrono::milliseconds(10000), [&] { return scriptFinishedInfo->finished || clientData->closed || _stopServer; }));
 		}
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 BaseLib::PVariable ScriptEngineServer::getAllScripts()
@@ -2138,8 +2153,8 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 {
 	try
 	{
-        std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-        _nodeClientIdMap.erase(nodeId);
+		std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+		_nodeClientIdMap.erase(nodeId);
 	}
 	catch(const std::exception& ex)
 	{
@@ -2157,1252 +2172,1390 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
 
 void ScriptEngineServer::unregisterDevice(uint64_t peerId)
 {
-    try
-    {
-        std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
-        _deviceClientIdMap.erase(peerId);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	try
+	{
+		std::lock_guard<std::mutex> deviceClientIdMapGuard(_deviceClientIdMapMutex);
+		_deviceClientIdMap.erase(peerId);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 // {{{ RPC methods
-	BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)
+BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData& clientData, BaseLib::PArray& parameters)
+{
+	try
 	{
-		try
-        {
-            pid_t pid = parameters->at(0)->integerValue;
-            if(GD::bl->settings.scriptEngineManualClientStart())
-            {
-                std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-                if(!_unconnectedProcesses.empty())
-                {
-                    pid = _unconnectedProcesses.front();
-                    _unconnectedProcesses.pop();
-                }
-            }
-			std::unique_lock<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
-			if(processIterator == _processes.end())
+		pid_t pid = parameters->at(0)->integerValue;
+		if(GD::bl->settings.scriptEngineManualClientStart())
+		{
+			std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+			if(!_unconnectedProcesses.empty())
 			{
-				_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
-				return BaseLib::Variable::createError(-1, "No matching process found.");
+				pid = _unconnectedProcesses.front();
+				_unconnectedProcesses.pop();
 			}
-			if(processIterator->second->getClientData())
-			{
-				_out.printError("Error: Cannot register client, because it already is registered.");
-				return BaseLib::PVariable(new BaseLib::Variable());
-			}
-			clientData->pid = pid;
-			processIterator->second->setClientData(clientData);
-			processGuard.unlock();
-			processIterator->second->requestConditionVariable.notify_all();
-			_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
+		}
+		std::unique_lock<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(pid);
+		if(processIterator == _processes.end())
+		{
+			_out.printError("Error: Cannot register client. No process with pid " + std::to_string(pid) + " found.");
+			return BaseLib::Variable::createError(-1, "No matching process found.");
+		}
+		if(processIterator->second->getClientData())
+		{
+			_out.printError("Error: Cannot register client, because it already is registered.");
 			return BaseLib::PVariable(new BaseLib::Variable());
 		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		clientData->pid = pid;
+		processIterator->second->setClientData(clientData);
+		processGuard.unlock();
+		processIterator->second->requestConditionVariable.notify_all();
+		_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
+		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+	catch(const std::exception& ex)
 	{
-		try
-		{
-			if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
-
-			int32_t exitCode = parameters->at(0)->integerValue;
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
-			if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-			processIterator->second->invokeScriptFinished(scriptId, exitCode);
-			processIterator->second->unregisterScript(scriptId);
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::scriptHeaders(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+	catch(BaseLib::Exception& ex)
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("scriptHeaders")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
-
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
-			if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-			processIterator->second->invokeScriptHeaders(scriptInfo->scriptId, parameters->at(0));
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::scriptOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+	catch(...)
 	{
-		try
-		{
-			if(parameters->size() < 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
-
-			std::lock_guard<std::mutex> processGuard(_processMutex);
-			std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
-			if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
-			processIterator->second->invokeScriptOutput(scriptInfo->scriptId, parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 
-	BaseLib::PVariable ScriptEngineServer::peerExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)
+{
+	try
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("peerExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
-			if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+		if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
-			if(scriptInfo->clientInfo->acls->roomsCategoriesDevicesReadSet())
-			{
-				auto families = GD::familyController->getFamilies();
-				for(auto& family : families)
-				{
-					auto central = family.second->getCentral();
-					if(central && central->peerExists((uint64_t)parameters->at(0)->integerValue64))
-					{
-						auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
-						if(!peer || !scriptInfo->clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-					}
-				}
-			}
-
-			return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->peerExists((uint64_t)parameters->at(0)->integerValue64)));
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		int32_t exitCode = parameters->at(0)->integerValue;
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
+		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
+		processIterator->second->invokeScriptFinished(scriptId, exitCode);
+		processIterator->second->unregisterScript(scriptId);
+		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::listRpcClients(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+	catch(const std::exception& ex)
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listRpcClients")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
-
-			BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
-			for(auto& server : GD::rpcServers)
-			{
-				const std::vector<BaseLib::PRpcClientInfo> clients = server.second->getClientInfo();
-				for(std::vector<BaseLib::PRpcClientInfo>::const_iterator j = clients.begin(); j != clients.end(); ++j)
-				{
-					BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-
-					element->structValue->insert(BaseLib::StructElement("CLIENT_ID", BaseLib::PVariable(new BaseLib::Variable((*j)->id))));
-					element->structValue->insert(BaseLib::StructElement("IP_ADDRESS", BaseLib::PVariable(new BaseLib::Variable((*j)->address))));
-					element->structValue->insert(BaseLib::StructElement("INIT_URL", BaseLib::PVariable(new BaseLib::Variable((*j)->initUrl))));
-					element->structValue->insert(BaseLib::StructElement("INIT_INTERFACE_ID", BaseLib::PVariable(new BaseLib::Variable((*j)->initInterfaceId))));
-					element->structValue->insert(BaseLib::StructElement("XML_RPC", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::xml))));
-					element->structValue->insert(BaseLib::StructElement("BINARY_RPC", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::binary))));
-					element->structValue->insert(BaseLib::StructElement("JSON_RPC", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::json))));
-					element->structValue->insert(BaseLib::StructElement("WEBSOCKET", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::websocket))));
-					element->structValue->insert(BaseLib::StructElement("INIT_KEEP_ALIVE", BaseLib::PVariable(new BaseLib::Variable((*j)->initKeepAlive))));
-					element->structValue->insert(BaseLib::StructElement("INIT_BINARY_MODE", BaseLib::PVariable(new BaseLib::Variable((*j)->initBinaryMode))));
-					element->structValue->insert(BaseLib::StructElement("INIT_NEW_FORMAT", BaseLib::PVariable(new BaseLib::Variable((*j)->initNewFormat))));
-					element->structValue->insert(BaseLib::StructElement("INIT_SUBSCRIBE_PEERS", BaseLib::PVariable(new BaseLib::Variable((*j)->initSubscribePeers))));
-					element->structValue->insert(BaseLib::StructElement("INIT_JSON_MODE", BaseLib::PVariable(new BaseLib::Variable((*j)->initJsonMode))));
-
-					result->arrayValue->push_back(element);
-				}
-			}
-
-			return result;
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::raiseDeleteDevice(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+	catch(BaseLib::Exception& ex)
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("raiseDeleteDevice")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() != 1 || parameters->at(0)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Method expects device address array as parameter.");
-
-            std::vector<uint64_t> newIds{};
-			GD::familyController->onRPCDeleteDevices(newIds, parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ 0 }))));
-
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::getFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+	catch(...)
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
-
-			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
-			if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
-
-			BaseLib::Systems::FamilySettings::PFamilySetting setting = family->getFamilySetting(parameters->at(1)->stringValue);
-			if(!setting) return BaseLib::Variable::createError(-3, "Setting not found.");
-
-			if(!setting->stringValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->stringValue));
-			else if(!setting->binaryValue.empty())
-			{
-				if(setting->binaryValue.size() > 3 && setting->binaryValue[0] == 'B' && setting->binaryValue[1] == 'i' && setting->binaryValue[2] == 'n')
-				{
-					try
-					{
-						return _rpcDecoder->decodeResponse(setting->binaryValue);
-					}
-					catch(BaseLib::Exception& ex)
-					{
-						return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
-					}
-				}
-				else return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
-			}
-			else return BaseLib::PVariable(new BaseLib::Variable(setting->integerValue));
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 
-	BaseLib::PVariable ScriptEngineServer::setFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+BaseLib::PVariable ScriptEngineServer::scriptHeaders(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() != 3 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID, parameter name and value as parameters.");
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("scriptHeaders")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
-			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
-			if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
-
-			if(parameters->at(2)->type == BaseLib::VariableType::tString) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->stringValue);
-			else if(parameters->at(2)->type == BaseLib::VariableType::tInteger) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->integerValue);
-			else if(parameters->at(2)->type == BaseLib::VariableType::tBinary)
-			{
-				std::vector<char> data(parameters->at(2)->binaryValue.data(), parameters->at(2)->binaryValue.data() + parameters->at(2)->binaryValue.size());
-				family->setFamilySetting(parameters->at(1)->stringValue, data);
-			}
-			else return BaseLib::Variable::createError(-3, "Unsupported variable type.");
-
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
+		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
+		processIterator->second->invokeScriptHeaders(scriptInfo->scriptId, parameters->at(0));
+		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-
-	BaseLib::PVariable ScriptEngineServer::deleteFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+	catch(const std::exception& ex)
 	{
-		try
-		{
-			if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-			if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
-
-			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
-			if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
-
-			family->deleteFamilySettingFromDatabase(parameters->at(1)->stringValue);
-
-			return BaseLib::PVariable(new BaseLib::Variable());
-		}
-		catch(const std::exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		return BaseLib::Variable::createError(-32500, "Unknown application error.");
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 
-	// {{{ MQTT
-		BaseLib::PVariable ScriptEngineServer::mqttPublish(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+BaseLib::PVariable ScriptEngineServer::scriptOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() < 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+		std::lock_guard<std::mutex> processGuard(_processMutex);
+		std::map<pid_t, std::shared_ptr<ScriptEngineProcess>>::iterator processIterator = _processes.find(clientData->pid);
+		if(processIterator == _processes.end()) return BaseLib::Variable::createError(-1, "No matching process found.");
+		processIterator->second->invokeScriptOutput(scriptInfo->scriptId, parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::peerExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("peerExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+		if(scriptInfo->clientInfo->acls->roomsCategoriesDevicesReadSet())
 		{
-			try
+			auto families = GD::familyController->getFamilies();
+			for(auto& family : families)
 			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("mqttPublish")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters (topic and payload).");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Topic is empty.");
-				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Payload is empty.");
-
-				GD::mqtt->queueMessage(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
-				return std::make_shared<BaseLib::Variable>();
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-	// }}}
-
-	// {{{ User methods
-		BaseLib::PVariable ScriptEngineServer::auth(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("auth")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
-				if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
-
-				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
-
-				return std::make_shared<BaseLib::Variable>(User::verify(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::createUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
-                if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
-
-				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
-
-                std::vector<uint64_t> groups;
-                groups.reserve(parameters->at(2)->arrayValue->size());
-                for(auto& element : *parameters->at(2)->arrayValue)
-                {
-                    if(element->integerValue64 != 0) groups.push_back(element->integerValue64);
-                }
-                if(groups.empty()) return BaseLib::Variable::createError(-1, "No groups specified.");
-
-				return std::make_shared<BaseLib::Variable>(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::deleteUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
-
-				return std::make_shared<BaseLib::Variable>(User::remove(parameters->at(0)->stringValue));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-        BaseLib::PVariable ScriptEngineServer::getUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
-
-                return User::getMetadata(parameters->at(0)->stringValue);
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-        BaseLib::PVariable ScriptEngineServer::getUsersGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUsersGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
-
-                auto groups = User::getGroups(parameters->at(0)->stringValue);
-                if(groups.empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
-
-                auto groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                groupArray->arrayValue->reserve(groups.size());
-
-                for(auto& group : groups)
-                {
-                    groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
-                }
-
-                return groupArray;
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-        BaseLib::PVariable ScriptEngineServer::setUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-                if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct.");
-
-                return std::make_shared<BaseLib::Variable>(User::setMetadata(parameters->at(0)->stringValue, parameters->at(1)));
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-		BaseLib::PVariable ScriptEngineServer::updateUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects two or three parameters.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-                if(parameters->at(1)->type != BaseLib::VariableType::tString && parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string or array.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
-                if(parameters->at(1)->type == BaseLib::VariableType::tArray && parameters->at(1)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
-
-				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
-
-                int32_t groupsIndex = parameters->size() == 3 ? 2 : (parameters->at(1)->type == BaseLib::VariableType::tArray ? 1 : -1);
-				if(groupsIndex != -1)
+				auto central = family.second->getCentral();
+				if(central && central->peerExists((uint64_t) parameters->at(0)->integerValue64))
 				{
-					std::vector<uint64_t> groups;
-					groups.reserve(parameters->at(groupsIndex)->arrayValue->size());
-					for(auto& element : *parameters->at(groupsIndex)->arrayValue)
-					{
-						if(element->integerValue64 != 0) groups.push_back(element->integerValue64);
-					}
-
-                    if(groupsIndex == 1) return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, groups));
-                    else return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups));
-				}
-				else return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::userExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("userExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
-
-				BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
-
-				return std::make_shared<BaseLib::Variable>(User::exists(parameters->at(0)->stringValue));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::listUsers(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listUsers")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
-
-				std::map<uint64_t, User::UserInfo> users;
-				User::getAll(users);
-
-				BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
-				result->arrayValue->reserve(users.size());
-				for(auto& user : users)
-				{
-                    BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                    entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(user.first));
-                    entry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(user.second.name));
-
-                    BaseLib::PVariable groups = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                    groups->arrayValue->reserve(user.second.groups.size());
-                    for(auto& group : user.second.groups)
-                    {
-                        groups->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
-                    }
-                    entry->structValue->emplace("groups", groups);
-
-                    entry->structValue->emplace("metadata", user.second.metadata);
-
-					result->arrayValue->push_back(entry);
-				}
-
-				return result;
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-	// }}}
-
-    // {{{ Group methods
-        BaseLib::PVariable ScriptEngineServer::createGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters. " + std::to_string(parameters->size()) + " given.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type struct.");
-                if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
-
-                return _bl->db->createGroup(parameters->at(0), parameters->at(1));
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-        BaseLib::PVariable ScriptEngineServer::deleteGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
-
-                return _bl->db->deleteGroup(parameters->at(0)->integerValue64);
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-		BaseLib::PVariable ScriptEngineServer::getGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1 && parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-                if(parameters->size() == 2 && parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
-
-                std::string languageCode = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
-
-				return _bl->db->getGroup(parameters->at(0)->integerValue64, languageCode);
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-        BaseLib::PVariable ScriptEngineServer::getGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() > 1) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
-                if(parameters->size() == 1 && parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
-
-                return _bl->db->getGroups(parameters->empty() ? "" : parameters->at(0)->stringValue);
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-        BaseLib::PVariable ScriptEngineServer::groupExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("groupExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
-
-                return std::make_shared<BaseLib::Variable>(_bl->db->groupExists(parameters->at(0)->integerValue64));
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-
-        BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-        {
-            try
-            {
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly two or three parameters.");
-                if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-                if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
-                if(parameters->size() == 3 && (parameters->at(2)->type != BaseLib::VariableType::tStruct || parameters->at(2)->structValue->empty())) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type struct or is empty.");
-
-                if(parameters->size() == 2) return _bl->db->updateGroup(parameters->at(0)->integerValue64, std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct), parameters->at(1));
-				else return _bl->db->updateGroup(parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        }
-    // }}}
-
-	// {{{ Module methods
-		BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
-
-				std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfo = GD::familyController->getModuleInfo();
-
-				BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
-				result->arrayValue->reserve(moduleInfo.size());
-				for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = moduleInfo.begin(); i != moduleInfo.end(); ++i)
-				{
-					BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-
-					element->structValue->insert(BaseLib::StructElement("FILENAME", BaseLib::PVariable(new BaseLib::Variable((*i)->filename))));
-					element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable((*i)->familyId))));
-					element->structValue->insert(BaseLib::StructElement("FAMILY_NAME", BaseLib::PVariable(new BaseLib::Variable((*i)->familyName))));
-					element->structValue->insert(BaseLib::StructElement("BASELIB_VERSION", BaseLib::PVariable(new BaseLib::Variable((*i)->baselibVersion))));
-					element->structValue->insert(BaseLib::StructElement("LOADED", BaseLib::PVariable(new BaseLib::Variable((*i)->loaded))));
-
-					result->arrayValue->push_back(element);
-				}
-
-				return result;
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::loadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("loadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
-
-				return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->loadModule(parameters->at(0)->stringValue)));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::unloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("unloadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
-
-				return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->unloadModule(parameters->at(0)->stringValue)));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::reloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("reloadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
-				if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
-
-				return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->reloadModule(parameters->at(0)->stringValue)));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-	// }}}
-
-	// {{{ Licensing methods
-		BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("checkLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters. " + std::to_string(parameters->size()) + " given.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
-				if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
-				if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type string.");
-
-				int32_t moduleId = parameters->at(0)->integerValue;
-				int32_t familyId = parameters->at(1)->integerValue;
-				int32_t deviceId = parameters->at(2)->integerValue;
-				std::string licenseKey = (parameters->size() == 4) ? parameters->at(3)->stringValue : "";
-
-				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
-				if(i == GD::licensingModules.end() || !i->second)
-				{
-					_out.printError("Error: Could not check license. License module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-					return BaseLib::PVariable(new BaseLib::Variable(-2));
-				}
-
-				return BaseLib::PVariable(new BaseLib::Variable(i->second->checkLicense(familyId, deviceId, licenseKey)));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("removeLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
-				if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
-
-				int32_t moduleId = parameters->at(0)->integerValue;
-				int32_t familyId = parameters->at(1)->integerValue;
-				int32_t deviceId = parameters->at(2)->integerValue;
-
-				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
-				if(i == GD::licensingModules.end() || !i->second)
-				{
-					_out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-					return BaseLib::PVariable(new BaseLib::Variable(-2));
-				}
-
-				i->second->removeLicense(familyId, deviceId);
-
-				return BaseLib::PVariable(new BaseLib::Variable(true));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getLicenseStates")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-
-				int32_t moduleId = parameters->at(0)->integerValue;
-
-				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
-				if(i == GD::licensingModules.end() || !i->second)
-				{
-					_out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-					return BaseLib::PVariable(new BaseLib::Variable(false));
-				}
-
-				BaseLib::Licensing::Licensing::DeviceStates states = i->second->getDeviceStates();
-				BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
-				result->arrayValue->reserve(states.size());
-				for(BaseLib::Licensing::Licensing::DeviceStates::iterator i = states.begin(); i != states.end(); ++i)
-				{
-					for(std::map<int32_t, BaseLib::Licensing::Licensing::PDeviceInfo>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-					{
-						BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-
-						element->structValue->insert(BaseLib::StructElement("MODULE_ID", BaseLib::PVariable(new BaseLib::Variable(j->second->moduleId))));
-						element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable(j->second->familyId))));
-						element->structValue->insert(BaseLib::StructElement("DEVICE_ID", BaseLib::PVariable(new BaseLib::Variable(j->second->deviceId))));
-						element->structValue->insert(BaseLib::StructElement("ACTIVATED", BaseLib::PVariable(new BaseLib::Variable(j->second->state))));
-						element->structValue->insert(BaseLib::StructElement("LICENSE_KEY", BaseLib::PVariable(new BaseLib::Variable(j->second->licenseKey))));
-
-						result->arrayValue->push_back(element);
-					}
-				}
-
-				return result;
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::getTrialStartTime(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getTrialStartTime")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
-				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
-				if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
-
-				int32_t moduleId = parameters->at(0)->integerValue;
-				int32_t familyId = parameters->at(1)->integerValue;
-				int32_t deviceId = parameters->at(2)->integerValue;
-
-				std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
-				if(i == GD::licensingModules.end() || !i->second)
-				{
-					_out.printError("Error: Could not check license. License module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-					return BaseLib::PVariable(new BaseLib::Variable(-2));
-				}
-
-				return BaseLib::PVariable(new BaseLib::Variable(i->second->getTrialStartTime(familyId, deviceId)));
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-	// }}}
-
-	// {{{ Flows
-		BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
-
-				GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
-
-				return std::make_shared<BaseLib::Variable>();
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
-				if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-				if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
-				if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type boolean.");
-
-				if(GD::nodeBlueServer) GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
-
-				return std::make_shared<BaseLib::Variable>();
-			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
-		}
-
-		BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
-		{
-			try
-			{
-				if(GD::nodeBlueServer)
-				{
-					if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
-					if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
-					if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
-					if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");
-
-					return GD::nodeBlueServer->executePhpNodeBaseMethod(parameters);
+					auto peer = central->getPeer((uint64_t) parameters->at(0)->integerValue64);
+					if(!peer || !scriptInfo->clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 				}
 			}
-			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			return BaseLib::Variable::createError(-32500, "Unknown application error.");
 		}
-	// }}}
+
+		return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->peerExists((uint64_t) parameters->at(0)->integerValue64)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::listRpcClients(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listRpcClients")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
+
+		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		for(auto& server : GD::rpcServers)
+		{
+			const std::vector<BaseLib::PRpcClientInfo> clients = server.second->getClientInfo();
+			for(std::vector<BaseLib::PRpcClientInfo>::const_iterator j = clients.begin(); j != clients.end(); ++j)
+			{
+				BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+
+				element->structValue->insert(BaseLib::StructElement("CLIENT_ID", BaseLib::PVariable(new BaseLib::Variable((*j)->id))));
+				element->structValue->insert(BaseLib::StructElement("IP_ADDRESS", BaseLib::PVariable(new BaseLib::Variable((*j)->address))));
+				element->structValue->insert(BaseLib::StructElement("INIT_URL", BaseLib::PVariable(new BaseLib::Variable((*j)->initUrl))));
+				element->structValue->insert(BaseLib::StructElement("INIT_INTERFACE_ID", BaseLib::PVariable(new BaseLib::Variable((*j)->initInterfaceId))));
+				element->structValue->insert(BaseLib::StructElement("XML_RPC", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::xml))));
+				element->structValue->insert(BaseLib::StructElement("BINARY_RPC", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::binary))));
+				element->structValue->insert(BaseLib::StructElement("JSON_RPC", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::json))));
+				element->structValue->insert(BaseLib::StructElement("WEBSOCKET", BaseLib::PVariable(new BaseLib::Variable((*j)->rpcType == BaseLib::RpcType::websocket))));
+				element->structValue->insert(BaseLib::StructElement("INIT_KEEP_ALIVE", BaseLib::PVariable(new BaseLib::Variable((*j)->initKeepAlive))));
+				element->structValue->insert(BaseLib::StructElement("INIT_BINARY_MODE", BaseLib::PVariable(new BaseLib::Variable((*j)->initBinaryMode))));
+				element->structValue->insert(BaseLib::StructElement("INIT_NEW_FORMAT", BaseLib::PVariable(new BaseLib::Variable((*j)->initNewFormat))));
+				element->structValue->insert(BaseLib::StructElement("INIT_SUBSCRIBE_PEERS", BaseLib::PVariable(new BaseLib::Variable((*j)->initSubscribePeers))));
+				element->structValue->insert(BaseLib::StructElement("INIT_JSON_MODE", BaseLib::PVariable(new BaseLib::Variable((*j)->initJsonMode))));
+
+				result->arrayValue->push_back(element);
+			}
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::raiseDeleteDevice(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("raiseDeleteDevice")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1 || parameters->at(0)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Method expects device address array as parameter.");
+
+		std::vector<uint64_t> newIds{};
+		GD::familyController->onRPCDeleteDevices(newIds, parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{0}))));
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+
+		BaseLib::Systems::FamilySettings::PFamilySetting setting = family->getFamilySetting(parameters->at(1)->stringValue);
+		if(!setting) return BaseLib::Variable::createError(-3, "Setting not found.");
+
+		if(!setting->stringValue.empty()) return BaseLib::PVariable(new BaseLib::Variable(setting->stringValue));
+		else if(!setting->binaryValue.empty())
+		{
+			if(setting->binaryValue.size() > 3 && setting->binaryValue[0] == 'B' && setting->binaryValue[1] == 'i' && setting->binaryValue[2] == 'n')
+			{
+				try
+				{
+					return _rpcDecoder->decodeResponse(setting->binaryValue);
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+				}
+			}
+			else return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
+		}
+		else return BaseLib::PVariable(new BaseLib::Variable(setting->integerValue));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::setFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 3 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID, parameter name and value as parameters.");
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+
+		if(parameters->at(2)->type == BaseLib::VariableType::tString) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->stringValue);
+		else if(parameters->at(2)->type == BaseLib::VariableType::tInteger) family->setFamilySetting(parameters->at(1)->stringValue, parameters->at(2)->integerValue);
+		else if(parameters->at(2)->type == BaseLib::VariableType::tBinary)
+		{
+			std::vector<char> data(parameters->at(2)->binaryValue.data(), parameters->at(2)->binaryValue.data() + parameters->at(2)->binaryValue.size());
+			family->setFamilySetting(parameters->at(1)->stringValue, data);
+		}
+		else return BaseLib::Variable::createError(-3, "Unsupported variable type.");
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::deleteFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteFamilySetting")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2 || parameters->at(0)->type != BaseLib::VariableType::tInteger || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Method expects family ID and parameter name as parameters.");
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+		if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+
+		family->deleteFamilySettingFromDatabase(parameters->at(1)->stringValue);
+
+		return BaseLib::PVariable(new BaseLib::Variable());
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+// {{{ MQTT
+BaseLib::PVariable ScriptEngineServer::mqttPublish(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("mqttPublish")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters (topic and payload).");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Topic is empty.");
+		if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Payload is empty.");
+
+		GD::mqtt->queueMessage(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 // }}}
+
+// {{{ User methods
+BaseLib::PVariable ScriptEngineServer::auth(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("auth")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameters are not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
+		if(parameters->at(1)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
+
+		BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+
+		return std::make_shared<BaseLib::Variable>(User::verify(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::createUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString || parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 or 2 is not of type string.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
+		if(parameters->at(2)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 3 is empty or no array.");
+		if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type Struct.");
+
+		BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+
+		std::vector<uint64_t> groups;
+		groups.reserve(parameters->at(2)->arrayValue->size());
+		for(auto& element : *parameters->at(2)->arrayValue)
+		{
+			if(element->integerValue64 != 0) groups.push_back(element->integerValue64);
+		}
+		if(groups.empty()) return BaseLib::Variable::createError(-1, "No groups specified.");
+
+		return std::make_shared<BaseLib::Variable>(User::create(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups, parameters->size() == 4 ? parameters->at(4) : BaseLib::PVariable()));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::deleteUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		return std::make_shared<BaseLib::Variable>(User::remove(parameters->at(0)->stringValue));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+
+		return User::getMetadata(parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getUsersGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getUsersGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+
+		auto groups = User::getGroups(parameters->at(0)->stringValue);
+		if(groups.empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
+		auto groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		groupArray->arrayValue->reserve(groups.size());
+
+		for(auto& group : groups)
+		{
+			groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
+		}
+
+		return groupArray;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::setUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("setUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type String.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Struct.");
+
+		return std::make_shared<BaseLib::Variable>(User::setMetadata(parameters->at(0)->stringValue, parameters->at(1)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::updateUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateUser")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects two or three parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type String.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tString && parameters->at(1)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string or array.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter 1 is empty.");
+		if(parameters->at(1)->type == BaseLib::VariableType::tArray && parameters->at(1)->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is empty.");
+
+		BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+
+		int32_t groupsIndex = parameters->size() == 3 ? 2 : (parameters->at(1)->type == BaseLib::VariableType::tArray ? 1 : -1);
+		if(groupsIndex != -1)
+		{
+			std::vector<uint64_t> groups;
+			groups.reserve(parameters->at(groupsIndex)->arrayValue->size());
+			for(auto& element : *parameters->at(groupsIndex)->arrayValue)
+			{
+				if(element->integerValue64 != 0) groups.push_back(element->integerValue64);
+			}
+
+			if(groupsIndex == 1) return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, groups));
+			else return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue, groups));
+		}
+		else return std::make_shared<BaseLib::Variable>(User::update(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::userExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("userExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+
+		return std::make_shared<BaseLib::Variable>(User::exists(parameters->at(0)->stringValue));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::listUsers(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listUsers")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
+
+		std::map<uint64_t, User::UserInfo> users;
+		User::getAll(users);
+
+		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		result->arrayValue->reserve(users.size());
+		for(auto& user : users)
+		{
+			BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(user.first));
+			entry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(user.second.name));
+
+			BaseLib::PVariable groups = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			groups->arrayValue->reserve(user.second.groups.size());
+			for(auto& group : user.second.groups)
+			{
+				groups->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
+			}
+			entry->structValue->emplace("groups", groups);
+
+			entry->structValue->emplace("metadata", user.second.metadata);
+
+			result->arrayValue->push_back(entry);
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::createOauthKeys(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createOauthKeys")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		auto userName = BaseLib::HelperFunctions::toLower(parameters->at(0)->stringValue);
+		if(!User::exists(userName)) return BaseLib::Variable::createError(-2, "User does not exist.");
+
+		if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+		std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
+		std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
+		if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");
+
+		std::string key;
+		std::string refreshKey;
+		if(!User::oauthCreate(userName, privateKey, publicKey, GD::bl->settings.oauthTokenLifetime(), GD::bl->settings.oauthRefreshTokenLifetime(), key, refreshKey))
+		{
+			return BaseLib::Variable::createError(-3, "Error generating OAuth keys.");
+		}
+
+		auto oauthResponse = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		oauthResponse->structValue->emplace("token_type", std::make_shared<BaseLib::Variable>("bearer"));
+		oauthResponse->structValue->emplace("access_token", std::make_shared<BaseLib::Variable>(key));
+		oauthResponse->structValue->emplace("expires_in", std::make_shared<BaseLib::Variable>(std::to_string(GD::bl->settings.oauthTokenLifetime())));
+		oauthResponse->structValue->emplace("refresh_token", std::make_shared<BaseLib::Variable>(refreshKey));
+
+		return oauthResponse;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::refreshOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("refreshOauthKey")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		auto refreshKey = parameters->at(0)->stringValue;
+
+		if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+		std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
+		std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
+		if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");
+
+		std::string key;
+		std::string newRefreshKey;
+		std::string userName;
+		if(!User::oauthRefresh(refreshKey, privateKey, publicKey, GD::bl->settings.oauthTokenLifetime(), GD::bl->settings.oauthRefreshTokenLifetime(), key, newRefreshKey, userName))
+		{
+			return BaseLib::Variable::createError(-3, "Could not refresh access key.");
+		}
+
+		auto oauthResponse = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		oauthResponse->structValue->emplace("token_type", std::make_shared<BaseLib::Variable>("bearer"));
+		oauthResponse->structValue->emplace("access_token", std::make_shared<BaseLib::Variable>(key));
+		oauthResponse->structValue->emplace("expires_in", std::make_shared<BaseLib::Variable>(std::to_string(GD::bl->settings.oauthTokenLifetime())));
+		oauthResponse->structValue->emplace("refresh_token", std::make_shared<BaseLib::Variable>(newRefreshKey));
+		oauthResponse->structValue->emplace("user", std::make_shared<BaseLib::Variable>(userName));
+
+		return oauthResponse;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::verifyOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("verifyOauthKey")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type String.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		auto key = parameters->at(0)->stringValue;
+
+		if(GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty())
+		{
+			GD::out.printError("Error: No OAuth certificates specified in \"main.conf\".");
+			return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
+		}
+		std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());
+		std::string privateKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthKeyPath());
+		if(publicKey.empty() || privateKey.empty()) return BaseLib::Variable::createError(-1, "Private or public OAuth certificate couldn't be read.");
+
+		std::string userName;
+		if(!User::oauthVerify(key, privateKey, publicKey, userName)) return std::make_shared<BaseLib::Variable>(false);
+
+		return std::make_shared<BaseLib::Variable>(userName);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+
+// {{{ Group methods
+BaseLib::PVariable ScriptEngineServer::createGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("createGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters. " + std::to_string(parameters->size()) + " given.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type struct.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
+
+		return _bl->db->createGroup(parameters->at(0), parameters->at(1));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::deleteGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("deleteGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+		return _bl->db->deleteGroup(parameters->at(0)->integerValue64);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1 && parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+		if(parameters->size() == 2 && parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+		std::string languageCode = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+
+		return _bl->db->getGroup(parameters->at(0)->integerValue64, languageCode);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getGroups")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() > 1) return BaseLib::Variable::createError(-1, "Method expects one or two parameters.");
+		if(parameters->size() == 1 && parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+
+		return _bl->db->getGroups(parameters->empty() ? "" : parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::groupExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("groupExists")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
+
+		return std::make_shared<BaseLib::Variable>(_bl->db->groupExists(parameters->at(0)->integerValue64));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("updateGroup")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly two or three parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tStruct || parameters->at(1)->structValue->empty()) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type struct or is empty.");
+		if(parameters->size() == 3 && (parameters->at(2)->type != BaseLib::VariableType::tStruct || parameters->at(2)->structValue->empty())) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type struct or is empty.");
+
+		if(parameters->size() == 2) return _bl->db->updateGroup(parameters->at(0)->integerValue64, std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct), parameters->at(1));
+		else return _bl->db->updateGroup(parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+
+// {{{ Module methods
+BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
+
+		std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfo = GD::familyController->getModuleInfo();
+
+		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		result->arrayValue->reserve(moduleInfo.size());
+		for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = moduleInfo.begin(); i != moduleInfo.end(); ++i)
+		{
+			BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+
+			element->structValue->insert(BaseLib::StructElement("FILENAME", BaseLib::PVariable(new BaseLib::Variable((*i)->filename))));
+			element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable((*i)->familyId))));
+			element->structValue->insert(BaseLib::StructElement("FAMILY_NAME", BaseLib::PVariable(new BaseLib::Variable((*i)->familyName))));
+			element->structValue->insert(BaseLib::StructElement("BASELIB_VERSION", BaseLib::PVariable(new BaseLib::Variable((*i)->baselibVersion))));
+			element->structValue->insert(BaseLib::StructElement("LOADED", BaseLib::PVariable(new BaseLib::Variable((*i)->loaded))));
+
+			result->arrayValue->push_back(element);
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::loadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("loadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->loadModule(parameters->at(0)->stringValue)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::unloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("unloadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->unloadModule(parameters->at(0)->stringValue)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::reloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("reloadModule")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+		if(parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Parameter is empty.");
+
+		return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->reloadModule(parameters->at(0)->stringValue)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+
+// {{{ Licensing methods
+BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("checkLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters. " + std::to_string(parameters->size()) + " given.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+		if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
+		if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type string.");
+
+		int32_t moduleId = parameters->at(0)->integerValue;
+		int32_t familyId = parameters->at(1)->integerValue;
+		int32_t deviceId = parameters->at(2)->integerValue;
+		std::string licenseKey = (parameters->size() == 4) ? parameters->at(3)->stringValue : "";
+
+		std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+		if(i == GD::licensingModules.end() || !i->second)
+		{
+			_out.printError("Error: Could not check license. License module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+			return BaseLib::PVariable(new BaseLib::Variable(-2));
+		}
+
+		return BaseLib::PVariable(new BaseLib::Variable(i->second->checkLicense(familyId, deviceId, licenseKey)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("removeLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+		if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
+
+		int32_t moduleId = parameters->at(0)->integerValue;
+		int32_t familyId = parameters->at(1)->integerValue;
+		int32_t deviceId = parameters->at(2)->integerValue;
+
+		std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+		if(i == GD::licensingModules.end() || !i->second)
+		{
+			_out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+			return BaseLib::PVariable(new BaseLib::Variable(-2));
+		}
+
+		i->second->removeLicense(familyId, deviceId);
+
+		return BaseLib::PVariable(new BaseLib::Variable(true));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getLicenseStates")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+
+		int32_t moduleId = parameters->at(0)->integerValue;
+
+		std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+		if(i == GD::licensingModules.end() || !i->second)
+		{
+			_out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+			return BaseLib::PVariable(new BaseLib::Variable(false));
+		}
+
+		BaseLib::Licensing::Licensing::DeviceStates states = i->second->getDeviceStates();
+		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
+		result->arrayValue->reserve(states.size());
+		for(BaseLib::Licensing::Licensing::DeviceStates::iterator i = states.begin(); i != states.end(); ++i)
+		{
+			for(std::map<int32_t, BaseLib::Licensing::Licensing::PDeviceInfo>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+
+				element->structValue->insert(BaseLib::StructElement("MODULE_ID", BaseLib::PVariable(new BaseLib::Variable(j->second->moduleId))));
+				element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable(j->second->familyId))));
+				element->structValue->insert(BaseLib::StructElement("DEVICE_ID", BaseLib::PVariable(new BaseLib::Variable(j->second->deviceId))));
+				element->structValue->insert(BaseLib::StructElement("ACTIVATED", BaseLib::PVariable(new BaseLib::Variable(j->second->state))));
+				element->structValue->insert(BaseLib::StructElement("LICENSE_KEY", BaseLib::PVariable(new BaseLib::Variable(j->second->licenseKey))));
+
+				result->arrayValue->push_back(element);
+			}
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::getTrialStartTime(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getTrialStartTime")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+		if(parameters->at(2)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type integer.");
+
+		int32_t moduleId = parameters->at(0)->integerValue;
+		int32_t familyId = parameters->at(1)->integerValue;
+		int32_t deviceId = parameters->at(2)->integerValue;
+
+		std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+		if(i == GD::licensingModules.end() || !i->second)
+		{
+			_out.printError("Error: Could not check license. License module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
+			return BaseLib::PVariable(new BaseLib::Variable(-2));
+		}
+
+		return BaseLib::PVariable(new BaseLib::Variable(i->second->getTrialStartTime(familyId, deviceId)));
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+
+// {{{ Flows
+BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+
+		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+		if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+		if(parameters->at(1)->type != BaseLib::VariableType::tInteger) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type integer.");
+		if(parameters->size() == 4 && parameters->at(3)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type boolean.");
+
+		if(GD::nodeBlueServer) GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
+
+		return std::make_shared<BaseLib::Variable>();
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)
+{
+	try
+	{
+		if(GD::nodeBlueServer)
+		{
+			if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+			if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+			if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
+			if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");
+
+			return GD::nodeBlueServer->executePhpNodeBaseMethod(parameters);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+// }}}
+// }}}
+
+}
 
 }
 

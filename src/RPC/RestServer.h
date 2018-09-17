@@ -33,26 +33,36 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace Rpc
 {
-	class RestServer
-	{
-		public:
-			RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
-			virtual ~RestServer();
 
-			void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
-		private:
-			BaseLib::Output _out;
-			BaseLib::Rpc::PServerInfo _serverInfo;
-			BaseLib::Http _http;
-			std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-			std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+class RestServer
+{
+public:
+	RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
 
-			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
-			void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
+	virtual ~RestServer();
 
-			void send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data);
-	};
+	void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+
+private:
+	BaseLib::Output _out;
+	BaseLib::Rpc::PServerInfo _serverInfo;
+	BaseLib::Http _http;
+	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+
+	void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
+
+	void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
+
+	void send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data);
+};
+
+}
+
 }
 #endif
