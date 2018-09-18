@@ -31,6 +31,9 @@
 #include "GD.h"
 #include "../UPnP/UPnP.h"
 
+namespace Homegear
+{
+
 std::unique_ptr<BaseLib::SharedObjects> GD::bl;
 BaseLib::Output GD::out;
 std::string GD::runAsUser = "";
@@ -60,3 +63,5 @@ std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
 #endif
 std::unique_ptr<IpcServer> GD::ipcServer;
 std::unique_ptr<NodeBlue::NodeBlueServer> GD::nodeBlueServer;
+
+}

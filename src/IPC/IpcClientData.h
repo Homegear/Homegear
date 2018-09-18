@@ -35,10 +35,14 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 class IpcClientData
 {
 private:
 	void init();
+
 public:
 	int32_t id = 0;
 	bool closed = false;
@@ -52,9 +56,14 @@ public:
 	std::condition_variable requestConditionVariable;
 
 	IpcClientData();
+
 	IpcClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+
 	virtual ~IpcClientData();
 };
 
 typedef std::shared_ptr<IpcClientData> PIpcClientData;
+
+}
+
 #endif

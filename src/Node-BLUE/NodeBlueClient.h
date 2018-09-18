@@ -45,6 +45,9 @@
 #include <mutex>
 #include <string>
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -52,10 +55,13 @@ class NodeBlueClient : public BaseLib::IQueue
 {
 public:
 	NodeBlueClient();
+
 	virtual ~NodeBlueClient();
+
 	void dispose();
 
 	void start();
+
 private:
 	struct RequestInfo
 	{
@@ -64,48 +70,61 @@ private:
 	};
 	typedef std::shared_ptr<RequestInfo> PRequestInfo;
 
-    struct InputValue
-    {
-        int64_t time = 0;
-        Flows::PVariable value;
-    };
+	struct InputValue
+	{
+		int64_t time = 0;
+		Flows::PVariable value;
+	};
 
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
 	public:
 		QueueEntry() {}
-		QueueEntry(std::string& methodName, Flows::PArray parameters) { this->methodName = methodName; this->parameters = parameters; }
+
+		QueueEntry(std::string& methodName, Flows::PArray parameters)
+		{
+			this->methodName = methodName;
+			this->parameters = parameters;
+		}
+
 		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
-		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) { this->nodeInfo = nodeInfo; this->targetPort = targetPort; this->message = message; }
+
+		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message)
+		{
+			this->nodeInfo = nodeInfo;
+			this->targetPort = targetPort;
+			this->message = message;
+		}
+
 		virtual ~QueueEntry() {}
 
 		//{{{ Request
-			std::string methodName;
-			Flows::PArray parameters;
+		std::string methodName;
+		Flows::PArray parameters;
 		//}}}
 
 		//{{{ Response
-			std::vector<char> packet;
+		std::vector<char> packet;
 		//}}}
 
 		//{{{ Node output
-			Flows::PNodeInfo nodeInfo;
-			uint32_t targetPort = 0;
-			Flows::PVariable message;
+		Flows::PNodeInfo nodeInfo;
+		uint32_t targetPort = 0;
+		Flows::PVariable message;
 		//}}}
 	};
 
 	BaseLib::Output _out;
-    std::atomic_int _threadCount;
-    std::atomic_int _processingThreadCount1;
-    std::atomic_int _processingThreadCount2;
-    std::atomic_int _processingThreadCount3;
-    std::atomic<int64_t> _processingThreadCountMaxReached1;
-    std::atomic<int64_t> _processingThreadCountMaxReached2;
-    std::atomic<int64_t> _processingThreadCountMaxReached3;
+	std::atomic_int _threadCount;
+	std::atomic_int _processingThreadCount1;
+	std::atomic_int _processingThreadCount2;
+	std::atomic_int _processingThreadCount3;
+	std::atomic<int64_t> _processingThreadCountMaxReached1;
+	std::atomic<int64_t> _processingThreadCountMaxReached2;
+	std::atomic<int64_t> _processingThreadCountMaxReached3;
 	std::atomic_bool _startUpComplete;
 	std::atomic_bool _shuttingDownOrRestarting;
-    std::atomic_bool _shutdownComplete;
+	std::atomic_bool _shutdownComplete;
 	std::atomic_bool _disposed;
 	std::string _socketPath;
 	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
@@ -116,7 +135,7 @@ private:
 	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
 	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
 	std::thread _maintenanceThread;
-    std::thread _watchdogThread;
+	std::thread _watchdogThread;
 	std::mutex _requestInfoMutex;
 	std::map<int64_t, PRequestInfo> _requestInfo;
 	std::mutex _packetIdMutex;
@@ -125,8 +144,8 @@ private:
 	std::unique_ptr<NodeManager> _nodeManager;
 	std::atomic_bool _frontendConnected;
 	std::atomic<int64_t> _lastQueueSize;
-    std::mutex _eventFlowIdMutex;
-    std::string _eventFlowId;
+	std::mutex _eventFlowIdMutex;
+	std::string _eventFlowId;
 
 	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
 	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -146,112 +165,135 @@ private:
 	std::mutex _internalMessagesMutex;
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
-    std::mutex _inputValuesMutex;
-    std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
+	std::mutex _inputValuesMutex;
+	std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
 
 	std::mutex _fixedInputValuesMutex;
 	std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _fixedInputValues;
 
-    void watchdog();
+	void watchdog();
 
-    void resetClient(Flows::PVariable packetId);
+	void resetClient(Flows::PVariable packetId);
 
 	void registerClient();
+
 	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
+
 	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait);
+
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+
 	Flows::PVariable send(std::vector<char>& data);
 
 	void log(std::string nodeId, int32_t logLevel, std::string message);
+
 	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
+
 	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
+
 	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
+
 	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
+
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
+
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
+
 	void setInternalMessage(std::string nodeId, Flows::PVariable message);
-    void setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
+
+	void setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
+
 	Flows::PVariable getConfigParameter(std::string nodeId, std::string name);
 
 	// {{{ RPC methods
-		/**
-		 * Causes the log files to be reopened.
-		 * @param parameters Irrelevant for this method.
-		 */
-		Flows::PVariable reload(Flows::PArray& parameters);
+	/**
+     * Causes the log files to be reopened.
+     * @param parameters Irrelevant for this method.
+     */
+	Flows::PVariable reload(Flows::PArray& parameters);
 
-		/**
-		 * Causes the script engine client to exit.
-		 * @param parameters Irrelevant for this method.
-		 */
-		Flows::PVariable shutdown(Flows::PArray& parameters);
+	/**
+     * Causes the script engine client to exit.
+     * @param parameters Irrelevant for this method.
+     */
+	Flows::PVariable shutdown(Flows::PArray& parameters);
 
-		/**
-		 * Starts a new flow.
-		 * @param parameters
-		 */
-		Flows::PVariable startFlow(Flows::PArray& parameters);
+	/**
+     * Starts a new flow.
+     * @param parameters
+     */
+	Flows::PVariable startFlow(Flows::PArray& parameters);
 
-		/**
-		 * Executes the method "start" on all nodes. It is run after all nodes are initialized.
-		 * @param parameters
-		 */
-		Flows::PVariable startNodes(Flows::PArray& parameters);
+	/**
+     * Executes the method "start" on all nodes. It is run after all nodes are initialized.
+     * @param parameters
+     */
+	Flows::PVariable startNodes(Flows::PArray& parameters);
 
-		/**
-		 * Executed when all config nodes are available.
-		 * @param parameters
-		 */
-		Flows::PVariable configNodesStarted(Flows::PArray& parameters);
+	/**
+     * Executed when all config nodes are available.
+     * @param parameters
+     */
+	Flows::PVariable configNodesStarted(Flows::PArray& parameters);
 
-		/**
-		 * Executed when start up is complete. Nodes can output data from within this method.
-		 * @param parameters
-		 */
-		Flows::PVariable startUpComplete(Flows::PArray& parameters);
+	/**
+     * Executed when start up is complete. Nodes can output data from within this method.
+     * @param parameters
+     */
+	Flows::PVariable startUpComplete(Flows::PArray& parameters);
 
-		/**
-		 * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
-		 * @param parameters
-		 */
-		Flows::PVariable stopNodes(Flows::PArray& parameters);
+	/**
+     * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
+     * @param parameters
+     */
+	Flows::PVariable stopNodes(Flows::PArray& parameters);
 
-		/**
-		 * Stops a flow.
-		 * @param parameters
-		 */
-		Flows::PVariable stopFlow(Flows::PArray& parameters);
+	/**
+     * Stops a flow.
+     * @param parameters
+     */
+	Flows::PVariable stopFlow(Flows::PArray& parameters);
 
-		/**
-		 * Returns the number of flows currently running.
-		 * @param parameters Irrelevant for this method.
-		 * @return Returns the number of running flows.
-		 */
-		Flows::PVariable flowCount(Flows::PArray& parameters);
+	/**
+     * Returns the number of flows currently running.
+     * @param parameters Irrelevant for this method.
+     * @return Returns the number of running flows.
+     */
+	Flows::PVariable flowCount(Flows::PArray& parameters);
 
-		Flows::PVariable nodeOutput(Flows::PArray& parameters);
-		Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
-		Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
+	Flows::PVariable nodeOutput(Flows::PArray& parameters);
 
-		Flows::PVariable getNodesWithFixedInputs(Flows::PArray& parameters);
+	Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
 
-		Flows::PVariable getNodeVariable(Flows::PArray& parameters);
-		Flows::PVariable getFlowVariable(Flows::PArray& parameters);
+	Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
 
-		Flows::PVariable setNodeVariable(Flows::PArray& parameters);
-        Flows::PVariable setFlowVariable(Flows::PArray& parameters);
+	Flows::PVariable getNodesWithFixedInputs(Flows::PArray& parameters);
 
-		Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
-		Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
+	Flows::PVariable getNodeVariable(Flows::PArray& parameters);
 
-		Flows::PVariable broadcastEvent(Flows::PArray& parameters);
-		Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);
-		Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);
-		Flows::PVariable broadcastUpdateDevice(Flows::PArray& parameters);
+	Flows::PVariable getFlowVariable(Flows::PArray& parameters);
+
+	Flows::PVariable setNodeVariable(Flows::PArray& parameters);
+
+	Flows::PVariable setFlowVariable(Flows::PArray& parameters);
+
+	Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
+
+	Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
+
+	Flows::PVariable broadcastEvent(Flows::PArray& parameters);
+
+	Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);
+
+	Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);
+
+	Flows::PVariable broadcastUpdateDevice(Flows::PArray& parameters);
 	// }}}
 };
+
+}
 
 }
 #endif

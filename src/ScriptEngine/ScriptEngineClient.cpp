@@ -42,6 +42,9 @@
 #include <utility>
 #include <zend_stream.h>
 
+namespace Homegear
+{
+
 namespace ScriptEngine
 {
 
@@ -63,11 +66,11 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
 	_out.setPrefix("Script Engine (" + std::to_string(getpid()) + "): ");
 
 #ifdef DEBUGSESOCKET
-	std::string socketLogfile = GD::bl->settings.logfilePath() + "homegear-socket-client-" + std::to_string((uint32_t)getpid()) + ".pcap";
-	BaseLib::Io::deleteFile(socketLogfile);
-	_socketOutput.open(socketLogfile, std::ios::app | std::ios::binary);
-	std::vector<uint8_t> buffer{ 0xa1, 0xb2, 0xc3, 0xd4, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xe4 };
-	_socketOutput.write((char*)buffer.data(), buffer.size());
+    std::string socketLogfile = GD::bl->settings.logfilePath() + "homegear-socket-client-" + std::to_string((uint32_t)getpid()) + ".pcap";
+    BaseLib::Io::deleteFile(socketLogfile);
+    _socketOutput.open(socketLogfile, std::ios::app | std::ios::binary);
+    std::vector<uint8_t> buffer{ 0xa1, 0xb2, 0xc3, 0xd4, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xe4 };
+    _socketOutput.write((char*)buffer.data(), buffer.size());
 #endif
 
 	_dummyClientInfo.reset(new BaseLib::RpcClientInfo());
@@ -98,7 +101,7 @@ ScriptEngineClient::~ScriptEngineClient()
 {
 	dispose(true);
 	if(_maintenanceThread.joinable()) _maintenanceThread.join();
-    if(_watchdogThread.joinable()) _watchdogThread.join();
+	if(_watchdogThread.joinable()) _watchdogThread.join();
 #ifdef DEBUGSESOCKET
 	_socketOutput.close();
 #endif
@@ -117,7 +120,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 {
 	try
 	{
-		BaseLib::PArray eventData(new BaseLib::Array{ BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))}))) });
+		BaseLib::PArray eventData(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))})))});
 
 		GD::bl->shuttingDown = true;
 		if(broadcastShutdown) broadcastEvent(eventData);
@@ -152,164 +155,164 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 		stopEventThreads();
 		stopQueue(0);
 		stopQueue(1);
-		php_homegear_shutdown();
+		php_homegear_deinit();
 		_scriptCache.clear();
 		_rpcResponses.clear();
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 #ifdef DEBUGSESOCKET
 void ScriptEngineClient::socketOutput(int32_t packetId, bool clientRequest, bool request, std::vector<char> data)
 {
-	try
-	{
-		int64_t time = BaseLib::HelperFunctions::getTimeMicroseconds();
-		int32_t timeSeconds = time / 1000000;
-		int32_t timeMicroseconds = time % 1000000;
-
-		uint32_t length = 20 + 8 + data.size();
-
-		std::vector<uint8_t> buffer;
-		buffer.reserve(length);
-		buffer.push_back((uint8_t)(timeSeconds >> 24));
-		buffer.push_back((uint8_t)(timeSeconds >> 16));
-		buffer.push_back((uint8_t)(timeSeconds >> 8));
-		buffer.push_back((uint8_t)timeSeconds);
-
-		buffer.push_back((uint8_t)(timeMicroseconds >> 24));
-		buffer.push_back((uint8_t)(timeMicroseconds >> 16));
-		buffer.push_back((uint8_t)(timeMicroseconds >> 8));
-		buffer.push_back((uint8_t)timeMicroseconds);
-
-		buffer.push_back((uint8_t)(length >> 24)); //incl_len
-		buffer.push_back((uint8_t)(length >> 16));
-		buffer.push_back((uint8_t)(length >> 8));
-		buffer.push_back((uint8_t)length);
-
-		buffer.push_back((uint8_t)(length >> 24)); //orig_len
-		buffer.push_back((uint8_t)(length >> 16));
-		buffer.push_back((uint8_t)(length >> 8));
-		buffer.push_back((uint8_t)length);
-
-		//{{{ IPv4 header
-			buffer.push_back(0x45); //Version 4 (0100....); Header length 20 (....0101)
-			buffer.push_back(0); //Differentiated Services Field
-
-			buffer.push_back((uint8_t)(length >> 8)); //Length
-			buffer.push_back((uint8_t)length);
-
-			buffer.push_back((uint8_t)((packetId % 65536) >> 8)); //Identification
-			buffer.push_back((uint8_t)(packetId % 65536));
-
-			buffer.push_back(0); //Flags: 0 (000.....); Fragment offset 0 (...00000 00000000)
-			buffer.push_back(0);
-
-			buffer.push_back(0x80); //TTL
-
-			buffer.push_back(17); //Protocol UDP
-
-			buffer.push_back(0); //Header checksum
-			buffer.push_back(0);
-
-			int32_t clientId = getpid();
-			if(request)
-			{
-				if(clientRequest)
-				{
-					buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Source
-					buffer.push_back((uint8_t)(clientId >> 16));
-					buffer.push_back((uint8_t)(clientId >> 8));
-					buffer.push_back((uint8_t)clientId);
-
-					buffer.push_back(2); //Destination
-					buffer.push_back(2);
-					buffer.push_back(2);
-					buffer.push_back(2);
-				}
-				else
-				{
-					buffer.push_back(1); //Source
-					buffer.push_back(1);
-					buffer.push_back(1);
-					buffer.push_back(1);
-
-					buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Destination
-					buffer.push_back((uint8_t)(clientId >> 16));
-					buffer.push_back((uint8_t)(clientId >> 8));
-					buffer.push_back((uint8_t)clientId);
-				}
-			}
-			else
-			{
-				if(clientRequest)
-				{
-					buffer.push_back(2); //Source
-					buffer.push_back(2);
-					buffer.push_back(2);
-					buffer.push_back(2);
-
-					buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Destination
-					buffer.push_back((uint8_t)(clientId >> 16));
-					buffer.push_back((uint8_t)(clientId >> 8));
-					buffer.push_back((uint8_t)clientId);
-				}
-				else
-				{
-					buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Source
-					buffer.push_back((uint8_t)(clientId >> 16));
-					buffer.push_back((uint8_t)(clientId >> 8));
-					buffer.push_back((uint8_t)clientId);
-
-					buffer.push_back(1); //Destination
-					buffer.push_back(1);
-					buffer.push_back(1);
-					buffer.push_back(1);
-				}
-			}
-		// }}}
-		// {{{ UDP header
-			buffer.push_back(0); //Source port
-			buffer.push_back(1);
-
-			buffer.push_back((uint8_t)(clientId >> 8)); //Destination port
-			buffer.push_back((uint8_t)clientId);
-
-			length -= 20;
-			buffer.push_back((uint8_t)(length >> 8)); //Length
-			buffer.push_back((uint8_t)length);
-
-			buffer.push_back(0); //Checksum
-			buffer.push_back(0);
-		// }}}
-
-		buffer.insert(buffer.end(), data.begin(), data.end());
-
-		std::lock_guard<std::mutex> socketOutputGuard(_socketOutputMutex);
-		_socketOutput.write((char*)buffer.data(), buffer.size());
-	}
-	catch(const std::exception& ex)
+    try
     {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        int64_t time = BaseLib::HelperFunctions::getTimeMicroseconds();
+        int32_t timeSeconds = time / 1000000;
+        int32_t timeMicroseconds = time % 1000000;
+
+        uint32_t length = 20 + 8 + data.size();
+
+        std::vector<uint8_t> buffer;
+        buffer.reserve(length);
+        buffer.push_back((uint8_t)(timeSeconds >> 24));
+        buffer.push_back((uint8_t)(timeSeconds >> 16));
+        buffer.push_back((uint8_t)(timeSeconds >> 8));
+        buffer.push_back((uint8_t)timeSeconds);
+
+        buffer.push_back((uint8_t)(timeMicroseconds >> 24));
+        buffer.push_back((uint8_t)(timeMicroseconds >> 16));
+        buffer.push_back((uint8_t)(timeMicroseconds >> 8));
+        buffer.push_back((uint8_t)timeMicroseconds);
+
+        buffer.push_back((uint8_t)(length >> 24)); //incl_len
+        buffer.push_back((uint8_t)(length >> 16));
+        buffer.push_back((uint8_t)(length >> 8));
+        buffer.push_back((uint8_t)length);
+
+        buffer.push_back((uint8_t)(length >> 24)); //orig_len
+        buffer.push_back((uint8_t)(length >> 16));
+        buffer.push_back((uint8_t)(length >> 8));
+        buffer.push_back((uint8_t)length);
+
+        //{{{ IPv4 header
+            buffer.push_back(0x45); //Version 4 (0100....); Header length 20 (....0101)
+            buffer.push_back(0); //Differentiated Services Field
+
+            buffer.push_back((uint8_t)(length >> 8)); //Length
+            buffer.push_back((uint8_t)length);
+
+            buffer.push_back((uint8_t)((packetId % 65536) >> 8)); //Identification
+            buffer.push_back((uint8_t)(packetId % 65536));
+
+            buffer.push_back(0); //Flags: 0 (000.....); Fragment offset 0 (...00000 00000000)
+            buffer.push_back(0);
+
+            buffer.push_back(0x80); //TTL
+
+            buffer.push_back(17); //Protocol UDP
+
+            buffer.push_back(0); //Header checksum
+            buffer.push_back(0);
+
+            int32_t clientId = getpid();
+            if(request)
+            {
+                if(clientRequest)
+                {
+                    buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Source
+                    buffer.push_back((uint8_t)(clientId >> 16));
+                    buffer.push_back((uint8_t)(clientId >> 8));
+                    buffer.push_back((uint8_t)clientId);
+
+                    buffer.push_back(2); //Destination
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+                }
+                else
+                {
+                    buffer.push_back(1); //Source
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+
+                    buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Destination
+                    buffer.push_back((uint8_t)(clientId >> 16));
+                    buffer.push_back((uint8_t)(clientId >> 8));
+                    buffer.push_back((uint8_t)clientId);
+                }
+            }
+            else
+            {
+                if(clientRequest)
+                {
+                    buffer.push_back(2); //Source
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+                    buffer.push_back(2);
+
+                    buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Destination
+                    buffer.push_back((uint8_t)(clientId >> 16));
+                    buffer.push_back((uint8_t)(clientId >> 8));
+                    buffer.push_back((uint8_t)clientId);
+                }
+                else
+                {
+                    buffer.push_back(0x80 | (uint8_t)(clientId >> 24)); //Source
+                    buffer.push_back((uint8_t)(clientId >> 16));
+                    buffer.push_back((uint8_t)(clientId >> 8));
+                    buffer.push_back((uint8_t)clientId);
+
+                    buffer.push_back(1); //Destination
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+                    buffer.push_back(1);
+                }
+            }
+        // }}}
+        // {{{ UDP header
+            buffer.push_back(0); //Source port
+            buffer.push_back(1);
+
+            buffer.push_back((uint8_t)(clientId >> 8)); //Destination port
+            buffer.push_back((uint8_t)clientId);
+
+            length -= 20;
+            buffer.push_back((uint8_t)(length >> 8)); //Length
+            buffer.push_back((uint8_t)length);
+
+            buffer.push_back(0); //Checksum
+            buffer.push_back(0);
+        // }}}
+
+        buffer.insert(buffer.end(), data.begin(), data.end());
+
+        std::lock_guard<std::mutex> socketOutputGuard(_socketOutputMutex);
+        _socketOutput.write((char*)buffer.data(), buffer.size());
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 #endif
@@ -327,14 +330,14 @@ void ScriptEngineClient::start()
 			_out.printError("Error: Could not redirect errors to log file.");
 		}
 
-        _threadCount = 10;
-        _processingThreadCount1 = 0;
-        _processingThreadCount2 = 0;
+		_threadCount = 10;
+		_processingThreadCount1 = 0;
+		_processingThreadCount2 = 0;
 
 		startQueue(0, false, _threadCount, 0, SCHED_OTHER);
 		startQueue(1, false, _threadCount, 0, SCHED_OTHER);
 
-        if(GD::bl->settings.scriptEngineWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&ScriptEngineClient::watchdog, this);
+		if(GD::bl->settings.scriptEngineWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&ScriptEngineClient::watchdog, this);
 
 		_socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
 		if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
@@ -359,7 +362,7 @@ void ScriptEngineClient::start()
 			}
 			strncpy(remoteAddress.sun_path, _socketPath.c_str(), 104);
 			remoteAddress.sun_path[103] = 0; //Just to make sure it is null terminated.
-			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, static_cast<socklen_t>(strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family))) == -1)
+			if(connect(_fileDescriptor->descriptor, (struct sockaddr*) &remoteAddress, static_cast<socklen_t>(strlen(remoteAddress.sun_path) + 1 + sizeof(remoteAddress.sun_family))) == -1)
 			{
 				if(i == 0)
 				{
@@ -414,7 +417,7 @@ void ScriptEngineClient::start()
 					if(errno == EINTR) continue;
 					GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					_out.printMessage("Connection to script server closed (1). Exiting.");
-                    if(_maintenanceThread.joinable()) _maintenanceThread.join();
+					if(_maintenanceThread.joinable()) _maintenanceThread.join();
 					return;
 				}
 
@@ -423,11 +426,11 @@ void ScriptEngineClient::start()
 				{
 					GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					_out.printMessage("Connection to script server closed (2). Exiting.");
-                    if(_maintenanceThread.joinable()) _maintenanceThread.join();
+					if(_maintenanceThread.joinable()) _maintenanceThread.join();
 					return;
 				}
 
-				if(bytesRead > (signed)buffer.size()) bytesRead = static_cast<int32_t>(buffer.size());
+				if(bytesRead > (signed) buffer.size()) bytesRead = static_cast<int32_t>(buffer.size());
 
 				try
 				{
@@ -437,19 +440,19 @@ void ScriptEngineClient::start()
 						processedBytes += _binaryRpc->process(buffer.data() + processedBytes, bytesRead - processedBytes);
 						if(_binaryRpc->isFinished())
 						{
-	#ifdef DEBUGSESOCKET
-							if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
-							{
-								std::string methodName;
-								BaseLib::PArray request = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
-								socketOutput(request->at(0)->integerValue, false, true, _binaryRpc->getData());
-							}
-							else
-							{
-								BaseLib::PVariable response = _rpcDecoder->decodeResponse(_binaryRpc->getData());
-								socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
-							}
-	#endif
+#ifdef DEBUGSESOCKET
+                            if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                            {
+                                std::string methodName;
+                                BaseLib::PArray request = _rpcDecoder->decodeRequest(_binaryRpc->getData(), methodName);
+                                socketOutput(request->at(0)->integerValue, false, true, _binaryRpc->getData());
+                            }
+                            else
+                            {
+                                BaseLib::PVariable response = _rpcDecoder->decodeResponse(_binaryRpc->getData());
+                                socketOutput(response->arrayValue->at(1)->integerValue, true, false, _binaryRpc->getData());
+                            }
+#endif
 							if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
 							{
 								std::string methodName;
@@ -488,18 +491,18 @@ void ScriptEngineClient::start()
 		}
 		buffer.clear();
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 std::vector<std::string> ScriptEngineClient::getArgs(const std::string& path, const std::string& args)
@@ -510,7 +513,7 @@ std::vector<std::string> ScriptEngineClient::getArgs(const std::string& path, co
 	wordexp_t p{};
 	if(wordexp(args.c_str(), &p, 0) == 0)
 	{
-		for (size_t i = 0; i < p.we_wordc; i++)
+		for(size_t i = 0; i < p.we_wordc; i++)
 		{
 			argv.push_back(std::string(p.we_wordv[i]));
 		}
@@ -529,17 +532,17 @@ void ScriptEngineClient::sendScriptFinished(int32_t exitCode)
 		sendRequest(globals->id, globals->peerId, globals->user, globals->language, methodName, parameters, false);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::registerClient()
@@ -547,7 +550,7 @@ void ScriptEngineClient::registerClient()
 	try
 	{
 		std::string methodName("registerScriptEngineClient");
-		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable((int32_t)getpid()))});
+		BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable((int32_t) getpid()))});
 		BaseLib::PVariable result = sendGlobalRequest(methodName, parameters);
 		if(result->errorStruct)
 		{
@@ -557,17 +560,17 @@ void ScriptEngineClient::registerClient()
 		_out.printInfo("Info: Client registered to server.");
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
@@ -580,163 +583,163 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
 		if(index == 0) //Request
 		{
-            _processingThreadCount1++;
-            try
-            {
-                if(_processingThreadCount1 == _threadCount) _processingThreadCountMaxReached1 = BaseLib::HelperFunctions::getTime();
-                if (queueEntry->parameters->size() < 3)
-                {
-                    _out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
-                    return;
-                }
-                std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
-                if (localMethodIterator == _localRpcMethods.end())
-                {
-                    _out.printError("Warning: RPC method not found: " + queueEntry->methodName);
-                    BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
-                    if (queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
-                    return;
-                }
+			_processingThreadCount1++;
+			try
+			{
+				if(_processingThreadCount1 == _threadCount) _processingThreadCountMaxReached1 = BaseLib::HelperFunctions::getTime();
+				if(queueEntry->parameters->size() < 3)
+				{
+					_out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
+					return;
+				}
+				std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+				if(localMethodIterator == _localRpcMethods.end())
+				{
+					_out.printError("Warning: RPC method not found: " + queueEntry->methodName);
+					BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
+					if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
+					return;
+				}
 
-                if (GD::bl->debugLevel >= 5)
-                {
-                    _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
-                    for (auto parameter : *queueEntry->parameters)
-                    {
-                        parameter->print(true, false);
-                    }
-                }
+				if(GD::bl->debugLevel >= 5)
+				{
+					_out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
+					for(auto parameter : *queueEntry->parameters)
+					{
+						parameter->print(true, false);
+					}
+				}
 
-                BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
-                if (GD::bl->debugLevel >= 5)
-                {
-                    _out.printDebug("Response: ");
-                    result->print(true, false);
-                }
-                if (queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            _processingThreadCountMaxReached1 = 0;
-            _processingThreadCount1--;
+				BaseLib::PVariable result = localMethodIterator->second(queueEntry->parameters->at(2)->arrayValue);
+				if(GD::bl->debugLevel >= 5)
+				{
+					_out.printDebug("Response: ");
+					result->print(true, false);
+				}
+				if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), result);
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_processingThreadCountMaxReached1 = 0;
+			_processingThreadCount1--;
 		}
 		else //Response
 		{
-            _processingThreadCount2++;
-            try
-            {
-                if(_processingThreadCount2 == _threadCount) _processingThreadCountMaxReached2 = BaseLib::HelperFunctions::getTime();
-                BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
-                if (response->arrayValue->size() < 3)
-                {
-                    _out.printError("Error: Response has wrong array size.");
-                    return;
-                }
-                int32_t scriptId = response->arrayValue->at(0)->integerValue;
-                int32_t packetId = response->arrayValue->at(1)->integerValue;
+			_processingThreadCount2++;
+			try
+			{
+				if(_processingThreadCount2 == _threadCount) _processingThreadCountMaxReached2 = BaseLib::HelperFunctions::getTime();
+				BaseLib::PVariable response = _rpcDecoder->decodeResponse(queueEntry->packet);
+				if(response->arrayValue->size() < 3)
+				{
+					_out.printError("Error: Response has wrong array size.");
+					return;
+				}
+				int32_t scriptId = response->arrayValue->at(0)->integerValue;
+				int32_t packetId = response->arrayValue->at(1)->integerValue;
 
-                {
-                    std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-                    auto responseIterator = _rpcResponses[scriptId].find(packetId);
-                    if (responseIterator != _rpcResponses[scriptId].end())
-                    {
-                        PScriptEngineResponse element = responseIterator->second;
-                        if (element)
-                        {
-                            element->response = response;
-                            element->packetId = packetId;
-                            element->finished = true;
-                        }
-                    }
-                }
-                if (scriptId != 0)
-                {
-                    std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
-                    std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
-                    if (requestIterator != _requestInfo.end())
-                    {
-                        std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
+				{
+					std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+					auto responseIterator = _rpcResponses[scriptId].find(packetId);
+					if(responseIterator != _rpcResponses[scriptId].end())
+					{
+						PScriptEngineResponse element = responseIterator->second;
+						if(element)
+						{
+							element->response = response;
+							element->packetId = packetId;
+							element->finished = true;
+						}
+					}
+				}
+				if(scriptId != 0)
+				{
+					std::lock_guard<std::mutex> requestInfoGuard(_requestInfoMutex);
+					std::map<int32_t, PRequestInfo>::iterator requestIterator = _requestInfo.find(scriptId);
+					if(requestIterator != _requestInfo.end())
+					{
+						std::unique_lock<std::mutex> waitLock(requestIterator->second->waitMutex);
 
-                        {
-                            std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-                            auto responseIterator = _rpcResponses[scriptId].find(packetId);
-                            if (responseIterator != _rpcResponses[scriptId].end())
-                            {
-                                PScriptEngineResponse element = responseIterator->second;
-                                if (element)
-                                {
-                                    element->response = response;
-                                    element->packetId = packetId;
-                                    element->finished = true;
-                                }
-                            }
-                        }
+						{
+							std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+							auto responseIterator = _rpcResponses[scriptId].find(packetId);
+							if(responseIterator != _rpcResponses[scriptId].end())
+							{
+								PScriptEngineResponse element = responseIterator->second;
+								if(element)
+								{
+									element->response = response;
+									element->packetId = packetId;
+									element->finished = true;
+								}
+							}
+						}
 
-                        waitLock.unlock();
-                        requestIterator->second->conditionVariable.notify_all();
-                    }
-                }
-                else
-                {
-                    std::unique_lock<std::mutex> waitLock(_waitMutex);
+						waitLock.unlock();
+						requestIterator->second->conditionVariable.notify_all();
+					}
+				}
+				else
+				{
+					std::unique_lock<std::mutex> waitLock(_waitMutex);
 
-                    {
-                        std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
-                        auto responseIterator = _rpcResponses[scriptId].find(packetId);
-                        if (responseIterator != _rpcResponses[scriptId].end())
-                        {
-                            PScriptEngineResponse element = responseIterator->second;
-                            if (element)
-                            {
-                                element->response = response;
-                                element->packetId = packetId;
-                                element->finished = true;
-                            }
-                        }
-                    }
+					{
+						std::lock_guard<std::mutex> responseGuard(_rpcResponsesMutex);
+						auto responseIterator = _rpcResponses[scriptId].find(packetId);
+						if(responseIterator != _rpcResponses[scriptId].end())
+						{
+							PScriptEngineResponse element = responseIterator->second;
+							if(element)
+							{
+								element->response = response;
+								element->packetId = packetId;
+								element->finished = true;
+							}
+						}
+					}
 
-                    waitLock.unlock();
-                    _requestConditionVariable.notify_all();
-                }
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-            _processingThreadCountMaxReached2 = 0;
-            _processingThreadCount2--;
+					waitLock.unlock();
+					_requestConditionVariable.notify_all();
+				}
+			}
+			catch(const std::exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_processingThreadCountMaxReached2 = 0;
+			_processingThreadCount2--;
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::sendOutput(std::string output, bool error)
@@ -752,17 +755,17 @@ void ScriptEngineClient::sendOutput(std::string output, bool error)
 		sendRequest(globals->id, globals->peerId, globals->user, globals->language, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
@@ -771,21 +774,22 @@ void ScriptEngineClient::sendHeaders(BaseLib::PVariable headers)
 	{
 		zend_homegear_globals* globals = php_homegear_get_globals();
 		std::string methodName("scriptHeaders");
-		BaseLib::PArray parameters(new BaseLib::Array{headers});
+		auto parameters = std::make_shared<BaseLib::Array>();
+		parameters->emplace_back(std::move(headers));
 		sendRequest(globals->id, globals->peerId, globals->user, globals->language, methodName, parameters, true);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLib::PVariable parameters, bool wait)
@@ -797,18 +801,18 @@ BaseLib::PVariable ScriptEngineClient::callMethod(std::string methodName, BaseLi
 		return sendRequest(globals->id, globals->peerId, globals->user, globals->language, methodName, parameters->arrayValue, wait);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
@@ -817,7 +821,7 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
 	{
 		int32_t totallySentBytes = 0;
 		std::lock_guard<std::mutex> sendGuard(_sendMutex);
-		while (totallySentBytes < (signed)data.size())
+		while(totallySentBytes < (signed) data.size())
 		{
 			int32_t sentBytes = static_cast<int32_t>(::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL));
 			if(sentBytes <= 0)
@@ -830,18 +834,18 @@ BaseLib::PVariable ScriptEngineClient::send(std::vector<char>& data)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::PVariable(new BaseLib::Variable());
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::PVariable(new BaseLib::Variable());
 }
 
 BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, uint64_t peerId, std::string& user, std::string& language, std::string methodName, BaseLib::PArray& parameters, bool wait)
@@ -910,7 +914,7 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, uint64_t pe
 
 		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-		while (!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 		{
 			return response->finished || _stopped;
 		}))
@@ -934,18 +938,18 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, uint64_t pe
 		return result;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName, BaseLib::PArray& parameters)
@@ -960,10 +964,10 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		}
 		BaseLib::PArray array = std::make_shared<BaseLib::Array>();
 		array->reserve(4);
-        auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(0));
-        scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(std::string()));
-        array->push_back(scriptInfo);
+		auto scriptInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		scriptInfo->structValue->emplace("scriptId", std::make_shared<BaseLib::Variable>(0));
+		scriptInfo->structValue->emplace("user", std::make_shared<BaseLib::Variable>(std::string()));
+		array->push_back(scriptInfo);
 		array->push_back(std::make_shared<BaseLib::Variable>(packetId));
 		array->push_back(std::make_shared<BaseLib::Variable>(true));
 		array->push_back(std::make_shared<BaseLib::Variable>(parameters));
@@ -994,7 +998,8 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		}
 
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
-		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]{
+		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+		{
 			return response->finished || _stopped;
 		}));
 
@@ -1013,25 +1018,25 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		return result;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void ScriptEngineClient::sendResponse(BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
 {
 	try
 	{
-		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ packetId, variable })));
+		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
 #ifdef DEBUGSESOCKET
@@ -1040,17 +1045,17 @@ void ScriptEngineClient::sendResponse(BaseLib::PVariable& packetId, BaseLib::PVa
 		send(data);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::collectGarbage()
@@ -1189,13 +1194,13 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 			ts_resource(0); //Replaces TSRMLS_FETCH()
 
-			if (!scriptInfo->script.empty())
+			if(!scriptInfo->script.empty())
 			{
 				zendHandle.type = ZEND_HANDLE_MAPPED;
 				zendHandle.handle.fp = nullptr;
 				zendHandle.handle.stream.handle = nullptr;
 				zendHandle.handle.stream.closer = nullptr;
-                memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
+				memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
 				zendHandle.handle.stream.mmap.buf = (char*) scriptInfo->script.c_str(); //String is not modified
 				zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
 				zendHandle.filename = scriptInfo->fullPath.c_str();
@@ -1208,13 +1213,13 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				zendHandle.filename = scriptInfo->fullPath.c_str();
 				zendHandle.opened_path = nullptr;
 				zendHandle.free_filename = 0;
-                memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
+				memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
 			}
 
 			zend_homegear_globals* globals = php_homegear_get_globals();
-			if (!globals) return;
+			if(!globals) return;
 
-			if (type == ScriptInfo::ScriptType::web)
+			if(type == ScriptInfo::ScriptType::web)
 			{
 				globals->webRequest = true;
 				globals->commandLine = false;
@@ -1229,11 +1234,11 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				globals->peerId = scriptInfo->peerId;
 			}
 
-			if (type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
+			if(type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				globals->nodeId = scriptInfo->nodeInfo->structValue->at("id")->stringValue;
 				auto flowIdIterator = scriptInfo->nodeInfo->structValue->at("info")->structValue->find("z");
-				if (flowIdIterator != scriptInfo->nodeInfo->structValue->at("info")->structValue->end())
+				if(flowIdIterator != scriptInfo->nodeInfo->structValue->at("info")->structValue->end())
 				{
 					globals->flowId = flowIdIterator->second->stringValue;
 				}
@@ -1242,7 +1247,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
 			ZEND_TSRMLS_CACHE_UPDATE();
 
-			if (type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::device2 || type == ScriptInfo::ScriptType::statefulNode)
+			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::device2 || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				//BaseLib::Base64::encode(BaseLib::HelperFunctions::getRandomBytes(16), globals->token);
 				BaseLib::Base64::encode(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}, globals->token);
@@ -1255,7 +1260,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			SG(server_context) = (void*) serverInfo.get(); //Must be defined! Otherwise php_homegear_activate is not called.
 			std::string charset = "UTF-8";
 			SG(default_charset) = estrndup(charset.data(), charset.size());
-            SG(default_mimetype) = nullptr;
+			SG(default_mimetype) = nullptr;
 			if(type == ScriptInfo::ScriptType::cli || type == ScriptInfo::ScriptType::device || type == ScriptInfo::ScriptType::device2 || type == ScriptInfo::ScriptType::simpleNode || type == ScriptInfo::ScriptType::statefulNode)
 			{
 				PG(register_argc_argv) = 1;
@@ -1270,19 +1275,19 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 			{
 				SG(sapi_headers).http_response_code = 200;
 				SG(request_info).content_length = globals->http.getHeader().contentLength;
-				if (!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
+				if(!globals->http.getHeader().contentTypeFull.empty()) SG(request_info).content_type = globals->http.getHeader().contentTypeFull.c_str();
 				SG(request_info).request_method = globals->http.getHeader().method.c_str();
 				SG(request_info).proto_num = globals->http.getHeader().protocol == BaseLib::Http::Protocol::http10 ? 1000 : 1001;
 				std::string redirectUrl = globals->http.getRedirectUrl();
 				std::string uri = (redirectUrl.empty() ? globals->http.getHeader().path : redirectUrl) + globals->http.getHeader().pathInfo;
-				if (!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
-				if (!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
-				if (!uri.empty()) SG(request_info).request_uri = estrndup(uri.data(), uri.size());
+				if(!globals->http.getHeader().args.empty()) uri.append('?' + globals->http.getHeader().args);
+				if(!globals->http.getHeader().args.empty()) SG(request_info).query_string = estrndup(&globals->http.getHeader().args.at(0), globals->http.getHeader().args.size());
+				if(!uri.empty()) SG(request_info).request_uri = estrndup(uri.data(), uri.size());
 				std::string pathTranslated = serverInfo->contentPath.substr(0, serverInfo->contentPath.size() - 1) + scriptInfo->relativePath;
 				SG(request_info).path_translated = estrndup(pathTranslated.data(), pathTranslated.size());
 			}
 
-			if (php_request_startup() == FAILURE)
+			if(php_request_startup() == FAILURE)
 			{
 				GD::bl->out.printError("Error calling php_request_startup...");
 				SG(server_context) = nullptr;
@@ -1297,14 +1302,14 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				php_homegear_build_argv(argv);
 				SG(request_info).argc = static_cast<int>(argv.size());
 				SG(request_info).argv = (char**) malloc((argv.size() + 1) * sizeof(char*));
-				for (uint32_t i = 0; i < argv.size(); ++i)
+				for(uint32_t i = 0; i < argv.size(); ++i)
 				{
 					SG(request_info).argv[i] = (char*) argv[i].c_str(); //Value is not modified.
 				}
 				SG(request_info).argv[argv.size()] = nullptr;
 			}
 
-			if (scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
+			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}
 
 		php_execute_script(&zendHandle);
@@ -1314,7 +1319,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		}
 		else if(type == ScriptInfo::ScriptType::device2)
 		{
-            runDevice(id, scriptInfo);
+			runDevice(id, scriptInfo);
 		}
 
 		scriptInfo->exitCode = EG(exit_status);
@@ -1323,20 +1328,20 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		return;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    SG(server_context) = nullptr;
-    std::string error("Error executing script. Check Homegear log for more details.");
-    sendOutput(error, true);
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	SG(server_context) = nullptr;
+	std::string error("Error executing script. Check Homegear log for more details.");
+	sendOutput(error, true);
 }
 
 void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
@@ -1364,7 +1369,7 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 				while(!GD::bl->shuttingDown && !stop)
 				{
 					std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
-					while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+					while(!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 					{
 						return nodeInfo->ready || GD::bl->shuttingDown;
 					}));
@@ -1403,9 +1408,9 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 				int callResult = 0;
 
 				zend_try
-				{
-                    callResult = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
-				}
+						{
+							callResult = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
+						}
 				zend_end_try();
 
 				if(callResult != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
@@ -1436,65 +1441,65 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
 
 void ScriptEngineClient::runDevice(int32_t id, PScriptInfo scriptInfo)
 {
-    zval homegearDeviceObject{};
-    try
-    {
-        uint64_t peerId = scriptInfo->peerId;
-        PDeviceInfo deviceInfo;
+	zval homegearDeviceObject{};
+	try
+	{
+		uint64_t peerId = scriptInfo->peerId;
+		PDeviceInfo deviceInfo;
 
-        {
-            std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
-            deviceInfo = _deviceInfo.at(peerId);
-        }
+		{
+			std::lock_guard<std::mutex> deviceInfoGuard(_deviceInfoMutex);
+			deviceInfo = _deviceInfo.at(peerId);
+		}
 
-        zend_class_entry* homegearDeviceClassEntry = nullptr;
-        bool result = php_init_device(scriptInfo, homegearDeviceClassEntry, &homegearDeviceObject);
+		zend_class_entry* homegearDeviceClassEntry = nullptr;
+		bool result = php_init_device(scriptInfo, homegearDeviceClassEntry, &homegearDeviceObject);
 
-        if(result)
-        {
-            bool stop = false;
-            while(!GD::bl->shuttingDown && !stop)
-            {
-                std::unique_lock<std::mutex> waitLock(deviceInfo->waitMutex);
-                while(!deviceInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
-                {
-                    return deviceInfo->ready || GD::bl->shuttingDown;
-                }));
-                if(!deviceInfo->ready || GD::bl->shuttingDown) continue;
-                deviceInfo->ready = false;
+		if(result)
+		{
+			bool stop = false;
+			while(!GD::bl->shuttingDown && !stop)
+			{
+				std::unique_lock<std::mutex> waitLock(deviceInfo->waitMutex);
+				while(!deviceInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+				{
+					return deviceInfo->ready || GD::bl->shuttingDown;
+				}));
+				if(!deviceInfo->ready || GD::bl->shuttingDown) continue;
+				deviceInfo->ready = false;
 
-                deviceInfo->response = php_device_object_invoke_local(scriptInfo, &homegearDeviceObject, deviceInfo->methodName, deviceInfo->parameters);
-                if(deviceInfo->methodName == "init")
-                {
-                    if(!deviceInfo->response->booleanValue) stop = true;
-                }
-                else if(deviceInfo->methodName == "start" && !deviceInfo->response->booleanValue) stop = true;
-                else if(deviceInfo->methodName == "waitForStop")
-                {
-                    stop = true;
-                }
+				deviceInfo->response = php_device_object_invoke_local(scriptInfo, &homegearDeviceObject, deviceInfo->methodName, deviceInfo->parameters);
+				if(deviceInfo->methodName == "init")
+				{
+					if(!deviceInfo->response->booleanValue) stop = true;
+				}
+				else if(deviceInfo->methodName == "start" && !deviceInfo->response->booleanValue) stop = true;
+				else if(deviceInfo->methodName == "waitForStop")
+				{
+					stop = true;
+				}
 
-                deviceInfo->parameters.reset();
-                waitLock.unlock();
-                deviceInfo->conditionVariable.notify_all();
-            }
-            std::string methodName = "__destruct";
-            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-            php_device_object_invoke_local(scriptInfo, &homegearDeviceObject, methodName, parameters);
-        }
-    }
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+				deviceInfo->parameters.reset();
+				waitLock.unlock();
+				deviceInfo->conditionVariable.notify_all();
+			}
+			std::string methodName = "__destruct";
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			php_device_object_invoke_local(scriptInfo, &homegearDeviceObject, methodName, parameters);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool sendOutput)
@@ -1519,7 +1524,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 
 		if(scriptInfo->script.empty() && scriptInfo->fullPath.size() > 3 && (scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgs") == 0 || scriptInfo->fullPath.compare(scriptInfo->fullPath.size() - 4, 4, ".hgn") == 0))
 		{
-            std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
+			std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
 			std::map<std::string, std::shared_ptr<CacheInfo>>::iterator scriptIterator = _scriptCache.find(scriptInfo->fullPath);
 			if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(scriptInfo->fullPath)) scriptInfo->script = scriptIterator->second->script;
 			else
@@ -1530,7 +1535,7 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 				{
 					if(data[i] == ' ')
 					{
-						pos = (int32_t)i;
+						pos = (int32_t) i;
 						break;
 					}
 				}
@@ -1563,17 +1568,17 @@ void ScriptEngineClient::scriptThread(int32_t id, PScriptInfo scriptInfo, bool s
 		runScript(id, scriptInfo);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string* result)
@@ -1589,7 +1594,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 		try
 		{
 			ZEND_TSRMLS_CACHE_UPDATE();
-			SG(server_context) = (void*)serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
+			SG(server_context) = (void*) serverInfo.get(); //Must be defined! Otherwise POST data is not processed.
 			SG(sapi_headers).http_response_code = 200;
 			SG(default_mimetype) = nullptr;
 			SG(default_charset) = nullptr;
@@ -1598,7 +1603,8 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 			SG(request_info).proto_num = 1001;
 			globals->http.getHeader().cookie = "PHPSESSID=" + sessionId;
 
-			if (php_request_startup() == FAILURE) {
+			if(php_request_startup() == FAILURE)
+			{
 				GD::bl->out.printError("Error calling php_request_startup...");
 				ts_free_thread();
 				return;
@@ -1632,9 +1638,9 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 		ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 
 		zend_try
-		{
-			call_user_function(EG(function_table), nullptr, &function, &returnValue, 0, nullptr);
-		}
+				{
+					call_user_function(EG(function_table), nullptr, &function, &returnValue, 0, nullptr);
+				}
 		zend_end_try();
 
 		zval_ptr_dtor(&function);
@@ -1659,7 +1665,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 					}
 				}
 			}
-        }
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -1679,47 +1685,47 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 
 void ScriptEngineClient::watchdog()
 {
-    while(!_stopped)
-    {
-        try
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	while(!_stopped)
+	{
+		try
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-            if(_processingThreadCount1 == _threadCount)
-            {
-                int64_t time = _processingThreadCountMaxReached1;
-                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.scriptEngineWatchdogTimeout())
-                {
-                    std::cout << "Watchdog 1 timed out. Killing process." << std::endl;
-                    std::cerr << "Watchdog 1 timed out. Killing process." << std::endl;
-                    kill(getpid(), 9);
-                }
-            }
+			if(_processingThreadCount1 == _threadCount)
+			{
+				int64_t time = _processingThreadCountMaxReached1;
+				if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.scriptEngineWatchdogTimeout())
+				{
+					std::cout << "Watchdog 1 timed out. Killing process." << std::endl;
+					std::cerr << "Watchdog 1 timed out. Killing process." << std::endl;
+					kill(getpid(), 9);
+				}
+			}
 
-            if(_processingThreadCount2 == _threadCount)
-            {
-                int64_t time = _processingThreadCountMaxReached2;
-                if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.scriptEngineWatchdogTimeout())
-                {
-                    std::cout << "Watchdog 2 timed out. Killing process." << std::endl;
-                    std::cerr << "Watchdog 2 timed out. Killing process." << std::endl;
-                    kill(getpid(), 9);
-                }
-            }
-        }
-        catch(const std::exception& ex)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        catch(BaseLib::Exception& ex)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        catch(...)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-        }
-    }
+			if(_processingThreadCount2 == _threadCount)
+			{
+				int64_t time = _processingThreadCountMaxReached2;
+				if(time != 0 && BaseLib::HelperFunctions::getTime() - time > GD::bl->settings.scriptEngineWatchdogTimeout())
+				{
+					std::cout << "Watchdog 2 timed out. Killing process." << std::endl;
+					std::cerr << "Watchdog 2 timed out. Killing process." << std::endl;
+					kill(getpid(), 9);
+				}
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+	}
 }
 
 // {{{ RPC methods
@@ -1738,19 +1744,19 @@ BaseLib::PVariable ScriptEngineClient::reload(BaseLib::PArray& parameters)
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
@@ -1763,19 +1769,19 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::stopDevices(BaseLib::PArray& parameters)
@@ -1793,12 +1799,12 @@ BaseLib::PVariable ScriptEngineClient::stopDevices(BaseLib::PArray& parameters)
 
 		for(auto& device : deviceInfo)
 		{
-            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-            parameters->reserve(3);
-            parameters->push_back(std::make_shared<BaseLib::Variable>(device.first));
-            parameters->push_back(std::make_shared<BaseLib::Variable>("stop"));
-            BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-            parameters->push_back(innerParameters);
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(3);
+			parameters->push_back(std::make_shared<BaseLib::Variable>(device.first));
+			parameters->push_back(std::make_shared<BaseLib::Variable>("stop"));
+			BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			parameters->push_back(innerParameters);
 
 			BaseLib::PVariable result = executeDeviceMethod(parameters);
 			if(result->errorStruct) _out.printError("Error calling stop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
@@ -1806,22 +1812,22 @@ BaseLib::PVariable ScriptEngineClient::stopDevices(BaseLib::PArray& parameters)
 
 		_out.printMessage("Call to stop() on devices completed.");
 
-        _out.printMessage("Calling waitForStop() on devices...");
+		_out.printMessage("Calling waitForStop() on devices...");
 
-        for(auto& device : deviceInfo)
-        {
-            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-            parameters->reserve(3);
-            parameters->push_back(std::make_shared<BaseLib::Variable>(device.first));
-            parameters->push_back(std::make_shared<BaseLib::Variable>("waitForStop"));
-            BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-            parameters->push_back(innerParameters);
+		for(auto& device : deviceInfo)
+		{
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(3);
+			parameters->push_back(std::make_shared<BaseLib::Variable>(device.first));
+			parameters->push_back(std::make_shared<BaseLib::Variable>("waitForStop"));
+			BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			parameters->push_back(innerParameters);
 
-            BaseLib::PVariable result = executeDeviceMethod(parameters);
-            if(result->errorStruct) _out.printError("Error calling waitForStop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
-        }
+			BaseLib::PVariable result = executeDeviceMethod(parameters);
+			if(result->errorStruct) _out.printError("Error calling waitForStop on peer " + std::to_string(device.first) + ": " + result->structValue->at("faultString")->stringValue);
+		}
 
-        _out.printMessage("Call to waitForStop() on devices completed.");
+		_out.printMessage("Call to waitForStop() on devices completed.");
 		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
@@ -1846,10 +1852,10 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 		if(parameters->size() < 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 		PScriptInfo scriptInfo;
 		bool sendOutput = false;
-		auto type = (ScriptInfo::ScriptType)parameters->at(1)->integerValue;
+		auto type = (ScriptInfo::ScriptType) parameters->at(1)->integerValue;
 		if(type == ScriptInfo::ScriptType::cli)
 		{
-			if(parameters->at(2)->stringValue.empty() ) return BaseLib::Variable::createError(-1, "Path is empty.");
+			if(parameters->at(2)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
 			scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5)->stringValue));
 
 			if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->fullPath))
@@ -1917,35 +1923,35 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 				threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
 				_scriptThreads.emplace(scriptInfo->id, threadInfo);
 
-                if(type == ScriptInfo::ScriptType::device2)
-                {
-                    BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-                    parameters->reserve(3);
-                    parameters->push_back(std::make_shared<BaseLib::Variable>(scriptInfo->peerId));
-                    parameters->push_back(std::make_shared<BaseLib::Variable>("init"));
-                    BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                    innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(scriptInfo->peerId));
-                    parameters->push_back(innerParameters);
+				if(type == ScriptInfo::ScriptType::device2)
+				{
+					BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+					parameters->reserve(3);
+					parameters->push_back(std::make_shared<BaseLib::Variable>(scriptInfo->peerId));
+					parameters->push_back(std::make_shared<BaseLib::Variable>("init"));
+					BaseLib::PVariable innerParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+					innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(scriptInfo->peerId));
+					parameters->push_back(innerParameters);
 
-                    BaseLib::PVariable result = executeDeviceMethod(parameters);
-                    if(result->errorStruct) GD::out.printError("Error calling init on peer " + std::to_string(scriptInfo->peerId) + ": " + result->structValue->at("faultString")->stringValue);
+					BaseLib::PVariable result = executeDeviceMethod(parameters);
+					if(result->errorStruct) GD::out.printError("Error calling init on peer " + std::to_string(scriptInfo->peerId) + ": " + result->structValue->at("faultString")->stringValue);
 
-                    if(!result->booleanValue)
-                    {
-                        GD::out.printError("Error calling init on peer " + std::to_string(scriptInfo->peerId) + ".");
-                    }
-                    else
-                    {
-                        parameters->at(1)->stringValue = "start";
-                        result = executeDeviceMethod(parameters);
-                        if(result->errorStruct) GD::out.printError("Error calling start on peer " + std::to_string(scriptInfo->peerId) + ": " + result->structValue->at("faultString")->stringValue);
+					if(!result->booleanValue)
+					{
+						GD::out.printError("Error calling init on peer " + std::to_string(scriptInfo->peerId) + ".");
+					}
+					else
+					{
+						parameters->at(1)->stringValue = "start";
+						result = executeDeviceMethod(parameters);
+						if(result->errorStruct) GD::out.printError("Error calling start on peer " + std::to_string(scriptInfo->peerId) + ": " + result->structValue->at("faultString")->stringValue);
 
-                        if(!result->booleanValue)
-                        {
-                            GD::out.printError("Error calling start on peer " + std::to_string(scriptInfo->peerId) + ".");
-                        }
-                    }
-                }
+						if(!result->booleanValue)
+						{
+							GD::out.printError("Error calling start on peer " + std::to_string(scriptInfo->peerId) + ".");
+						}
+					}
+				}
 			}
 			else _out.printError("Error: Tried to execute script with ID of already running script.");
 		}
@@ -1953,19 +1959,19 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::devTest(BaseLib::PArray& parameters)
@@ -1983,19 +1989,19 @@ BaseLib::PVariable ScriptEngineClient::devTest(BaseLib::PArray& parameters)
 
 		return std::make_shared<BaseLib::Variable>();
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::scriptCount(BaseLib::PArray& parameters)
@@ -2004,21 +2010,21 @@ BaseLib::PVariable ScriptEngineClient::scriptCount(BaseLib::PArray& parameters)
 	{
 		collectGarbage();
 
-		return std::make_shared<BaseLib::Variable>((int32_t)_scriptThreads.size());
+		return std::make_shared<BaseLib::Variable>((int32_t) _scriptThreads.size());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parameters)
@@ -2037,19 +2043,19 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
 		}
 		return scripts;
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameters)
@@ -2068,19 +2074,19 @@ BaseLib::PVariable ScriptEngineClient::checkSessionId(BaseLib::PArray& parameter
 
 		return std::make_shared<BaseLib::Variable>(result);
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& parameters)
@@ -2095,7 +2101,7 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 		{
 			std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
 			auto nodeIterator = _nodeInfo.find(nodeId);
-			if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Unknown node.");
+			if(nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Unknown node.");
 			nodeInfo = nodeIterator->second;
 		}
 
@@ -2114,7 +2120,7 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 		{
 			std::unique_lock<std::mutex> waitLock(nodeInfo->waitMutex);
 			int32_t i = 0;
-			while (!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+			while(!nodeInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 			{
 				return nodeInfo->response || GD::bl->shuttingDown;
 			}))
@@ -2138,19 +2144,19 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray& par
 
 		return response ? response : std::make_shared<BaseLib::Variable>();
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::executeDeviceMethod(BaseLib::PArray& parameters)
@@ -2184,7 +2190,7 @@ BaseLib::PVariable ScriptEngineClient::executeDeviceMethod(BaseLib::PArray& para
 		{
 			std::unique_lock<std::mutex> waitLock(deviceInfo->waitMutex);
 			int32_t i = 0;
-			while (!deviceInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+			while(!deviceInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
 			{
 				return deviceInfo->response || GD::bl->shuttingDown;
 			}))
@@ -2253,19 +2259,19 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& parameters)
@@ -2288,19 +2294,19 @@ BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& para
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& parameters)
@@ -2323,19 +2329,19 @@ BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& p
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& parameters)
@@ -2361,21 +2367,23 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
+
+}
 
 }
 

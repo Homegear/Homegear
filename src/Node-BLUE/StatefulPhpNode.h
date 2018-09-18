@@ -35,23 +35,32 @@
 
 #include <homegear-node/INode.h>
 
+namespace Homegear
+{
+
 class StatefulPhpNode : public Flows::INode
 {
 private:
 	Flows::PVariable _nodeInfo;
 public:
 	StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected);
+
 	virtual ~StatefulPhpNode();
 
 	virtual bool init(Flows::PNodeInfo nodeInfo);
+
 	virtual bool start();
+
 	virtual void stop();
+
 	virtual void waitForStop();
 
 	virtual void configNodesStarted();
+
 	virtual void startUpComplete();
 
 	virtual void variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
+
 	virtual void setNodeVariable(std::string& variable, Flows::PVariable& value);
 
 	virtual Flows::PVariable getConfigParameterIncoming(std::string name);
@@ -60,6 +69,8 @@ public:
 
 	virtual Flows::PVariable invokeLocal(std::string methodName, Flows::PArray& parameters);
 };
+
+}
 
 #endif
 #endif

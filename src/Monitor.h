@@ -35,14 +35,22 @@
 #include <mutex>
 #include <atomic>
 
+namespace Homegear
+{
+
 class Monitor
 {
 public:
 	Monitor();
+
 	~Monitor();
+
 	void init();
+
 	void stop();
+
 	void dispose();
+
 	bool killedProcess();
 
 	/**
@@ -51,8 +59,11 @@ public:
 	void suspend();
 
 	void prepareParent();
+
 	void prepareChild();
+
 	void checkHealth(pid_t mainProcessId);
+
 private:
 	int _pipeToChild[2];
 	int _pipeFromChild[2];
@@ -65,9 +76,14 @@ private:
 	std::mutex _checkHealthMutex;
 
 	void monitor();
+
 	void killChild(pid_t mainProcessId);
+
 	bool lifetick();
+
 	void checkHealthThread(pid_t mainProcessId);
 };
+
+}
 
 #endif

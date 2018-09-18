@@ -33,6 +33,9 @@
 
 #include <string>
 
+namespace Homegear
+{
+
 namespace ScriptEngine
 {
 
@@ -41,6 +44,8 @@ struct CacheInfo
     int32_t lastModified;
     std::string script;
 };
+
+}
 
 }
 

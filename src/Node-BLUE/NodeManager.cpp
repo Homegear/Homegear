@@ -34,6 +34,9 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 NodeLoader::NodeLoader(std::string nodeNamespace, std::string type, std::string path)
 {
 	try
@@ -44,14 +47,14 @@ NodeLoader::NodeLoader(std::string nodeNamespace, std::string type, std::string 
 		_type = type;
 
 		void* nodeHandle = dlopen(_path.c_str(), RTLD_NOW);
-		if (!nodeHandle)
+		if(!nodeHandle)
 		{
 			GD::out.printCritical("Critical: Could not open node \"" + _path + "\": " + std::string(dlerror()));
 			return;
 		}
 
-		Flows::NodeFactory* (*getFactory)();
-		getFactory = (Flows::NodeFactory* (*)())dlsym(nodeHandle, "getFactory");
+		Flows::NodeFactory* (* getFactory)();
+		getFactory = (Flows::NodeFactory* (*)()) dlsym(nodeHandle, "getFactory");
 		if(!getFactory)
 		{
 			GD::out.printCritical("Critical: Could not open node \"" + _path + "\". Symbol \"getFactory\" not found.");
@@ -104,7 +107,7 @@ NodeLoader::~NodeLoader()
 
 Flows::PINode NodeLoader::createNode(const std::atomic_bool* nodeEventsEnabled)
 {
-	if (!_factory) return Flows::PINode();
+	if(!_factory) return Flows::PINode();
 	return Flows::PINode(_factory->createNode(_path, _namespace, _type, nodeEventsEnabled));
 }
 
@@ -135,23 +138,23 @@ Flows::PINode NodeManager::getNode(std::string& id)
 		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 		auto nodeIterator = _nodes.find(id);
 		bool locked = false;
-		if (nodeIterator != _nodes.end() && nodeIterator->second)
+		if(nodeIterator != _nodes.end() && nodeIterator->second)
 		{
 			node = nodeIterator->second;
 			auto nodeInfoIterator = _nodesUsage.find(node->getNamespace() + "." + node->getType());
 			if(nodeInfoIterator != _nodesUsage.end()) locked = nodeInfoIterator->second->locked;
 		}
-		if (node && !locked) return node;
+		if(node && !locked) return node;
 	}
-	catch (const std::exception& ex)
+	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch (BaseLib::Exception& ex)
+	catch(BaseLib::Exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch (...)
+	catch(...)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
@@ -168,7 +171,7 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 		for(auto& directory : directories)
 		{
 			std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.nodeBluePath() + "nodes/" + directory);
-			if (files.empty()) continue;
+			if(files.empty()) continue;
 			if(nodeInfoVector.size() + files.size() > nodeInfoVector.capacity()) nodeInfoVector.reserve(nodeInfoVector.capacity() + 100);
 			for(auto& file : files)
 			{
@@ -177,7 +180,7 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 				{
 					if(file.size() < 6) continue; //?*.hni
 					std::string extension = file.substr(file.size() - 4, 4);
-					if (extension != ".hni") continue;
+					if(extension != ".hni") continue;
 					std::string content = GD::bl->io.getFileContent(path);
 					BaseLib::HelperFunctions::trim(content);
 					if(content.empty() || content.compare(0, 31, "<script type=\"text/x-homegear\">") != 0)
@@ -251,17 +254,17 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 	return nodeInfoVector;
 }
 
@@ -279,7 +282,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
 			std::string localePath = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/locales/" + language + "/";
 			if(!GD::bl->io.directoryExists(localePath)) continue;
 			std::vector<std::string> files = GD::bl->io.getFiles(localePath);
-			if (files.empty()) continue;
+			if(files.empty()) continue;
 			for(auto& file : files)
 			{
 				std::string path = localePath + file;
@@ -312,18 +315,18 @@ std::string NodeManager::getNodeLocales(std::string& language)
 		return locales;
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return "";
 }
 
 int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::string id, Flows::PINode& node)
@@ -418,18 +421,18 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return -1;
 }
 
 int32_t NodeManager::unloadNode(std::string id)
@@ -446,10 +449,10 @@ int32_t NodeManager::unloadNode(std::string id)
 		{
 			nodesUsageIterator->second->referenceCounter--;
 			if(nodesUsageIterator->second->referenceCounter > 0)
-            {
-                _nodes.erase(nodesIterator);
-                return 0;
-            }
+			{
+				_nodes.erase(nodesIterator);
+				return 0;
+			}
 		}
 
 		GD::out.printInfo("Info: Unloading node " + id);
@@ -479,16 +482,18 @@ int32_t NodeManager::unloadNode(std::string id)
 		return 0;
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return -1;
+}
+
 }

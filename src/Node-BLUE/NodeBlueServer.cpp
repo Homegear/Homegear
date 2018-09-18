@@ -32,9 +32,8 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-pid_t _manualClientCurrentProcessId = 1;
-std::mutex _unconnectedProcessesMutex;
-std::queue<pid_t> _unconnectedProcesses;
+namespace Homegear
+{
 
 namespace NodeBlue
 {
@@ -59,7 +58,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_dummyClientInfo->flowsServer = true;
 	_dummyClientInfo->initInterfaceId = "nodeBlue";
 	_dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
-	std::vector<uint64_t> groups{ 4 };
+	std::vector<uint64_t> groups{4};
 	_dummyClientInfo->acls->fromGroups(groups);
 	_dummyClientInfo->user = "SYSTEM (4)";
 
@@ -69,7 +68,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("system.methodHelp", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodHelp()));
 	_rpcMethods.emplace("system.methodSignature", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMethodSignature()));
 	_rpcMethods.emplace("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall()));
-    _rpcMethods.emplace("acknowledgeGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAcknowledgeGlobalServiceMessage()));
+	_rpcMethods.emplace("acknowledgeGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAcknowledgeGlobalServiceMessage()));
 	_rpcMethods.emplace("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset()));
 	_rpcMethods.emplace("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
 	_rpcMethods.emplace("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice()));
@@ -130,7 +129,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("listKnownDeviceTypes", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListKnownDeviceTypes()));
 	_rpcMethods.emplace("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams()));
 	_rpcMethods.emplace("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel()));
-    _rpcMethods.emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
+	_rpcMethods.emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
 	_rpcMethods.emplace("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing()));
 	_rpcMethods.emplace("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset()));
 	_rpcMethods.emplace("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveEvent()));
@@ -139,13 +138,13 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo()));
 	_rpcMethods.emplace("runScript", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRunScript()));
 	_rpcMethods.emplace("searchDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchDevices()));
-    _rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
+	_rpcMethods.emplace("searchInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSearchInterfaces()));
 	_rpcMethods.emplace("setData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetData()));
-    _rpcMethods.emplace("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalServiceMessage()));
+	_rpcMethods.emplace("setGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalServiceMessage()));
 	_rpcMethods.emplace("setId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetId()));
 	_rpcMethods.emplace("setInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInstallMode()));
 	_rpcMethods.emplace("setInterface", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetInterface()));
-    _rpcMethods.emplace("setLanguage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLanguage()));
+	_rpcMethods.emplace("setLanguage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLanguage()));
 	_rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
 	_rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
 	_rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
@@ -217,14 +216,14 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
 	}
 
-    { // UI
+	{ // UI
 		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
-        _rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
+		_rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
 		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
 		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
 		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
 		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
-    }
+	}
 
 #ifndef NO_SCRIPTENGINE
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&NodeBlueServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
@@ -264,7 +263,7 @@ void NodeBlueServer::collectGarbage()
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			try
 			{
-                clientsToRemove.reserve(_clients.size());
+				clientsToRemove.reserve(_clients.size());
 				for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 				{
 					if(i->second->closed) clientsToRemove.push_back(i->second);
@@ -289,17 +288,17 @@ void NodeBlueServer::collectGarbage()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::getMaxThreadCounts()
@@ -313,18 +312,18 @@ void NodeBlueServer::getMaxThreadCounts()
 			_maxThreadCounts[infoEntry->nodeName] = infoEntry->maxThreadCount;
 		}
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 bool NodeBlueServer::checkIntegrity(std::string flowsFile)
@@ -338,18 +337,18 @@ bool NodeBlueServer::checkIntegrity(std::string flowsFile)
 		return true;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printError(std::string("Integrity check of flows file returned error: ") + ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-    	_out.printError(std::string("Integrity check of flows file returned error: ") + ex.what());
-    }
-    catch(...)
-    {
-    	_out.printError(std::string("Integrity check of flows file returned unknown error."));
-    }
-    return false;
+	{
+		_out.printError(std::string("Integrity check of flows file returned error: ") + ex.what());
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		_out.printError(std::string("Integrity check of flows file returned error: ") + ex.what());
+	}
+	catch(...)
+	{
+		_out.printError(std::string("Integrity check of flows file returned unknown error."));
+	}
+	return false;
 }
 
 void NodeBlueServer::backupFlows()
@@ -421,17 +420,17 @@ void NodeBlueServer::backupFlows()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 bool NodeBlueServer::start()
@@ -455,19 +454,19 @@ bool NodeBlueServer::start()
 		startFlows();
 		return true;
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return false;
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
 }
 
 void NodeBlueServer::stop()
@@ -507,17 +506,17 @@ void NodeBlueServer::homegearShuttingDown()
 		sendShutdown();
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::homegearReloading()
@@ -527,7 +526,7 @@ void NodeBlueServer::homegearReloading()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -541,17 +540,17 @@ void NodeBlueServer::homegearReloading()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
@@ -578,6 +577,11 @@ void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, 
 			else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
 			if(signal != -1 && signal != 15) exitCode = -32500;
+
+			process->setExited(true);
+
+			process->requestConditionVariable.notify_all();
+
 			process->invokeFlowFinished(exitCode);
 			if(signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown)
 			{
@@ -587,17 +591,17 @@ void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, 
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous)
@@ -628,43 +632,43 @@ void NodeBlueServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVa
 		sendRequest(clientData, "nodeOutput", parameters, false);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs()
 {
 	try
 	{
-        std::vector<PNodeBlueClientData> clients;
-        {
-            std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
-            for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
-            {
-                if(i->second->closed) continue;
-                clients.push_back(i->second);
-            }
-        }
+		std::vector<PNodeBlueClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			clients.reserve(_clients.size());
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
 
-        auto nodeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
-        {
-            BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-            auto result = sendRequest(*i, "getNodesWithFixedInputs", parameters, true);
-            if(result->errorStruct) continue;
-            nodeStruct->structValue->insert(result->structValue->begin(), result->structValue->end());
-        }
-        return nodeStruct;
+		auto nodeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+			auto result = sendRequest(*i, "getNodesWithFixedInputs", parameters, true);
+			if(result->errorStruct) continue;
+			nodeStruct->structValue->insert(result->structValue->begin(), result->structValue->end());
+		}
+		return nodeStruct;
 	}
 	catch(const std::exception& ex)
 	{
@@ -734,17 +738,17 @@ void NodeBlueServer::setNodeVariable(std::string nodeId, std::string topic, Base
 	{
 		PNodeBlueClientData clientData;
 		int32_t clientId = 0;
-        bool isFlow = false;
+		bool isFlow = false;
 		{
 			std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
 			auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
 			if(nodeClientIdIterator == _nodeClientIdMap.end())
-            {
-                std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
-                nodeClientIdIterator = _flowClientIdMap.find(nodeId);
-                if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
-                isFlow = true;
-            }
+			{
+				std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+				nodeClientIdIterator = _flowClientIdMap.find(nodeId);
+				if(nodeClientIdIterator == _nodeClientIdMap.end()) return;
+				isFlow = true;
+			}
 			clientId = nodeClientIdIterator->second;
 		}
 		{
@@ -754,25 +758,25 @@ void NodeBlueServer::setNodeVariable(std::string nodeId, std::string topic, Base
 			clientData = clientIterator->second;
 		}
 
-        BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-        parameters->reserve(3);
-        parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
-        parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
-        parameters->push_back(value);
-        sendRequest(clientData, isFlow ? "setFlowVariable" : "setNodeVariable", parameters, false);
+		BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+		parameters->reserve(3);
+		parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+		parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
+		parameters->push_back(value);
+		sendRequest(clientData, isFlow ? "setFlowVariable" : "setNodeVariable", parameters, false);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::enableNodeEvents()
@@ -785,7 +789,7 @@ void NodeBlueServer::enableNodeEvents()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -800,17 +804,17 @@ void NodeBlueServer::enableNodeEvents()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::disableNodeEvents()
@@ -823,7 +827,7 @@ void NodeBlueServer::disableNodeEvents()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -838,17 +842,17 @@ void NodeBlueServer::disableNodeEvents()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds)
@@ -955,7 +959,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 
 					auto sourceNodeWiresIterator = sourceNodeIterator->second->structValue->find("wires");
 					if(sourceNodeWiresIterator == sourceNodeIterator->second->structValue->end()) continue;
-					while((signed)sourceNodeWiresIterator->second->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWiresIterator->second->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
+					while((signed) sourceNodeWiresIterator->second->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWiresIterator->second->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
 
 					*sourceNodeWiresIterator->second->arrayValue->at(wirePortIterator->second->integerValue) = *targetNodeWiresIterator->second->arrayValue->at(outputIndex);
 				}
@@ -1054,18 +1058,18 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 		return subsubflows;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::set<std::string>();
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::set<std::string>();
 }
 
 void NodeBlueServer::startFlows()
@@ -1083,114 +1087,114 @@ void NodeBlueServer::startFlows()
 		}
 
 		//{{{ Filter all nodes and assign it to flows
-			BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
-			std::unordered_map<std::string, BaseLib::PVariable> subflowInfos;
-			std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> flowNodes;
-			std::unordered_map<std::string, std::set<std::string>> subflowNodeIds;
-			std::unordered_map<std::string, std::set<std::string>> nodeIds;
-			std::set<std::string> allNodeIds;
-			std::set<std::string> disabledFlows;
-			for(auto& element : *flows->arrayValue)
+		BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
+		std::unordered_map<std::string, BaseLib::PVariable> subflowInfos;
+		std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> flowNodes;
+		std::unordered_map<std::string, std::set<std::string>> subflowNodeIds;
+		std::unordered_map<std::string, std::set<std::string>> nodeIds;
+		std::set<std::string> allNodeIds;
+		std::set<std::string> disabledFlows;
+		for(auto& element : *flows->arrayValue)
+		{
+			auto idIterator = element->structValue->find("id");
+			if(idIterator == element->structValue->end())
 			{
-				auto idIterator = element->structValue->find("id");
-				if(idIterator == element->structValue->end())
-				{
-					GD::out.printError("Error: Flow element has no id.");
-					continue;
-				}
-
-				auto typeIterator = element->structValue->find("type");
-				if(typeIterator == element->structValue->end()) continue;
-				else if(typeIterator->second->stringValue == "comment") continue;
-				else if(typeIterator->second->stringValue == "subflow")
-				{
-					subflowInfos.emplace(idIterator->second->stringValue, element);
-					continue;
-				}
-				else if(typeIterator->second->stringValue == "tab")
-				{
-					auto disabledIterator = element->structValue->find("disabled");
-					if(disabledIterator != element->structValue->end() && disabledIterator->second->booleanValue) disabledFlows.emplace(idIterator->second->stringValue);
-					continue;
-				}
-
-				std::string z;
-				auto zIterator = element->structValue->find("z");
-				if(zIterator != element->structValue->end()) z = zIterator->second->stringValue;
-				if(z.empty())
-				{
-					z = "g";
-					if(zIterator != element->structValue->end()) zIterator->second->stringValue = "g";
-					else element->structValue->emplace("z", std::make_shared<BaseLib::Variable>("g"));
-				}
-				element->structValue->emplace("flow", std::make_shared<BaseLib::Variable>(z));
-
-				if(allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end())
-				{
-					GD::out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". At least one of the flows is not working correctly.");
-					continue;
-				}
-
-				allNodeIds.emplace(idIterator->second->stringValue);
-				nodeIds[z].emplace(idIterator->second->stringValue);
-				flowNodes[z].emplace(idIterator->second->stringValue, element);
-				if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) subflowNodeIds[z].emplace(idIterator->second->stringValue);
+				GD::out.printError("Error: Flow element has no id.");
+				continue;
 			}
+
+			auto typeIterator = element->structValue->find("type");
+			if(typeIterator == element->structValue->end()) continue;
+			else if(typeIterator->second->stringValue == "comment") continue;
+			else if(typeIterator->second->stringValue == "subflow")
+			{
+				subflowInfos.emplace(idIterator->second->stringValue, element);
+				continue;
+			}
+			else if(typeIterator->second->stringValue == "tab")
+			{
+				auto disabledIterator = element->structValue->find("disabled");
+				if(disabledIterator != element->structValue->end() && disabledIterator->second->booleanValue) disabledFlows.emplace(idIterator->second->stringValue);
+				continue;
+			}
+
+			std::string z;
+			auto zIterator = element->structValue->find("z");
+			if(zIterator != element->structValue->end()) z = zIterator->second->stringValue;
+			if(z.empty())
+			{
+				z = "g";
+				if(zIterator != element->structValue->end()) zIterator->second->stringValue = "g";
+				else element->structValue->emplace("z", std::make_shared<BaseLib::Variable>("g"));
+			}
+			element->structValue->emplace("flow", std::make_shared<BaseLib::Variable>(z));
+
+			if(allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end())
+			{
+				GD::out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". At least one of the flows is not working correctly.");
+				continue;
+			}
+
+			allNodeIds.emplace(idIterator->second->stringValue);
+			nodeIds[z].emplace(idIterator->second->stringValue);
+			flowNodes[z].emplace(idIterator->second->stringValue, element);
+			if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) subflowNodeIds[z].emplace(idIterator->second->stringValue);
+		}
 		//}}}
 
 		//{{{ Insert subflows
-			for(auto& subflowNodeIdsInner : subflowNodeIds)
+		for(auto& subflowNodeIdsInner : subflowNodeIds)
+		{
+			if(subflowInfos.find(subflowNodeIdsInner.first) != subflowInfos.end()) continue; //Don't process nodes of subflows
+
+			for(auto subflowNodeId : subflowNodeIdsInner.second)
 			{
-				if(subflowInfos.find(subflowNodeIdsInner.first) != subflowInfos.end()) continue; //Don't process nodes of subflows
+				std::set<std::string> processedSubflows;
 
-				for(auto subflowNodeId : subflowNodeIdsInner.second)
+				std::set<std::string> subsubflows;
+				subsubflows.emplace(subflowNodeId);
+				while(!subsubflows.empty())
 				{
-					std::set<std::string> processedSubflows;
-
-					std::set<std::string> subsubflows;
-					subsubflows.emplace(subflowNodeId);
-					while(!subsubflows.empty())
+					std::set<std::string> newSubsubflows;
+					for(auto& subsubflowNodeId : subsubflows)
 					{
-						std::set<std::string> newSubsubflows;
-						for(auto& subsubflowNodeId : subsubflows)
+						auto& innerFlowNodes = flowNodes.at(subflowNodeIdsInner.first);
+						auto subflowNodeIterator = innerFlowNodes.find(subsubflowNodeId);
+						if(subflowNodeIterator == innerFlowNodes.end())
 						{
-							auto& innerFlowNodes = flowNodes.at(subflowNodeIdsInner.first);
-							auto subflowNodeIterator = innerFlowNodes.find(subsubflowNodeId);
-							if(subflowNodeIterator == innerFlowNodes.end())
+							_out.printError("Error: Could not find subflow node ID \"" + subsubflowNodeId + "\" in flow with ID \"" + subflowNodeIdsInner.first + "\".");
+							continue;
+						}
+						std::string subflowId = subflowNodeIterator->second->structValue->at("type")->stringValue.substr(8);
+						auto subflowNodesIterator = flowNodes.find(subflowId);
+						if(subflowNodesIterator == flowNodes.end())
+						{
+							_out.printError("Error: Could not find subflow with ID \"" + subflowId + "\" in flows.");
+							continue;
+						}
+						std::set<std::string> returnedSubsubflows = insertSubflows(subflowNodeIterator->second, subflowInfos, innerFlowNodes, subflowNodesIterator->second, nodeIds.at(subflowNodeIdsInner.first), allNodeIds);
+						processedSubflows.emplace(subsubflowNodeId);
+						bool abort = false;
+						for(auto& returnedSubsubflow : returnedSubsubflows)
+						{
+							if(processedSubflows.find(returnedSubsubflow) != processedSubflows.end())
 							{
-								_out.printError("Error: Could not find subflow node ID \"" + subsubflowNodeId + "\" in flow with ID \"" + subflowNodeIdsInner.first + "\".");
-								continue;
-							}
-							std::string subflowId = subflowNodeIterator->second->structValue->at("type")->stringValue.substr(8);
-							auto subflowNodesIterator = flowNodes.find(subflowId);
-							if(subflowNodesIterator == flowNodes.end())
-							{
-								_out.printError("Error: Could not find subflow with ID \"" + subflowId + "\" in flows.");
-								continue;
-							}
-							std::set<std::string> returnedSubsubflows = insertSubflows(subflowNodeIterator->second, subflowInfos, innerFlowNodes, subflowNodesIterator->second, nodeIds.at(subflowNodeIdsInner.first), allNodeIds);
-							processedSubflows.emplace(subsubflowNodeId);
-							bool abort = false;
-							for(auto& returnedSubsubflow : returnedSubsubflows)
-							{
-								if(processedSubflows.find(returnedSubsubflow) != processedSubflows.end())
-								{
-									_out.printError("Error: Subflow recursion detected. Aborting processing subflows for flow with ID: " + subflowNodeIdsInner.first);
-									abort = true;
-									break;
-								}
-								newSubsubflows.emplace(returnedSubsubflow);
-							}
-							if(abort)
-							{
-								subsubflows.clear();
+								_out.printError("Error: Subflow recursion detected. Aborting processing subflows for flow with ID: " + subflowNodeIdsInner.first);
+								abort = true;
 								break;
 							}
+							newSubsubflows.emplace(returnedSubsubflow);
 						}
-						subsubflows = newSubsubflows;
+						if(abort)
+						{
+							subsubflows.clear();
+							break;
+						}
 					}
+					subsubflows = newSubsubflows;
 				}
 			}
+		}
 		//}}}
 
 		for(auto& element : flowNodes)
@@ -1221,7 +1225,7 @@ void NodeBlueServer::startFlows()
 			if(disabledFlows.find(element.first) == disabledFlows.end())
 			{
 				PFlowInfoServer flowInfo = std::make_shared<FlowInfoServer>();
-                flowInfo->nodeBlueId = element.first;
+				flowInfo->nodeBlueId = element.first;
 				flowInfo->maxThreadCount = maxThreadCount;
 				flowInfo->flow = flow;
 				startFlow(flowInfo, nodeIds[element.first]);
@@ -1231,7 +1235,7 @@ void NodeBlueServer::startFlows()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1268,17 +1272,17 @@ void NodeBlueServer::startFlows()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::sendShutdown()
@@ -1288,7 +1292,7 @@ void NodeBlueServer::sendShutdown()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1313,28 +1317,28 @@ void NodeBlueServer::sendShutdown()
 		_nodeClientIdMap.clear();
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 bool NodeBlueServer::sendReset()
 {
 	try
 	{
-        _out.printInfo("Info: Resetting flows client process.");
+		_out.printInfo("Info: Resetting flows client process.");
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1344,24 +1348,24 @@ bool NodeBlueServer::sendReset()
 		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
 		{
 			BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
-            auto result = sendRequest(*i, "reset", parameters, true);
+			auto result = sendRequest(*i, "reset", parameters, true);
 			if(result->errorStruct)
-            {
-                _out.printError("Error executing reset: " + result->structValue->at("faultString")->stringValue);
-                return false;
-            }
-            else
-            {
-                std::lock_guard<std::mutex> processGuard(_processMutex);
-                std::map<pid_t, PNodeBlueProcess>::iterator processIterator = _processes.find((*i)->pid);
-                if(processIterator != _processes.end()) processIterator->second->reset();
-            }
+			{
+				_out.printError("Error executing reset: " + result->structValue->at("faultString")->stringValue);
+				return false;
+			}
+			else
+			{
+				std::lock_guard<std::mutex> processGuard(_processMutex);
+				std::map<pid_t, PNodeBlueProcess>::iterator processIterator = _processes.find((*i)->pid);
+				if(processIterator != _processes.end()) processIterator->second->reset();
+			}
 		}
 
 		std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
 		_nodeClientIdMap.clear();
 
-        return true;
+		return true;
 	}
 	catch(const std::exception& ex)
 	{
@@ -1375,7 +1379,7 @@ bool NodeBlueServer::sendReset()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-    return false;
+	return false;
 }
 
 void NodeBlueServer::closeClientConnections()
@@ -1385,7 +1389,7 @@ void NodeBlueServer::closeClientConnections()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				clients.push_back(i->second);
@@ -1417,17 +1421,17 @@ void NodeBlueServer::closeClientConnections()
 		_processes.clear();
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::stopNodes()
@@ -1438,7 +1442,7 @@ void NodeBlueServer::stopNodes()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1452,17 +1456,17 @@ void NodeBlueServer::stopNodes()
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::restartFlows()
@@ -1473,30 +1477,30 @@ void NodeBlueServer::restartFlows()
 		_flowsRestarting = true;
 		stopNodes();
 		bool result = sendReset();
-        if(!result)
-        {
-            _out.printInfo("Info: Stopping Flows...");
-            sendShutdown();
-            _out.printInfo("Info: Closing connections to Flows clients...");
-            closeClientConnections();
-        }
+		if(!result)
+		{
+			_out.printInfo("Info: Stopping Flows...");
+			sendShutdown();
+			_out.printInfo("Info: Closing connections to Flows clients...");
+			closeClientConnections();
+		}
 		getMaxThreadCounts();
 		_out.printInfo("Info: Starting Flows...");
 		startFlows();
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _flowsRestarting = false;
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_flowsRestarting = false;
 }
 
 std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
@@ -1545,7 +1549,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if (path == "node-blue/flows")
+		else if(path == "node-blue/flows")
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
@@ -1584,13 +1588,13 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-        else if(path == "node-blue/settings/user")
-        {
-            if(!sessionValid) return "unauthorized";
-            path = _webroot + "static/" + path.substr(19);
-            if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
-            responseEncoding = "application/json";
-        }
+		else if(path == "node-blue/settings/user")
+		{
+			if(!sessionValid) return "unauthorized";
+			path = _webroot + "static/" + path.substr(19);
+			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			responseEncoding = "application/json";
+		}
 		else if(path == "node-blue/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
@@ -1614,7 +1618,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 					BaseLib::PVariable nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 					nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(infoEntry->nodeId));
 					nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
-					nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{ std::make_shared<BaseLib::Variable>(infoEntry->nodeName) })));
+					nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(infoEntry->nodeName)})));
 					nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
 					nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
 					nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
@@ -1643,7 +1647,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 
 			std::string ending = "";
 			int32_t pos = path.find_last_of('.');
-			if(pos != (signed)std::string::npos && (unsigned)pos < path.size() - 1) ending = path.substr(pos + 1);
+			if(pos != (signed) std::string::npos && (unsigned) pos < path.size() - 1) ending = path.substr(pos + 1);
 			GD::bl->hf.toLower(ending);
 			responseEncoding = http.getMimeType(ending);
 			if(responseEncoding.empty()) responseEncoding = "application/octet-stream";
@@ -1651,18 +1655,18 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		return contentString;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return "";
 }
 
 std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
@@ -1673,7 +1677,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
 		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
 
-		if (path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
+		if(path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
 			if(!sessionValid) return "unauthorized";
 			_out.printInfo("Info: Deploying (1)...");
@@ -1681,7 +1685,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			_out.printInfo("Info: Deploying (2)...");
 			BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
 			auto flowsIterator = json->structValue->find("flows");
-			if (flowsIterator == json->structValue->end()) return "";
+			if(flowsIterator == json->structValue->end()) return "";
 
 			std::vector<char> flows;
 			_jsonEncoder->encode(flowsIterator->second, flows);
@@ -1706,15 +1710,15 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			return "{\"rev\": \"" + md5String + "\"}";
 		}
 	}
-	catch (const std::exception& ex)
+	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch (BaseLib::Exception& ex)
+	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch (...)
+	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
@@ -1729,7 +1733,7 @@ uint32_t NodeBlueServer::flowCount()
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1747,18 +1751,18 @@ uint32_t NodeBlueServer::flowCount()
 		return count;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
 }
 
 void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values)
@@ -1786,7 +1790,7 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 			BaseLib::PArray newValues;
 			newVariables->reserve(variables->size());
 			newValues->reserve(values->size());
-			for(int32_t i = 0; i < (int32_t)variables->size(); i++)
+			for(int32_t i = 0; i < (int32_t) variables->size(); i++)
 			{
 				if(id == 0)
 				{
@@ -1813,7 +1817,7 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1835,17 +1839,17 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
@@ -1861,11 +1865,11 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PV
 			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 			{
 				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-				if(central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+				if(central && central->peerExists((uint64_t) ids.front())) //All ids are from the same family
 				{
 					for(auto id : ids)
 					{
-						auto peer = central->getPeer((uint64_t)id);
+						auto peer = central->getPeer((uint64_t) id);
 						if(!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
 					}
 				}
@@ -1875,7 +1879,7 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PV
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1891,17 +1895,17 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PV
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
@@ -1912,7 +1916,7 @@ void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1928,17 +1932,17 @@ void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint)
@@ -1963,7 +1967,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 		std::vector<PNodeBlueClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(_clients.size());
+			clients.reserve(_clients.size());
 			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1979,17 +1983,17 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::closeClientConnection(PNodeBlueClientData client)
@@ -2001,17 +2005,17 @@ void NodeBlueServer::closeClientConnection(PNodeBlueClientData client)
 		client->closed = true;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
@@ -2112,17 +2116,17 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::vector<char>& data)
@@ -2131,7 +2135,7 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 	{
 		int32_t totallySentBytes = 0;
 		std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
-		while (totallySentBytes < (signed)data.size())
+		while(totallySentBytes < (signed) data.size())
 		{
 			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
 			if(sentBytes <= 0)
@@ -2144,18 +2148,18 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::PVariable(new BaseLib::Variable());
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::PVariable(new BaseLib::Variable());
 }
 
 BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
@@ -2201,7 +2205,8 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 		}
 
 		int32_t i = 0;
-		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]{
+		while(!clientData->requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+		{
 			return response->finished || clientData->closed || _stopServer;
 		}))
 		{
@@ -2228,41 +2233,41 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 		return result;
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void NodeBlueServer::sendResponse(PNodeBlueClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable)
 {
 	try
 	{
-		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{ scriptId, packetId, variable })));
+		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void NodeBlueServer::mainThread()
@@ -2330,11 +2335,11 @@ void NodeBlueServer::mainThread()
 				continue;
 			}
 
-			if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
+			if(FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown)
 			{
 				sockaddr_un clientAddress;
 				socklen_t addressSize = sizeof(addressSize);
-				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize));
+				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr*) &clientAddress, &addressSize));
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
 
@@ -2383,25 +2388,25 @@ void NodeBlueServer::mainThread()
 		}
 		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 {
 	try
 	{
-		if(GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+		if(GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned) GD::bl->settings.maxNodeThreadsPerProcess())
 		{
 			GD::out.printError("Error: Could not get flow process, because maximum number of threads in flow is greater than the number of threads allowed per flow process.");
 			return PNodeBlueProcess();
@@ -2413,7 +2418,7 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 			for(std::map<pid_t, PNodeBlueProcess>::iterator i = _processes.begin(); i != _processes.end(); ++i)
 			{
 				if(i->second->getClientData()->closed) continue;
-				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess())
+				if(GD::bl->settings.maxNodeThreadsPerProcess() == -1 || i->second->nodeThreadCount() + maxThreadCount <= (unsigned) GD::bl->settings.maxNodeThreadsPerProcess())
 				{
 					i->second->lastExecution = BaseLib::HelperFunctions::getTime();
 					return i->second;
@@ -2422,20 +2427,20 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 		}
 		_out.printInfo("Info: Spawning new flows process.");
 		PNodeBlueProcess process(new NodeBlueProcess());
-		std::vector<std::string> arguments{ "-c", GD::configPath, "-rl" };
-        if(GD::bl->settings.nodeBlueManualClientStart())
-        {
-            pid_t currentProcessId = _manualClientCurrentProcessId++;
-            process->setPid(currentProcessId);
-            {
-                std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-                _unconnectedProcesses.push(currentProcessId);
-            }
-        }
-        else
-        {
-            process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
-        }
+		std::vector<std::string> arguments{"-c", GD::configPath, "-rl"};
+		if(GD::bl->settings.nodeBlueManualClientStart())
+		{
+			pid_t currentProcessId = _manualClientCurrentProcessId++;
+			process->setPid(currentProcessId);
+			{
+				std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+				_unconnectedProcesses.push(currentProcessId);
+			}
+		}
+		else
+		{
+			process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+		}
 		if(process->getPid() != -1)
 		{
 			{
@@ -2444,7 +2449,7 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 			}
 
 			std::unique_lock<std::mutex> requestLock(_processRequestMutex);
-			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&]{ return (bool)(process->getClientData()); });
+			process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&] { return (bool) (process->getClientData()) || process->getExited(); });
 
 			if(!process->getClientData())
 			{
@@ -2462,19 +2467,19 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 			return process;
 		}
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return PNodeBlueProcess();
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return PNodeBlueProcess();
 }
 
 void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
@@ -2491,7 +2496,7 @@ void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
 			return;
 		}
 
-		if(bytesRead > (signed)clientData->buffer.size()) bytesRead = clientData->buffer.size();
+		if(bytesRead > (signed) clientData->buffer.size()) bytesRead = clientData->buffer.size();
 
 		try
 		{
@@ -2532,18 +2537,18 @@ void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
 			clientData->binaryRpc->reset();
 		}
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
@@ -2582,7 +2587,7 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
 			return false;
 		}
 		int32_t reuseAddress = 1;
-		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
+		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*) &reuseAddress, sizeof(int32_t)) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			_out.printCritical("Critical: Couldn't set socket options: " + _socketPath + ". Flows won't work correctly. Error: " + strerror(errno));
@@ -2599,7 +2604,7 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
 		}
 		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
@@ -2610,21 +2615,21 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
 			_out.printError("Error: chmod failed on unix socket \"" + _socketPath + "\".");
 		}
 		return true;
-    }
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-    return false;
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+	return false;
 }
 
 void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes)
@@ -2658,15 +2663,15 @@ void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>&
 			}
 		}
 
-        {
-            std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
-            _flowClientIdMap.emplace(flowInfo->nodeBlueId, clientData->id);
-        }
+		{
+			std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
+			_flowClientIdMap.emplace(flowInfo->nodeBlueId, clientData->id);
+		}
 
 		BaseLib::PArray parameters(new BaseLib::Array{
 				BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
 				flowInfo->flow
-				});
+		});
 
 		BaseLib::PVariable result = sendRequest(clientData, "startFlow", parameters, true);
 		if(result->errorStruct)
@@ -2687,18 +2692,18 @@ void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>&
 		}
 		flowInfo->started = true;
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& parameters)
@@ -2724,18 +2729,18 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& par
 		return sendRequest(clientData, "executePhpNodeBaseMethod", parameters, true);
 	}
 	catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 // {{{ RPC methods
@@ -2745,14 +2750,14 @@ BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clie
 	{
 		pid_t pid = parameters->at(0)->integerValue;
 		if(GD::bl->settings.nodeBlueManualClientStart())
-        {
-            std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
-            if (!_unconnectedProcesses.empty())
-            {
-                pid = _unconnectedProcesses.front();
-                _unconnectedProcesses.pop();
-            }
-        }
+		{
+			std::lock_guard<std::mutex> unconnectedProcessesGuard(_unconnectedProcessesMutex);
+			if(!_unconnectedProcesses.empty())
+			{
+				pid = _unconnectedProcesses.front();
+				_unconnectedProcesses.pop();
+			}
+		}
 		PNodeBlueProcess process;
 		{
 			std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -2777,22 +2782,23 @@ BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clie
 		_out.printInfo("Info: Client with pid " + std::to_string(pid) + " successfully registered.");
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 #ifndef NO_SCRIPTENGINE
+
 BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
 	try
@@ -2801,17 +2807,17 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData& clientDat
 
 		std::string filename;
 		BaseLib::ScriptEngine::PScriptInfo scriptInfo;
-        bool wait = false;
+		bool wait = false;
 		if(parameters->size() == 4)
 		{
 			filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
 			scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3));
-            auto internalMessagesIterator = parameters->at(3)->structValue->find("_internal");
-            if(internalMessagesIterator != parameters->at(3)->structValue->end())
-            {
-                auto synchronousOutputIterator = internalMessagesIterator->second->structValue->find("synchronousOutput");
-                if(synchronousOutputIterator != internalMessagesIterator->second->structValue->end()) wait = synchronousOutputIterator->second->booleanValue;
-            }
+			auto internalMessagesIterator = parameters->at(3)->structValue->find("_internal");
+			if(internalMessagesIterator != parameters->at(3)->structValue->end())
+			{
+				auto synchronousOutputIterator = internalMessagesIterator->second->structValue->find("synchronousOutput");
+				if(synchronousOutputIterator != internalMessagesIterator->second->structValue->end()) wait = synchronousOutputIterator->second->booleanValue;
+			}
 		}
 		else
 		{
@@ -2827,19 +2833,19 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData& clientDat
 		GD::scriptEngineServer->executeScript(scriptInfo, wait);
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable NodeBlueServer::executePhpNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
@@ -2850,20 +2856,21 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeMethod(PNodeBlueClientData& cli
 
 		return GD::scriptEngineServer->executePhpNodeMethod(parameters);
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
+
 #endif
 
 BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
@@ -2890,19 +2897,19 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientD
 
 		return sendRequest(clientData, "invokeNodeMethod", parameters, parameters->at(3)->booleanValue);
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
@@ -2925,20 +2932,22 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, Ba
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 		return std::make_shared<BaseLib::Variable>();
 	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
+
+}
 
 }

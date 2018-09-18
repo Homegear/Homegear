@@ -6,11 +6,11 @@ SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
 
 cd $SCRIPTDIR/../../../libhomegear-base
 BRANCH=$(git branch | grep "\*")
-[[ "$BRANCH" == "* master" ]] && exit 0
+[[ "$BRANCH" == "* master" || "$BRANCH" == "* testing" ]] && exit 0
 
 cd $SCRIPTDIR/../..
 BRANCH=$(git branch | grep "\*")
-[[ "$BRANCH" == "* master" ]] && exit 0
+[[ "$BRANCH" == "* master" || "$BRANCH" == "* testing" ]] && exit 0
 
 REVISION_FILE=$SCRIPTDIR/../../../libhomegear-base/revision.txt
 REVISION=$(cat $REVISION_FILE)

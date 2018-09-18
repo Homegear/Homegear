@@ -33,6 +33,9 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 namespace NodeBlue
 {
 
@@ -44,23 +47,28 @@ public:
 	uint32_t maxThreadCount = 0;
 
 	// {{{ Input parameters
-		BaseLib::PVariable flow;
+	BaseLib::PVariable flow;
 	// }}}
 
 	// {{{ Output parameters
-		bool started = false;
-		bool finished = false;
-		int32_t exitCode = -1;
+	bool started = false;
+	bool finished = false;
+	int32_t exitCode = -1;
 	// }}}
 
 	FlowInfoServer() {}
+
 	virtual ~FlowInfoServer() {}
+
 protected:
 };
 
 typedef std::shared_ptr<FlowInfoServer> PFlowInfoServer;
 
 }
+
+}
+
 #endif
 
 

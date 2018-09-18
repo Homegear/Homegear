@@ -33,6 +33,9 @@
 #include <ifaddrs.h>
 #include <string.h>
 
+namespace Homegear
+{
+
 UPnP::UPnP()
 {
 	try
@@ -250,7 +253,7 @@ void UPnP::listen()
 					GD::bl->fileDescriptorManager.shutdown(_serverSocketDescriptor);
 				}
 
-				bytesReceived = recvfrom(_serverSocketDescriptor->descriptor, buffer, 1024, 0, (struct sockaddr *)&si_other, &slen);
+				bytesReceived = recvfrom(_serverSocketDescriptor->descriptor, buffer, 1024, 0, (struct sockaddr*) &si_other, &slen);
 				if(bytesReceived <= 0) continue;
 				http.reset();
 				http.process(buffer, bytesReceived, false);
@@ -417,17 +420,17 @@ void UPnP::sendOK(std::string destinationIpAddress, int32_t destinationPort, boo
 		for(std::map<int32_t, Packets>::iterator i = _packets.begin(); i != _packets.end(); ++i)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending discovery response packets to " + destinationIpAddress + " on port " + std::to_string(destinationPort));
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.okRoot.at(0), i->second.okRoot.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.okRoot.at(0), i->second.okRoot.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
 			if(!rootDeviceOnly)
 			{
-				if(sendto(_serverSocketDescriptor->descriptor, &i->second.okRootUUID.at(0), i->second.okRootUUID.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+				if(sendto(_serverSocketDescriptor->descriptor, &i->second.okRootUUID.at(0), i->second.okRootUUID.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 				{
 					_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 				}
-				if(sendto(_serverSocketDescriptor->descriptor, &i->second.ok.at(0), i->second.ok.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+				if(sendto(_serverSocketDescriptor->descriptor, &i->second.ok.at(0), i->second.ok.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 				{
 					_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 				}
@@ -461,15 +464,15 @@ void UPnP::sendNotify()
 		for(std::map<int32_t, Packets>::iterator i = _packets.begin(); i != _packets.end(); ++i)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending notify packets.");
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.notifyRoot.at(0), i->second.notifyRoot.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.notifyRoot.at(0), i->second.notifyRoot.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.notifyRootUUID.at(0), i->second.notifyRootUUID.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.notifyRootUUID.at(0), i->second.notifyRootUUID.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.notify.at(0), i->second.notify.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.notify.at(0), i->second.notify.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
@@ -503,15 +506,15 @@ void UPnP::sendByebye()
 		for(std::map<int32_t, Packets>::iterator i = _packets.begin(); i != _packets.end(); ++i)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending byebye packets.");
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.byebyeRoot.at(0), i->second.byebyeRoot.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.byebyeRoot.at(0), i->second.byebyeRoot.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.byebyeRootUUID.at(0), i->second.byebyeRootUUID.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.byebyeRootUUID.at(0), i->second.byebyeRootUUID.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.byebye.at(0), i->second.byebye.size(), 0, (struct sockaddr*)&addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, &i->second.byebye.at(0), i->second.byebye.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
@@ -544,7 +547,7 @@ void UPnP::getSocketDescriptor()
 		}
 
 		int32_t reuse = 1;
-		if(setsockopt(_serverSocketDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) == -1)
+		if(setsockopt(_serverSocketDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (char*) &reuse, sizeof(reuse)) == -1)
 		{
 			_out.printWarning("Warning: Could not set socket options in UPnP server: " + std::string(strerror(errno)));
 		}
@@ -552,25 +555,25 @@ void UPnP::getSocketDescriptor()
 		GD::out.printInfo("Info: UPnP server: Binding to address: " + _address);
 
 		char loopch = 0;
-		if(setsockopt(_serverSocketDescriptor->descriptor, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch)) == -1)
+		if(setsockopt(_serverSocketDescriptor->descriptor, IPPROTO_IP, IP_MULTICAST_LOOP, (char*) &loopch, sizeof(loopch)) == -1)
 		{
 			_out.printWarning("Warning: Could not set socket options in UPnP server: " + std::string(strerror(errno)));
 		}
 
 		struct in_addr localInterface;
 		localInterface.s_addr = inet_addr(_address.c_str());
-		if(setsockopt(_serverSocketDescriptor->descriptor, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface)) == -1)
+		if(setsockopt(_serverSocketDescriptor->descriptor, IPPROTO_IP, IP_MULTICAST_IF, (char*) &localInterface, sizeof(localInterface)) == -1)
 		{
 			_out.printWarning("Warning: Could not set socket options in UPnP server: " + std::string(strerror(errno)));
 		}
 
 		struct sockaddr_in localSock;
-		memset((char *) &localSock, 0, sizeof(localSock));
+		memset((char*) &localSock, 0, sizeof(localSock));
 		localSock.sin_family = AF_INET;
 		localSock.sin_port = htons(1900);
 		localSock.sin_addr.s_addr = inet_addr("239.255.255.250");
 
-		if(bind(_serverSocketDescriptor->descriptor, (struct sockaddr*)&localSock, sizeof(localSock)) == -1)
+		if(bind(_serverSocketDescriptor->descriptor, (struct sockaddr*) &localSock, sizeof(localSock)) == -1)
 		{
 			GD::out.printError("Error: Binding to address " + _address + " failed: " + std::string(strerror(errno)));
 			GD::bl->fileDescriptorManager.close(_serverSocketDescriptor);
@@ -580,7 +583,7 @@ void UPnP::getSocketDescriptor()
 		struct ip_mreq group;
 		group.imr_multiaddr.s_addr = inet_addr("239.255.255.250");
 		group.imr_interface.s_addr = inet_addr(_address.c_str());
-		if(setsockopt(_serverSocketDescriptor->descriptor, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) == -1)
+		if(setsockopt(_serverSocketDescriptor->descriptor, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*) &group, sizeof(group)) == -1)
 		{
 			_out.printWarning("Warning: Could not set socket options in UPnP server: " + std::string(strerror(errno)));
 		}
@@ -600,37 +603,39 @@ void UPnP::getSocketDescriptor()
 }
 
 // {{{ Webserver events
-	bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path)
+bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path)
+{
+	if(_stopServer) return false;
+	if(GD::bl->settings.enableUPnP() && path == "/description.xml")
 	{
-		if(_stopServer) return false;
-		if(GD::bl->settings.enableUPnP() && path == "/description.xml")
+		std::vector<char> content;
+		getDescription(serverInfo->port, content);
+		if(!content.empty())
 		{
-			std::vector<char> content;
-			getDescription(serverInfo->port, content);
-			if(!content.empty())
+			std::string header;
+			std::vector<std::string> additionalHeaders;
+			BaseLib::Http::constructHeader(content.size(), "text/xml", 200, "OK", additionalHeaders, header);
+			content.insert(content.begin(), header.begin(), header.end());
+			try
 			{
-				std::string header;
-				std::vector<std::string> additionalHeaders;
-				BaseLib::Http::constructHeader(content.size(), "text/xml", 200, "OK", additionalHeaders, header);
-				content.insert(content.begin(), header.begin(), header.end());
-				try
-				{
-					//Sleep a tiny little bit. Some clients like don't accept responses too fast.
-					std::this_thread::sleep_for(std::chrono::milliseconds(22));
-					socket->proofwrite(content);
-				}
-				catch(BaseLib::SocketDataLimitException& ex)
-				{
-					_out.printWarning("Warning: " + ex.what());
-				}
-				catch(const BaseLib::SocketOperationException& ex)
-				{
-					_out.printError("Error: " + ex.what());
-				}
-				socket->close();
-				return true;
+				//Sleep a tiny little bit. Some clients like don't accept responses too fast.
+				std::this_thread::sleep_for(std::chrono::milliseconds(22));
+				socket->proofwrite(content);
 			}
+			catch(BaseLib::SocketDataLimitException& ex)
+			{
+				_out.printWarning("Warning: " + ex.what());
+			}
+			catch(const BaseLib::SocketOperationException& ex)
+			{
+				_out.printError("Error: " + ex.what());
+			}
+			socket->close();
+			return true;
 		}
-		return false;
 	}
+	return false;
+}
 // }}}
+
+}

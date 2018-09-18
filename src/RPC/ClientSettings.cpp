@@ -31,8 +31,12 @@
 #include "ClientSettings.h"
 #include "../GD/GD.h"
 
+namespace Homegear
+{
+
 namespace Rpc
 {
+
 ClientSettings::ClientSettings()
 {
 
@@ -49,29 +53,29 @@ void ClientSettings::load(std::string filename)
 	{
 		reset();
 		char input[1024];
-		FILE *fin;
+		FILE* fin;
 		int32_t len, ptr;
 		bool found = false;
 
-		if (!(fin = fopen(filename.c_str(), "r")))
+		if(!(fin = fopen(filename.c_str(), "r")))
 		{
 			GD::out.printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
 		std::shared_ptr<Settings> settings(new Settings());
-		while (fgets(input, 1024, fin))
+		while(fgets(input, 1024, fin))
 		{
 			if(input[0] == '#') continue;
 			len = strlen(input);
-			if (len < 2) continue;
-			if (input[len-1] == '\n') input[len-1] = '\0';
+			if(len < 2) continue;
+			if(input[len - 1] == '\n') input[len - 1] = '\0';
 			ptr = 0;
 			if(input[0] == '[')
 			{
 				while(ptr < len)
 				{
-					if (input[ptr] == ']')
+					if(input[ptr] == ']')
 					{
 						input[ptr] = '\0';
 						if(!settings->hostname.empty()) _clients[settings->hostname] = settings;
@@ -86,7 +90,7 @@ void ClientSettings::load(std::string filename)
 			found = false;
 			while(ptr < len)
 			{
-				if (input[ptr] == '=')
+				if(input[ptr] == '=')
 				{
 					found = true;
 					input[ptr++] = '\0';
@@ -169,6 +173,12 @@ void ClientSettings::load(std::string filename)
 					if(settings->timeout < 1000000) settings->timeout = 1000000;
 					GD::out.printDebug("Debug: timeout of RPC client " + settings->name + " set to " + std::to_string(settings->timeout));
 				}
+				else if(name == "keepalive")
+				{
+					BaseLib::HelperFunctions::toLower(value);
+					settings->keepAlive = (value == "true");
+					GD::out.printDebug("Debug: keepAlive of RPC client " + settings->name + " set to " + std::to_string(settings->keepAlive));
+				}
 				else
 				{
 					GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));
@@ -180,16 +190,19 @@ void ClientSettings::load(std::string filename)
 		fclose(fin);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
-} /* namespace Rpc */
+
+}
+
+}

@@ -59,7 +59,7 @@
 
 void php_homegear_build_argv(std::vector<std::string>& arguments);
 int php_homegear_init();
-void php_homegear_shutdown();
+void php_homegear_deinit();
 
 #endif
 #endif

@@ -57,6 +57,8 @@
 
 #include <gcrypt.h>
 
+using namespace Homegear;
+
 void startMainProcess();
 void startUp();
 

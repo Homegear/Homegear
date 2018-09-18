@@ -35,21 +35,36 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 class IpcServer : public BaseLib::IQueue
 {
 public:
 	IpcServer();
+
 	virtual ~IpcServer();
 
 	bool start();
+
 	void stop();
+
 	void homegearShuttingDown();
+
 	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
+
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
+
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+
+	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
+
 	BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters);
+
 	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
+
 private:
 	class QueueEntry : public BaseLib::IQueueEntry
 	{
@@ -61,20 +76,33 @@ private:
 		};
 
 		QueueEntry() {}
-		QueueEntry(PIpcClientData clientData, std::vector<char>& packet) { this->clientData = clientData; this->packet = packet; }
-		QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters) { type = QueueEntryType::broadcast; this->clientData = clientData; this->methodName = methodName; this->parameters = parameters; }
+
+		QueueEntry(PIpcClientData clientData, std::vector<char>& packet)
+		{
+			this->clientData = clientData;
+			this->packet = packet;
+		}
+
+		QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters)
+		{
+			type = QueueEntryType::broadcast;
+			this->clientData = clientData;
+			this->methodName = methodName;
+			this->parameters = parameters;
+		}
+
 		virtual ~QueueEntry() {}
 
 		QueueEntryType type = QueueEntryType::defaultType;
 		PIpcClientData clientData;
 
 		// {{{ defaultType
-			std::vector<char> packet;
+		std::vector<char> packet;
 		// }}}
 
 		// {{{ broadcast
-			std::string methodName;
-			BaseLib::PArray parameters;
+		std::string methodName;
+		BaseLib::PArray parameters;
 		// }}}
 	};
 
@@ -101,22 +129,38 @@ private:
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	void collectGarbage();
+
 	bool getFileDescriptor(bool deleteOldSocket = false);
+
 	void mainThread();
+
 	void readClient(PIpcClientData& clientData);
+
 	BaseLib::PVariable send(PIpcClientData& clientData, std::vector<char>& data);
+
 	BaseLib::PVariable sendRequest(PIpcClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+
 	void sendResponse(PIpcClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+
 	void closeClientConnection(PIpcClientData client);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
 	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
-    BaseLib::PVariable cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
+	BaseLib::PVariable cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable cliPeerCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
+	BaseLib::PVariable ptyOutput(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 	// }}}
 };
+
+}
+
 #endif

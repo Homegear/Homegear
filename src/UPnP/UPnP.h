@@ -33,15 +33,22 @@
 
 #include <homegear-base/BaseLib.h>
 
+namespace Homegear
+{
+
 class UPnP : public BaseLib::Rpc::IWebserverEventSink
 {
 public:
 	UPnP();
+
 	virtual ~UPnP();
 
 	void start();
+
 	void stop();
+
 	void getDescription(int32_t port, std::vector<char>& output);
+
 private:
 	struct Packets
 	{
@@ -68,20 +75,30 @@ private:
 	int32_t _lastAdvertisement = 0;
 
 	// {{{ Webserver events
-		BaseLib::PEventHandler _webserverEventHandler;
+	BaseLib::PEventHandler _webserverEventHandler;
 
-		bool onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path);
+	bool onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path);
 	// }}}
 
 	void getAddress();
+
 	void getUDN();
+
 	void getSocketDescriptor();
+
 	void listen();
+
 	void processPacket(BaseLib::Http& http);
+
 	void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
+
 	void sendNotify();
+
 	void sendByebye();
+
 	void registerServers();
 };
+
+}
 
 #endif
