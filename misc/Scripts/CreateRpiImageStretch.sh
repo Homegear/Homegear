@@ -363,7 +363,7 @@ cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 
 stage_one()
 {
-    bytes=$(fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
+    bytes=$(LANG=C fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
     gigabytes=$(($bytes / 1073741824))
     maxrootpartitionsize=$(($gigabytes - 1))
 
@@ -548,6 +548,9 @@ echo "sync" >> /etc/homegear/homegear-stop.sh
 echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger -t homegear-reload" > /etc/cron.d/homegear
 
 chown -R homegear:homegear /var/lib/homegear/www
+
+# Create database and defaultPassword.txt while file system is writeable
+systemctl restart homegear
 
 echo ""
 echo "Starting raspi-config..."
