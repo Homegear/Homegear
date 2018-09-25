@@ -77,22 +77,22 @@ try {
 <div class="container marketing">
     <div class="row">
         <div style="height: 350px" class="col-lg-3">
+            <span class="glyphicon glyphicon-wrench" style="font-size: 140px"></span>
+            <h2>Administration</h2>
+            <p style="height: 40px">Start adding devices in the administration interface.</p>
+            <p><a class="btn btn-default" href="/admin" role="button">Go there &raquo;</a></p>
+        </div><!-- /.col-lg-3 -->
+        <div style="height: 350px" class="col-lg-3">
             <span class="icon-nodes" style="font-size: 140px"></span>
             <h2>Node-BLUE</h2>
             <p style="height: 40px">To make your home smart use Homegear's logic engine.</p>
-            <p><a class="btn btn-default" href="/flows" role="button">Go there &raquo;</a></p>
+            <p><a class="btn btn-default" href="/node-blue" role="button">Go there &raquo;</a></p>
         </div><!-- /.col-lg-3 -->
         <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-education" style="font-size: 140px"></span>
             <h2>Documentation</h2>
             <p style="height: 40px">For help and tutorials visit the Homegear documentation.</p>
             <p><a class="btn btn-default" href="https://doc.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-3 -->
-        <div style="height: 350px" class="col-lg-3">
-            <span class="glyphicon glyphicon-wrench" style="font-size: 140px"></span>
-            <h2>Reference</h2>
-            <p style="height: 40px">Visit the Homegear reference for information about using this RPC server.</p>
-            <p><a class="btn btn-default" href="https://ref.homegear.eu" role="button">Go there &raquo;</a></p>
         </div><!-- /.col-lg-3 -->
         <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-comment" style="font-size: 140px"></span>
