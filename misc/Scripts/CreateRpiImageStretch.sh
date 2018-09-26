@@ -363,7 +363,9 @@ cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 
 stage_one()
 {
-    bytes=$(LANG=C fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
+	export LC_ALL=C
+	export LANG=C
+    bytes=$(fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
     gigabytes=$(($bytes / 1073741824))
     maxrootpartitionsize=$(($gigabytes - 1))
 
