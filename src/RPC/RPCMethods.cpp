@@ -327,11 +327,11 @@ BaseLib::PVariable RPCAcknowledgeGlobalServiceMessage::invoke(BaseLib::PRpcClien
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess("acknowledgeGlobalServiceMessage")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString})
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		GD::bl->globalServiceMessages.unset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+		GD::bl->globalServiceMessages.unset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->stringValue);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -6338,11 +6338,17 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setGlobalServiceMessage")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger})
+																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger})
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		GD::bl->globalServiceMessages.set(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->stringValue, parameters->at(4), parameters->at(5)->integerValue64);
+        std::list<std::string> variables;
+        for(auto& element : *parameters->at(5)->arrayValue)
+        {
+            variables.emplace_back(element->stringValue);
+        }
+
+		GD::bl->globalServiceMessages.set(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->stringValue, variables, parameters->at(6), parameters->at(7)->integerValue64);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
