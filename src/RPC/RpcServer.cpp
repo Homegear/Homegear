@@ -1792,6 +1792,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
             GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
             return;
         }
+        gnutls_transport_set_pull_timeout_function(client->socketDescriptor->tlsSession, gnutls_system_recv_timeout);
         if((result = gnutls_priority_set(client->socketDescriptor->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
         {
             _out.printError("Error: Could not set cipher priority on TLS session: " + std::string(gnutls_strerror(result)));
@@ -1814,6 +1815,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 
         if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert) gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUIRE);
         else if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUEST);
+        gnutls_handshake_set_timeout(client->socketDescriptor->tlsSession, 5000);
         do
         {
             result = gnutls_handshake(client->socketDescriptor->tlsSession);
