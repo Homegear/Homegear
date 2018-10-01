@@ -373,7 +373,7 @@ void DatabaseController::initializeDatabase()
 
 			GD::out.printMessage("Default password for user \"homegear\" set to: " + password);
 			std::string content = "Default password for user \"homegear\": " + password + "\nPlease write down the password and delete this file.\n";
-			std::string path = GD::bl->settings.dataPath() + "defaultPassword.txt";
+			std::string path = GD::bl->settings.writeableDataPath() + "defaultPassword.txt";
 			BaseLib::Io::writeFile(path, content);
 			uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
 			gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());

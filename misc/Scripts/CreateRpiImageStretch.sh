@@ -529,6 +529,7 @@ chown homegear:homegear /data/homegear-data
 sed -i 's/debugLevel = 4/debugLevel = 3/g' /etc/homegear/main.conf
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
+sed -i 's/# writeableDataPath =/writeableDataPath =/g' /etc/homegear/main.conf
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
 sed -i 's/familyDataPath = \/var\/lib\/homegear\/families/familyDataPath = \/data\/homegear-data\/families/g' /etc/homegear/main.conf
 sed -i 's/nodeBlueDataPath = \/var\/lib\/homegear\/node-blue\/data/nodeBlueDataPath = \/data\/homegear-data\/node-blue/g' /etc/homegear/main.conf
