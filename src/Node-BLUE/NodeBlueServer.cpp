@@ -1506,6 +1506,9 @@ void NodeBlueServer::restartFlows()
 
 std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
+#ifdef NO_SCRIPTENGINE
+	return "unauthorized";
+#else
 	try
 	{
 		bool sessionValid = false;
@@ -1668,10 +1671,14 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
+#endif
 }
 
 std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
+#ifdef NO_SCRIPTENGINE
+	return "unauthorized";
+#else
 	try
 	{
 		bool sessionValid = false;
@@ -1724,6 +1731,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
+#endif
 }
 
 uint32_t NodeBlueServer::flowCount()

@@ -341,7 +341,7 @@ bool Auth::sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::W
 		return false;
 	}
 #else
-    sendWebSocketUnauthorized("Homegear is compiled without script engine. Session authentication is not possible.");
+    sendWebSocketUnauthorized(socket, "Homegear is compiled without script engine. Session authentication is not possible.");
     throw AuthException("Homegear is compiled without script engine. Session authentication is not possible.");
     return false;
 #endif
