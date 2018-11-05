@@ -33,6 +33,33 @@
 #include <homegear-base/BaseLib.h>
 #include <gnutls/gnutls.h>
 
+#if GNUTLS_VERSION_NUMBER < 0x030400
+int gnutls_system_recv_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
+{
+	int ret;
+	int fd = (int)(int64_t)ptr;
+
+	fd_set rfds;
+	struct timeval _tv, *tv = NULL;
+
+	FD_ZERO(&rfds);
+	FD_SET(fd, &rfds);
+
+	if (ms != GNUTLS_INDEFINITE_TIMEOUT)
+	{
+		_tv.tv_sec = ms / 1000;
+		_tv.tv_usec = (ms % 1000) * 1000;
+		tv = &_tv;
+	}
+
+	ret = select(fd + 1, &rfds, NULL, NULL, tv);
+
+	if (ret <= 0) return ret;
+
+	return ret;
+}
+#endif
+
 namespace Homegear
 {
 
