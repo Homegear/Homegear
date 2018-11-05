@@ -36,6 +36,8 @@
 #if GNUTLS_VERSION_NUMBER < 0x030400
 int gnutls_system_recv_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
 {
+    unsigned int indefiniteTimeout = (unsigned int)-2;
+
 	int ret;
 	int fd = (int)(int64_t)ptr;
 
@@ -45,7 +47,7 @@ int gnutls_system_recv_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
 	FD_ZERO(&rfds);
 	FD_SET(fd, &rfds);
 
-	if (ms != GNUTLS_INDEFINITE_TIMEOUT)
+	if (ms != indefiniteTimeout)
 	{
 		_tv.tv_sec = ms / 1000;
 		_tv.tv_usec = (ms % 1000) * 1000;
