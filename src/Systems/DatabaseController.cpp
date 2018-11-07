@@ -2102,7 +2102,7 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string& node, std::strin
 		//Only return passwords if request comes from FlowsServer
 		std::string lowerCharKey = key;
 		BaseLib::HelperFunctions::toLower(lowerCharKey);
-		if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && (lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0 || lowerCharKey.compare(lowerCharKey.size() - 11, 11, "private_key") == 0)) obfuscate = true;
+		if(!requestFromTrustedServer && lowerCharKey.size() >= 8 && (lowerCharKey.compare(lowerCharKey.size() - 8, 8, "password") == 0 || (lowerCharKey.size() >= 11 && lowerCharKey.compare(lowerCharKey.size() - 11, 11, "private_key") == 0))) obfuscate = true;
 
 		if(!key.empty())
 		{
