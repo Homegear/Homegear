@@ -577,8 +577,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			return;
 		}
 		uint8_t qos = data[0] & 6;
-		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t) data[1 + lengthBytes])
-				<< 8) + (uint8_t) data[1 + lengthBytes + 1];
+		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t) data[1 + lengthBytes]) << 8) + (uint8_t) data[1 + lengthBytes + 1];
 		uint32_t payloadPos = (qos > 0) ? topicLength + 2 : topicLength;
 		if(payloadPos >= data.size())
 		{
@@ -594,12 +593,12 @@ void Mqtt::processPublish(std::vector<char>& data)
 			std::vector<char> puback{MQTT_PACKET_PUBACK, 2, data[topicLength], data[topicLength + 1]};
 			send(puback);
 		}
-		std::string topic(&data[1 + lengthBytes + 2], topicLength - (1 + lengthBytes + 2));
-		std::string payload(&data[payloadPos], data.size() - payloadPos);
+		std::string topic(data.data() + 1 + lengthBytes + 2, topicLength - (1 + lengthBytes + 2));
+		std::string payload(data.data() + payloadPos, data.size() - payloadPos);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(topic, '/');
 		if(parts.size() == _prefixParts + 5 && (parts.at(_prefixParts + 1) == "value" || parts.at(_prefixParts + 1) == "set"))
 		{
-			uint64_t peerId = BaseLib::Math::getNumber(parts.at(_prefixParts + 2));
+			uint64_t peerId = BaseLib::Math::getUnsignedNumber64(parts.at(_prefixParts + 2));
 			int32_t channel = BaseLib::Math::getNumber(parts.at(_prefixParts + 3));
 
 			BaseLib::PVariable value;

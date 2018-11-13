@@ -1047,7 +1047,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
 			else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
 
 			valueKeys->push_back(valueKey);
-			values->push_back(rpcParameter->convertFromPacket(parameterData));
+			values->push_back(rpcParameter->convertFromPacket(parameterData, true));
             std::string address = _serialNumber + ":" + std::to_string(channel);
             if(clientInfo->scriptEngineServer)
             {
