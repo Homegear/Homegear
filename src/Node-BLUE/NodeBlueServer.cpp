@@ -1861,6 +1861,91 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 	}
 }
 
+void NodeBlueServer::broadcastFlowVariableEvent(std::string& flowId, std::string& variable, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(_shuttingDown || _flowsRestarting) return;
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+		std::vector<PNodeBlueClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			clients.reserve(_clients.size());
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(3);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(flowId));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+			parameters->emplace_back(value);
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastFlowVariableEvent", parameters);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastFlowVariableEvent\". Queue is full.");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void NodeBlueServer::broadcastGlobalVariableEvent(std::string& variable, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(_shuttingDown || _flowsRestarting) return;
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+		std::vector<PNodeBlueClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			clients.reserve(_clients.size());
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(2);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+			parameters->emplace_back(value);
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastGlobalVariableEvent", parameters);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastGlobalVariableEvent\". Queue is full.");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
@@ -2087,6 +2172,7 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 					}
 				}
 			}
+
 			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{

@@ -6843,6 +6843,8 @@ BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		GD::nodeBlueServer->broadcastFlowVariableEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+
 		return GD::bl->db->setNodeData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
@@ -6870,6 +6872,8 @@ BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
 																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tVariant})
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
+
+		GD::nodeBlueServer->broadcastGlobalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
 
 		std::string nodeId = "global";
 		return GD::bl->db->setNodeData(nodeId, parameters->at(0)->stringValue, parameters->at(1));

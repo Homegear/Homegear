@@ -67,6 +67,10 @@ public:
 
 	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
 
+	void broadcastFlowVariableEvent(std::string& flowId, std::string& variable, BaseLib::PVariable& value);
+
+	void broadcastGlobalVariableEvent(std::string& variable, BaseLib::PVariable& value);
+
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
