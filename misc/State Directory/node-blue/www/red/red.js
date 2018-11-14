@@ -793,7 +793,7 @@ RED.comms = (function() {
             if(dirty) {
                 RED.view.redraw();
                 if(errornotification) errornotification.close();
-                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",true);
+                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",false,5000);
             }
         });
     }
