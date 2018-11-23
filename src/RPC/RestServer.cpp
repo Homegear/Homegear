@@ -115,7 +115,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 
 		if(http.getHeader().method == "GET")
 		{
-			if(request == "get")
+			if(request == "get" || request == "variable")
 			{
 				GD::out.printInfo("Info: REST RPC call received. Method: getValue");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -133,6 +133,25 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 					responseJson->structValue->emplace("value", response);
 					_jsonEncoder->encode(responseJson, contentString);
 				}
+			}
+			else if(request == "config")
+			{
+				GD::out.printInfo("Info: REST RPC call received. Method: getParamset");
+				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				parameters->arrayValue->reserve(4);
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
+				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));;
+				std::string methodName = "getParamset";
+				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
+				else
+                {
+                    BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    responseJson->structValue->emplace("result", std::make_shared<BaseLib::Variable>("success"));
+                    responseJson->structValue->emplace("value", response);
+                    _jsonEncoder->encode(responseJson, contentString);
+                }
 			}
 			else
 			{
@@ -155,7 +174,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 			}
 
 			auto structIterator = json->structValue->find("value");
-			if(request == "set")
+			if(request == "set" || request == "variable")
 			{
 				GD::out.printInfo("Info: REST RPC call received. Method: setValue");
 
