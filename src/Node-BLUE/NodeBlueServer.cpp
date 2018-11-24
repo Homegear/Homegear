@@ -1271,6 +1271,11 @@ void NodeBlueServer::startFlows()
 		{
 			if(allNodeIds.find(nodeId) == allNodeIds.end() && nodeIds.find(nodeId) == nodeIds.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
 		}
+
+		std::string nodeId = "global";
+		std::string topic = "flowsStarted";
+		BaseLib::PVariable value = std::make_shared<BaseLib::Variable>(true);
+		GD::rpcClient->broadcastNodeEvent(nodeId, topic, value);
 	}
 	catch(const std::exception& ex)
 	{

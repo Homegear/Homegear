@@ -680,15 +680,22 @@ RED.comms = (function() {
 
     function homegearEvent(message) {
         if(message.method == "nodeEvent") {
-            if(message.params[2].format && !message.params[2].format.match(/string/g)) message.params[2].msg = JSON.stringify(message.params[2].msg);
-            for (var t in subscriptions) {
-                if (subscriptions.hasOwnProperty(t)) {
-                    var re = new RegExp("^"+t.replace(/([\[\]\?\(\)\\\\$\^\*\.|])/g,"\\$1").replace(/\+/g,"[^/]+").replace(/\/#$/,"(\/.*)?")+"$");
-                    if (re.test(message.params[1])) {
-                        var subscribers = subscriptions[t];
-                        if (subscribers) {
-                            for (var i=0;i<subscribers.length;i++) {
-                                subscribers[i](message.params[1], message.params[2]);
+            if(message.params[0] == "global") {
+                if(message.params[1] == "flowsStarted") {
+                    RED.comms.homegear().invoke('setNodeVariable', null, RED.workspaces.active(), "enableEvents", true);
+                    RED.notify(RED._("notification.info",{message:RED._("notification.infoMessages.flowsStarted")}),"success",false);
+                }
+            } else {
+                if(message.params[2].format && !message.params[2].format.match(/string/g)) message.params[2].msg = JSON.stringify(message.params[2].msg);
+                for (var t in subscriptions) {
+                    if (subscriptions.hasOwnProperty(t)) {
+                        var re = new RegExp("^"+t.replace(/([\[\]\?\(\)\\\\$\^\*\.|])/g,"\\$1").replace(/\+/g,"[^/]+").replace(/\/#$/,"(\/.*)?")+"$");
+                        if (re.test(message.params[1])) {
+                            var subscribers = subscriptions[t];
+                            if (subscribers) {
+                                for (var i=0;i<subscribers.length;i++) {
+                                    subscribers[i](message.params[1], message.params[2]);
+                                }
                             }
                         }
                     }
@@ -793,7 +800,7 @@ RED.comms = (function() {
             if(dirty) {
                 RED.view.redraw();
                 if(errornotification) errornotification.close();
-                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",false,5000);
+                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",false);
             }
         });
     }
@@ -12791,9 +12798,9 @@ RED.view = (function() {
                     //node.append("path").attr("class","node_error").attr("d","M 3,-3 l 10,0 l -5,-8 z");
 
                     //TODO: these ought to be SVG
-                    node.append("image").attr("class","node_fixed_input hidden").attr("xlink:href","icons/node-red/node-fixed-input.png").attr("x",0).attr("y",-6).attr("width",10).attr("height",10);
-                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.png").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
-                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.png").attr("x",24).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_fixed_input hidden").attr("xlink:href","icons/node-red/node-fixed-input.svg").attr("x",0).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_error hidden").attr("xlink:href","icons/node-red/node-error.svg").attr("x",12).attr("y",-6).attr("width",10).attr("height",10);
+                    node.append("image").attr("class","node_changed hidden").attr("xlink:href","icons/node-red/node-changed.svg").attr("x",24).attr("y",-6).attr("width",10).attr("height",10);
             });
 
             node.each(function(d,i) {
