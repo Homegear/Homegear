@@ -1669,8 +1669,15 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
         flow->id = parameters->at(0)->integerValue;
         flow->flow = parameters->at(1)->arrayValue->at(0);
         std::string flowId;
-        auto flowIdIterator = flow->flow->structValue->find("id");
-        if(flowIdIterator != flow->flow->structValue->end()) flowId = flowIdIterator->second->stringValue;
+        for(auto& element : *parameters->at(1)->arrayValue)
+        {
+            auto flowIdIterator = element->structValue->find("flow");
+            if(flowIdIterator != element->structValue->end())
+            {
+                flowId = flowIdIterator->second->stringValue;
+                break;
+            }
+        }
 
         _out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + " (" + flowId + ")...");
 
