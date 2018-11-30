@@ -719,7 +719,7 @@ RED.comms = (function() {
             if(hostArray.length > 1) port = hostArray[1];
         }
         var sessionId = readCookie('PHPSESSID');
-        homegear = new HomegearWS(server, port, 'hgflows', ssl, sessionId, '', true);
+        homegear = new HomegearWS(server, port, 'hgflows', ssl, sessionId);
         homegear.ready(function() {
             if(errornotification) {
                 errornotification.close();
