@@ -1310,7 +1310,7 @@ void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVa
         parameters->push_back(std::make_shared<Flows::Variable>(key));
         parameters->push_back(value);
 
-        invoke("setNodeData", parameters, false);
+        invoke("setNodeData", parameters, true);
     }
     catch(const std::exception& ex)
     {
@@ -1369,7 +1369,7 @@ void NodeBlueClient::setFlowData(std::string flowId, std::string key, Flows::PVa
         parameters->push_back(std::make_shared<Flows::Variable>(key));
         parameters->push_back(value);
 
-        invoke("setFlowData", parameters, false);
+        invoke("setFlowData", parameters, true);
     }
     catch(const std::exception& ex)
     {
@@ -1425,7 +1425,7 @@ void NodeBlueClient::setGlobalData(std::string key, Flows::PVariable value)
         parameters->push_back(std::make_shared<Flows::Variable>(key));
         parameters->push_back(value);
 
-        invoke("setGlobalData", parameters, false);
+        invoke("setGlobalData", parameters, true);
     }
     catch(const std::exception& ex)
     {
