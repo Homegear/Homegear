@@ -1782,8 +1782,6 @@ ZEND_FUNCTION(hg_configure_gateway)
 			}
         //}}}
 
-        socket.close();
-
         Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
     }
     catch(BaseLib::Exception& ex)

@@ -287,75 +287,10 @@ sed -i "s/<DISTVER>/${distver}/g" $rootfs/PHPBuild/CreatePHPPackages.sh
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
-if [ -n "$PHPBUILD_SHELL" ]; then
+if [[ -z "$PHPBUILD_SERVERNAME" || -z "$PHPBUILD_SERVERPORT" || -z "$PHPBUILD_SERVERUSER" || -z "$PHPBUILD_SERVERPATH" || -z "$PHPBUILD_SERVERCERT" ]]; then
 	echo "Container setup successful. You can now execute \"/PHPBuild/CreatePHPPackages.sh\"."
 	/bin/bash
 	exit 0
-fi
-if [[ -z "$PHPBUILD_SERVERNAME" || -z "$PHPBUILD_SERVERPORT" || -z "$PHPBUILD_SERVERUSER" || -z "$PHPBUILD_SERVERPATH" || -z "$PHPBUILD_SERVERCERT" ]]; then
-	while :
-	do
-		echo "Setting up SSH package uploading:"
-		while :
-		do
-			read -p "Please specify the server name to upload to: " PHPBUILD_SERVERNAME
-			if [ -n "$PHPBUILD_SERVERNAME" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the SSH port number of the server: " PHPBUILD_SERVERPORT
-			if [ -n "$PHPBUILD_SERVERPORT" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the user name to use to login into the server: " PHPBUILD_SERVERUSER
-			if [ -n "$PHPBUILD_SERVERUSER" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the path on the server to upload packages to: " PHPBUILD_SERVERPATH
-			PHPBUILD_SERVERPATH=${PHPBUILD_SERVERPATH%/}
-			if [ -n "$PHPBUILD_SERVERPATH" ]; then
-				break
-			fi
-		done
-		echo "Paste your certificate:"
-		IFS= read -d '' -n 1 PHPBUILD_SERVERCERT
-		while IFS= read -d '' -n 1 -t 2 c
-		do
-		    PHPBUILD_SERVERCERT+=$c
-		done
-		echo
-		echo
-		echo "Testing connection..."
-		mkdir -p /root/.ssh
-		echo "$PHPBUILD_SERVERCERT" > /root/.ssh/id_rsa
-		chmod 400 /root/.ssh/id_rsa
-		ssh -p $PHPBUILD_SERVERPORT ${PHPBUILD_SERVERUSER}@${PHPBUILD_SERVERNAME} "echo \"It works :-)\""
-		echo
-		echo -e "Server name:\t$PHPBUILD_SERVERNAME"
-		echo -e "Server port:\t$PHPBUILD_SERVERPORT"
-		echo -e "Server user:\t$PHPBUILD_SERVERUSER"
-		echo -e "Server path:\t$PHPBUILD_SERVERPATH"
-		echo -e "Certificate:\t"
-		echo "$PHPBUILD_SERVERCERT"
-		while :
-		do
-			read -p "Is this information correct [y/n]: " correct
-			if [ -n "$correct" ]; then
-				break
-			fi
-		done
-		if [ "$correct" = "y" ]; then
-			break
-		fi
-	done
 else
 	PHPBUILD_SERVERPATH=${PHPBUILD_SERVERPATH%/}
 	echo "Testing connection..."

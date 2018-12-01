@@ -255,8 +255,9 @@ wget --https-only https://github.com/Homegear/homegear-nodes-optional/archive/${
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
+mv homegear-nodes-optional-${1} homegear-nodes-optional
 
-cd homegear-nodes-optional*
+cd homegear-nodes-optional
 ./buildPackages.sh <DISTVER> <ARCH>
 if [ "<ARCH>" == "amd64" ]; then
 	./buildPackages.sh <DISTVER> all
@@ -300,13 +301,29 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libhomegear-nod
 
 /build/CreateDebianPackage.sh master $1
 
-if test -f /build/homegear-nodes-optional-master/output/node-blue-*.deb; then
-	if test -f /build/UploadStable.sh; then
-		/build/UploadStable.sh
+if test -f /build/homegear-nodes-optional/output/node-blue-*.deb; then
+	if test -f /build/UploadRepository.sh; then
+		/build/UploadRepository.sh
 	fi
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
+
+cat > "$rootfs/build/CreateDebianPackageTesting.sh" <<-'EOF'
+#!/bin/bash
+
+chroot $rootfs apt-get update
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libhomegear-node
+
+/build/CreateDebianPackage.sh testing $1
+
+if test -f /build/homegear-nodes-optional/output/node-blue-*.deb; then
+	if test -f /build/UploadRepository.sh; then
+		/build/UploadRepository.sh
+	fi
+fi
+EOF
+chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
@@ -316,86 +333,12 @@ if [ -n "$NODEBUILD_THREADS" ]; then
 else
 	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackage.sh
 fi
-if [ -n "$NODEBUILD_SHELL" ]; then
-	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
+if [[ -z "$NODEBUILD_SERVERNAME" || -z "$NODEBUILD_SERVERPORT" || -z "$NODEBUILD_SERVERUSER" || -z "$NODEBUILD_REPOSITORYSERVERPATH" || -z "$NODEBUILD_NIGHTLYSERVERPATH" || -z "$NODEBUILD_SERVERCERT" ]]; then
+	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\", \"/build/CreateDebianPackageTesting.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 	exit 0
-fi
-if [[ -z "$NODEBUILD_SERVERNAME" || -z "$NODEBUILD_SERVERPORT" || -z "$NODEBUILD_SERVERUSER" || -z "$NODEBUILD_STABLESERVERPATH" || -z "$NODEBUILD_NIGHTLYSERVERPATH" || -z "$NODEBUILD_SERVERCERT" ]]; then
-	while :
-	do
-		echo "Setting up SSH package uploading:"
-		while :
-		do
-			read -p "Please specify the server name to upload to: " NODEBUILD_SERVERNAME
-			if [ -n "$NODEBUILD_SERVERNAME" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the SSH port number of the server: " NODEBUILD_SERVERPORT
-			if [ -n "$NODEBUILD_SERVERPORT" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the user name to use to login into the server: " NODEBUILD_SERVERUSER
-			if [ -n "$NODEBUILD_SERVERUSER" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the path on the server to upload stable packages to: " NODEBUILD_STABLESERVERPATH
-			NODEBUILD_STABLESERVERPATH=${NODEBUILD_STABLESERVERPATH%/}
-			if [ -n "$NODEBUILD_STABLESERVERPATH" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the path on the server to upload nightly packages to: " NODEBUILD_NIGHTLYSERVERPATH
-			NODEBUILD_NIGHTLYSERVERPATH=${NODEBUILD_NIGHTLYSERVERPATH%/}
-			if [ -n "$NODEBUILD_NIGHTLYSERVERPATH" ]; then
-				break
-			fi
-		done
-		echo "Paste your certificate:"
-		IFS= read -d '' -n 1 NODEBUILD_SERVERCERT
-		while IFS= read -d '' -n 1 -t 2 c
-		do
-		    NODEBUILD_SERVERCERT+=$c
-		done
-		echo
-		echo
-		echo "Testing connection..."
-		mkdir -p /root/.ssh
-		echo "$NODEBUILD_SERVERCERT" > /root/.ssh/id_rsa
-		chmod 400 /root/.ssh/id_rsa
-		ssh -p $NODEBUILD_SERVERPORT ${NODEBUILD_SERVERUSER}@${NODEBUILD_SERVERNAME} "echo \"It works :-)\""
-		echo
-		echo -e "Server name:\t$NODEBUILD_SERVERNAME"
-		echo -e "Server port:\t$NODEBUILD_SERVERPORT"
-		echo -e "Server user:\t$NODEBUILD_SERVERUSER"
-		echo -e "Server path (stable):\t$NODEBUILD_STABLESERVERPATH"
-		echo -e "Server path (nightlies):\t$NODEBUILD_NIGHTLYSERVERPATH"
-		echo -e "Certificate:\t"
-		echo "$NODEBUILD_SERVERCERT"
-		while :
-		do
-			read -p "Is this information correct [y/n]: " correct
-			if [ -n "$correct" ]; then
-				break
-			fi
-		done
-		if [ "$correct" = "y" ]; then
-			break
-		fi
-	done
 else
-	NODEBUILD_STABLESERVERPATH=${NODEBUILD_STABLESERVERPATH%/}
+	NODEBUILD_REPOSITORYSERVERPATH=${NODEBUILD_REPOSITORYSERVERPATH%/}
 	NODEBUILD_NIGHTLYSERVERPATH=${NODEBUILD_NIGHTLYSERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
@@ -413,7 +356,7 @@ echo "#!/bin/bash
 
 set -x
 
-cd /build/homegear-nodes-optional-master/output
+cd /build/homegear-nodes-optional/output
 if [ \$(ls | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
@@ -421,9 +364,9 @@ if [ \$(ls | grep -c \"\\.changes\$\") -ne 0 ]; then
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
-		scp -P $NODEBUILD_SERVERPORT \${path}.uploading ${NODEBUILD_SERVERUSER}@${NODEBUILD_SERVERNAME}:${NODEBUILD_STABLESERVERPATH}
+		scp -P $NODEBUILD_SERVERPORT \${path}.uploading ${NODEBUILD_SERVERUSER}@${NODEBUILD_SERVERNAME}:${NODEBUILD_REPOSITORYSERVERPATH}
 		if [ \$? -eq 0 ]; then
-			ssh -p $NODEBUILD_SERVERPORT ${NODEBUILD_SERVERUSER}@${NODEBUILD_SERVERNAME} \"mv ${NODEBUILD_STABLESERVERPATH}/\${filename}.uploading ${NODEBUILD_STABLESERVERPATH}/\${filename}\"
+			ssh -p $NODEBUILD_SERVERPORT ${NODEBUILD_SERVERUSER}@${NODEBUILD_SERVERNAME} \"mv ${NODEBUILD_REPOSITORYSERVERPATH}/\${filename}.uploading ${NODEBUILD_REPOSITORYSERVERPATH}/\${filename}\"
 			if [ \$? -eq 0 ]; then
 				echo "Packages uploaded successfully."
 				exit 0
@@ -433,8 +376,8 @@ if [ \$(ls | grep -c \"\\.changes\$\") -ne 0 ]; then
 		fi
 	fi
 fi
-" > /build/UploadStable.sh
-chmod 755 /build/UploadStable.sh
+" > /build/UploadRepository.sh
+chmod 755 /build/UploadRepository.sh
 
 echo "#!/bin/bash
 
@@ -466,10 +409,12 @@ rm /FirstStart.sh
 
 if [ "$NODEBUILD_TYPE" = "stable" ]; then
 	/build/CreateDebianPackageStable.sh ${NODEBUILD_API_KEY}
+elif [ "$NODEBUILD_TYPE" = "testing" ]; then
+	/build/CreateDebianPackageTesting.sh ${NODEBUILD_API_KEY}
 elif [ "$NODEBUILD_TYPE" = "nightly" ]; then
 	/build/CreateDebianPackageNightly.sh ${NODEBUILD_API_KEY}
 else
-	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
+	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\", \"/build/CreateDebianPackageTesting.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 fi
 EOF
