@@ -1190,6 +1190,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 		zend_file_handle zendHandle{};
 
 		ScriptInfo::ScriptType type = scriptInfo->getType();
+
 		{
 			std::lock_guard<std::mutex> resourceGuard(_resourceMutex);
 			ts_resource(0); //Replaces TSRMLS_FETCH()
@@ -1308,6 +1309,36 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 				}
 				SG(request_info).argv[argv.size()] = nullptr;
 			}
+
+            { //Overwrite getenv and putenv
+                zend_string* getenvString = zend_string_init("getenv", sizeof("getenv"), false);
+                zend_string* hgGetenvString = zend_string_init("hg_getenv", sizeof("hg_getenv"), false);
+                zval* getenvFunction = zend_hash_find(EG(function_table), getenvString);
+                zval* hgGetenvFunction = zend_hash_find(EG(function_table), hgGetenvString);
+                if(getenvFunction && hgGetenvFunction)
+                {
+                    zend_hash_del(EG(function_table), getenvString);
+                    zend_hash_del(EG(function_table), hgGetenvString);
+                    zend_hash_add(EG(function_table), getenvString, hgGetenvFunction);
+                    zend_hash_add(EG(function_table), hgGetenvString, getenvFunction);
+                }
+                zend_string_free(hgGetenvString);
+                zend_string_free(getenvString);
+
+                zend_string* putenvString = zend_string_init("putenv", sizeof("putenv"), false);
+                zend_string* hgPutenvString = zend_string_init("hg_putenv", sizeof("hg_putenv"), false);
+                zval* putenvFunction = zend_hash_find(EG(function_table), putenvString);
+                zval* hgPutenvFunction = zend_hash_find(EG(function_table), hgPutenvString);
+                if(putenvFunction && hgPutenvFunction)
+                {
+                    zend_hash_del(EG(function_table), putenvString);
+                    zend_hash_del(EG(function_table), hgPutenvString);
+                    zend_hash_add(EG(function_table), putenvString, hgPutenvFunction);
+                    zend_hash_add(EG(function_table), hgPutenvString, putenvFunction);
+                }
+                zend_string_free(hgPutenvString);
+                zend_string_free(putenvString);
+            }
 
 			if(scriptInfo->peerId > 0) GD::out.printInfo("Info: Starting PHP script of peer " + std::to_string(scriptInfo->peerId) + ".");
 		}

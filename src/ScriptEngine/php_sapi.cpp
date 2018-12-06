@@ -56,6 +56,7 @@ static bool _disposed = true;
 static zend_homegear_superglobals _superglobals;
 static std::mutex _scriptCacheMutex;
 static std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>> _scriptCache;
+static std::mutex _envMutex;
 
 static zend_class_entry* homegear_class_entry = nullptr;
 static zend_class_entry* homegear_gpio_class_entry = nullptr;
@@ -147,6 +148,13 @@ ZEND_FUNCTION(hg_i2c_read);
 ZEND_FUNCTION(hg_i2c_write);
 #endif
 
+//{{{ Overwrite non thread safe function
+	//Todo: Remove once thread safe
+	ZEND_FUNCTION(hg_getenv);
+	ZEND_FUNCTION(hg_putenv);
+// }}}
+
+
 static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(print_v, NULL)
 	ZEND_FE(hg_get_script_id, NULL)
@@ -197,6 +205,8 @@ static const zend_function_entry homegear_functions[] = {
 	ZEND_FE(hg_i2c_close, NULL)
 	ZEND_FE(hg_i2c_read, NULL)
 	ZEND_FE(hg_i2c_write, NULL)
+	ZEND_FE(hg_getenv, NULL)
+	ZEND_FE(hg_putenv, NULL)
 #endif
 	{NULL, NULL, NULL}
 };
@@ -2343,6 +2353,86 @@ ZEND_FUNCTION(hg_i2c_write)
 	RETURN_TRUE;
 }
 #endif
+
+ZEND_FUNCTION(hg_getenv)
+{
+	if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string varname;
+    if(argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to getenv().");
+    else if(argc == 1)
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "varname is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) varname = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+    }
+    if(varname.empty())
+    {
+        array_init(return_value);
+        std::lock_guard<std::mutex> envGuard(_envMutex);
+        for(int32_t i = 0; environ[i] != nullptr; i++)
+        {
+            std::string entry(environ[i]);
+            auto pair = BaseLib::HelperFunctions::splitFirst(entry, '=');
+            zval value;
+            if(pair.second.empty()) ZVAL_STRINGL(&value, "", 0); //At least once, *.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
+            else ZVAL_STRINGL(&value, pair.second.c_str(), pair.second.size());
+            add_assoc_zval_ex(return_value, pair.first.c_str(), pair.first.size(), &value);
+        }
+    }
+    else
+    {
+        std::string value;
+
+        {
+            std::lock_guard<std::mutex> envGuard(_envMutex);
+            auto variable = getenv((char*)varname.c_str());
+            if(!variable) RETURN_FALSE;
+            value = std::string(variable);
+        }
+
+        RETURN_STRINGL(value.c_str(), value.length());
+    }
+}
+
+ZEND_FUNCTION(hg_putenv)
+{
+	if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string setting;
+    if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to putenv().");
+    else if(argc == 1)
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "setting is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) setting = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+    }
+    if(setting.empty()) RETURN_FALSE;
+
+    int returnCode = -1;
+
+    {
+        std::lock_guard<std::mutex> envGuard(_envMutex);
+        returnCode = putenv((char*)setting.c_str());
+    }
+
+    if(returnCode == 0)
+    {
+        RETURN_TRUE;
+    }
+    else
+    {
+        RETURN_FALSE;
+    }
+}
 
 ZEND_METHOD(Homegear, __call)
 {
