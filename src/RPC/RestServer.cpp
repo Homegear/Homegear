@@ -284,7 +284,6 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				return;
 			}
 
-			auto structIterator = json->structValue->find("value");
 			if(request == "set" || request == "variable")
 			{
                 if(parts.size() != 7)
@@ -300,6 +299,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 
 				GD::out.printInfo("Info: REST RPC call received. Method: setValue");
 
+				auto structIterator = json->structValue->find("value");
 				if(structIterator == json->structValue->end()) contentString = "{\"result\":\"error\",\"message\":\"No value specified.\"}";
 				else
 				{
@@ -334,8 +334,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
-				BaseLib::PVariable value = structIterator->second;
-				if(value) parameters->arrayValue->push_back(value);
+				parameters->arrayValue->push_back(json);
 				std::string methodName = "putParamset";
 				BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 				if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
