@@ -282,7 +282,7 @@ fi
 
 /build/CreateDebianPackage.sh dev $1
 
-if test -f /build/homegear-nodes-optional-dev/output/node-blue-*.deb; then
+if test -f /build/homegear-nodes-optional/output/node-blue-node-backup_*.deb; then
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi
@@ -301,7 +301,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libhomegear-nod
 
 /build/CreateDebianPackage.sh master $1
 
-if test -f /build/homegear-nodes-optional/output/node-blue-*.deb; then
+if test -f /build/homegear-nodes-optional/output/node-blue-node-backup_*.deb; then
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
@@ -317,7 +317,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libhomegear-nod
 
 /build/CreateDebianPackage.sh testing $1
 
-if test -f /build/homegear-nodes-optional/output/node-blue-*.deb; then
+if test -f /build/homegear-nodes-optional/output/node-blue-node-backup_*.deb; then
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi

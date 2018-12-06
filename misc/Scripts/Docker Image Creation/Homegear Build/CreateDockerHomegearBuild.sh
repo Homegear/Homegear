@@ -770,84 +770,10 @@ if [ -n "$HOMEGEARBUILD_THREADS" ]; then
 else
 	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackage.sh
 fi
-if [ -n "$HOMEGEARBUILD_SHELL" ]; then
+if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_REPOSITORYSERVERPATH" || -z "$HOMEGEARBUILD_NIGHTLYSERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 	exit 0
-fi
-if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_REPOSITORYSERVERPATH" || -z "$HOMEGEARBUILD_NIGHTLYSERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
-	while :
-	do
-		echo "Setting up SSH package uploading:"
-		while :
-		do
-			read -p "Please specify the server name to upload to: " HOMEGEARBUILD_SERVERNAME
-			if [ -n "$HOMEGEARBUILD_SERVERNAME" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the SSH port number of the server: " HOMEGEARBUILD_SERVERPORT
-			if [ -n "$HOMEGEARBUILD_SERVERPORT" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the user name to use to login into the server: " HOMEGEARBUILD_SERVERUSER
-			if [ -n "$HOMEGEARBUILD_SERVERUSER" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the path on the server to upload stable packages to: " HOMEGEARBUILD_REPOSITORYSERVERPATH
-			HOMEGEARBUILD_REPOSITORYSERVERPATH=${HOMEGEARBUILD_REPOSITORYSERVERPATH%/}
-			if [ -n "$HOMEGEARBUILD_REPOSITORYSERVERPATH" ]; then
-				break
-			fi
-		done
-		while :
-		do
-			read -p "Please specify the path on the server to upload nightly packages to: " HOMEGEARBUILD_NIGHTLYSERVERPATH
-			HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
-			if [ -n "$HOMEGEARBUILD_NIGHTLYSERVERPATH" ]; then
-				break
-			fi
-		done
-		echo "Paste your certificate:"
-		IFS= read -d '' -n 1 HOMEGEARBUILD_SERVERCERT
-		while IFS= read -d '' -n 1 -t 2 c
-		do
-		    HOMEGEARBUILD_SERVERCERT+=$c
-		done
-		echo
-		echo
-		echo "Testing connection..."
-		mkdir -p /root/.ssh
-		echo "$HOMEGEARBUILD_SERVERCERT" > /root/.ssh/id_rsa
-		chmod 400 /root/.ssh/id_rsa
-		ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} "echo \"It works :-)\""
-		echo
-		echo -e "Server name:\t$HOMEGEARBUILD_SERVERNAME"
-		echo -e "Server port:\t$HOMEGEARBUILD_SERVERPORT"
-		echo -e "Server user:\t$HOMEGEARBUILD_SERVERUSER"
-		echo -e "Server path (stable):\t$HOMEGEARBUILD_REPOSITORYSERVERPATH"
-		echo -e "Server path (nightlies):\t$HOMEGEARBUILD_NIGHTLYSERVERPATH"
-		echo -e "Certificate:\t"
-		echo "$HOMEGEARBUILD_SERVERCERT"
-		while :
-		do
-			read -p "Is this information correct [y/n]: " correct
-			if [ -n "$correct" ]; then
-				break
-			fi
-		done
-		if [ "$correct" = "y" ]; then
-			break
-		fi
-	done
 else
 	HOMEGEARBUILD_REPOSITORYSERVERPATH=${HOMEGEARBUILD_REPOSITORYSERVERPATH%/}
 	HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
