@@ -370,6 +370,7 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
 
             auto elementInfo = languageIterator->second->getElementInfo();
             elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement.second->databaseId));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement.second->label));
             elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement.second->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categories->arrayValue->reserve(uiElement.second->categoryIds.size());
@@ -481,6 +482,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
 
             auto elementInfo = languageIterator->second->getElementInfo();
             elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
             elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categories->arrayValue->reserve(uiElement->categoryIds.size());
@@ -559,6 +561,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
 
             auto elementInfo = languageIterator->second->getElementInfo();
             elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
             elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categories->arrayValue->reserve(uiElement->categoryIds.size());
