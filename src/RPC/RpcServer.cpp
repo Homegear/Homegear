@@ -269,6 +269,11 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
     _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
     //}}}
+
+    //{{{ Users
+    _rpcMethods->emplace("getUserMetadata", std::make_shared<RPCGetUserMetadata>());
+    _rpcMethods->emplace("setUserMetadata", std::make_shared<RPCSetUserMetadata>());
+    //}}}
 }
 
 RpcServer::~RpcServer()
@@ -1457,6 +1462,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                 while(processedBytes < bytesRead)
                 {
                     processedBytes += webSocket.process(buffer + processedBytes, bytesRead - processedBytes);
+                    GD::out.printError("Moin " + std::to_string(processedBytes) + " " + std::to_string(bytesRead) + " " + std::to_string((int32_t)webSocket.isFinished()) + " " + BaseLib::HelperFunctions::getHexString(buffer, bytesRead));
                     if(webSocket.isFinished())
                     {
                         if(webSocket.getHeader().close)
