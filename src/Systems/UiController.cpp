@@ -281,26 +281,23 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
             parameters->arrayValue->emplace_back(nameIterator->second);
 
             auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+            if(!result->errorStruct) variableInput->structValue->emplace("value", result);
+
+            methodName = "getVariableDescription";
+            result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
             if(result->errorStruct)
             {
-                GD::out.printWarning("Warning: Could not get value for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
+                GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
                 continue;
             }
 
-            variableInput->structValue->emplace("value", result);
+            auto typeIterator = result->structValue->find("TYPE");
+            if(typeIterator != result->structValue->end()) variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
 
             auto minimumValueIterator = variableInput->structValue->find("minimumValue");
             auto maximumValueIterator = variableInput->structValue->find("maximumValue");
             if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
             {
-                methodName = "getVariableDescription";
-                auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(result->errorStruct)
-                {
-                    GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
-                    continue;
-                }
-
                 if(minimumValueIterator == variableInput->structValue->end())
                 {
                     auto minimumValueIterator2 = result->structValue->find("MIN");
