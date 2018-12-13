@@ -139,7 +139,10 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
         uiElement->roomId = 0;
         uiElement->categoryIds.clear();
 
-        auto dataIterator = data->structValue->find("inputPeers");
+        auto dataIterator = data->structValue->find("label");
+        uiElement->label = dataIterator->second->stringValue;
+
+        dataIterator = data->structValue->find("inputPeers");
         if(dataIterator != data->structValue->end())
         {
             uiElement->peerInfo->inputPeers.reserve(dataIterator->second->arrayValue->size());
