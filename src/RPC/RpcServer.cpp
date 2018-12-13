@@ -1428,7 +1428,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                         doBreak = true;
                                         break;
                                     }
-                                    else _out.printDebug("Client successfully authorized using basic authentication.");
+                                    else _out.printDebug("Client successfully authorized as user [" + client->user + "] using basic authentication.");
                                 }
                                 catch(AuthException& ex)
                                 {
@@ -1462,7 +1462,6 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                 while(processedBytes < bytesRead)
                 {
                     processedBytes += webSocket.process(buffer + processedBytes, bytesRead - processedBytes);
-                    GD::out.printError("Moin " + std::to_string(processedBytes) + " " + std::to_string(bytesRead) + " " + std::to_string((int32_t)webSocket.isFinished()) + " " + BaseLib::HelperFunctions::getHexString(buffer, bytesRead));
                     if(webSocket.isFinished())
                     {
                         if(webSocket.getHeader().close)
@@ -1497,8 +1496,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                 else
                                 {
                                     client->webSocketAuthorized = true;
-                                    if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using basic authentication.");
-                                    else if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized using session authentication.");
+                                    if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized as user [" + client->user + "] using basic authentication.");
+                                    else if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::session) _out.printInfo(std::string("Client ") + (client->webSocketClient ? "(direction browser => Homegear)" : "(direction Homegear => browser)") + " successfully authorized as user [" + client->user + "] using session authentication.");
                                     if(client->webSocketClient || client->sendEventsToRpcServer)
                                     {
                                         _out.printInfo("Info: Transferring client number " + std::to_string(client->id) + " to rpc client.");
@@ -1627,7 +1626,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                             doBreak = true;
                                             break;
                                         }
-                                        else _out.printInfo("Info: Client successfully authorized using basic authentication.");
+                                        else _out.printInfo("Info: Client successfully authorized as user [" + client->user + "] using basic authentication.");
                                     }
                                     catch(AuthException& ex)
                                     {
@@ -1883,7 +1882,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
                 }
                 else _out.printInfo("Info: Certificate authentication failed. Falling back to next authentication type. Error was: " + error);
             }
-            else _out.printInfo("Info: User " + client->user + " was successfully authenticated using certificate authentication.");
+            else _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
         }
 
         return;

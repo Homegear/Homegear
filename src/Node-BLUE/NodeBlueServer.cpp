@@ -1522,8 +1522,20 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 	try
 	{
 		bool sessionValid = false;
-		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+		{
+			auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+			if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+		}
 
 		std::string contentString;
 		if(path == "node-blue/locales/nodes")

@@ -140,7 +140,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
         uiElement->categoryIds.clear();
 
         auto dataIterator = data->structValue->find("label");
-        uiElement->label = dataIterator->second->stringValue;
+        if(dataIterator != data->structValue->end()) uiElement->label = dataIterator->second->stringValue;
 
         dataIterator = data->structValue->find("inputPeers");
         if(dataIterator != data->structValue->end())
