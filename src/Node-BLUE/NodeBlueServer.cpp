@@ -1704,8 +1704,20 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 	try
 	{
 		bool sessionValid = false;
-		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+		{
+			auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+			if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+		}
 
 		if(path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{

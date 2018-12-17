@@ -7147,7 +7147,7 @@ BaseLib::PVariable RPCSetUserMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
 {
 	try
 	{
-		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setUserMetadata")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setUserMetadata") || clientInfo->user.empty()) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesWriteSet();
 
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
