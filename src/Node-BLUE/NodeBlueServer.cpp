@@ -2165,15 +2165,12 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 			std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
 			{
-				if(GD::bl->debugLevel >= 4)
+				if(GD::bl->debugLevel >= 5)
 				{
-					if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "nodeEvent")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
-					if(GD::bl->debugLevel >= 5)
+					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 					{
-						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
-						{
-							(*i)->print(true, false);
-						}
+						(*i)->print(true, false);
 					}
 				}
 				BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, queueEntry->parameters->at(3)->arrayValue);
@@ -2195,15 +2192,12 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 4)
+			if(GD::bl->debugLevel >= 5)
 			{
-				if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "setNodeData" && queueEntry->methodName != "getNodeData")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
-				if(GD::bl->debugLevel >= 5)
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 				{
-					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
-					{
-						(*i)->print(true, false);
-					}
+					(*i)->print(true, false);
 				}
 			}
 

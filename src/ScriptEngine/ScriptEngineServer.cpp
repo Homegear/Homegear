@@ -1241,15 +1241,12 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 			auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
 			{
-				if(GD::bl->debugLevel >= 4)
+				if(GD::bl->debugLevel >= 5)
 				{
-					if(GD::bl->debugLevel >= 5 || queueEntry->methodName != "peerExists") _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
-					if(GD::bl->debugLevel >= 5)
+					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 					{
-						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
-						{
-							(*i)->print(true, false);
-						}
+						(*i)->print(true, false);
 					}
 				}
 				BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, scriptInfo, queueEntry->parameters->at(3)->arrayValue);
@@ -1271,17 +1268,15 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 4)
+			if(GD::bl->debugLevel >= 5)
 			{
 				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
-				if(GD::bl->debugLevel >= 5)
+				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 				{
-					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
-					{
-						(*i)->print(true, false);
-					}
+					(*i)->print(true, false);
 				}
 			}
+
 			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(scriptInfo->clientInfo, queueEntry->parameters->at(3)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{
