@@ -607,9 +607,12 @@ void Mqtt::processPublish(std::vector<char>& data)
 				if(payload.front() != '{' && payload.front() != '[')
 				{
 					std::vector<char> fixedPayload;
-					fixedPayload.reserve(payload.size() + 2);
+					bool quote = payload != "true" && payload != "false" && payload != "null" && payload.front() != '"' && !BaseLib::Math::isNumber(payload);
+					fixedPayload.reserve(payload.size() + (quote ? 4 : 2));
 					fixedPayload.push_back('[');
+					if(quote) fixedPayload.push_back('"');
 					fixedPayload.insert(fixedPayload.end(), payload.begin(), payload.end());
+					if(quote) fixedPayload.push_back('"');
 					fixedPayload.push_back(']');
 					value = _jsonDecoder->decode(fixedPayload);
 					if(value) value = value->arrayValue->at(0);
@@ -619,7 +622,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 					value = _jsonDecoder->decode(payload);
 					if(value)
 					{
-						if(value->arrayValue->size() > 0)
+						if(!value->arrayValue->empty())
 						{
 							value = value->arrayValue->at(0);
 						}
