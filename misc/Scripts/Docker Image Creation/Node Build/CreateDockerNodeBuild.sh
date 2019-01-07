@@ -273,11 +273,13 @@ cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
 
 TEMPDIR=$(mktemp -d)
 cd $TEMPDIR
-wget https://homegear.eu/downloads/nightlies/libhomegear-node_current_<DIST>_<DISTVER>_<ARCH>.deb || exit 1
-dpkg -i libhomegear-node_current_<DIST>_<DISTVER>_<ARCH>.deb
+DIST="<DIST>"
+DIST="${DIST,,}"
+wget https://downloads.homegear.eu/nightlies/libhomegear-node_current_${DIST}_<DISTVER>_<ARCH>.deb || exit 1
+dpkg -i libhomegear-node_current_${DIST}_<DISTVER>_<ARCH>.deb
 if [ $? -ne 0 ]; then
 	apt-get -y -f install || exit 1
-	dpkg -i libhomegear-node_current_<DIST>_<DISTVER>_<ARCH>.deb || exit 1
+	dpkg -i libhomegear-node_current_${DIST}_<DISTVER>_<ARCH>.deb || exit 1
 fi
 
 /build/CreateDebianPackage.sh dev $1
