@@ -139,7 +139,10 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
         uiElement->roomId = 0;
         uiElement->categoryIds.clear();
 
-        auto dataIterator = data->structValue->find("inputPeers");
+        auto dataIterator = data->structValue->find("label");
+        if(dataIterator != data->structValue->end()) uiElement->label = dataIterator->second->stringValue;
+
+        dataIterator = data->structValue->find("inputPeers");
         if(dataIterator != data->structValue->end())
         {
             uiElement->peerInfo->inputPeers.reserve(dataIterator->second->arrayValue->size());
@@ -278,26 +281,23 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
             parameters->arrayValue->emplace_back(nameIterator->second);
 
             auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+            if(!result->errorStruct) variableInput->structValue->emplace("value", result);
+
+            methodName = "getVariableDescription";
+            result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
             if(result->errorStruct)
             {
-                GD::out.printWarning("Warning: Could not get value for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
+                GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
                 continue;
             }
 
-            variableInput->structValue->emplace("value", result);
+            auto typeIterator = result->structValue->find("TYPE");
+            if(typeIterator != result->structValue->end()) variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
 
             auto minimumValueIterator = variableInput->structValue->find("minimumValue");
             auto maximumValueIterator = variableInput->structValue->find("maximumValue");
             if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
             {
-                methodName = "getVariableDescription";
-                auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(result->errorStruct)
-                {
-                    GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
-                    continue;
-                }
-
                 if(minimumValueIterator == variableInput->structValue->end())
                 {
                     auto minimumValueIterator2 = result->structValue->find("MIN");
@@ -367,6 +367,7 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
 
             auto elementInfo = languageIterator->second->getElementInfo();
             elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement.second->databaseId));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement.second->label));
             elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement.second->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categories->arrayValue->reserve(uiElement.second->categoryIds.size());
@@ -478,6 +479,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
 
             auto elementInfo = languageIterator->second->getElementInfo();
             elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
             elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categories->arrayValue->reserve(uiElement->categoryIds.size());
@@ -556,6 +558,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
 
             auto elementInfo = languageIterator->second->getElementInfo();
             elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
             elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categories->arrayValue->reserve(uiElement->categoryIds.size());

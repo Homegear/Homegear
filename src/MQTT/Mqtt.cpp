@@ -577,8 +577,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			return;
 		}
 		uint8_t qos = data[0] & 6;
-		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t) data[1 + lengthBytes])
-				<< 8) + (uint8_t) data[1 + lengthBytes + 1];
+		uint32_t topicLength = 1 + lengthBytes + 2 + (((uint16_t) data[1 + lengthBytes]) << 8) + (uint8_t) data[1 + lengthBytes + 1];
 		uint32_t payloadPos = (qos > 0) ? topicLength + 2 : topicLength;
 		if(payloadPos >= data.size())
 		{
@@ -594,12 +593,12 @@ void Mqtt::processPublish(std::vector<char>& data)
 			std::vector<char> puback{MQTT_PACKET_PUBACK, 2, data[topicLength], data[topicLength + 1]};
 			send(puback);
 		}
-		std::string topic(&data[1 + lengthBytes + 2], topicLength - (1 + lengthBytes + 2));
-		std::string payload(&data[payloadPos], data.size() - payloadPos);
+		std::string topic(data.data() + 1 + lengthBytes + 2, topicLength - (1 + lengthBytes + 2));
+		std::string payload(data.data() + payloadPos, data.size() - payloadPos);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(topic, '/');
 		if(parts.size() == _prefixParts + 5 && (parts.at(_prefixParts + 1) == "value" || parts.at(_prefixParts + 1) == "set"))
 		{
-			uint64_t peerId = BaseLib::Math::getNumber(parts.at(_prefixParts + 2));
+			uint64_t peerId = BaseLib::Math::getUnsignedNumber64(parts.at(_prefixParts + 2));
 			int32_t channel = BaseLib::Math::getNumber(parts.at(_prefixParts + 3));
 
 			BaseLib::PVariable value;
@@ -608,19 +607,27 @@ void Mqtt::processPublish(std::vector<char>& data)
 				if(payload.front() != '{' && payload.front() != '[')
 				{
 					std::vector<char> fixedPayload;
-					fixedPayload.reserve(payload.size() + 2);
-					fixedPayload.push_back('[');
-					fixedPayload.insert(fixedPayload.end(), payload.begin(), payload.end());
-					fixedPayload.push_back(']');
-					value = _jsonDecoder->decode(fixedPayload);
-					if(value) value = value->arrayValue->at(0);
+					bool isString = payload != "true" && payload != "false" && payload != "null" && payload.front() != '"' && !BaseLib::Math::isNumber(payload);
+					if(isString)
+					{
+						value = std::make_shared<BaseLib::Variable>(payload);
+					}
+					else
+					{
+						fixedPayload.reserve(payload.size() + 2);
+						fixedPayload.push_back('[');
+						fixedPayload.insert(fixedPayload.end(), payload.begin(), payload.end());
+						fixedPayload.push_back(']');
+						value = _jsonDecoder->decode(fixedPayload);
+						if(value) value = value->arrayValue->at(0);
+					}
 				}
 				else
 				{
 					value = _jsonDecoder->decode(payload);
 					if(value)
 					{
-						if(value->arrayValue->size() > 0)
+						if(!value->arrayValue->empty())
 						{
 							value = value->arrayValue->at(0);
 						}

@@ -680,15 +680,22 @@ RED.comms = (function() {
 
     function homegearEvent(message) {
         if(message.method == "nodeEvent") {
-            if(message.params[2].format && !message.params[2].format.match(/string/g)) message.params[2].msg = JSON.stringify(message.params[2].msg);
-            for (var t in subscriptions) {
-                if (subscriptions.hasOwnProperty(t)) {
-                    var re = new RegExp("^"+t.replace(/([\[\]\?\(\)\\\\$\^\*\.|])/g,"\\$1").replace(/\+/g,"[^/]+").replace(/\/#$/,"(\/.*)?")+"$");
-                    if (re.test(message.params[1])) {
-                        var subscribers = subscriptions[t];
-                        if (subscribers) {
-                            for (var i=0;i<subscribers.length;i++) {
-                                subscribers[i](message.params[1], message.params[2]);
+            if(message.params[0] == "global") {
+                if(message.params[1] == "flowsStarted") {
+                    RED.comms.homegear().invoke('setNodeVariable', null, RED.workspaces.active(), "enableEvents", true);
+                    RED.notify(RED._("notification.info",{message:RED._("notification.infoMessages.flowsStarted")}),"success",false);
+                }
+            } else {
+                if(message.params[2].format && !message.params[2].format.match(/string/g)) message.params[2].msg = JSON.stringify(message.params[2].msg);
+                for (var t in subscriptions) {
+                    if (subscriptions.hasOwnProperty(t)) {
+                        var re = new RegExp("^"+t.replace(/([\[\]\?\(\)\\\\$\^\*\.|])/g,"\\$1").replace(/\+/g,"[^/]+").replace(/\/#$/,"(\/.*)?")+"$");
+                        if (re.test(message.params[1])) {
+                            var subscribers = subscriptions[t];
+                            if (subscribers) {
+                                for (var i=0;i<subscribers.length;i++) {
+                                    subscribers[i](message.params[1], message.params[2]);
+                                }
                             }
                         }
                     }
@@ -711,7 +718,7 @@ RED.comms = (function() {
             server = hostArray[0];
             if(hostArray.length > 1) port = hostArray[1];
         }
-        var sessionId = readCookie('PHPSESSID');
+        var sessionId = readCookie('PHPSESSIDADMIN');
         homegear = new HomegearWS(server, port, 'hgflows', ssl, sessionId);
         homegear.ready(function() {
             if(errornotification) {
@@ -793,7 +800,7 @@ RED.comms = (function() {
             if(dirty) {
                 RED.view.redraw();
                 if(errornotification) errornotification.close();
-                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",true);
+                errornotification = RED.notify(RED._("notification.warning",{message:RED._("notification.warnings.fixed_inputs")}),"warning",false);
             }
         });
     }

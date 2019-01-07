@@ -359,6 +359,10 @@ bool User::oauthCreate(const std::string& userName, const std::string& privateKe
     {
         GD::out.printError("Error creating OAuth key for user: " + std::string(ex.what()));
     }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printError("Error creating OAuth key for user: " + std::string(ex.what()));
+    }
     catch(...)
     {
         GD::out.printError("Unknown error creating OAuth key for user.");
@@ -402,12 +406,16 @@ bool User::oauthVerify(const std::string& key, const std::string& privateKey, co
         uint64_t userId = GD::bl->db->getUserId(userName);
         if(userId == 0) return false;
         int64_t keyIndex = GD::bl->db->getUserKeyIndex1(userId);
-        if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber(keyParts.at(3))) return false;
+        if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber64(keyParts.at(3))) return false;
 
         auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(4));
         return lifeEnds - BaseLib::HelperFunctions::getTimeSeconds() > 0;
     }
     catch(std::exception& ex)
+    {
+        GD::out.printError("Error verifying OAuth key of user: " + std::string(ex.what()));
+    }
+    catch(BaseLib::Exception& ex)
     {
         GD::out.printError("Error verifying OAuth key of user: " + std::string(ex.what()));
     }
@@ -454,7 +462,7 @@ bool User::oauthRefresh(const std::string& refreshKey, const std::string& privat
         uint64_t userId = GD::bl->db->getUserId(userName);
         if(userId == 0) return false;
         int64_t keyIndex = GD::bl->db->getUserKeyIndex2(userId);
-        if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber(keyParts.at(3))) return false;
+        if(keyIndex == 0 || keyIndex != BaseLib::Math::getNumber64(keyParts.at(3))) return false;
 
         auto lifeEnds = BaseLib::Math::getNumber(keyParts.at(4));
         if(lifeEnds - BaseLib::HelperFunctions::getTimeSeconds() < 0) return false;
@@ -467,6 +475,10 @@ bool User::oauthRefresh(const std::string& refreshKey, const std::string& privat
         return true;
     }
     catch(std::exception& ex)
+    {
+        GD::out.printError("Error refreshing OAuth key for user: " + std::string(ex.what()));
+    }
+    catch(BaseLib::Exception& ex)
     {
         GD::out.printError("Error refreshing OAuth key for user: " + std::string(ex.what()));
     }

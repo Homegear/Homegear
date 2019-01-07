@@ -83,6 +83,8 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("enableNodeEvents", std::bind(&NodeBlueClient::enableNodeEvents, this, std::placeholders::_1));
     _localRpcMethods.emplace("disableNodeEvents", std::bind(&NodeBlueClient::disableNodeEvents, this, std::placeholders::_1));
     _localRpcMethods.emplace("broadcastEvent", std::bind(&NodeBlueClient::broadcastEvent, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastFlowVariableEvent", std::bind(&NodeBlueClient::broadcastFlowVariableEvent, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastGlobalVariableEvent", std::bind(&NodeBlueClient::broadcastGlobalVariableEvent, this, std::placeholders::_1));
     _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&NodeBlueClient::broadcastDeleteDevices, this, std::placeholders::_1));
     _localRpcMethods.emplace("broadcastNewDevices", std::bind(&NodeBlueClient::broadcastNewDevices, this, std::placeholders::_1));
     _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&NodeBlueClient::broadcastUpdateDevice, this, std::placeholders::_1));
@@ -156,6 +158,17 @@ void NodeBlueClient::dispose()
                                 }
                             }
                         }
+                    }
+                    {
+                        std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
+                        for(auto& flowId : _flowSubscriptions)
+                        {
+                            flowId.second.erase(node.first);
+                        }
+                    }
+                    {
+                        std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
+                        _globalSubscriptions.erase(node.first);
                     }
                     _nodeManager->unloadNode(node.second->id);
                 }
@@ -267,6 +280,16 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
         {
             std::lock_guard<std::mutex> peerSubscriptionsGuard(_peerSubscriptionsMutex);
             _peerSubscriptions.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
+            _flowSubscriptions.clear();
+        }
+
+        {
+            std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
+            _globalSubscriptions.clear();
         }
 
         {
@@ -951,6 +974,90 @@ void NodeBlueClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_
     }
 }
 
+void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
+        _flowSubscriptions[flowId].insert(nodeId);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
+        _flowSubscriptions[flowId].erase(nodeId);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void NodeBlueClient::subscribeGlobal(std::string nodeId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
+        _globalSubscriptions.insert(nodeId);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void NodeBlueClient::unsubscribeGlobal(std::string nodeId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
+        _globalSubscriptions.erase(nodeId);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void NodeBlueClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
 {
     try
@@ -1203,7 +1310,122 @@ void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVa
         parameters->push_back(std::make_shared<Flows::Variable>(key));
         parameters->push_back(value);
 
-        invoke("setNodeData", parameters, false);
+        invoke("setNodeData", parameters, true);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+Flows::PVariable NodeBlueClient::getFlowData(std::string flowId, std::string key)
+{
+    try
+    {
+        Flows::PArray parameters = std::make_shared<Flows::Array>();
+        parameters->reserve(2);
+        parameters->push_back(std::make_shared<Flows::Variable>(flowId));
+        parameters->push_back(std::make_shared<Flows::Variable>(key));
+
+        Flows::PVariable result = invoke("getFlowData", parameters, true);
+        if(result->errorStruct)
+        {
+            GD::out.printError("Error calling getFlowData: " + result->structValue->at("faultString")->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::make_shared<Flows::Variable>();
+}
+
+void NodeBlueClient::setFlowData(std::string flowId, std::string key, Flows::PVariable value)
+{
+    try
+    {
+        Flows::PArray parameters = std::make_shared<Flows::Array>();
+        parameters->reserve(3);
+        parameters->push_back(std::make_shared<Flows::Variable>(flowId));
+        parameters->push_back(std::make_shared<Flows::Variable>(key));
+        parameters->push_back(value);
+
+        invoke("setFlowData", parameters, true);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+Flows::PVariable NodeBlueClient::getGlobalData(std::string key)
+{
+    try
+    {
+        Flows::PArray parameters = std::make_shared<Flows::Array>();
+        parameters->push_back(std::make_shared<Flows::Variable>(key));
+
+        Flows::PVariable result = invoke("getGlobalData", parameters, true);
+        if(result->errorStruct)
+        {
+            GD::out.printError("Error calling getGlobalData: " + result->structValue->at("faultString")->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::make_shared<Flows::Variable>();
+}
+
+void NodeBlueClient::setGlobalData(std::string key, Flows::PVariable value)
+{
+    try
+    {
+        Flows::PArray parameters = std::make_shared<Flows::Array>();
+        parameters->reserve(2);
+        parameters->push_back(std::make_shared<Flows::Variable>(key));
+        parameters->push_back(value);
+
+        invoke("setGlobalData", parameters, true);
     }
     catch(const std::exception& ex)
     {
@@ -1447,8 +1669,15 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
         flow->id = parameters->at(0)->integerValue;
         flow->flow = parameters->at(1)->arrayValue->at(0);
         std::string flowId;
-        auto flowIdIterator = flow->flow->structValue->find("id");
-        if(flowIdIterator != flow->flow->structValue->end()) flowId = flowIdIterator->second->stringValue;
+        for(auto& element : *parameters->at(1)->arrayValue)
+        {
+            auto flowIdIterator = element->structValue->find("flow");
+            if(flowIdIterator != element->structValue->end())
+            {
+                flowId = flowIdIterator->second->stringValue;
+                break;
+            }
+        }
 
         _out.printInfo("Info: Starting flow with ID " + std::to_string(flow->id) + " (" + flowId + ")...");
 
@@ -1565,10 +1794,18 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
                 nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray, bool)>(std::bind(&NodeBlueClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
                 nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
                 nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setSubscribeFlow(std::function<void(std::string, std::string)>(std::bind(&NodeBlueClient::subscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setUnsubscribeFlow(std::function<void(std::string, std::string)>(std::bind(&NodeBlueClient::unsubscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSubscribeGlobal(std::function<void(std::string)>(std::bind(&NodeBlueClient::subscribeGlobal, this, std::placeholders::_1)));
+                nodeObject->setUnsubscribeGlobal(std::function<void(std::string)>(std::bind(&NodeBlueClient::unsubscribeGlobal, this, std::placeholders::_1)));
                 nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
                 nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
                 nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
                 nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetFlowData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getFlowData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetFlowData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setFlowData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetGlobalData(std::function<Flows::PVariable(std::string)>(std::bind(&NodeBlueClient::getGlobalData, this, std::placeholders::_1)));
+                nodeObject->setSetGlobalData(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setGlobalData, this, std::placeholders::_1, std::placeholders::_2)));
                 nodeObject->setSetInternalMessage(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
                 nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
@@ -1784,6 +2021,17 @@ Flows::PVariable NodeBlueClient::stopFlow(Flows::PArray& parameters)
                     }
                 }
             }
+            {
+                std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
+                for(auto& flowId : _flowSubscriptions)
+                {
+                    flowId.second.erase(node.first);
+                }
+            }
+            {
+                std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
+                _globalSubscriptions.erase(node.first);
+            }
             _nodeManager->unloadNode(node.second->id);
         }
         _flows.erase(flowsIterator);
@@ -1924,6 +2172,40 @@ Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray& paramet
             if(innerParameters->at(3)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 4 is not of type string.");
 
             unsubscribePeer(innerParameters->at(0)->stringValue, static_cast<uint64_t>(innerParameters->at(1)->integerValue64), innerParameters->at(2)->integerValue, innerParameters->at(3)->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+        else if(methodName == "subscribeFlow")
+        {
+            if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+            if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+            if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+            subscribeFlow(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+        else if(methodName == "unsubscribeFlow")
+        {
+            if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+            if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+            if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+
+            unsubscribeFlow(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+        else if(methodName == "subscribeGlobal")
+        {
+            if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+            if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+
+            subscribeGlobal(innerParameters->at(0)->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+        else if(methodName == "unsubscribeGlobal")
+        {
+            if(innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
+            if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+
+            unsubscribeGlobal(innerParameters->at(0)->stringValue);
             return std::make_shared<Flows::Variable>();
         }
         else if(methodName == "output")
@@ -2359,6 +2641,72 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
                 Flows::PINode node = _nodeManager->getNode(nodeId);
                 if(node) node->variableEvent(source, peerId, channel, variableName, value);
             }
+        }
+
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::broadcastFlowVariableEvent(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        std::lock_guard<std::mutex> eventsGuard(_flowSubscriptionsMutex);
+        std::string& flowId = parameters->at(0)->stringValue;
+
+        auto flowIterator = _flowSubscriptions.find(flowId);
+        if(flowIterator == _flowSubscriptions.end()) return std::make_shared<Flows::Variable>();
+
+        for(auto nodeId : flowIterator->second)
+        {
+            Flows::PINode node = _nodeManager->getNode(nodeId);
+            if(node) node->flowVariableEvent(flowId, parameters->at(1)->stringValue, parameters->at(2));
+        }
+
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::broadcastGlobalVariableEvent(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        std::lock_guard<std::mutex> eventsGuard(_globalSubscriptionsMutex);
+
+        for(auto nodeId : _globalSubscriptions)
+        {
+            Flows::PINode node = _nodeManager->getNode(nodeId);
+            if(node) node->globalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
         }
 
         return std::make_shared<Flows::Variable>();

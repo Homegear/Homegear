@@ -162,6 +162,13 @@ private:
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
 
+	std::mutex _flowSubscriptionsMutex;
+	std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
+
+	std::mutex _globalSubscriptionsMutex;
+	std::set<std::string> _globalSubscriptions;
+
+
 	std::mutex _internalMessagesMutex;
 	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
@@ -193,6 +200,14 @@ private:
 
 	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
 
+	void subscribeFlow(std::string nodeId, std::string flowId);
+
+	void unsubscribeFlow(std::string nodeId, std::string flowId);
+
+	void subscribeGlobal(std::string nodeId);
+
+	void unsubscribeGlobal(std::string nodeId);
+
 	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
 	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
@@ -200,6 +215,14 @@ private:
 	Flows::PVariable getNodeData(std::string nodeId, std::string key);
 
 	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
+
+    Flows::PVariable getFlowData(std::string flowId, std::string key);
+
+    void setFlowData(std::string flowId, std::string key, Flows::PVariable value);
+
+    Flows::PVariable getGlobalData(std::string key);
+
+    void setGlobalData(std::string key, Flows::PVariable value);
 
 	void setInternalMessage(std::string nodeId, Flows::PVariable message);
 
@@ -284,6 +307,10 @@ private:
 	Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
 
 	Flows::PVariable broadcastEvent(Flows::PArray& parameters);
+
+	Flows::PVariable broadcastFlowVariableEvent(Flows::PArray& parameters);
+
+	Flows::PVariable broadcastGlobalVariableEvent(Flows::PArray& parameters);
 
 	Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);
 

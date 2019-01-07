@@ -20,7 +20,7 @@ override_dh_auto_install:
 	cp -r /usr/include/php7-homegear/php/*/* $(CURDIR)/debian/php7-homegear-dev/usr/include/php7-homegear
 	mkdir -p $(CURDIR)/debian/php7-homegear-dev/usr/lib
 	cp /usr/share/homegear/php/lib/libphp7.a $(CURDIR)/debian/php7-homegear-dev/usr/lib/libphp7-homegear.a
-	mkdir -p $(CURDIR)/debian/php7-homegear-dev/usr/share/homegear/php/$(PHP_ZEND_VERSION)
-	cp /usr/share/homegear/php/$(PHP_ZEND_VERSION)/opcache.* $(CURDIR)/debian/php7-homegear-dev/usr/share/homegear/php/$(PHP_ZEND_VERSION)/
+	mkdir -p $(CURDIR)/debian/php7-homegear-dev/usr/share/homegear/php-dev/$(PHP_ZEND_VERSION)
+	cp /usr/share/homegear/php/$(PHP_ZEND_VERSION)/opcache.* $(CURDIR)/debian/php7-homegear-dev/usr/share/homegear/php-dev/$(PHP_ZEND_VERSION)/
 %:
 	dh $@

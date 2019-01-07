@@ -327,11 +327,11 @@ BaseLib::PVariable RPCAcknowledgeGlobalServiceMessage::invoke(BaseLib::PRpcClien
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess("acknowledgeGlobalServiceMessage")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString})
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		GD::bl->globalServiceMessages.unset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+		GD::bl->globalServiceMessages.unset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->stringValue);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -3413,6 +3413,39 @@ BaseLib::PVariable RPCGetPairingInfo::invoke(BaseLib::PRpcClientInfo clientInfo,
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCGetPairingState::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("getPairingState")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+        }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::shared_ptr<BaseLib::Systems::DeviceFamily> family = GD::familyController->getFamily(parameters->at(0)->integerValue);
+        if(!family) return BaseLib::Variable::createError(-2, "Device family not found.");
+        auto central = family->getCentral();
+        if(!central) return BaseLib::Variable::createError(-32501, "Family has no central.");
+
+		return central->getPairingState(clientInfo);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
 	try
@@ -4265,6 +4298,32 @@ BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo
 		}
 
 		return updateInfo;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetUserMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("getUserMetadata") || clientInfo->user.empty()) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>());
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return User::getMetadata(clientInfo->user);
 	}
 	catch(const std::exception& ex)
 	{
@@ -6305,11 +6364,17 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
 	{
 		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setGlobalServiceMessage")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger})
+																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger})
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		GD::bl->globalServiceMessages.set(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->stringValue, parameters->at(4), parameters->at(5)->integerValue64);
+        std::list<std::string> variables;
+        for(auto& element : *parameters->at(5)->arrayValue)
+        {
+            variables.emplace_back(element->stringValue);
+        }
+
+		GD::bl->globalServiceMessages.set(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->stringValue, variables, parameters->at(6), parameters->at(7)->integerValue64);
 
 		return std::make_shared<BaseLib::Variable>();
 	}
@@ -6804,6 +6869,8 @@ BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		GD::nodeBlueServer->broadcastFlowVariableEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+
 		return GD::bl->db->setNodeData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
@@ -6831,6 +6898,8 @@ BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
 																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tVariant})
 																												 }));
 		if(error != ParameterError::Enum::noError) return getError(error);
+
+		GD::nodeBlueServer->broadcastGlobalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
 
 		std::string nodeId = "global";
 		return GD::bl->db->setNodeData(nodeId, parameters->at(0)->stringValue, parameters->at(1));
@@ -7058,6 +7127,34 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
 		}
 
 		return BaseLib::Variable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCSetUserMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+	try
+	{
+		if(!clientInfo || !clientInfo->acls->checkMethodAccess("setUserMetadata") || clientInfo->user.empty()) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+																														 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tStruct})
+																												 }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return std::make_shared<BaseLib::Variable>(User::setMetadata(clientInfo->user, parameters->at(0)));
 	}
 	catch(const std::exception& ex)
 	{

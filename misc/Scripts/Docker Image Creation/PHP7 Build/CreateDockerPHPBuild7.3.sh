@@ -176,7 +176,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == 
 fi
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.2"
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.3"
 cd $rootfs/PHPBuild
 tar -xf php7*debian.tar.xz
 cd ..
@@ -240,7 +240,7 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php7.2
+apt-get source php7.3
 rm php7*.tar.xz
 rm php7*.dsc
 cd php7*

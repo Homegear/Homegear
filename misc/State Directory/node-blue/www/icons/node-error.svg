@@ -14,8 +14,11 @@
    viewBox="0 0 10 10"
    id="svg2"
    version="1.1"
-   inkscape:version="0.91 r13725"
-   sodipodi:docname="node-error.svg">
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   sodipodi:docname="node-error.svg"
+   inkscape:export-filename="/home/sathya/Projekte/Homegear/homegear-node-blue/editor/icons/node-error.png"
+   inkscape:export-xdpi="192"
+   inkscape:export-ydpi="192">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -26,15 +29,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="63.356767"
-     inkscape:cx="2.3447612"
+     inkscape:cx="-4.6947394"
      inkscape:cy="3.9328658"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
      inkscape:window-width="3840"
-     inkscape:window-height="2053"
-     inkscape:window-x="0"
+     inkscape:window-height="2105"
+     inkscape:window-x="3840"
      inkscape:window-y="0"
      inkscape:window-maximized="1" />
   <metadata
@@ -45,7 +48,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
