@@ -385,8 +385,8 @@ echo "#!/bin/bash
 
 set -x
 
-cd /build/homegear-nodes-optional-dev/output
-if [ \$(ls | grep -c \"\\.deb\$\") -ne 0 ]; then
+cd /build/homegear-nodes-optional/output
+if [ \$(ls | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
 	tar -zcpf \${path} *
