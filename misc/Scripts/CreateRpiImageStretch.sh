@@ -109,9 +109,6 @@ proc            /proc                       proc            defaults            
 /dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
 /dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
 tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
-tmpfs           /var/log                    tmpfs           defaults,nosuid,mode=1777,size=25%                                  0       0
-tmpfs           /var/tmp                    tmpfs           defaults,nosuid,mode=1777,size=10%                                  0       0
-tmpfs           /var/lib/homegear/db        tmpfs           defaults,nosuid,mode=1770,uid=homegear,gid=homegear,size=20M        0       0
 #tmpfs           /var/<your directory>       tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
 EOF
 
@@ -143,24 +140,24 @@ cat > "$rootfs/third-stage" <<'EOF'
 set -x
 debconf-set-selections /debconf.set
 rm -f /debconf.set
-apt update
+apt-get update
 ls -l /etc/apt/sources.list.d
 cat /etc/apt/sources.list
-apt -y install apt-transport-https ca-certificates
+apt-get -y install apt-transport-https ca-certificates
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
 echo "deb http://archive.raspberrypi.org/debian/ stretch main ui" > /etc/apt/sources.list.d/raspi.list
-echo "deb https://homegear.eu/packages/Raspbian/ stretch/" >> /etc/apt/sources.list.d/homegear.list
-wget http://homegear.eu/packages/Release.key
+echo "deb https://apt.homegear.eu/Raspbian/ stretch/" >> /etc/apt/sources.list.d/homegear.list
+wget https://apt.homegear.eu/Release.key
 apt-key add - < Release.key
 rm Release.key
 wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 apt-key add - < raspberrypi.gpg.key
 rm raspberrypi.gpg.key
-apt update
-apt -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntp resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt-get update
+apt-get -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntp ntpdate resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
-apt -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
+apt-get -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -192,6 +189,25 @@ rm -f $rootfs/third-stage
 mkdir -p $rootfs/lib/systemd/scripts
 cat > "$rootfs/lib/systemd/scripts/setup-tmpfs.sh" <<'EOF'
 #!/bin/bash
+
+modprobe zram num_devices=3
+
+echo 268435456 > /sys/block/zram0/disksize
+echo 20971520 > /sys/block/zram1/disksize
+echo 134217728 > /sys/block/zram2/disksize
+
+mkfs.ext4 /dev/zram0
+mkfs.ext4 /dev/zram1
+mkfs.ext4 /dev/zram2
+
+mount /dev/zram0 /var/log
+mount /dev/zram1 /var/lib/homegear/db
+mount /dev/zram2 /var/tmp
+
+chmod 777 /var/log
+chmod 770 /var/lib/homegear/db
+chown homegear:homegear /var/lib/homegear/db
+chmod 777 /var/tmp
 
 mkdir /var/tmp/lock
 chmod 777 /var/tmp/lock
@@ -225,7 +241,7 @@ EOF
 [Unit]
 Description=setup-tmpfs
 DefaultDependencies=no
-After=var-log.mount var-tmp.mount var-lib-homegear-db.mount
+After=-.mount run.mount
 Before=systemd-random-seed.service
 
 [Service]
@@ -347,6 +363,8 @@ cat > "$rootfs/setupPartitions.sh" <<-'EOF'
 
 stage_one()
 {
+	export LC_ALL=C
+	export LANG=C
     bytes=$(fdisk -l | grep mmcblk0 | head -1 | cut -d "," -f 2 | cut -d " " -f 2)
     gigabytes=$(($bytes / 1073741824))
     maxrootpartitionsize=$(($gigabytes - 1))
@@ -386,7 +404,7 @@ EOC
 
     rm -f /partstageone
     touch /partstagetwo
-
+    sync
     dialog --no-cancel --stdout --title "Partition setup" --no-tags --pause "Rebooting in 10 seconds..." 10 50 10
     reboot
 }
@@ -430,6 +448,12 @@ echo "************************************************************"
 
 sleep 2
 
+ping -c 4 apt.homegear.eu 1>/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+    dialog --no-cancel --stdout --title "No internet" --no-tags --pause "Your device doesn't seem to have a working internet connection. Rebooting in 10 seconds..." 10 50 10
+    poweroff
+fi
+
 mount -o remount,rw /
 mount -o remount,rw /boot
 
@@ -449,6 +473,10 @@ if [ -f /partstageone ] || [ -f /partstagetwo ]; then
     exit 0
 fi
 rm -f /setupPartitions.sh
+
+service ntp stop
+ntpdate pool.ntp.org | dialog --title "Date" --progressbox "Waiting for NTP to set date." 10 50
+service ntp start
 
 password1=""
 password2=""
@@ -489,7 +517,7 @@ apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Up
 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
-apt-get -y install homegear homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
+apt-get -y install homegear homegear-management homegear-webssh homegear-adminui homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno homegear-ccu2 homegear-zwave | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
@@ -501,6 +529,7 @@ chown homegear:homegear /data/homegear-data
 sed -i 's/debugLevel = 4/debugLevel = 3/g' /etc/homegear/main.conf
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
+sed -i 's/# writeableDataPath =/writeableDataPath =/g' /etc/homegear/main.conf
 sed -i 's/# databaseBackupPath =/databaseBackupPath = \/data\/homegear-data/g' /etc/homegear/main.conf
 sed -i 's/familyDataPath = \/var\/lib\/homegear\/families/familyDataPath = \/data\/homegear-data\/families/g' /etc/homegear/main.conf
 sed -i 's/nodeBlueDataPath = \/var\/lib\/homegear\/node-blue\/data/nodeBlueDataPath = \/data\/homegear-data\/node-blue/g' /etc/homegear/main.conf
@@ -522,6 +551,9 @@ echo "sync" >> /etc/homegear/homegear-stop.sh
 echo "3 *  * * *   root    /bin/systemctl reload homegear 2>&1 |/usr/bin/logger -t homegear-reload" > /etc/cron.d/homegear
 
 chown -R homegear:homegear /var/lib/homegear/www
+
+# Create database and defaultPassword.txt while file system is writeable
+systemctl restart homegear
 
 echo ""
 echo "Starting raspi-config..."

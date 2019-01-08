@@ -44,6 +44,7 @@ public:
     {
         uint64_t databaseId = 0;
         std::string elementId;
+        std::string label;
         BaseLib::PVariable data;
         uint64_t roomId = 0;
         std::unordered_set<uint64_t> categoryIds;

@@ -387,7 +387,7 @@ void UPnP::registerServers()
 
 			std::string description = "<?xml version=\"1.0\"?><root xmlns=\"urn:schemas-upnp-org:device-1-0\"><specVersion><major>1</major><minor>0</minor></specVersion>";
 			description.append(std::string("<URLBase>") + "http://" + _address + ":" + std::to_string(settings->port) + "</URLBase>");
-			description.append("<device><deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType><friendlyName>Homegear</friendlyName><manufacturer>Homegear UG (haftungsbeschränkt)</manufacturer><manufacturerURL>http://homegear.eu</manufacturerURL>");
+			description.append("<device><deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType><friendlyName>Homegear</friendlyName><manufacturer>Homegear GmbH</manufacturer><manufacturerURL>http://homegear.eu</manufacturerURL>");
 			description.append("<modelDescription>Homegear</modelDescription><modelName>Homegear</modelName><modelNumber>Homegear " + std::string(VERSION) + "</modelNumber><serialNumber>" + _udn + "</serialNumber><modelURL>http://homegear.eu</modelURL>");
 			description.append("<UDN>uuid:" + _udn + "</UDN><presentationURL>" + "http://" + _address + ":" + std::to_string(settings->port) + "</presentationURL></device></root>");
 			packet->description = std::vector<char>(&description.at(0), &description.at(0) + description.size());

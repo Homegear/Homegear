@@ -334,7 +334,7 @@ public:
 
 	virtual void deleteServiceMessage(uint64_t databaseId);
 
-	virtual void deleteGlobalServiceMessage(int32_t familyId, int32_t messageId, std::string& message);
+	virtual void deleteGlobalServiceMessage(int32_t familyId, int32_t messageId, std::string& messageSubId, std::string& message);
 	// }}}
 
 	// {{{ License modules

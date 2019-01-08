@@ -133,7 +133,7 @@ class RPCAcknowledgeGlobalServiceMessage : public BaseLib::Rpc::RpcMethod
 public:
 	RPCAcknowledgeGlobalServiceMessage()
 	{
-		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 	}
 
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -905,7 +905,18 @@ class RPCGetPairingInfo : public BaseLib::Rpc::RpcMethod
 public:
 	RPCGetPairingInfo()
 	{
-		addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+	}
+
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCGetPairingState : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCGetPairingState()
+	{
+		addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
 	}
 
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -1092,6 +1103,17 @@ class RPCGetUpdateStatus : public BaseLib::Rpc::RpcMethod
 {
 public:
 	RPCGetUpdateStatus()
+	{
+		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
+	}
+
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCGetUserMetadata : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCGetUserMetadata()
 	{
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
 	}
@@ -1563,7 +1585,7 @@ class RPCSetGlobalServiceMessage : public BaseLib::Rpc::RpcMethod
 public:
 	RPCSetGlobalServiceMessage()
 	{
-		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
+		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
 	}
 
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -1750,6 +1772,17 @@ public:
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
 		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+	}
+
+	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCSetUserMetadata : public BaseLib::Rpc::RpcMethod
+{
+public:
+	RPCSetUserMetadata()
+	{
+		addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
 	}
 
 	BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);

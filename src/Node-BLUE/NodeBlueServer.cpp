@@ -108,6 +108,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
 	_rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeVariable()));
 	_rpcMethods.emplace("getPairingInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingInfo()));
+	_rpcMethods.emplace("getPairingState", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingState()));
 	_rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
 	_rpcMethods.emplace("getParamsetDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetDescription()));
 	_rpcMethods.emplace("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId()));
@@ -223,6 +224,11 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
 		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
 		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+	}
+
+	{ // Users
+		_rpcMethods.emplace("getUserMetadata", std::make_shared<Rpc::RPCGetUserMetadata>());
+		_rpcMethods.emplace("setUserMetadata", std::make_shared<Rpc::RPCSetUserMetadata>());
 	}
 
 #ifndef NO_SCRIPTENGINE
@@ -1270,6 +1276,11 @@ void NodeBlueServer::startFlows()
 		{
 			if(allNodeIds.find(nodeId) == allNodeIds.end() && nodeIds.find(nodeId) == nodeIds.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
 		}
+
+		std::string nodeId = "global";
+		std::string topic = "flowsStarted";
+		BaseLib::PVariable value = std::make_shared<BaseLib::Variable>(true);
+		GD::rpcClient->broadcastNodeEvent(nodeId, topic, value);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1505,11 +1516,26 @@ void NodeBlueServer::restartFlows()
 
 std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
+#ifdef NO_SCRIPTENGINE
+	return "unauthorized";
+#else
 	try
 	{
 		bool sessionValid = false;
-		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+		{
+			auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+			if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+		}
 
 		std::string contentString;
 		if(path == "node-blue/locales/nodes")
@@ -1667,15 +1693,31 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
+#endif
 }
 
 std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
 {
+#ifdef NO_SCRIPTENGINE
+	return "unauthorized";
+#else
 	try
 	{
 		bool sessionValid = false;
-		auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-		if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+		{
+			auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+			if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+			if(!sessionValid)
+			{
+				sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
+				if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+			}
+		}
 
 		if(path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
@@ -1723,6 +1765,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
+#endif
 }
 
 uint32_t NodeBlueServer::flowCount()
@@ -1836,6 +1879,91 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 			parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
 			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
 			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void NodeBlueServer::broadcastFlowVariableEvent(std::string& flowId, std::string& variable, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(_shuttingDown || _flowsRestarting) return;
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+		std::vector<PNodeBlueClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			clients.reserve(_clients.size());
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(3);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(flowId));
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+			parameters->emplace_back(value);
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastFlowVariableEvent", parameters);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastFlowVariableEvent\". Queue is full.");
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void NodeBlueServer::broadcastGlobalVariableEvent(std::string& variable, BaseLib::PVariable& value)
+{
+	try
+	{
+		if(_shuttingDown || _flowsRestarting) return;
+		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+
+		std::vector<PNodeBlueClientData> clients;
+		{
+			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+			clients.reserve(_clients.size());
+			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			{
+				if(i->second->closed) continue;
+				clients.push_back(i->second);
+			}
+		}
+
+		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		{
+			auto parameters = std::make_shared<BaseLib::Array>();
+			parameters->reserve(2);
+			parameters->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+			parameters->emplace_back(value);
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastGlobalVariableEvent", parameters);
+			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastGlobalVariableEvent\". Queue is full.");
 		}
 	}
 	catch(const std::exception& ex)
@@ -2037,15 +2165,12 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 			std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
 			if(localMethodIterator != _localRpcMethods.end())
 			{
-				if(GD::bl->debugLevel >= 4)
+				if(GD::bl->debugLevel >= 5)
 				{
-					if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "nodeEvent")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
-					if(GD::bl->debugLevel >= 5)
+					_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+					for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 					{
-						for(BaseLib::Array::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
-						{
-							(*i)->print(true, false);
-						}
+						(*i)->print(true, false);
 					}
 				}
 				BaseLib::PVariable result = localMethodIterator->second(queueEntry->clientData, queueEntry->parameters->at(3)->arrayValue);
@@ -2067,17 +2192,15 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 				return;
 			}
 
-			if(GD::bl->debugLevel >= 4)
+			if(GD::bl->debugLevel >= 5)
 			{
-				if(GD::bl->debugLevel >= 5 || (queueEntry->methodName != "setNodeData" && queueEntry->methodName != "getNodeData")) _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
-				if(GD::bl->debugLevel >= 5)
+				_out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
+				for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
 				{
-					for(std::vector<BaseLib::PVariable>::iterator i = queueEntry->parameters->at(3)->arrayValue->begin(); i != queueEntry->parameters->at(3)->arrayValue->end(); ++i)
-					{
-						(*i)->print(true, false);
-					}
+					(*i)->print(true, false);
 				}
 			}
+
 			BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
 			if(GD::bl->debugLevel >= 5)
 			{

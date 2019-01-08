@@ -3,7 +3,7 @@ class User
 {
     public function __construct()
     {
-        session_start();
+        session_start(array('name' => 'PHPSESSIDADMIN'));
     }
 
     public function checkAuth($redirectToLogin)
