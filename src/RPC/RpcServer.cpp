@@ -430,7 +430,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
                 std::vector<uint8_t> binaryData;
                 try
                 {
-                    binaryData = GD::bl->io.getUBinaryFileContent(_info->dhParamPath.c_str());
+                    binaryData = GD::bl->io.getUBinaryFileContent(_info->dhParamPath);
                     binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
                 }
                 catch(BaseLib::Exception& ex)
