@@ -978,6 +978,7 @@ void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
 {
     try
     {
+        if(_bl->settings.devLog()) GD::out.printInfo("Devlog: Subscribing flow with ID " + flowId + " for node " + nodeId);
         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
         _flowSubscriptions[flowId].insert(nodeId);
     }
@@ -999,6 +1000,7 @@ void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
 {
     try
     {
+        if(_bl->settings.devLog()) GD::out.printInfo("Devlog: Unsubscribing flow with ID " + flowId + " for node " + nodeId);
         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
         _flowSubscriptions[flowId].erase(nodeId);
     }
