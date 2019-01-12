@@ -58,9 +58,9 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 			return;
 		}
 		_familyId = getFamilyId();
-		if(_familyId < 0)
+		if(_familyId < 0 || _familyId > 1023)
 		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Got invalid family id.");
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Got invalid family id. Only family IDs between 0 and 1023 are valid.");
 			dlclose(moduleHandle);
 			return;
 		}
@@ -171,7 +171,7 @@ std::string ModuleLoader::getVersion()
 	return _version;
 }
 
-std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseLib::Systems::IFamilyEventSink* eventHandler)
 {
 	if(!_factory) return std::unique_ptr<BaseLib::Systems::DeviceFamily>();
 	return std::unique_ptr<BaseLib::Systems::DeviceFamily>(_factory->createDeviceFamily(GD::bl.get(), eventHandler));
@@ -575,6 +575,21 @@ int32_t FamilyController::loadModule(std::string filename)
 
 		if(family)
 		{
+			{
+				std::unique_lock<std::mutex> familiesGuard(_familiesMutex);
+				if(_families.find(family->getFamily()) != _families.end())
+				{
+					GD::out.printError("Error: Could not load family " + family->getName() + ", because a family with ID " + std::to_string(family->getFamily()) + " is already loaded.");
+					familiesGuard.unlock();
+					family->dispose();
+					family.reset();
+					_moduleLoaders.at(filename)->dispose();
+					_moduleLoaders.erase(filename);
+					_moduleLoadersMutex.unlock();
+					return -3;
+				}
+			}
+
 			_moduleFilenames[family->getFamily()] = filename;
 			std::string name = family->getName();
 			BaseLib::HelperFunctions::toLower(name);
@@ -608,7 +623,7 @@ int32_t FamilyController::loadModule(std::string filename)
 			_moduleLoaders.at(filename)->dispose();
 			_moduleLoaders.erase(filename);
 			_moduleLoadersMutex.unlock();
-			return -3;
+			return -5;
 		}
 		_rpcCache.reset();
 		_moduleLoadersMutex.unlock();
@@ -821,24 +836,27 @@ void FamilyController::load()
 		std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
 		for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
 		{
-			if(!i->second->enabled() || !i->second->init())
+			if(i->second->type() == BaseLib::Systems::FamilyType::sharedObject)
 			{
-				if(!i->second->enabled()) GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because it is disabled in it's configuration file.");
-				else GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
-				i->second->dispose();
-				i->second.reset();
-				_families[i->first].reset();
-				_moduleLoadersMutex.lock();
-				std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator moduleIterator = _moduleLoaders.find(_moduleFilenames[i->first]);
-				if(moduleIterator != _moduleLoaders.end())
+				if(!i->second->enabled() || !i->second->init())
 				{
-					moduleIterator->second->dispose();
-					_moduleLoaders.erase(moduleIterator);
+					if(!i->second->enabled()) GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", because it is disabled in it's configuration file.");
+					else GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
+					i->second->dispose();
+					i->second.reset();
+					_families[i->first].reset();
+					_moduleLoadersMutex.lock();
+					std::map<std::string, std::unique_ptr<ModuleLoader>>::iterator moduleIterator = _moduleLoaders.find(_moduleFilenames[i->first]);
+					if(moduleIterator != _moduleLoaders.end())
+					{
+						moduleIterator->second->dispose();
+						_moduleLoaders.erase(moduleIterator);
+					}
+					_moduleLoadersMutex.unlock();
+					continue;
 				}
-				_moduleLoadersMutex.unlock();
-				continue;
+				i->second->load();
 			}
-			i->second->load();
 		}
 	}
 	catch(const std::exception& ex)

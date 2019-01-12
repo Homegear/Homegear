@@ -59,7 +59,7 @@ public:
 
 	std::string getVersion();
 
-	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::IFamilyEventSink* eventHandler);
 
 private:
 	bool _disposing = false;
@@ -75,7 +75,7 @@ private:
 	ModuleLoader& operator=(const ModuleLoader&);
 };
 
-class FamilyController : public BaseLib::Systems::DeviceFamily::IFamilyEventSink
+class FamilyController : public BaseLib::Systems::IFamilyEventSink
 {
 public:
 	struct ModuleInfo
@@ -134,7 +134,7 @@ public:
 	/**
 	 * Loads a family module. The module needs to be in Homegear's module path.
 	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
-	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, 1: Module already loaded, -1: System error, -2: Module does not exists, -4: Family initialization failed
+	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, 1: Module already loaded, -1: System error, -2: Module does not exists, -3: Family with same ID already exists, -4: Family initialization failed
 	 */
 	int32_t loadModule(std::string filename);
 

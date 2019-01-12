@@ -42,7 +42,7 @@ class MiscCentral;
 class Miscellaneous : public BaseLib::Systems::DeviceFamily
 {
 public:
-	Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+	Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler);
 	virtual ~Miscellaneous();
 	virtual void dispose();
 
