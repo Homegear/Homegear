@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,90 +31,14 @@
 #ifndef FAMILYCONTROLLER_H_
 #define FAMILYCONTROLLER_H_
 
-#include <homegear-base/BaseLib.h>
-
-#include <string>
-#include <iostream>
-#include <vector>
-#include <memory>
-#include <mutex>
-
-#include <dlfcn.h>
+#include "SharedObjectFamilyModules.h"
 
 namespace Homegear
 {
 
-class ModuleLoader
+class FamilyController
 {
 public:
-	ModuleLoader(std::string name, std::string path);
-
-	virtual ~ModuleLoader();
-
-	void dispose();
-
-	int32_t getFamilyId();
-
-	std::string getFamilyName();
-
-	std::string getVersion();
-
-	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::IFamilyEventSink* eventHandler);
-
-private:
-	bool _disposing = false;
-	std::string _name;
-	int32_t _familyId = -1;
-	std::string _familyName;
-	std::string _version;
-	void* _handle = nullptr;
-	std::unique_ptr<BaseLib::Systems::SystemFactory> _factory;
-
-	ModuleLoader(const ModuleLoader&);
-
-	ModuleLoader& operator=(const ModuleLoader&);
-};
-
-class FamilyController : public BaseLib::Systems::IFamilyEventSink
-{
-public:
-	struct ModuleInfo
-	{
-		std::string filename;
-		std::string baselibVersion;
-		int32_t familyId;
-		std::string familyName;
-		bool loaded;
-	};
-
-	// {{{ Family event handling
-	//Hooks
-	virtual void onAddWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler, std::map<int32_t, BaseLib::PEventHandler>& eventHandlers);
-
-	virtual void onRemoveWebserverEventHandler(std::map<int32_t, BaseLib::PEventHandler>& eventHandlers);
-
-	virtual void onRPCEvent(std::string source, uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-
-	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-
-	virtual void onRPCNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
-
-	virtual void onRPCDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
-
-	virtual void onEvent(std::string source, uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
-
-	virtual void onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, bool wait);
-
-	virtual BaseLib::PVariable onInvokeRpc(std::string& methodName, BaseLib::PArray& parameters);
-
-	virtual int32_t onCheckLicense(int32_t moduleId, int32_t familyId, int32_t deviceId, const std::string& licenseKey);
-
-	virtual uint64_t onGetRoomIdByName(std::string& name);
-
-	//Device description
-	virtual void onDecryptDeviceDescription(int32_t moduleId, const std::vector<char>& input, std::vector<char>& output);
-	// }}}
-
 	FamilyController();
 
 	virtual ~FamilyController();
@@ -129,29 +53,29 @@ public:
 	 * Returns a vector of type ModuleInfo with information about all loaded and not loaded modules.
 	 * @return Returns a vector of type ModuleInfo.
 	 */
-	std::vector<std::shared_ptr<ModuleInfo>> getModuleInfo();
+	std::vector<std::shared_ptr<FamilyModuleInfo>> getModuleInfo();
 
 	/**
-	 * Loads a family module. The module needs to be in Homegear's module path.
+	 * Loads a shared object family module. The module needs to be in Homegear's module path.
 	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, 1: Module already loaded, -1: System error, -2: Module does not exists, -3: Family with same ID already exists, -4: Family initialization failed
 	 */
-	int32_t loadModule(std::string filename);
+	int32_t loadModule(const std::string& filename);
 
 	/**
-	 * Unloads a previously loaded family module.
+	 * Unloads a previously loaded shared object family module.
 	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, 1: Module not loaded, -1: System error, -2: Module does not exists
 	 */
-	int32_t unloadModule(std::string filename);
+	int32_t unloadModule(const std::string& filename);
 
 	/**
-	 * Unloads and loads a family module again. The module needs to be in Homegear's module path.
+	 * Unloads and loads a shared object family module again. The module needs to be in Homegear's module path.
 	 *
 	 * @param filename The filename of the module (e. g. mod_miscellanous.so).
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Modules successfully loaded, -1: System error, -2: Module does not exists, -4: Family initialization failed
 	 */
-	int32_t reloadModule(std::string filename);
+	int32_t reloadModule(const std::string& filename);
 
 	void init();
 
@@ -186,10 +110,12 @@ public:
      */
 	void homegearShuttingDown();
 
+	void onEvent(std::string source, uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
+
+	void onRPCEvent(std::string source, uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>> values);
+
 	// {{{ Physical interfaces
 	uint32_t physicalInterfaceCount(int32_t family);
-
-	void physicalInterfaceClear(int32_t family);
 
 	void physicalInterfaceStopListening();
 
@@ -205,17 +131,7 @@ public:
 	BaseLib::PVariable listFamilies(int32_t familyId);
 
 private:
-	bool _disposed = false;
-	BaseLib::PVariable _rpcCache;
-
-	std::mutex _moduleLoadersMutex;
-	std::map<std::string, std::unique_ptr<ModuleLoader>> _moduleLoaders;
-	std::map<int32_t, std::string> _moduleFilenames;
-
-	std::mutex _familiesMutex;
-	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> _families;
-
-	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+	SharedObjectFamilyModules _sharedObjectFamilyModules;
 
 	FamilyController(const FamilyController&);
 
