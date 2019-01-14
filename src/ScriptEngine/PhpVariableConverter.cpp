@@ -52,27 +52,31 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 	{
 		BaseLib::PVariable variable;
 		if(!value) return variable;
-		if(Z_TYPE_P(value) == IS_LONG)
+		if(Z_TYPE_P(value) == IS_NULL)
 		{
-			variable.reset(new BaseLib::Variable(Z_LVAL_P(value)));
+			variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
+		}
+		else if(Z_TYPE_P(value) == IS_LONG)
+		{
+			variable = std::make_shared<BaseLib::Variable>(Z_LVAL_P(value));
 			variable->type = (sizeof(long) == 8) ? BaseLib::VariableType::tInteger64 : BaseLib::VariableType::tInteger;
 		}
 		else if(Z_TYPE_P(value) == IS_DOUBLE)
 		{
-			variable.reset(new BaseLib::Variable((double) Z_DVAL_P(value)));
+			variable = std::make_shared<BaseLib::Variable>((double)Z_DVAL_P(value));
 		}
 		else if(Z_TYPE_P(value) == IS_TRUE)
 		{
-			variable.reset(new BaseLib::Variable(true));
+			variable = std::make_shared<BaseLib::Variable>(true);
 		}
 		else if(Z_TYPE_P(value) == IS_FALSE)
 		{
-			variable.reset(new BaseLib::Variable(false));
+			variable = std::make_shared<BaseLib::Variable>(false);
 		}
 		else if(Z_TYPE_P(value) == IS_STRING)
 		{
-			if(Z_STRLEN_P(value) > 0) variable.reset(new BaseLib::Variable(std::string(Z_STRVAL_P(value), Z_STRLEN_P(value))));
-			else variable.reset(new BaseLib::Variable(std::string("")));
+			if(Z_STRLEN_P(value) > 0) variable = std::make_shared<BaseLib::Variable>(std::string(Z_STRVAL_P(value), Z_STRLEN_P(value)));
+			else variable = std::make_shared<BaseLib::Variable>(std::string(""));
 		}
 		else if(Z_TYPE_P(value) == IS_ARRAY)
 		{
@@ -82,7 +86,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 			ulong keyIndex = 0;
 			if(zend_hash_num_elements(ht) == 0)
 			{
-				variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+				variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 				return variable;
 			}
 			bool arraysAreStructsLocal = arraysAreStructs;
@@ -93,10 +97,10 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 						{
 							if(!variable)
 							{
-								if(key || arraysAreStructsLocal) variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+								if(key || arraysAreStructsLocal) variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 								else
 								{
-									variable.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
+									variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 									variable->arrayValue->reserve(zend_hash_num_elements(ht));
 								}
 							}
@@ -120,14 +124,14 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
 				if(variable->type == BaseLib::VariableType::tArray && (uint64_t) indexSum * 2 != (variable->arrayValue->size() - 1) * variable->arrayValue->size())
 				{
 					arraysAreStructsLocal = true;
-					variable.reset(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+					variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 				}
 				else break;
 			}
 		}
 		else
 		{
-			variable.reset(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+			variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
 		}
 
 		return variable;
