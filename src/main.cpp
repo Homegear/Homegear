@@ -1288,7 +1288,8 @@ int main(int argc, char* argv[])
     		{
     			if(i + 1 < argc)
     			{
-    				GD::runAsUser = std::string(argv[i + 1]);
+    				auto user = std::string(argv[i + 1]);
+    				if(user != "root") GD::runAsUser;
     				i++;
     			}
     			else
@@ -1301,7 +1302,8 @@ int main(int argc, char* argv[])
     		{
     			if(i + 1 < argc)
     			{
-    				GD::runAsGroup = std::string(argv[i + 1]);
+					auto group = std::string(argv[i + 1]);
+    				if(group != "root") GD::runAsGroup = group;
     				i++;
     			}
     			else
