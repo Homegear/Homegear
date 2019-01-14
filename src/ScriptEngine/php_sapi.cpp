@@ -374,9 +374,6 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
 	else
 	{
 		//{{{ 100% from zend_stream_open in zend_stream.c (ok, 99.9% - I replaced NULL with nullptr)
-		if (zend_stream_open_function) {
-			return zend_stream_open_function(filename, handle);
-		}
 		handle->type = ZEND_HANDLE_FP;
 		handle->opened_path = nullptr;
 		handle->handle.fp = zend_fopen(filename, &handle->opened_path);
