@@ -320,7 +320,7 @@ bool FamilyController::lifetick()
 {
 	try
 	{
-		_sharedObjectFamilyModules.lifetick();
+		return _sharedObjectFamilyModules.lifetick();
 	}
 	catch(const std::exception& ex)
 	{
