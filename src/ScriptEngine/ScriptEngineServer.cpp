@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -2417,7 +2417,7 @@ BaseLib::PVariable ScriptEngineServer::raiseDeleteDevice(PScriptEngineClientData
 		if(parameters->size() != 1 || parameters->at(0)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Method expects device address array as parameter.");
 
 		std::vector<uint64_t> newIds{};
-		GD::familyController->onRPCDeleteDevices(newIds, parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{0}))));
+		GD::rpcClient->broadcastDeleteDevices(newIds, parameters->at(0), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{0}))));
 
 		return BaseLib::PVariable(new BaseLib::Variable());
 	}
@@ -3180,19 +3180,19 @@ BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData& clie
 		if(!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 		if(parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
-		std::vector<std::shared_ptr<FamilyController::ModuleInfo>> moduleInfo = GD::familyController->getModuleInfo();
+		auto moduleInfo = GD::familyController->getModuleInfo();
 
 		BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
 		result->arrayValue->reserve(moduleInfo.size());
-		for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = moduleInfo.begin(); i != moduleInfo.end(); ++i)
+		for(auto& module : moduleInfo)
 		{
 			BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 
-			element->structValue->insert(BaseLib::StructElement("FILENAME", BaseLib::PVariable(new BaseLib::Variable((*i)->filename))));
-			element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable((*i)->familyId))));
-			element->structValue->insert(BaseLib::StructElement("FAMILY_NAME", BaseLib::PVariable(new BaseLib::Variable((*i)->familyName))));
-			element->structValue->insert(BaseLib::StructElement("BASELIB_VERSION", BaseLib::PVariable(new BaseLib::Variable((*i)->baselibVersion))));
-			element->structValue->insert(BaseLib::StructElement("LOADED", BaseLib::PVariable(new BaseLib::Variable((*i)->loaded))));
+			element->structValue->insert(BaseLib::StructElement("FILENAME", BaseLib::PVariable(new BaseLib::Variable(module->filename))));
+			element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable(module->familyId))));
+			element->structValue->insert(BaseLib::StructElement("FAMILY_NAME", BaseLib::PVariable(new BaseLib::Variable(module->familyName))));
+			element->structValue->insert(BaseLib::StructElement("BASELIB_VERSION", BaseLib::PVariable(new BaseLib::Variable(module->baselibVersion))));
+			element->structValue->insert(BaseLib::StructElement("LOADED", BaseLib::PVariable(new BaseLib::Variable(module->loaded))));
 
 			result->arrayValue->push_back(element);
 		}

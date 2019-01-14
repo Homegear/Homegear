@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -37,9 +37,9 @@
 #include "../IPC/IpcServer.h"
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
-#include "../Systems/FamilyController.h"
-#include "../Systems/DatabaseController.h"
-#include "../Systems/UiController.h"
+#include "../FamilyModules/FamilyController.h"
+#include "../Database/DatabaseController.h"
+#include "../UI/UiController.h"
 #include "../RPC/RpcServer.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"

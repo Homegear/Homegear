@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,7 +35,7 @@
 namespace Misc
 {
 
-Miscellaneous::Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler, MISC_FAMILY_ID, MISC_FAMILY_NAME)
+Miscellaneous::Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler, MISC_FAMILY_ID, MISC_FAMILY_NAME)
 {
 	GD::bl = bl;
 	GD::family = this;

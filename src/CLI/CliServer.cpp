@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -473,17 +473,17 @@ std::string CliServer::moduleCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			std::vector<std::shared_ptr<FamilyController::ModuleInfo>> modules = GD::familyController->getModuleInfo();
+			auto modules = GD::familyController->getModuleInfo();
 			if(modules.size() == 0) return "No modules loaded.\n";
 
 			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Family Name"
 						 << std::setw(30) << "Filename" << std::setw(14) << "Compiled For" << std::setw(7) << "Loaded"
 						 << std::endl;
-			for(std::vector<std::shared_ptr<FamilyController::ModuleInfo>>::iterator i = modules.begin(); i != modules.end(); ++i)
+			for(auto& module : modules)
 			{
-				stringStream << std::setw(6) << (*i)->familyId << std::setw(30) << (*i)->familyName << std::setw(30)
-							 << (*i)->filename << std::setw(14) << (*i)->baselibVersion << std::setw(7)
-							 << ((*i)->loaded ? "true" : "false") << std::endl;
+				stringStream << std::setw(6) << module->familyId << std::setw(30) << module->familyName << std::setw(30)
+							 << module->filename << std::setw(14) << module->baselibVersion << std::setw(7)
+							 << (module->loaded ? "true" : "false") << std::endl;
 			}
 
 			return stringStream.str();

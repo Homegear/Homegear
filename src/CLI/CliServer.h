@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,7 +33,7 @@
 
 #include <homegear-base/BaseLib.h>
 #include "../User/User.h"
-#include "../Systems/FamilyController.h"
+#include "../FamilyModules/FamilyController.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

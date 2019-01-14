@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -42,7 +42,7 @@ class MiscCentral;
 class Miscellaneous : public BaseLib::Systems::DeviceFamily
 {
 public:
-	Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+	Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler);
 	virtual ~Miscellaneous();
 	virtual void dispose();
 

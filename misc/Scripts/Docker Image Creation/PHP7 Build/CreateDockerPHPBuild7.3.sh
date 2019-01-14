@@ -192,6 +192,7 @@ if [ "$distver" == "wheezy" ]; then
 	sed -i '/.*libc-client-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i 's/libgd-dev.*,/libgd2-xpm-dev,/g' $rootfs/PHPBuild/debian/control
 else
+	sed -i 's/libpcre2-dev .*,/libpcre2-dev,/g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
@@ -249,10 +250,10 @@ if test ! -f ext_skel.in; then
 	touch ext_skel.in
 fi
 git clone https://github.com/krakjoe/pthreads.git pthreads
-# Todo: Remove the next three lines when fixed (not the case in 7.2.9)
-sed -i '/.*#include <ctype.h>/a#include <limits.h>' xmlrpc/libxmlrpc/base64.c
-sed -i '/.*#include <string.h>/a#include <stdlib.h>' xmlrpc/libxmlrpc/encodings.c
-sed -i "s/if(queue_index == NULL)/if(index == NULL)/g" xmlrpc/libxmlrpc/queue.c
+# Todo: Remove the next three lines when fixed (not the case in 7.2.9, seems to be fixed in 7.3.1)
+#sed -i '/.*#include <ctype.h>/a#include <limits.h>' xmlrpc/libxmlrpc/base64.c
+#sed -i '/.*#include <string.h>/a#include <stdlib.h>' xmlrpc/libxmlrpc/encodings.c
+#sed -i "s/if(queue_index == NULL)/if(index == NULL)/g" xmlrpc/libxmlrpc/queue.c
 # Add Homegear to allowed OPcode cache modules
 sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
 cd ..

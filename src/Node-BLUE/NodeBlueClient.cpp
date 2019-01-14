@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
+/* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -978,6 +978,7 @@ void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
 {
     try
     {
+        if(_bl->debugLevel >= 5) _out.printInfo("Debug: Subscribing flow with ID " + flowId + " for node " + nodeId);
         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
         _flowSubscriptions[flowId].insert(nodeId);
     }
@@ -999,6 +1000,7 @@ void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
 {
     try
     {
+        if(_bl->debugLevel >= 5) _out.printInfo("Debug: Unsubscribing flow with ID " + flowId + " for node " + nodeId);
         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
         _flowSubscriptions[flowId].erase(nodeId);
     }
@@ -1672,7 +1674,8 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
         for(auto& element : *parameters->at(1)->arrayValue)
         {
             auto flowIdIterator = element->structValue->find("flow");
-            if(flowIdIterator != element->structValue->end())
+            Flows::Struct::const_iterator idIterator = element->structValue->find("id"); //Check if node is a subflow node. Ignore those.
+            if(flowIdIterator != element->structValue->end() && idIterator != element->structValue->end() && idIterator->second->stringValue.find(':') == std::string::npos)
             {
                 flowId = flowIdIterator->second->stringValue;
                 break;
@@ -1692,6 +1695,13 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
                 continue;
             }
 
+            auto flowIdIterator = element->structValue->find("flow"); //For subflows this is not flowId
+            if(flowIdIterator == element->structValue->end())
+            {
+                GD::out.printError("Error: Flow element has no flow ID.");
+                continue;
+            }
+
             auto typeIterator = element->structValue->find("type");
             if(typeIterator == element->structValue->end())
             {
@@ -1701,6 +1711,7 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
             if(typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
 
             node->id = idIterator->second->stringValue;
+            node->flowId = flowIdIterator->second->stringValue;
             node->type = typeIterator->second->stringValue;
             node->info = element;
 
@@ -1787,7 +1798,7 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
                 }
 
                 nodeObject->setId(node->id);
-                nodeObject->setFlowId(flowId);
+                nodeObject->setFlowId(node->flowId);
 
                 nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&NodeBlueClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
                 nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray)>(std::bind(&NodeBlueClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
