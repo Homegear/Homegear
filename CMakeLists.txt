@@ -20,10 +20,17 @@ set(SOURCE_FILES
         src/CLI/CliClient.h
         src/CLI/CliServer.cpp
         src/CLI/CliServer.h
+        src/Database/DatabaseController.cpp
+        src/Database/DatabaseController.h
         src/Database/SQLite3.cpp
         src/Database/SQLite3.h
         src/Events/EventHandler.cpp
         src/Events/EventHandler.h
+        src/FamilyModules/FamilyController.cpp
+        src/FamilyModules/FamilyController.h
+        src/FamilyModules/FamilyModuleInfo.h
+        src/FamilyModules/SharedObjectFamilyModules.cpp
+        src/FamilyModules/SharedObjectFamilyModules.h
         src/Node-BLUE/FlowInfoClient.h
         src/Node-BLUE/FlowInfoServer.h
         src/Node-BLUE/NodeBlueClient.cpp
@@ -93,12 +100,8 @@ set(SOURCE_FILES
         src/ScriptEngine/ScriptEngineResponse.h
         src/ScriptEngine/ScriptEngineServer.cpp
         src/ScriptEngine/ScriptEngineServer.h
-        src/Systems/DatabaseController.cpp
-        src/Systems/DatabaseController.h
-        src/Systems/FamilyController.cpp
-        src/Systems/FamilyController.h
-        src/Systems/UiController.cpp
-        src/Systems/UiController.h
+        src/UI/UiController.cpp
+        src/UI/UiController.h
         src/UPnP/UPnP.cpp
         src/UPnP/UPnP.h
         src/User/User.cpp

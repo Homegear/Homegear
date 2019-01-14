@@ -20,7 +20,7 @@ endif
 
 
 bin_PROGRAMS = homegear
-homegear_SOURCES = main.cpp Monitor.cpp CLI/CliClient.cpp CLI/CliServer.cpp Database/SQLite3.cpp Events/EventHandler.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RpcServer.cpp WebServer/WebServer.cpp Systems/DatabaseController.cpp Systems/FamilyController.cpp Systems/UiController.cpp UPnP/UPnP.cpp User/User.cpp
+homegear_SOURCES = main.cpp Monitor.cpp CLI/CliClient.cpp CLI/CliServer.cpp Database/DatabaseController.cpp Database/SQLite3.cpp Events/EventHandler.cpp FamilyModules/FamilyController.cpp FamilyModules/SharedObjectFamilyModules.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/RpcClient.cpp RPC/RPCMethods.cpp RPC/RpcServer.cpp UI/UiController.cpp WebServer/WebServer.cpp UPnP/UPnP.cpp User/User.cpp
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomegear-node -lhomegear-ipc -lgpg-error -lsqlite3
 
 if BSDSYSTEM

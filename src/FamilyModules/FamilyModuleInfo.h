@@ -28,41 +28,18 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef NO_SCRIPTENGINE
+#ifndef FAMILY_MODULE_INFO_H_
+#define FAMILY_MODULE_INFO_H_
 
-#include "php_config_fixes.h"
-#include "php_homegear_globals.h"
-#include "php_config_fixes.h"
-#include "../GD/GD.h"
+#include <string>
 
-static pthread_key_t pthread_key;
-
-pthread_key_t* php_homegear_get_pthread_key()
+struct FamilyModuleInfo
 {
-	return &pthread_key;
-}
-
-zend_homegear_globals* php_homegear_get_globals()
-{
-	zend_homegear_globals* data = (zend_homegear_globals*)pthread_getspecific(pthread_key);
-	if(!data)
-	{
-		data = new zend_homegear_globals();
-		if(!data || pthread_setspecific(pthread_key, data) != 0)
-		{
-			Homegear::GD::out.printCritical("Critical: Could not set PHP globals data - out of memory?.");
-			if(data) delete data;
-			data = nullptr;
-			return data;
-		}
-		data->id = 0;
-		data->webRequest = false;
-		data->commandLine = false;
-		data->cookiesParsed = false;
-		data->peerId = 0;
-		data->logLevel = -1;
-	}
-	return data;
-}
+    std::string filename;
+    std::string baselibVersion;
+    int32_t familyId;
+    std::string familyName;
+    bool loaded;
+};
 
 #endif
