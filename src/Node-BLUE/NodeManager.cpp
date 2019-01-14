@@ -346,7 +346,7 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 		std::string path(GD::bl->settings.nodeBluePath() + "nodes/" + nodeNamespace + "/");
 		if(BaseLib::Io::fileExists(path + type + ".so")) //C++ module
 		{
-			GD::out.printInfo("Info: Loading node " + type + ".so");
+			GD::out.printInfo("Info: Loading " + type + ".so for node " + id);
 			path = path + type + ".so";
 
 			bool loaderCreated = false;

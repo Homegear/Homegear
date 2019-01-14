@@ -978,7 +978,7 @@ void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
 {
     try
     {
-        if(_bl->settings.devLog()) GD::out.printInfo("Devlog: Subscribing flow with ID " + flowId + " for node " + nodeId);
+        if(_bl->debugLevel >= 5) _out.printInfo("Debug: Subscribing flow with ID " + flowId + " for node " + nodeId);
         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
         _flowSubscriptions[flowId].insert(nodeId);
     }
@@ -1000,7 +1000,7 @@ void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
 {
     try
     {
-        if(_bl->settings.devLog()) GD::out.printInfo("Devlog: Unsubscribing flow with ID " + flowId + " for node " + nodeId);
+        if(_bl->debugLevel >= 5) _out.printInfo("Debug: Unsubscribing flow with ID " + flowId + " for node " + nodeId);
         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
         _flowSubscriptions[flowId].erase(nodeId);
     }
@@ -1674,7 +1674,8 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
         for(auto& element : *parameters->at(1)->arrayValue)
         {
             auto flowIdIterator = element->structValue->find("flow");
-            if(flowIdIterator != element->structValue->end())
+            Flows::Struct::const_iterator idIterator = element->structValue->find("id"); //Check if node is a subflow node. Ignore those.
+            if(flowIdIterator != element->structValue->end() && idIterator != element->structValue->end() && idIterator->second->stringValue.find(':') == std::string::npos)
             {
                 flowId = flowIdIterator->second->stringValue;
                 break;
