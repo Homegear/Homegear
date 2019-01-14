@@ -1,6 +1,6 @@
 /var/log/homegear/*.log /var/log/homegear/*.err {
         missingok
-        rotate 2
+        rotate 0
         compress
         notifempty
         size 10M
