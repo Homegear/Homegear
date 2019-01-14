@@ -2,12 +2,11 @@
         missingok
         rotate 2
         compress
-        delaycompress
         notifempty
         size 10M
         create 640 homegear homegear
         sharedscripts
         postrotate
-        service homegear reload > /dev/null
+                service homegear reload > /dev/null
         endscript
 }
