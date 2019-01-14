@@ -44,7 +44,7 @@
 #if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
-#if PHP_VERSION_ID >= 70300
+#if PHP_VERSION_ID >= 70400
 #error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
@@ -373,7 +373,10 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
 	}
 	else
 	{
-		//{{{ 100% from zend_stream_open in zend_stream.c */
+		//{{{ 100% from zend_stream_open in zend_stream.c (ok, 99.9% - I replaced NULL with nullptr)
+		if (zend_stream_open_function) {
+			return zend_stream_open_function(filename, handle);
+		}
 		handle->type = ZEND_HANDLE_FP;
 		handle->opened_path = nullptr;
 		handle->handle.fp = zend_fopen(filename, &handle->opened_path);
