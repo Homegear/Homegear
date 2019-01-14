@@ -958,6 +958,36 @@ void SharedObjectFamilyModules::save(bool full)
     }
 }
 
+void SharedObjectFamilyModules::listFamilies(const BaseLib::PArray& array, int32_t familyId)
+{
+    try
+    {
+        auto families = getFamilies();
+        for(auto& family : families)
+        {
+            if(familyId != -1 && family.first != familyId) continue;
+
+            auto familyDescription = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+            familyDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable((int32_t) family.first))));
+            familyDescription->structValue->insert(BaseLib::StructElement("NAME", BaseLib::PVariable(new BaseLib::Variable(family.second->getName()))));
+            array->emplace_back(std::move(familyDescription));
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> SharedObjectFamilyModules::getFamilies()
 {
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families;
@@ -983,31 +1013,6 @@ std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> SharedObjectF
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return families;
-}
-
-void SharedObjectFamilyModules::getFamilies(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>& families)
-{
-    try
-    {
-        std::lock_guard<std::mutex> familiesGuard(_familiesMutex);
-        for(auto& family : _families)
-        {
-            if(!family.second || family.second->locked()) continue;
-            families.emplace(family);
-        }
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 std::shared_ptr<BaseLib::Systems::DeviceFamily> SharedObjectFamilyModules::getFamily(int32_t familyId)

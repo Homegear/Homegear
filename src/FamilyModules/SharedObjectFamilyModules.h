@@ -148,20 +148,7 @@ public:
 
     void save(bool full);
 
-    /*
-     * Returns the family map.
-     */
-    std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> getFamilies();
-
-    /*
-     * Fills a family map.
-     */
-    void getFamilies(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>& families);
-
-    /*
-     * Returns the device family specified by familyId.
-     */
-    std::shared_ptr<BaseLib::Systems::DeviceFamily> getFamily(int32_t familyId);
+    void listFamilies(const BaseLib::PArray& array, int32_t familyId);
 
     /*
      * Checks if the peer with the provided id exists.
@@ -200,6 +187,16 @@ private:
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> _families;
 
     std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+
+    /*
+     * Returns the family map.
+     */
+    std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> getFamilies();
+
+    /*
+     * Returns the device family specified by familyId.
+     */
+    std::shared_ptr<BaseLib::Systems::DeviceFamily> getFamily(int32_t familyId);
 
     SharedObjectFamilyModules(const SharedObjectFamilyModules&);
 

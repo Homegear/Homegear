@@ -357,50 +357,6 @@ void FamilyController::save(bool full)
 	}
 }
 
-std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> FamilyController::getFamilies()
-{
-	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families;
-	try
-	{
-		_sharedObjectFamilyModules.getFamilies(families);
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return families;
-}
-
-std::shared_ptr<BaseLib::Systems::DeviceFamily> FamilyController::getFamily(int32_t familyId)
-{
-	try
-	{
-		auto family = _sharedObjectFamilyModules.getFamily(familyId);
-		return family;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return std::shared_ptr<BaseLib::Systems::DeviceFamily>();
-}
-
 bool FamilyController::peerExists(uint64_t peerId)
 {
 	try
@@ -429,17 +385,7 @@ BaseLib::PVariable FamilyController::listFamilies(int32_t familyId)
 	{
 		auto array = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 
-		auto families = getFamilies();
-		for(auto& family : families)
-		{
-			if(familyId != -1 && family.first != familyId) continue;
-
-			auto familyDescription = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-
-			familyDescription->structValue->insert(BaseLib::StructElement("ID", BaseLib::PVariable(new BaseLib::Variable((int32_t) family.first))));
-			familyDescription->structValue->insert(BaseLib::StructElement("NAME", BaseLib::PVariable(new BaseLib::Variable(family.second->getName()))));
-			array->arrayValue->emplace_back(std::move(familyDescription));
-		}
+		_sharedObjectFamilyModules.listFamilies(array->arrayValue, familyId);
 
 		return array;
 	}

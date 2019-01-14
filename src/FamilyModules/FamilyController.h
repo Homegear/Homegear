@@ -86,16 +86,6 @@ public:
 	void save(bool full);
 
 	/*
-	 * Returns the family map.
-	 */
-	std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> getFamilies();
-
-	/*
-	 * Returns the device family specified by familyId.
-	 */
-	std::shared_ptr<BaseLib::Systems::DeviceFamily> getFamily(int32_t familyId);
-
-	/*
 	 * Checks if the peer with the provided id exists.
 	 */
 	bool peerExists(uint64_t peerId);
