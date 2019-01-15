@@ -1290,7 +1290,7 @@ int main(int argc, char* argv[])
     			if(i + 1 < argc)
     			{
     				auto user = std::string(argv[i + 1]);
-    				if(user != "root") GD::runAsUser;
+    				if(user != "root") GD::runAsUser = user;
     				i++;
     			}
     			else
