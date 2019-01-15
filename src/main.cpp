@@ -608,7 +608,7 @@ void printHelp()
 	std::cout << "-e <command>        Execute CLI command" << std::endl;
 	std::cout << "-o <input> <output> Convert old device description file into new format." << std::endl;
 	std::cout << "-l                  Checks the lifeticks of all components. Exit code \"0\" means everything is ok." << std::endl;
-	std::cout << "-uuid               Generates and prints a new time UUID." << std::endl;
+	std::cout << "-i                  Generates and prints a new time UUID." << std::endl;
 	std::cout << "-v                  Print program version" << std::endl;
 }
 
@@ -1455,7 +1455,7 @@ int main(int argc, char* argv[])
     			int32_t exitCode = cliClient.terminal(command);
     			exit(exitCode);
     		}
-    		else if(arg == "-uuid")
+    		else if(arg == "-i")
 			{
 				GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
 				GD::bl->debugLevel = 3; //Only output warnings.
