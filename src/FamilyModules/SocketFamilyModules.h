@@ -38,7 +38,7 @@
 namespace Homegear
 {
 
-class SocketFamilyModules
+class SocketFamilyModules : public BaseLib::Systems::IFamilyEventSink
 {
 public:
 
