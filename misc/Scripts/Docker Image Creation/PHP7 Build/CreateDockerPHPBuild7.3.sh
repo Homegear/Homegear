@@ -194,7 +194,7 @@ if [ "$distver" == "wheezy" ]; then
 else
 	sed -i 's/libpcre2-dev .*,/libpcre2-dev,/g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
-	sed -i '/.*libgcrypt20-dev,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i '/.*libgcrypt20-dev .*,/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
