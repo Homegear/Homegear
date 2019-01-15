@@ -92,6 +92,8 @@ fi
 
 if [ "$distver" == "bionic" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+elif [ "$distver" == "trusty" ]; then
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 else
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 fi
