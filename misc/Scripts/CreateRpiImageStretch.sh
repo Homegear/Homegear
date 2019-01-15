@@ -109,6 +109,8 @@ proc            /proc                       proc            defaults            
 /dev/mmcblk0p1  /boot                       vfat            defaults,noatime,ro                                                 0       2
 /dev/mmcblk0p2  /                           ext4            defaults,noatime,ro                                                 0       1
 tmpfs           /run                        tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
+tmpfs           /dev/shm                    tmpfs           defaults,size=32m                                                   0       0
+tmpfs           /sys/fs/cgroup              tmpfs           defaults,size=32m                                                   0       0
 #tmpfs           /var/<your directory>       tmpfs           defaults,nosuid,mode=1777,size=50M                                  0       0
 EOF
 
@@ -192,7 +194,7 @@ cat > "$rootfs/lib/systemd/scripts/setup-tmpfs.sh" <<'EOF'
 
 modprobe zram num_devices=3
 
-echo 268435456 > /sys/block/zram0/disksize
+echo 134217728 > /sys/block/zram0/disksize
 echo 20971520 > /sys/block/zram1/disksize
 echo 134217728 > /sys/block/zram2/disksize
 
@@ -252,6 +254,67 @@ TimeoutSec=30s
 
 [Install]
 WantedBy=sysinit.target
+EOF
+
+cat > "$rootfs/etc/logrotate.conf" <<'EOF'
+daily
+rotate 0
+size 1M
+create
+compress
+include /etc/logrotate.d
+/var/log/wtmp {
+    missingok
+    monthly
+    create 0664 root utmp
+    rotate 0
+}
+/var/log/btmp {
+    missingok
+    monthly
+    create 0660 root utmp
+    rotate 0
+}
+EOF
+
+cat > "$rootfs/etc/logrotate.d/rsyslog" <<'EOF'
+/var/log/syslog
+{
+	rotate 0
+	daily
+	size 1M
+	missingok
+	notifempty
+	compress
+	postrotate
+		invoke-rc.d rsyslog rotate > /dev/null
+	endscript
+}
+
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/cron.log
+/var/log/debug
+/var/log/messages
+{
+	rotate 0
+	daily
+	size 1M
+	missingok
+	notifempty
+	compress
+	sharedscripts
+	postrotate
+		invoke-rc.d rsyslog rotate > /dev/null
+	endscript
+}
 EOF
 
 cat > "$rootfs/fourth-stage" <<'EOF'
