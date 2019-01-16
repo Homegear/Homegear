@@ -92,6 +92,8 @@ fi
 
 if [ "$distver" == "bionic" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+elif [ "$distver" == "trusty" ]; then
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 else
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 fi
@@ -135,6 +137,9 @@ if [ "$distver" == "stretch" ]; then
 fi
 
 if [ "$distver" == "bionic" ]; then
+	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
+		export MAN_DISABLE_SECCOMP=1
+	fi
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
@@ -194,6 +199,7 @@ if [ "$distver" == "wheezy" ]; then
 else
 	sed -i 's/libpcre2-dev .*,/libpcre2-dev,/g' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libgcrypt11-dev,.*/d' $rootfs/PHPBuild/debian/control
+	sed -i '/.*libgcrypt20-dev .*,/d' $rootfs/PHPBuild/debian/control
 	sed -i '/.*libxml2-dev/a\\t       libgcrypt20-dev,' $rootfs/PHPBuild/debian/control
 fi
 chroot $rootfs bash -c "cd /PHPBuild && mk-build-deps debian/control"
