@@ -108,7 +108,7 @@ PSocketPeer SocketCentral::getPeer(uint64_t id)
 PSocketPeer SocketCentral::getPeer(std::string serialNumber)
 {
     //Todo: Implement
-    return PSocketPeer;
+    return PSocketPeer();
 }
 
 bool SocketCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet)

@@ -63,7 +63,7 @@ void SocketDeviceFamily::createCentral()
 
 std::shared_ptr<BaseLib::Systems::ICentral> SocketDeviceFamily::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
-    return std::make_shared<SocketCentral>(deviceId, serialNumber, this);
+    return std::make_shared<SocketCentral>(getFamily(), deviceId, serialNumber, this);
 }
 
 BaseLib::PVariable SocketDeviceFamily::getPairingInfo()

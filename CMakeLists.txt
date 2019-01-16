@@ -26,17 +26,13 @@ set(SOURCE_FILES
         src/Database/SQLite3.h
         src/Events/EventHandler.cpp
         src/Events/EventHandler.h
+        src/FamilyModules/FamilyModuleInfo.h
         src/FamilyModules/FamilyController.cpp
         src/FamilyModules/FamilyController.h
-        src/FamilyModules/FamilyModuleInfo.h
-        src/FamilyModules/SharedObjectFamilyModules.cpp
-        src/FamilyModules/SharedObjectFamilyModules.h
         src/FamilyModules/SocketCentral.cpp
         src/FamilyModules/SocketCentral.h
         src/FamilyModules/SocketDeviceFamily.cpp
         src/FamilyModules/SocketDeviceFamily.h
-        src/FamilyModules/SocketFamilyModules.cpp
-        src/FamilyModules/SocketFamilyModules.h
         src/FamilyModules/SocketPeer.cpp
         src/FamilyModules/SocketPeer.h
         src/Node-BLUE/FlowInfoClient.h

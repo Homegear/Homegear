@@ -33,7 +33,6 @@
 
 #include <homegear-base/BaseLib.h>
 #include "../User/User.h"
-#include "../FamilyModules/FamilyController.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
