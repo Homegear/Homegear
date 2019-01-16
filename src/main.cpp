@@ -1743,6 +1743,7 @@ int main(int argc, char* argv[])
 
 		GD::licensingController.reset(new LicensingController());
 		GD::familyController.reset(new FamilyController());
+		GD::familyServer.reset(new FamilyServer());
 		GD::bl->db.reset(new DatabaseController());
 		GD::rpcClient.reset(new Rpc::Client());
 
