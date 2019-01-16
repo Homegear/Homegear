@@ -184,7 +184,7 @@ public:
 
     void physicalInterfaceSetup(int32_t userId, int32_t groupId, bool setPermissions);
 
-    void listInterfaces(const BaseLib::PArray& array, int32_t familyId);
+    BaseLib::PVariable listInterfaces(int32_t familyId);
     // }}}
 
     BaseLib::PVariable listFamilies(int32_t familyId);

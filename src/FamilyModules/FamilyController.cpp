@@ -507,7 +507,7 @@ std::vector<std::shared_ptr<FamilyModuleInfo>> FamilyController::getModuleInfo()
             auto moduleInfo = std::make_shared<FamilyModuleInfo>();
             {
                 std::lock_guard<std::mutex> moduleLoadersGuard(_moduleLoadersMutex);
-                std::map<std::string, std::unique_ptr<ModuleLoader>>::const_iterator moduleIterator = _moduleLoaders.find(*i);
+                std::map<std::string, std::unique_ptr<ModuleLoader>>::const_iterator moduleIterator = _moduleLoaders.find(filename);
                 if(moduleIterator != _moduleLoaders.end() && moduleIterator->second)
                 {
                     moduleInfo->baselibVersion = moduleIterator->second->getVersion();
@@ -519,8 +519,8 @@ std::vector<std::shared_ptr<FamilyModuleInfo>> FamilyController::getModuleInfo()
                     continue;
                 }
             }
-            std::string path(GD::bl->settings.modulePath() + *i);
-            std::unique_ptr<ModuleLoader> moduleLoader(new ModuleLoader(*i, path));
+            std::string path(GD::bl->settings.modulePath() + filename);
+            std::unique_ptr<ModuleLoader> moduleLoader(new ModuleLoader(filename, path));
             moduleInfo->baselibVersion = moduleLoader->getVersion();
             moduleInfo->loaded = false;
             moduleInfo->filename = filename;
@@ -1163,17 +1163,18 @@ void FamilyController::physicalInterfaceSetup(int32_t userID, int32_t groupID, b
     }
 }
 
-void FamilyController::listInterfaces(const BaseLib::PArray& array, int32_t familyId)
+BaseLib::PVariable FamilyController::listInterfaces(int32_t familyId)
 {
+    auto interfaces = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     try
     {
         if(familyId != -1)
         {
             auto family = getFamily(familyId);
-            if(!family) return;
+            if(!family) return interfaces;
             auto interfaces = family->physicalInterfaces()->listInterfaces();
-            array->insert(array->end(), interfaces->arrayValue->begin(), interfaces->arrayValue->end());
-            return;
+            interfaces->arrayValue->insert(interfaces->arrayValue->end(), interfaces->arrayValue->begin(), interfaces->arrayValue->end());
+            return interfaces;
         }
         else
         {
@@ -1181,7 +1182,7 @@ void FamilyController::listInterfaces(const BaseLib::PArray& array, int32_t fami
             for(auto& family : families)
             {
                 auto tempArray = family.second->physicalInterfaces()->listInterfaces();
-                array->insert(array->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+                interfaces->arrayValue->insert(interfaces->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
             }
         }
     }
@@ -1197,6 +1198,7 @@ void FamilyController::listInterfaces(const BaseLib::PArray& array, int32_t fami
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return interfaces;
 }
 
 BaseLib::PVariable FamilyController::listFamilies(int32_t familyId)

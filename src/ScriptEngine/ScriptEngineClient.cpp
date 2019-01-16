@@ -912,21 +912,24 @@ BaseLib::PVariable ScriptEngineClient::sendRequest(int32_t scriptId, uint64_t pe
 			}
 		}
 
-		int32_t i = 0;
 		std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
+		while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
 		{
-			return response->finished || _stopped;
-		}))
-		{
-			i++;
-			if(i == 60) break;
-		}
+			return GD::bl->shuttingDown || response->finished || _stopped;
+		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
-			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			result = BaseLib::Variable::createError(-1, "No response received.");
+			if(GD::bl->shuttingDown)
+			{
+				_out.printInfo("Info: Aborting RPC request after 10 seconds, because I'm shutting down. Method: " + methodName);
+				result = BaseLib::Variable::createError(-32501, "Shutting down.");
+			}
+			else
+			{
+				_out.printError("Error: No response received to RPC request. Method: " + methodName);
+				result = BaseLib::Variable::createError(-1, "No response received.");
+			}
 		}
 		else result = response->response->arrayValue->at(2);
 
@@ -1000,13 +1003,21 @@ BaseLib::PVariable ScriptEngineClient::sendGlobalRequest(std::string methodName,
 		std::unique_lock<std::mutex> waitLock(_waitMutex);
 		while(!_requestConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
 		{
-			return response->finished || _stopped;
+			return GD::bl->shuttingDown || response->finished || _stopped;
 		}));
 
 		if(!response->finished || response->response->arrayValue->size() != 3 || response->packetId != packetId)
 		{
-			_out.printError("Error: No response received to RPC request. Method: " + methodName);
-			result = BaseLib::Variable::createError(-1, "No response received.");
+            if(GD::bl->shuttingDown)
+            {
+                _out.printInfo("Info: Aborting RPC request after 10 seconds, because I'm shutting down. Method: " + methodName);
+                result = BaseLib::Variable::createError(-32501, "Shutting down.");
+            }
+            else
+            {
+                _out.printError("Error: No response received to RPC request. Method: " + methodName);
+                result = BaseLib::Variable::createError(-1, "No response received.");
+            }
 		}
 		else result = response->response->arrayValue->at(2);
 
