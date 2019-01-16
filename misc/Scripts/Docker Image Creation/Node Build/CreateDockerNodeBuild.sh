@@ -130,6 +130,9 @@ if [ "$distver" == "stretch" ]; then
 fi
 
 if [ "$distver" == "bionic" ]; then
+	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
+		export MAN_DISABLE_SECCOMP=1
+	fi
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
