@@ -569,7 +569,8 @@ int32_t FamilyController::loadModule(const std::string& filename)
         {
             {
                 std::unique_lock<std::mutex> familiesGuard(_familiesMutex);
-                if(_families.find(family->getFamily()) != _families.end())
+                auto familyIterator = _families.find(family->getFamily());
+                if(familyIterator != _families.end() && familyIterator->second)
                 {
                     GD::out.printError("Error: Could not load family " + family->getName() + ", because a family with ID " + std::to_string(family->getFamily()) + " is already loaded.");
                     familiesGuard.unlock();
