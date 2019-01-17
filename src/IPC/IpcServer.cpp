@@ -700,7 +700,7 @@ BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, 
 			if(clientIterator == _clientsByRpcMethods.end())
 			{
 				_out.printError("Warning: RPC method not found: " + methodName);
-				return BaseLib::Variable::createError(-32601, ": Requested method not found.");
+				return BaseLib::Variable::createError(-32601, "Requested method not found.");
 			}
 			clientData.reserve(clientIterator->second.second.size());
 			for(auto& client : clientIterator->second.second)

@@ -29,6 +29,8 @@ set(SOURCE_FILES
         src/FamilyModules/FamilyModuleInfo.h
         src/FamilyModules/FamilyController.cpp
         src/FamilyModules/FamilyController.h
+        src/FamilyModules/FamilyServer.cpp
+        src/FamilyModules/FamilyServer.h
         src/FamilyModules/SocketCentral.cpp
         src/FamilyModules/SocketCentral.h
         src/FamilyModules/SocketDeviceFamily.cpp
