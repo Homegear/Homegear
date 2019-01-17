@@ -1222,11 +1222,24 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 			{
 				std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
 				messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
-				if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+				if(value->type == BaseLib::VariableType::tString)
+				{
+					messagePlain->message.clear();
+					messagePlain->message.insert(messagePlain->message.end(), value->stringValue.begin(), value->stringValue.end());
+				}
+				else if(value->type == BaseLib::VariableType::tBinary)
+				{
+					messagePlain->message.clear();
+					messagePlain->message.insert(messagePlain->message.end(), value->binaryValue.begin(), value->binaryValue.end());
+				}
 				else
 				{
-					_jsonEncoder->encode(value, messagePlain->message);
-					messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
+					if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+					else
+					{
+						_jsonEncoder->encode(value, messagePlain->message);
+						messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
+					}
 				}
 				messagePlain->retain = retain;
 				queueMessage(messagePlain);
@@ -1337,11 +1350,24 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 				{
 					std::shared_ptr<MqttMessage> messagePlain(new MqttMessage());
 					messagePlain->topic = "plain/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + keys.at(i);
-					if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+					if(values.at(i)->type == BaseLib::VariableType::tString)
+					{
+						messagePlain->message.clear();
+						messagePlain->message.insert(messagePlain->message.end(), values.at(i)->stringValue.begin(), values.at(i)->stringValue.end());
+					}
+					else if(values.at(i)->type == BaseLib::VariableType::tBinary)
+					{
+						messagePlain->message.clear();
+						messagePlain->message.insert(messagePlain->message.end(), values.at(i)->binaryValue.begin(), values.at(i)->binaryValue.end());
+					}
 					else
 					{
-						_jsonEncoder->encode(values.at(i), messagePlain->message);
-						messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
+						if(messageJson1) messagePlain->message.insert(messagePlain->message.end(), messageJson1->message.begin() + 1, messageJson1->message.end() - 1);
+						else
+						{
+							_jsonEncoder->encode(values.at(i), messagePlain->message);
+							messagePlain->message = std::vector<char>(messagePlain->message.begin() + 1, messagePlain->message.end() - 1);
+						}
 					}
 					messagePlain->retain = retain;
 					queueMessage(messagePlain);
