@@ -353,6 +353,22 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
         if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
         _out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 
+        if(info->familyServer)
+        {
+            //Disable WebSocket, REST and Webserver
+            info->webSocket = false;
+            info->restServer = false;
+            info->webServer = false;
+            if(info->interface != "::1" && info->interface != "127.0.0.1")
+            {
+                if(!_info->ssl || _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+                {
+                    _out.printError("Error: For a family RPC server to listen on other addresses than \"::1\" or \"127.0.0.1\", SSL and authentication have to be enabled. Not starting server.");
+                    return;
+                }
+            }
+        }
+
         if(!_info->ssl && _info->interface != "::1" && _info->interface != "127.0.0.1")
         {
             _out.printWarning("Warning: SSL is not enabled for this RPC server. It is strongly recommended to disable all unencrypted RPC servers when the connected clients support it.");
@@ -943,7 +959,7 @@ bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& me
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
 
-        return _rpcMethods->find(methodName) != _rpcMethods->end() || GD::ipcServer->methodExists(clientInfo, methodName);
+        return _rpcMethods->find(methodName) != _rpcMethods->end() || GD::ipcServer->methodExists(clientInfo, methodName) || (_info->familyServer && GD::familyServer->methodExists(clientInfo, methodName));
     }
     catch(const std::exception& ex)
     {
@@ -968,6 +984,11 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
         if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
         if(_rpcMethods->find(methodName) == _rpcMethods->end())
         {
+            if(_info->familyServer)
+            {
+                auto result = GD::familyServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
+                if(!result->errorStruct || result->structValue->at("faultCode")->integerValue != 32601) return result;
+            }
             BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
             return result;
         }
@@ -1029,6 +1050,15 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 
         if(_rpcMethods->find(methodName) == _rpcMethods->end())
         {
+            if(_info->familyServer)
+            {
+                auto result = GD::familyServer->callRpcMethod(client, methodName, parameters);
+                if(!result->errorStruct || result->structValue->at("faultCode")->integerValue != 32601)
+                {
+                    sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+                    return;
+                }
+            }
             BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
             sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
             return;

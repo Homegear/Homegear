@@ -38,6 +38,7 @@
 #include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
 #include "../FamilyModules/FamilyController.h"
+#include "../FamilyModules/FamilyServer.h"
 #include "../Database/DatabaseController.h"
 #include "../UI/UiController.h"
 #include "../RPC/RpcServer.h"
@@ -71,6 +72,7 @@ public:
 	static std::string executableFile;
 	static int64_t startingTime;
 	static std::unique_ptr<FamilyController> familyController;
+	static std::unique_ptr<FamilyServer> familyServer;
 	static std::unique_ptr<LicensingController> licensingController;
 	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
 	static std::map<int32_t, std::shared_ptr<Rpc::RpcServer>> rpcServers;
