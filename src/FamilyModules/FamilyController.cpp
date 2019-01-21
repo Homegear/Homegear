@@ -1173,8 +1173,8 @@ BaseLib::PVariable FamilyController::listInterfaces(int32_t familyId)
         {
             auto family = getFamily(familyId);
             if(!family) return interfaces;
-            auto interfaces = family->physicalInterfaces()->listInterfaces();
-            if(!interfaces->arrayValue->empty()) interfaces->arrayValue->insert(interfaces->arrayValue->end(), interfaces->arrayValue->begin(), interfaces->arrayValue->end());
+            auto tempArray = family->physicalInterfaces()->listInterfaces();
+            if(!interfaces->arrayValue->empty()) interfaces->arrayValue->insert(interfaces->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
             return interfaces;
         }
         else
