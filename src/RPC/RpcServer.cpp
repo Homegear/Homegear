@@ -688,7 +688,7 @@ void RpcServer::mainThread()
                     if(client->address == "127.0.0.1")
                     {
                         client->clientType = BaseLib::RpcClientType::ccu2;
-                        _out.printInfo("Info: Client type set to \"CCU2\".");
+                        _out.printInfo("Info: Client type set to \"CCU\".");
                     }
 #endif
 
@@ -1069,7 +1069,7 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
         _lifetick2Mutex.unlock();
         if(GD::bl->debugLevel >= 4 && methodName != "getNodeVariable")
         {
-            _out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->clientType == BaseLib::RpcClientType::ccu2 ? " (CCU2)" : "") + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t) (client->rpcType)) + ") Parameters:");
+            _out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->clientType == BaseLib::RpcClientType::ccu2 ? " (CCU)" : "") + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t) (client->rpcType)) + ") Parameters:");
             for(std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i)
             {
                 (*i)->print(true, false);
