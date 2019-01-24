@@ -14,8 +14,8 @@
         }
     },
     "workspace": {
-        "defaultName": "Lauf __number__",
-        "editFlow": "Lauf bearbeiten: __name__",
+        "defaultName": "Flow __number__",
+        "editFlow": "Flow bearbeiten: __name__",
         "confirmDelete": "Löschen bestätigen",
         "delete": "Are you sure you want to delete '__label__'?",
         "dropFlowHere": "Drop the flow here",
@@ -86,6 +86,11 @@
         }
     },
     "notification": {
+        "info": "<strong>Info</strong>: __message__",
+        "infoMessages": {
+            "flowsStarted": "Flows have been (re)started."
+        },
+
         "warning": "<strong>Warning</strong>: __message__",
         "warnings": {
             "undeployedChanges": "node has undeployed changes",
@@ -496,7 +501,7 @@
     },
     "fixedInputs": {
         "title": "Eingangswert fixieren",
-        "description": "Sie können den Einganswert eines Knoteneinganges hier fixieren. Ein Homegearneustart - nicht jedoch ein Laufneustart - setzt den Wert wieder zurück.",
+        "description": "Sie können den Einganswert eines Knoteneinganges hier fixieren. Ein Homegearneustart - nicht jedoch ein Flowneustart - setzt den Wert wieder zurück.",
         "clear": "Zurücksetzen",
         "set": "Setzen"
     }
