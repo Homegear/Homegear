@@ -8,15 +8,15 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #ifndef HAVE_SSIZE_T
-	#define HAVE_SSIZE_T 1
+#define HAVE_SSIZE_T 1
 #endif
 
 #ifndef isnan //Fix for build on Ubuntu Xenial
-	#define isnan(a) std::isnan(a)
+#define isnan(a) std::isnan(a)
 #endif
 
 #ifndef isfinite //Fix for build with some cross compilers
-	#define isfinite(a) std::isfinite(a)
+#define isfinite(a) std::isfinite(a)
 #endif
 
 #endif

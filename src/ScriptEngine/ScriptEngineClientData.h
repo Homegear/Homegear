@@ -45,24 +45,24 @@ namespace ScriptEngine
 class ScriptEngineClientData
 {
 public:
-	ScriptEngineClientData();
+    ScriptEngineClientData();
 
-	ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+    ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
 
-	virtual ~ScriptEngineClientData();
+    virtual ~ScriptEngineClientData();
 
-	int32_t id = 0;
-	pid_t pid = 0;
-	std::atomic_bool closed;
+    int32_t id = 0;
+    pid_t pid = 0;
+    std::atomic_bool closed;
 
-	std::vector<char> buffer;
-	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
-	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-	std::mutex sendMutex;
-	std::mutex waitMutex;
-	std::mutex rpcResponsesMutex;
-	std::map<int32_t, PScriptEngineResponse> rpcResponses;
-	std::condition_variable requestConditionVariable;
+    std::vector<char> buffer;
+    std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
+    std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+    std::mutex sendMutex;
+    std::mutex waitMutex;
+    std::mutex rpcResponsesMutex;
+    std::map<int32_t, PScriptEngineResponse> rpcResponses;
+    std::condition_variable requestConditionVariable;
 };
 
 typedef std::shared_ptr<ScriptEngineClientData> PScriptEngineClientData;

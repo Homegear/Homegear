@@ -63,29 +63,29 @@ namespace Rpc
 class RpcClient
 {
 public:
-	RpcClient();
+    RpcClient();
 
-	virtual ~RpcClient();
+    virtual ~RpcClient();
 
-	void invokeBroadcast(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
+    void invokeBroadcast(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
 
-	BaseLib::PVariable invoke(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
+    BaseLib::PVariable invoke(RemoteRpcServer* server, std::string methodName, std::shared_ptr<std::list<BaseLib::PVariable>> parameters);
 
-	void reset();
+    void reset();
 
 protected:
-	BaseLib::Output _out;
-	BaseLib::WebSocket _webSocket;
-	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-	std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder> _xmlRpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
-	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+    BaseLib::Output _out;
+    BaseLib::WebSocket _webSocket;
+    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+    std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+    std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder> _xmlRpcDecoder;
+    std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
+    std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+    std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 
-	std::pair<std::string, std::string> basicAuth(std::string& userName, std::string& password);
+    std::pair<std::string, std::string> basicAuth(std::string& userName, std::string& password);
 
-	void sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);
+    void sendRequest(RemoteRpcServer* server, std::vector<char>& data, std::vector<char>& responseData, bool insertHeader, bool& retry);
 };
 
 }

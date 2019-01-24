@@ -16,22 +16,39 @@ else
     if($loginResult === 0)
     {
       header("Location: index.php");
+      die();
     }
   }
 }
+
+$locales = array('de-DE', 'de', 'en-US', 'en');
+$i18n = array();
+if(file_exists('static/locales/en-US/signin')) $i18n = json_decode(file_get_contents('static/locales/en-US/signin'), true);
+
+foreach($locales as $locale)
+{
+  if(file_exists('static/locales/'.$locale.'/signin'))
+  {
+    $i18n2 = json_decode(file_get_contents('static/locales/'.$locale.'/signin'), true);
+    $i18n = array_replace_recursive($i18n, $i18n2);
+    break;
+  }
+}
+
+$i18n = json_decode(json_encode($i18n), false);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="author" content="Homegear UG">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Homegear UG">
 
-    <title>Node-BLUE</title>
+  <title>Node-BLUE</title>
 
-    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
-    <style>
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+  <style>
 body {
   width: 100%;
   padding-top: 40px;
@@ -92,23 +109,23 @@ p.footer {
   text-align: center;
   margin-top: 40px
 }
-    </style>
-  </head>
+  </style>
+</head>
 
-  <body>
-    <div style="text-align: center; margin-bottom: 20px;"><img style="width: 200px; margin-left: auto; margin-right: auto;" src="red/images/node-blue.svg" /></div>
-    <div style="position: relative; margin-left: auto; margin-right: auto; width: 250px;">
-      <form role="form" action="<?PHP print $_SERVER["PHP_SELF"]; ?>" method="post">
-        <input type="hidden" name="url" value="<?php if(isset($_GET['url'])) print $_GET['url']; ?>" />
-        <input type="user" id="inputUser" name="username" class="inputtop" placeholder="Username" required autofocus />
-        <input type="password" id="inputPassword" name="password" class="inputbottom" placeholder="Password" required />
-        <?php
-          if($loginResult === -1) print "<div class=\"alert alert-danger\" role=\"alert\">Wrong username or password.</div>"; 
-          else if($loginResult === -2) print "<div class=\"alert alert-danger\" role=\"alert\">No access permission.</div>";
-        ?>
-        <button type="submit">Sign in</button>
-      </form>
-      <p class="footer">Node-BLUE</p>
-    </div>
-  </body>
+<body>
+  <div style="text-align: center; margin-bottom: 20px;"><img style="width: 200px; margin-left: auto; margin-right: auto;" src="red/images/node-blue.svg" /></div>
+  <div style="position: relative; margin-left: auto; margin-right: auto; width: 250px;">
+    <form role="form" action="<?PHP print $_SERVER["PHP_SELF"]; ?>" method="post">
+      <input type="hidden" name="url" value="<?php if(isset($_GET['url'])) print $_GET['url']; ?>" />
+      <input type="user" id="inputUser" name="username" class="inputtop" placeholder="<?php print($i18n->common->username); ?>" required autofocus />
+      <input type="password" id="inputPassword" name="password" class="inputbottom" placeholder="<?php print($i18n->common->password); ?>" required />
+      <?php
+        if($loginResult === -1) print('<div class="alert alert-danger" role="alert">'.$i18n->common->error->wrongpassword.'</div>'); 
+        else if($loginResult === -2) print('<div class="alert alert-danger" role="alert">'.$i18n->common->error->noaccess.'</div>');
+      ?>
+      <button type="submit"><?php print($i18n->common->signin); ?></button>
+    </form>
+    <p class="footer">Node-BLUE</p>
+  </div>
+</body>
 </html>

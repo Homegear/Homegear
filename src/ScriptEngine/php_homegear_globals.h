@@ -45,39 +45,39 @@ __attribute__((unused)) static zend_class_entry* homegear_device_base_class_entr
 
 typedef struct _zend_homegear_globals
 {
-	std::function<void(std::string output, bool error)> outputCallback;
-	std::function<void(BaseLib::PVariable headers)> sendHeadersCallback;
-	std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> rpcCallback;
-	BaseLib::Http http;
-	BaseLib::ScriptEngine::PScriptInfo scriptInfo;
-	std::forward_list<std::string> additionalStrings;
+    std::function<void(std::string output, bool error)> outputCallback;
+    std::function<void(BaseLib::PVariable headers)> sendHeadersCallback;
+    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> rpcCallback;
+    BaseLib::Http http;
+    BaseLib::ScriptEngine::PScriptInfo scriptInfo;
+    std::forward_list<std::string> additionalStrings;
 
-	bool webRequest = false;
-	bool commandLine = false;
-	bool cookiesParsed = false;
-	int64_t peerId = 0;
-	int32_t logLevel = -1;
+    bool webRequest = false;
+    bool commandLine = false;
+    bool cookiesParsed = false;
+    int64_t peerId = 0;
+    int32_t logLevel = -1;
 
-	// {{{ Needed by ScriptEngineClient
-	int32_t id = 0;
-	std::string user;
-	std::string language;
-	std::string token;
-	bool executionStarted = false;
-	// }}}
+    // {{{ Needed by ScriptEngineClient
+    int32_t id = 0;
+    std::string user;
+    std::string language;
+    std::string token;
+    bool executionStarted = false;
+    // }}}
 
-	// {{{ Needed for nodes
-	std::string nodeId;
-	std::string flowId;
-	// }}}
+    // {{{ Needed for nodes
+    std::string nodeId;
+    std::string flowId;
+    // }}}
 } zend_homegear_globals;
 
 typedef struct _zend_homegear_superglobals
 {
-	BaseLib::Http* http;
-	BaseLib::LowLevel::Gpio* gpio;
-	std::mutex serialDevicesMutex;
-	std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
+    BaseLib::Http* http;
+    BaseLib::LowLevel::Gpio* gpio;
+    std::mutex serialDevicesMutex;
+    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>> serialDevices;
 } zend_homegear_superglobals;
 
 zend_homegear_globals* php_homegear_get_globals();

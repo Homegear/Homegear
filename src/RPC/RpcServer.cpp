@@ -38,27 +38,27 @@ int gnutls_system_recv_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
 {
     unsigned int indefiniteTimeout = (unsigned int)-2;
 
-	int ret;
-	int fd = (int)(int64_t)ptr;
+    int ret;
+    int fd = (int)(int64_t)ptr;
 
-	fd_set rfds;
-	struct timeval _tv, *tv = NULL;
+    fd_set rfds;
+    struct timeval _tv, *tv = NULL;
 
-	FD_ZERO(&rfds);
-	FD_SET(fd, &rfds);
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
 
-	if (ms != indefiniteTimeout)
-	{
-		_tv.tv_sec = ms / 1000;
-		_tv.tv_usec = (ms % 1000) * 1000;
-		tv = &_tv;
-	}
+    if (ms != indefiniteTimeout)
+    {
+        _tv.tv_sec = ms / 1000;
+        _tv.tv_usec = (ms % 1000) * 1000;
+        tv = &_tv;
+    }
 
-	ret = select(fd + 1, &rfds, NULL, NULL, tv);
+    ret = select(fd + 1, &rfds, NULL, NULL, tv);
 
-	if (ret <= 0) return ret;
+    if (ret <= 0) return ret;
 
-	return ret;
+    return ret;
 }
 #endif
 
@@ -329,13 +329,13 @@ bool RpcServer::lifetick()
 
 /*int verifyClientCert(gnutls_session_t tlsSession)
 {
-	//Called during handshake just after the certificate message has been received.
+    //Called during handshake just after the certificate message has been received.
 
-	uint32_t status = (uint32_t)-1;
-	if(gnutls_certificate_verify_peers3(tlsSession, nullptr, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
-	if(status > 0) return -1;
+    uint32_t status = (uint32_t)-1;
+    if(gnutls_certificate_verify_peers3(tlsSession, nullptr, &status) != GNUTLS_E_SUCCESS) return -1; //Terminate handshake
+    if(status > 0) return -1;
 
-	return 0;
+    return 0;
 }*/
 
 void RpcServer::start(BaseLib::Rpc::PServerInfo& info)

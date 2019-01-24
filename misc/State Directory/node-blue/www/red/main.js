@@ -515,18 +515,18 @@
 
         menuOptions.push({id:"menu-item-keyboard-shortcuts",label:RED._("menu.label.keyboardShortcuts"),onselect:"core:show-help"});
         menuOptions.push({id:"menu-item-help",
-            label: RED.settings.theme("menu.menu-item-help.label","Node-BLUE website"),
+            label: RED.settings.theme("menu.menu-item-help.label",RED._("menu.label.nodebluewebsite")),
             href: RED.settings.theme("menu.menu-item-help.url","https://doc.homegear.eu/data/homegear-node-blue/")
         });
         menuOptions.push(null);
         menuOptions.push({id:"menu-item-node-red-version", label:"v"+RED.settings.version, onselect: "core:show-about" });
         menuOptions.push({id:"menu-item-node-red",
-            label: RED.settings.theme("menu.menu-item-logout.label","Powered by Node-RED"),
+            label: RED.settings.theme("menu.menu-item-logout.label",RED._("menu.label.powered")),
             href: RED.settings.theme("menu.menu-item-logout.url","https://nodered.org/")
         });
         menuOptions.push(null);
         menuOptions.push({id:"menu-item-logout",
-            label: RED.settings.theme("menu.menu-item-logout.label","Logout"),
+            label: RED.settings.theme("menu.menu-item-logout.label",RED._("menu.label.logout")),
             hrefLocal: RED.settings.theme("menu.menu-item-logout.url","signin.php?logout=1")
         });
 

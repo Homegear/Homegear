@@ -108,6 +108,20 @@ if(!$user->checkAuth(true)) die();
         </div>
     </form>
 </div>
+
+<script>
+<?php
+if(isset($_SESSION['locale']) && is_array($_SESSION['locale']) && count($_SESSION['locale']) > 0)
+{
+    print('var locale = '.json_encode($_SESSION['locale']).';');
+}
+else
+{
+    print('var locale = null;');
+}
+?>
+</script>
+
 <script type="text/x-red" data-template-name="subflow">
     <div class="form-row">
         <label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label>

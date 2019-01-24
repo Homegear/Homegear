@@ -111,7 +111,7 @@ RED.i18n = (function() {
         },
 
         loadNodeCatalogs: function(done) {
-            var languageList = i18n.functions.toLanguages(i18n.detectLanguage());
+            var languageList = locale ? locale : i18n.functions.toLanguages(i18n.detectLanguage());
             var toLoad = languageList.length;
 
             languageList.forEach(function(lang) {
@@ -12879,7 +12879,7 @@ RED.view = (function() {
 
                                 dynamicContent = function() {
                                     RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
-                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">History</a>&nbsp;&nbsp;<a class=\"popover-dialog2\" href=\"#\">Set</a></div>" + label + types + "<p><b>Last value:</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
+                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">" + RED._("history.title") + "</a>&nbsp;&nbsp;<a class=\"popover-dialog2\" href=\"#\">" + RED._("fixedInputs.set") + "</a></div>" + label + types + "<p><b>" + RED._("history.lastValue") + "</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
                                 };
 
                                 var intervalCallback = function() {
@@ -12938,11 +12938,11 @@ RED.view = (function() {
                                                 $(this).remove();
                                             }
                                         });
-                                    historyDialog.dialog("option", "title", "History").dialog("open");
+                                    historyDialog.dialog("option", "title", RED._("history.title")).dialog("open");
                                 };
 
                                 openDialog2 = function() {
-                                    var fixedInputDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="fixed-input"><p>You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.</p><form><input type="text" id="fixed-input-payload" style="width:100%"/><input type="hidden" id="fixed-input-payloadType"/></form></div></div>')
+                                    var fixedInputDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="fixed-input"><p>' + RED._("fixedInputs.description") + '</p><form><input type="text" id="fixed-input-payload" style="width:100%"/><input type="hidden" id="fixed-input-payloadType"/></form></div></div>')
                                         .appendTo("body")
                                         .dialog({
                                             modal: true,
@@ -12961,7 +12961,7 @@ RED.view = (function() {
                                                 {
                                                     id: "popover-dialog-clear",
                                                     class: "primary",
-                                                    text: RED._("common.label.clear"),
+                                                    text: RED._("fixedInputs.clear"),
                                                     click: function() {
                                                         RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
                                                         if(d.fixedInputs > 0) d.fixedInputs -= 1;
@@ -12973,7 +12973,7 @@ RED.view = (function() {
                                                 {
                                                     id: "popover-dialog-set",
                                                     class: "primary",
-                                                    text: RED._("common.label.set"),
+                                                    text: RED._("fixedInputs.set"),
                                                     click: function() {
                                                         var element = $("#fixed-input-payload");
                                                         RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, [element.typedInput('type'), element.typedInput('value')]);
@@ -13012,7 +13012,7 @@ RED.view = (function() {
                                                 $(this).remove();
                                             }
                                         });
-                                    fixedInputDialog.dialog("option", "title", "Set fixed input").dialog("open");
+                                    fixedInputDialog.dialog("option", "title", RED._("fixedInputs.title")).dialog("open");
                                 };
 
                                 var popover = RED.popover.create({
