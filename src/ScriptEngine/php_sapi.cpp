@@ -2419,9 +2419,20 @@ ZEND_FUNCTION(hg_putenv)
 
     int returnCode = -1;
 
+    auto envPair = BaseLib::HelperFunctions::splitFirst(setting, '=');
+
+    //Don't use putenv, as it requires the string to be persistent throughout the lifetime of the program.
     {
-        std::lock_guard<std::mutex> envGuard(_envMutex);
-        returnCode = putenv((char*)setting.c_str());
+        if(envPair.second.empty())
+        {
+            std::lock_guard<std::mutex> envGuard(_envMutex);
+            returnCode = unsetenv(envPair.first.c_str());
+        }
+        else
+        {
+            std::lock_guard<std::mutex> envGuard(_envMutex);
+            returnCode = setenv(envPair.first.c_str(), envPair.second.c_str(), 1);
+        }
     }
 
     if(returnCode == 0)
