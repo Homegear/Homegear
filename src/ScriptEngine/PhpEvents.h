@@ -40,72 +40,72 @@ class PhpEvents
 {
 
 public:
-	class EventData
-	{
-	public:
-		std::string source;
-		std::string type;
-		uint64_t id = 0;
-		int32_t channel = -1;
-		int32_t hint = -1;
-		std::string variable;
-		BaseLib::PVariable value;
-	};
+    class EventData
+    {
+    public:
+        std::string source;
+        std::string type;
+        uint64_t id = 0;
+        int32_t channel = -1;
+        int32_t hint = -1;
+        std::string variable;
+        BaseLib::PVariable value;
+    };
 
-	static std::mutex eventsMapMutex;
-	static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
+    static std::mutex eventsMapMutex;
+    static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
 
-	PhpEvents(std::string& token, std::function<void(std::string output, bool error)>& outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& rpcCallback);
+    PhpEvents(std::string& token, std::function<void(std::string output, bool error)>& outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& rpcCallback);
 
-	virtual ~PhpEvents();
+    virtual ~PhpEvents();
 
-	void stop();
+    void stop();
 
-	bool enqueue(std::shared_ptr<EventData>& entry);
+    bool enqueue(std::shared_ptr<EventData>& entry);
 
-	std::shared_ptr<EventData> poll(int32_t timeout = -1);
+    std::shared_ptr<EventData> poll(int32_t timeout = -1);
 
-	void addPeer(uint64_t peerId, int32_t channel, std::string& variable);
+    void addPeer(uint64_t peerId, int32_t channel, std::string& variable);
 
-	void removePeer(uint64_t peerId, int32_t channel, std::string& variable);
+    void removePeer(uint64_t peerId, int32_t channel, std::string& variable);
 
-	bool peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable);
+    bool peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable);
 
-	void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
+    void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 
-	int32_t getLogLevel() { return _logLevel; }
+    int32_t getLogLevel() { return _logLevel; }
 
-	void setPeerId(uint64_t peerId) { _peerId = peerId; }
+    void setPeerId(uint64_t peerId) { _peerId = peerId; }
 
-	int32_t getPeerId() { return _peerId; }
+    int32_t getPeerId() { return _peerId; }
 
-	std::function<void(std::string output, bool error)>& getOutputCallback() { return _outputCallback; };
+    std::function<void(std::string output, bool error)>& getOutputCallback() { return _outputCallback; };
 
-	std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& getRpcCallback() { return _rpcCallback; };
+    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& getRpcCallback() { return _rpcCallback; };
 
-	std::string& getToken() { return _token; }
+    std::string& getToken() { return _token; }
 
 private:
-	std::function<void(std::string output, bool error)> _outputCallback;
-	std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
-	std::string _token;
+    std::function<void(std::string output, bool error)> _outputCallback;
+    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
+    std::string _token;
 
-	// {{{ Data exchange - e are abusing the events object here for data exchange between main thread and sub threads.
-	uint64_t _peerId = 0;
-	int32_t _logLevel = -1;
-	// }}}
+    // {{{ Data exchange - e are abusing the events object here for data exchange between main thread and sub threads.
+    uint64_t _peerId = 0;
+    int32_t _logLevel = -1;
+    // }}}
 
-	std::atomic_bool _stopProcessing;
-	static const int32_t _bufferSize = 1000;
-	std::mutex _queueMutex;
-	int32_t _bufferHead = 0;
-	int32_t _bufferTail = 0;
-	std::atomic_int _bufferCount;
-	std::mutex _bufferMutex;
-	std::shared_ptr<EventData> _buffer[_bufferSize];
-	std::condition_variable _processingConditionVariable;
-	std::mutex _peersMutex;
-	std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
+    std::atomic_bool _stopProcessing;
+    static const int32_t _bufferSize = 1000;
+    std::mutex _queueMutex;
+    int32_t _bufferHead = 0;
+    int32_t _bufferTail = 0;
+    std::atomic_int _bufferCount;
+    std::mutex _bufferMutex;
+    std::shared_ptr<EventData> _buffer[_bufferSize];
+    std::condition_variable _processingConditionVariable;
+    std::mutex _peersMutex;
+    std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
 };
 
 }

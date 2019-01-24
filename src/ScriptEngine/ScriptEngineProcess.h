@@ -46,70 +46,70 @@ namespace ScriptEngine
 
 struct ScriptFinishedInfo
 {
-	bool finished = false;
-	std::mutex mutex;
-	std::condition_variable conditionVariable;
+    bool finished = false;
+    std::mutex mutex;
+    std::condition_variable conditionVariable;
 };
 typedef std::shared_ptr<ScriptFinishedInfo> PScriptFinishedInfo;
 
 class ScriptEngineProcess
 {
 private:
-	pid_t _pid = 0;
-	std::mutex _scriptsMutex;
-	std::map<int32_t, PScriptInfo> _scripts;
-	std::map<int32_t, PScriptFinishedInfo> _scriptFinishedInfo;
-	PScriptEngineClientData _clientData;
-	bool _nodeProcess = false;
-	bool _exited = false;
-	std::atomic_uint _nodeThreadCount;
-	std::function<void(std::string)> _unregisterNode;
-	std::function<void(uint64_t)> _unregisterDevice;
+    pid_t _pid = 0;
+    std::mutex _scriptsMutex;
+    std::map<int32_t, PScriptInfo> _scripts;
+    std::map<int32_t, PScriptFinishedInfo> _scriptFinishedInfo;
+    PScriptEngineClientData _clientData;
+    bool _nodeProcess = false;
+    bool _exited = false;
+    std::atomic_uint _nodeThreadCount;
+    std::function<void(std::string)> _unregisterNode;
+    std::function<void(uint64_t)> _unregisterDevice;
 public:
-	ScriptEngineProcess(bool nodeProcess);
+    ScriptEngineProcess(bool nodeProcess);
 
-	virtual ~ScriptEngineProcess();
+    virtual ~ScriptEngineProcess();
 
-	std::atomic<int64_t> lastExecution;
-	std::condition_variable requestConditionVariable;
+    std::atomic<int64_t> lastExecution;
+    std::condition_variable requestConditionVariable;
 
-	pid_t getPid() { return _pid; }
+    pid_t getPid() { return _pid; }
 
-	void setPid(pid_t value) { _pid = value; }
+    void setPid(pid_t value) { _pid = value; }
 
-	PScriptEngineClientData& getClientData() { return _clientData; }
+    PScriptEngineClientData& getClientData() { return _clientData; }
 
-	void setClientData(PScriptEngineClientData& value) { _clientData = value; }
+    void setClientData(PScriptEngineClientData& value) { _clientData = value; }
 
-	void setUnregisterNode(std::function<void(std::string)> value) { _unregisterNode.swap(value); }
+    void setUnregisterNode(std::function<void(std::string)> value) { _unregisterNode.swap(value); }
 
-	void setUnregisterDevice(std::function<void(uint64_t)> value) { _unregisterDevice.swap(value); }
+    void setUnregisterDevice(std::function<void(uint64_t)> value) { _unregisterDevice.swap(value); }
 
-	bool getExited() { return _exited; }
+    bool getExited() { return _exited; }
 
-	void setExited(bool value) { _exited = value; }
+    void setExited(bool value) { _exited = value; }
 
-	bool isNodeProcess() { return _nodeProcess; }
+    bool isNodeProcess() { return _nodeProcess; }
 
-	void invokeScriptOutput(int32_t id, std::string& output, bool error);
+    void invokeScriptOutput(int32_t id, std::string& output, bool error);
 
-	void invokeScriptHeaders(int32_t id, BaseLib::PVariable& headers);
+    void invokeScriptHeaders(int32_t id, BaseLib::PVariable& headers);
 
-	void invokeScriptFinished(int32_t exitCode);
+    void invokeScriptFinished(int32_t exitCode);
 
-	void invokeScriptFinished(int32_t id, int32_t exitCode);
+    void invokeScriptFinished(int32_t id, int32_t exitCode);
 
-	uint32_t scriptCount();
+    uint32_t scriptCount();
 
-	uint32_t nodeThreadCount();
+    uint32_t nodeThreadCount();
 
-	BaseLib::ScriptEngine::PScriptInfo getScript(int32_t id);
+    BaseLib::ScriptEngine::PScriptInfo getScript(int32_t id);
 
-	PScriptFinishedInfo getScriptFinishedInfo(int32_t id);
+    PScriptFinishedInfo getScriptFinishedInfo(int32_t id);
 
-	void registerScript(int32_t id, PScriptInfo& scriptInfo);
+    void registerScript(int32_t id, PScriptInfo& scriptInfo);
 
-	void unregisterScript(int32_t id);
+    void unregisterScript(int32_t id);
 };
 
 typedef std::shared_ptr<ScriptEngineProcess> PScriptEngineProcess;

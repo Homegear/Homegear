@@ -1,0 +1,11 @@
+{
+    "common": {
+        "username": "Benutzername",
+        "password": "Kennwort",
+        "signin": "Anmelden",
+        "error": {
+            "wrongpassword": "Unbekannter Benutzer oder falsches Kennwort.",
+            "noaccess": "Keine Zugriffsberechtigung."
+        }
+    }
+}
