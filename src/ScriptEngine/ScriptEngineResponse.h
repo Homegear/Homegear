@@ -44,14 +44,14 @@ namespace ScriptEngine
 class ScriptEngineResponse
 {
 public:
-	std::atomic_bool finished;
-	int32_t packetId = 0;
-	BaseLib::PVariable response;
+    std::atomic_bool finished;
+    int32_t packetId = 0;
+    BaseLib::PVariable response;
 
-	ScriptEngineResponse()
-	{
-		finished = false;
-	}
+    ScriptEngineResponse()
+    {
+        finished = false;
+    }
 };
 
 typedef std::shared_ptr<ScriptEngineResponse> PScriptEngineResponse;

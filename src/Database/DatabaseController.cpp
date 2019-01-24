@@ -4843,7 +4843,7 @@ void DatabaseController::saveGlobalServiceMessageAsynchronous(BaseLib::Database:
 {
 	try
 	{
-		if(data.size() == 10)
+		if(data.size() == 11)
 		{
 			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp, integerValue, message, variables, binaryData) VALUES((SELECT variableID FROM serviceMessages WHERE familyID=" + std::to_string(data.at(2)->intValue) + " AND messageID=" + std::to_string(data.at(4)->intValue) + " AND messageSubID=? AND message=?), ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
 			enqueue(0, entry);
@@ -4890,7 +4890,7 @@ void DatabaseController::deleteGlobalServiceMessage(int32_t familyId, int32_t me
 	try
 	{
 		BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(familyId), std::make_shared<BaseLib::Database::DataColumn>(messageId), std::make_shared<BaseLib::Database::DataColumn>(messageSubId), std::make_shared<BaseLib::Database::DataColumn>(message)});
-		_db.executeCommand("DELETE FROM serviceMessages WHERE familyID=? AND messageID=? AND messageSubID=? AND stringValue=?", data);
+		_db.executeCommand("DELETE FROM serviceMessages WHERE familyID=? AND messageID=? AND messageSubID=? AND message=?", data);
 	}
 	catch(const std::exception& ex)
 	{

@@ -56,130 +56,130 @@ namespace Rpc
 class RpcServer
 {
 public:
-	class Client : public BaseLib::RpcClientInfo
-	{
-	public:
-		bool webSocketClient = false;
-		bool webSocketAuthorized = false;
-		bool nodeClient = false;
-		std::thread readThread;
-		std::shared_ptr<Auth> auth;
+    class Client : public BaseLib::RpcClientInfo
+    {
+    public:
+        bool webSocketClient = false;
+        bool webSocketAuthorized = false;
+        bool nodeClient = false;
+        std::thread readThread;
+        std::shared_ptr<Auth> auth;
 
-		Client();
+        Client();
 
-		virtual ~Client();
-	};
+        virtual ~Client();
+    };
 
-	struct PacketType
-	{
-		enum Enum
-		{
-			xmlRequest,
-			xmlResponse,
-			binaryRequest,
-			binaryResponse,
-			jsonRequest,
-			jsonResponse,
-			webSocketRequest,
-			webSocketResponse
-		};
-	};
+    struct PacketType
+    {
+        enum Enum
+        {
+            xmlRequest,
+            xmlResponse,
+            binaryRequest,
+            binaryResponse,
+            jsonRequest,
+            jsonResponse,
+            webSocketRequest,
+            webSocketResponse
+        };
+    };
 
-	RpcServer();
+    RpcServer();
 
-	virtual ~RpcServer();
+    virtual ~RpcServer();
 
-	void dispose();
+    void dispose();
 
-	const std::vector<BaseLib::PRpcClientInfo> getClientInfo();
+    const std::vector<BaseLib::PRpcClientInfo> getClientInfo();
 
-	const BaseLib::Rpc::PServerInfo getInfo() { return _info; }
+    const BaseLib::Rpc::PServerInfo getInfo() { return _info; }
 
-	bool lifetick();
+    bool lifetick();
 
-	bool isRunning() { return !_stopped; }
+    bool isRunning() { return !_stopped; }
 
-	void start(BaseLib::Rpc::PServerInfo& settings);
+    void start(BaseLib::Rpc::PServerInfo& settings);
 
-	void stop();
+    void stop();
 
-	uint32_t connectionCount();
+    uint32_t connectionCount();
 
-	std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; };
+    std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; };
 
-	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
+    bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
-	BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters);
+    BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters);
 
-	BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
+    BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 
-	void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
+    void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
 
 protected:
 private:
-	BaseLib::Output _out;
-	static int32_t _currentClientID;
-	BaseLib::Rpc::PServerInfo _info;
-	gnutls_certificate_credentials_t _x509Cred = nullptr;
-	gnutls_priority_t _tlsPriorityCache = nullptr;
-	gnutls_dh_params_t _dhParams = nullptr;
-	int32_t _threadPolicy = SCHED_OTHER;
-	int32_t _threadPriority = 0;
-	std::atomic_bool _stopServer;
-	std::atomic_bool _stopped;
-	std::thread _mainThread;
-	int32_t _backlog = 100;
-	std::mutex _garbageCollectionMutex;
-	int64_t _lastGargabeCollection = 0;
-	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-	std::mutex _stateMutex;
-	std::map<int32_t, std::shared_ptr<Client>> _clients;
-	std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> _rpcMethods;
-	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoderAnsi;
-	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-	std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder> _xmlRpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
-	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-	std::unique_ptr<WebServer::WebServer> _webServer;
-	std::unique_ptr<RestServer> _restServer;
-	std::mutex _lifetick1Mutex;
-	std::pair<int64_t, bool> _lifetick1;
-	std::mutex _lifetick2Mutex;
-	std::pair<int64_t, bool> _lifetick2;
+    BaseLib::Output _out;
+    static int32_t _currentClientID;
+    BaseLib::Rpc::PServerInfo _info;
+    gnutls_certificate_credentials_t _x509Cred = nullptr;
+    gnutls_priority_t _tlsPriorityCache = nullptr;
+    gnutls_dh_params_t _dhParams = nullptr;
+    int32_t _threadPolicy = SCHED_OTHER;
+    int32_t _threadPriority = 0;
+    std::atomic_bool _stopServer;
+    std::atomic_bool _stopped;
+    std::thread _mainThread;
+    int32_t _backlog = 100;
+    std::mutex _garbageCollectionMutex;
+    int64_t _lastGargabeCollection = 0;
+    std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+    std::mutex _stateMutex;
+    std::map<int32_t, std::shared_ptr<Client>> _clients;
+    std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> _rpcMethods;
+    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoderAnsi;
+    std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+    std::unique_ptr<BaseLib::Rpc::XmlrpcDecoder> _xmlRpcDecoder;
+    std::unique_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
+    std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+    std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+    std::unique_ptr<WebServer::WebServer> _webServer;
+    std::unique_ptr<RestServer> _restServer;
+    std::mutex _lifetick1Mutex;
+    std::pair<int64_t, bool> _lifetick1;
+    std::mutex _lifetick2Mutex;
+    std::pair<int64_t, bool> _lifetick2;
 
-	void collectGarbage();
+    void collectGarbage();
 
-	void getSocketDescriptor();
+    void getSocketDescriptor();
 
-	std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor(std::string& address, int32_t& port);
+    std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor(std::string& address, int32_t& port);
 
-	void getSSLSocketDescriptor(std::shared_ptr<Client>);
+    void getSSLSocketDescriptor(std::shared_ptr<Client>);
 
-	void mainThread();
+    void mainThread();
 
-	void readClient(std::shared_ptr<Client> client);
+    void readClient(std::shared_ptr<Client> client);
 
-	void sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib::PVariable variable, int32_t messageId, PacketType::Enum packetType, bool keepAlive);
+    void sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib::PVariable variable, int32_t messageId, PacketType::Enum packetType, bool keepAlive);
 
-	void sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive);
+    void sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive);
 
-	void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+    void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 
-	void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http);
+    void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http);
 
-	void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+    void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 
-	void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+    void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 
-	void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive);
+    void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive);
 
-	std::string getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection);
+    std::string getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection);
 
-	void closeClientConnection(std::shared_ptr<Client> client);
+    void closeClientConnection(std::shared_ptr<Client> client);
 
-	bool clientValid(std::shared_ptr<Client>& client);
+    bool clientValid(std::shared_ptr<Client>& client);
 };
 
 }

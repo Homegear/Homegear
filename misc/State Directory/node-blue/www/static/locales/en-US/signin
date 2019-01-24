@@ -1,0 +1,11 @@
+{
+    "common": {
+        "username": "Username",
+        "password": "Password",
+        "signin": "Sign in",
+        "error": {
+            "wrongpassword": "Wrong username or password.",
+            "noaccess":"No access permission."
+        }
+    }
+}
