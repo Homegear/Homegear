@@ -62,13 +62,13 @@
             "rename": "Rename",
             "delete": "Delete",
             "keyboardShortcuts": "Keyboard shortcuts",
-            "login": "Login",
-            "logout": "Logout",
+            "login": "Anmelden",
+            "logout": "Abmelden",
             "editPalette":"Manage palette",
             "other": "Other",
             "showTips": "Show tips",
             "help": "Node-RED website",
-            "powered": "Angetrieben von Node-RED",
+            "powered": "Basiert auf Node-RED",
             "nodebluewebsite": "Node-BLUE-Webseite"
         }
     },
