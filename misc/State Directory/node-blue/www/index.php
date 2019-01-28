@@ -6,8 +6,6 @@ if($_SERVER['WEBSOCKET_AUTH_TYPE'] != 'session') die('WebSocket authorization ty
 
 $user = new User();
 if(!$user->checkAuth(true)) die();
-
-$_SESSION['locale'] = array('en');
 ?>
 <!DOCTYPE html>
 <html>
