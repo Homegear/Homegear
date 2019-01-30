@@ -2435,6 +2435,8 @@ ZEND_FUNCTION(hg_putenv)
         }
     }
 
+    RETURN_LONG(5);
+
     if(returnCode == 0)
     {
         RETURN_TRUE;
