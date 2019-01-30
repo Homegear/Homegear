@@ -21,7 +21,7 @@ else
   }
 }
 
-$locales = array('de-DE', 'de', 'en-US', 'en');
+$locales = explode(',', explode(';', $_SERVER['HTTP_ACCEPT_LANGUAGE'])[0]);
 $i18n = array();
 if(file_exists('static/locales/en-US/signin')) $i18n = json_decode(file_get_contents('static/locales/en-US/signin'), true);
 

@@ -88,6 +88,7 @@ RED.i18n = (function() {
     return {
         init: function(done) {
             i18n.init({
+                lng: locale ? locale[0] : null,
                 resGetPath: 'locales/__ns__?lng=__lng__',
                 dynamicLoad: false,
                 load:'current',
@@ -95,7 +96,7 @@ RED.i18n = (function() {
                     namespaces: ["editor","node-red","jsonata","infotips"],
                     defaultNs: "editor"
                 },
-                fallbackLng: ['en-US'],
+                fallbackLng: locale ? locale : ['en-US'],
                 fallbackNS: ['node-red', 'editor'],
                 useCookie: false
             },function() {
@@ -106,6 +107,7 @@ RED.i18n = (function() {
             }
 
         },
+
         loadCatalog: function(namespace,done) {
             i18n.loadNamespace(namespace,done);
         },
