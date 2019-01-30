@@ -1328,8 +1328,8 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 zval* hgGetenvFunction = zend_hash_find(EG(function_table), hgGetenvString);
                 if(getenvFunction && hgGetenvFunction)
                 {
-                    zend_hash_del(EG(function_table), getenvString);
-                    zend_hash_add(EG(function_table), getenvString, hgGetenvFunction);
+                    //Don't call zend_hash_del => double free
+                    zend_hash_add_new(EG(function_table), getenvString, hgGetenvFunction);
                 }
                 //No need to call zend_string_free on getenvString and hgGetenvString
 
@@ -1339,8 +1339,8 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 zval* hgPutenvFunction = zend_hash_find(EG(function_table), hgPutenvString);
                 if(putenvFunction && hgPutenvFunction)
                 {
-                    zend_hash_del(EG(function_table), putenvString);
-                    zend_hash_add(EG(function_table), putenvString, hgPutenvFunction);
+                    //Don't call zend_hash_del => double free
+                    zend_hash_add_new(EG(function_table), putenvString, hgPutenvFunction);
                 }
                 //No need to call zend_string_free on putenvString and hgPutenvString
             }

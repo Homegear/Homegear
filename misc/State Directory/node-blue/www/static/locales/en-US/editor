@@ -86,6 +86,11 @@
         }
     },
     "notification": {
+        "info": "<strong>Info</strong>: __message__",
+        "infoMessages": {
+            "flowsStarted": "Flows have been (re)started."
+        },
+
         "warning": "<strong>Warning</strong>: __message__",
         "warnings": {
             "undeployedChanges": "node has undeployed changes",

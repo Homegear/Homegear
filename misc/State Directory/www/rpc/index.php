@@ -5,6 +5,11 @@ if(file_exists('/var/lib/homegear/ui/index.php') || file_exists('/var/lib/homege
 	header('Location: /ui/');
 	exit(0);
 }
+else if(file_exists('/var/lib/homegear/admin-ui/public/index.php') || file_exists('/var/lib/homegear/admin-ui/public/index.hgs'))
+{
+    header('Location: /admin/');
+    exit(0);
+}
 
 $hgDevices = [];
 $hgVersion = '-';
@@ -77,30 +82,36 @@ try {
 <div class="container marketing">
     <div class="row">
         <div style="height: 350px" class="col-lg-3">
+            <span class="glyphicon glyphicon-wrench" style="font-size: 140px"></span>
+            <h2>Reference</h2>
+            <p style="height: 40px">Visit the Homegear reference for information about using this RPC server.</p>
+            <p><a class="btn btn-default" href="https://ref.homegear.eu" role="button">Go there &raquo;</a></p>
+        </div>
+        <div style="height: 350px" class="col-lg-3">
             <span class="icon-nodes" style="font-size: 140px"></span>
             <h2>Node-BLUE</h2>
             <p style="height: 40px">To make your home smart use Homegear's logic engine.</p>
-            <p><a class="btn btn-default" href="/flows" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-3 -->
+            <p><a class="btn btn-default" href="/node-blue/" role="button">Go there &raquo;</a></p>
+        </div>
         <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-education" style="font-size: 140px"></span>
             <h2>Documentation</h2>
             <p style="height: 40px">For help and tutorials visit the Homegear documentation.</p>
             <p><a class="btn btn-default" href="https://doc.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-3 -->
+        </div>
         <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-wrench" style="font-size: 140px"></span>
             <h2>Reference</h2>
             <p style="height: 40px">Visit the Homegear reference for information about using this RPC server.</p>
             <p><a class="btn btn-default" href="https://ref.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-3 -->
+        </div>
         <div style="height: 350px" class="col-lg-3">
             <span class="glyphicon glyphicon-comment" style="font-size: 140px"></span>
             <h2>Forum</h2>
             <p style="height: 40px">If you still don't know, what to do, get help in our forum.</p>
             <p><a class="btn btn-default" href="https://forum.homegear.eu" role="button">Go there &raquo;</a></p>
-        </div><!-- /.col-lg-3 -->
-    </div><!-- /.row -->
+        </div>
+    </div>
     <div class="row">
         <?php
 
