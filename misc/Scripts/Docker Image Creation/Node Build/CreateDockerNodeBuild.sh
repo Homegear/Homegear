@@ -301,8 +301,8 @@ sed -i "s/<ARCH>/${arch}/g" $rootfs/build/CreateDebianPackageNightly.sh
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
-chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libhomegear-node
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get -y install libhomegear-node
 
 /build/CreateDebianPackage.sh master $1
 
@@ -317,8 +317,8 @@ chmod 755 $rootfs/build/CreateDebianPackageStable.sh
 cat > "$rootfs/build/CreateDebianPackageTesting.sh" <<-'EOF'
 #!/bin/bash
 
-chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libhomegear-node
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get -y install libhomegear-node
 
 /build/CreateDebianPackage.sh testing $1
 
