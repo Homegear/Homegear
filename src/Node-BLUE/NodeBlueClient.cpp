@@ -106,23 +106,6 @@ void NodeBlueClient::dispose()
         _disposed = true;
         _out.printMessage("Shutting down...");
 
-        int64_t startTime = 0;
-        _out.printMessage("Calling waitForStop()...");
-        {
-            std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-            for(auto& flow : _flows)
-            {
-                for(auto& nodeIterator : flow.second->nodes)
-                {
-                    Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-                    if(_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
-                    startTime = BaseLib::HelperFunctions::getTime();
-                    if(node) node->waitForStop();
-                    if(BaseLib::HelperFunctions::getTime() - startTime > 1000) _out.printWarning("Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue + " took longer than 1 second.");
-                }
-            }
-        }
-
         _out.printMessage("Nodes are stopped. Disposing...");
 
         GD::bl->shuttingDown = true;
@@ -205,19 +188,6 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
         _shuttingDownOrRestarting = true;
 
         std::lock_guard<std::mutex> startFlowGuard(_startFlowMutex);
-        _out.printMessage("Calling waitForStop()...");
-        {
-            std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-            for(auto& flow : _flows)
-            {
-                for(auto& nodeIterator : flow.second->nodes)
-                {
-                    Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-                    if(_bl->debugLevel >= 5) _out.printDebug("Debug: Waiting for node " + nodeIterator.second->id + " to stop...");
-                    if(node) node->waitForStop();
-                }
-            }
-        }
 
         _out.printMessage("Nodes are stopped. Stopping queues...");
 
@@ -1990,6 +1960,19 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray& parameters)
             }
         }
         _out.printMessage("Call to stop() completed.");
+
+        _out.printMessage("Calling waitForStop()...");
+        for(auto& flow : _flows)
+        {
+            for(auto& nodeIterator : flow.second->nodes)
+            {
+                Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
+                if(_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
+                startTime = BaseLib::HelperFunctions::getTime();
+                if(node) node->waitForStop();
+                if(BaseLib::HelperFunctions::getTime() - startTime > 1000) _out.printWarning("Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue + " took longer than 1 second.");
+            }
+        }
         _nodesStopped = true;
         return std::make_shared<Flows::Variable>();
     }

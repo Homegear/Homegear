@@ -1662,19 +1662,19 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     _restServer->process(client, http, client->socket);
                                 }
                                 else if(_info->webServer && (
-                                        !_info->xmlrpcServer ||
-                                        http.getHeader().method != "POST" ||
-                                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
-                                        http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
-                                        http.getHeader().path.compare(0, 7, "/admin/") == 0
+                                    !_info->xmlrpcServer ||
+                                    http.getHeader().method != "POST" ||
+                                    (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
+                                    http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
+                                    http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ) && (
-                                                !_info->jsonrpcServer ||
-                                                http.getHeader().method != "POST" ||
-                                                (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
-                                                http.getHeader().path == "/node-blue/flows" ||
-                                                http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
-                                                http.getHeader().path.compare(0, 7, "/admin/") == 0
-                                        ))
+                                    !_info->jsonrpcServer ||
+                                    http.getHeader().method != "POST" ||
+                                    (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
+                                    http.getHeader().path == "/node-blue/flows" ||
+                                    http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
+                                    http.getHeader().path.compare(0, 7, "/admin/") == 0
+                                ))
                                 {
                                     client->rpcType = BaseLib::RpcType::webserver;
                                     http.getHeader().remoteAddress = client->address;
