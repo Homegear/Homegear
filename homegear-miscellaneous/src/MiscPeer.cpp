@@ -1028,7 +1028,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
 		{
 			if(channel == 0 && value->type == VariableType::tBoolean)
 			{
-				if(serviceMessages->set(valueKey, value->booleanValue)) return PVariable(new Variable(VariableType::tVoid));
+				if(serviceMessages->set(valueKey, value->booleanValue)) return std::make_shared<BaseLib::Variable>();
 			}
 			else if(value->type == VariableType::tInteger) serviceMessages->set(valueKey, value->integerValue, channel);
 		}
