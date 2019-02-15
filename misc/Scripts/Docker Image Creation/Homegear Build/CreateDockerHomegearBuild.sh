@@ -132,9 +132,6 @@ if [ "$distver" == "stretch" ]; then
 fi
 
 if [ "$distver" == "bionic" ]; then
-	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
-		export MAN_DISABLE_SECCOMP=1
-	fi
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
@@ -423,12 +420,14 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-nodes-extra-master* homegear-nodes-extra-${1}
 
-	wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
-	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
-	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-	mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
+	if [ "$distributionVersion" != "jessie" ]; then
+		wget --https-only https://gitit.de/Homegear-Addons/Homegear-Beckhoff/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
+		[ $? -ne 0 ] && exit 1
+		unzip ${1}.zip
+		[ $? -ne 0 ] && exit 1
+		rm ${1}.zip
+		mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
+	fi
 
 	wget --https-only https://gitit.de/Homegear-Addons/Homegear-KNX/repository/${1}/archive.zip?private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
@@ -590,7 +589,9 @@ if [[ -n $2 ]]; then
 	createPackage homegear-licensing $1 homegear-licensing 1
 
 	createPackage homegear-nodes-extra $1 homegear-nodes-extra 1
-	createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
+	if [ "$distributionVersion" != "jessie" ]; then
+		createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
+	fi
 	createPackage Homegear-KNX $1 homegear-knx 1
 	createPackage Homegear-EnOcean $1 homegear-enocean 1
 	createPackage homegear-easycam $1 homegear-easycam 1
@@ -609,6 +610,8 @@ sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackage.sh
 
 cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
 #!/bin/bash
+
+distributionVersion="<DISTVER>"
 
 function cleanUp {
 	rm ${1}_*.build
@@ -659,7 +662,9 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-licensing
 
 	cleanUp2 homegear-nodes-extra
-	cleanUp2 homegear-beckhoff
+	if [ "$distributionVersion" != "jessie" ]; then
+		cleanUp2 homegear-beckhoff
+	fi
 	cleanUp2 homegear-knx
 	cleanUp2 homegear-enocean
 	cleanUp2 homegear-easycam
@@ -694,7 +699,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	if [[ -n \$1 ]]; then
-		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-beckhoff.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-webssh.deb; then
+		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-webssh.deb; then
 			echo \"Error: Some or all packages from gitit.de could not be created.\"
 			exit 1
 		fi
@@ -705,7 +710,6 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
 		mv homegear-nodes-extra.deb homegear-nodes-extra_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-beckhoff.deb homegear-beckhoff_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-knx.deb homegear-knx_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-enocean.deb homegear-enocean_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-easycam.deb homegear-easycam_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -716,15 +720,27 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-mbus.deb homegear-mbus_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-zwave.deb homegear-zwave_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-webssh.deb homegear-webssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
+
+		if [ \"$distributionVersion\" != \"jessie\" ]; then
+			if test ! -f homegear-beckhoff.deb; then
+				echo \"Error: Some or all packages from gitit.de could not be created.\"
+				exit 1
+			fi
+
+			mv homegear-beckhoff.deb homegear-beckhoff_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		fi
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi
 fi" >> $rootfs/build/CreateDebianPackageNightly.sh
 chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
+sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
 
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
+
+distributionVersion="<DISTVER>"
 
 /build/CreateDebianPackage.sh master $1
 
@@ -732,9 +748,16 @@ cd /build
 
 if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
+		fi
+
+		if [ "$distributionVersion" != "jessie" ]; then
+			if test ! -f homegear-beckhoff_*.deb; then
+				echo "Error: Some or all packages from gitit.de could not be created."
+				exit 1
+			fi
 		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
@@ -743,9 +766,12 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
+sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageStable.sh
 
 cat > "$rootfs/build/CreateDebianPackageTesting.sh" <<-'EOF'
 #!/bin/bash
+
+distributionVersion="<DISTVER>"
 
 /build/CreateDebianPackage.sh testing $1
 
@@ -753,9 +779,16 @@ cd /build
 
 if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
+		fi
+
+		if [ "$distributionVersion" != "jessie" ]; then
+			if test ! -f homegear-beckhoff_*.deb; then
+				echo "Error: Some or all packages from gitit.de could not be created."
+				exit 1
+			fi
 		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
@@ -764,6 +797,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
+sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageTesting.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
