@@ -721,7 +721,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-zwave.deb homegear-zwave_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-webssh.deb homegear-webssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
-		if [ \"$distributionVersion\" != \"jessie\" ]; then
+		if [ \"\$distributionVersion\" != \"jessie\" ]; then
 			if test ! -f homegear-beckhoff.deb; then
 				echo \"Error: Some or all packages from gitit.de could not be created.\"
 				exit 1
