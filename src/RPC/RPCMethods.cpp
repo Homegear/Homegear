@@ -7031,23 +7031,6 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
         BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
 
-        { //Set type to old value type and convert value
-            BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-            requestParameters->arrayValue->push_back(parameters->at(2));
-            std::string methodName = "getSystemVariable";
-            auto oldValue = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-
-            if(!oldValue->errorStruct && value->type != oldValue->type)
-            {
-                value->type = oldValue->type;
-            }
-        }
-
-        if(value->type == BaseLib::VariableType::tInteger64 && value->integerValue64 == (int64_t)value->integerValue)
-        {
-            value->type = BaseLib::VariableType::tInteger;
-        }
-
         return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value);
     }
     catch(const std::exception& ex)

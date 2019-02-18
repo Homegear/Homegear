@@ -3065,7 +3065,22 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
 				std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 				_systemVariables.emplace(variableId, systemVariable);
 			}
-			else systemVariable->value = value;
+			else
+			{
+				{ //Set type to old value type, value already is converted by constructor of class Variable
+					if(value->type != systemVariable->value->type)
+					{
+						value->type = systemVariable->value->type;
+					}
+
+					if(value->type == BaseLib::VariableType::tInteger64 && value->integerValue64 == (int64_t)value->integerValue)
+					{
+						value->type = BaseLib::VariableType::tInteger;
+					}
+				}
+
+				systemVariable->value = value;
+			}
 		}
 
 		BaseLib::Database::DataRow data;
