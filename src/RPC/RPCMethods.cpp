@@ -7039,14 +7039,6 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
             if(!oldValue->errorStruct && value->type != oldValue->type)
             {
-                if(oldValue->type == BaseLib::VariableType::tFloat && value->type == BaseLib::VariableType::tString)
-                {
-                    value = std::make_shared<BaseLib::Variable>(BaseLib::Math::getDouble(value->stringValue));
-                }
-                else if((oldValue->type == BaseLib::VariableType::tInteger || oldValue->type == BaseLib::VariableType::tInteger64) && value->type == BaseLib::VariableType::tString)
-                {
-                    value = std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber64(value->stringValue));
-                }
                 value->type = oldValue->type;
             }
         }
