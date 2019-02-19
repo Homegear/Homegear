@@ -59,134 +59,134 @@ public:
 
 	DatabaseController();
 
-	virtual ~DatabaseController();
+	~DatabaseController() override;
 
-	virtual void dispose();
+	void dispose() override;
 
-	virtual void init();
+	void init() override;
 
 	// {{{ General
-	virtual void open(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "", std::string backupFilename = "");
+	void open(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath, std::string backupFilename) override;
 
-	virtual void hotBackup();
+	void hotBackup() override;
 
-	virtual bool isOpen() { return _db.isOpen(); }
+	bool isOpen() override { return _db.isOpen(); }
 
-	virtual void initializeDatabase();
+	void initializeDatabase() override;
 
-	virtual bool convertDatabase();
+	bool convertDatabase() override;
 
-	virtual void createSavepointSynchronous(std::string& name);
+	void createSavepointSynchronous(std::string& name) override;
 
-	virtual void releaseSavepointSynchronous(std::string& name);
+	void releaseSavepointSynchronous(std::string& name) override;
 
-	virtual void createSavepointAsynchronous(std::string& name);
+	void createSavepointAsynchronous(std::string& name) override;
 
-	virtual void releaseSavepointAsynchronous(std::string& name);
+	void releaseSavepointAsynchronous(std::string& name) override;
 	// }}}
 
 	// {{{ Homegear variables
-	virtual bool getHomegearVariableString(HomegearVariables::Enum id, std::string& value);
+	bool getHomegearVariableString(HomegearVariables::Enum id, std::string& value) override;
 
-	virtual void setHomegearVariableString(HomegearVariables::Enum id, std::string& value);
+	void setHomegearVariableString(HomegearVariables::Enum id, std::string& value) override;
 	// }}}
 
 	// {{{ Data
-	virtual BaseLib::PVariable setData(std::string& component, std::string& key, BaseLib::PVariable& value);
+	BaseLib::PVariable setData(std::string& component, std::string& key, BaseLib::PVariable& value) override;
 
-	virtual BaseLib::PVariable getData(std::string& component, std::string& key);
+	BaseLib::PVariable getData(std::string& component, std::string& key) override;
 
-	virtual BaseLib::PVariable deleteData(std::string& component, std::string& key);
+	BaseLib::PVariable deleteData(std::string& component, std::string& key) override;
 	// }}}
 
 	// {{{ UI
-	virtual uint64_t addUiElement(std::string& elementId, BaseLib::PVariable data);
+	uint64_t addUiElement(std::string& elementId, BaseLib::PVariable data) override;
 
-	virtual std::shared_ptr<BaseLib::Database::DataTable> getUiElements();
+	std::shared_ptr<BaseLib::Database::DataTable> getUiElements() override;
 
-	virtual void removeUiElement(uint64_t databaseId);
+	void removeUiElement(uint64_t databaseId) override;
 	// }}}
 
 	// {{{ Stories
-	virtual BaseLib::PVariable addRoomToStory(uint64_t storyId, uint64_t roomId);
+	BaseLib::PVariable addRoomToStory(uint64_t storyId, uint64_t roomId) override;
 
-	virtual BaseLib::PVariable createStory(BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	BaseLib::PVariable createStory(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 
-	virtual BaseLib::PVariable deleteStory(uint64_t storyId);
+	BaseLib::PVariable deleteStory(uint64_t storyId) override;
 
-	virtual BaseLib::PVariable getRoomsInStory(BaseLib::PRpcClientInfo clientInfo, uint64_t storyId, bool checkAcls);
+	BaseLib::PVariable getRoomsInStory(BaseLib::PRpcClientInfo clientInfo, uint64_t storyId, bool checkAcls) override;
 
-	virtual BaseLib::PVariable getStoryMetadata(uint64_t storyId);
+	BaseLib::PVariable getStoryMetadata(uint64_t storyId) override;
 
-	virtual BaseLib::PVariable getStories(std::string languageCode);
+	BaseLib::PVariable getStories(std::string languageCode) override;
 
-	virtual BaseLib::PVariable removeRoomFromStories(uint64_t roomId);
+	BaseLib::PVariable removeRoomFromStories(uint64_t roomId) override;
 
-	virtual BaseLib::PVariable removeRoomFromStory(uint64_t storyId, uint64_t roomId);
+	BaseLib::PVariable removeRoomFromStory(uint64_t storyId, uint64_t roomId) override;
 
-	virtual bool storyExists(uint64_t storyId);
+	bool storyExists(uint64_t storyId) override;
 
-	virtual BaseLib::PVariable setStoryMetadata(uint64_t storyId, BaseLib::PVariable metadata);
+	BaseLib::PVariable setStoryMetadata(uint64_t storyId, BaseLib::PVariable metadata) override;
 
-	virtual BaseLib::PVariable updateStory(uint64_t storyId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	BaseLib::PVariable updateStory(uint64_t storyId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 	// }}}
 
 	// {{{ Rooms
-	virtual BaseLib::PVariable createRoom(BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	BaseLib::PVariable createRoom(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 
-	virtual BaseLib::PVariable deleteRoom(uint64_t roomId);
+	BaseLib::PVariable deleteRoom(uint64_t roomId) override;
 
-	virtual BaseLib::PVariable getRoomMetadata(uint64_t roomId);
+	BaseLib::PVariable getRoomMetadata(uint64_t roomId) override;
 
-	virtual BaseLib::PVariable getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls);
+	BaseLib::PVariable getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;
 
-	virtual bool roomExists(uint64_t roomId);
+	bool roomExists(uint64_t roomId) override;
 
-	virtual BaseLib::PVariable setRoomMetadata(uint64_t roomId, BaseLib::PVariable metadata);
+	BaseLib::PVariable setRoomMetadata(uint64_t roomId, BaseLib::PVariable metadata) override;
 
-	virtual BaseLib::PVariable updateRoom(uint64_t roomId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	BaseLib::PVariable updateRoom(uint64_t roomId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 	// }}}
 
 	// {{{ Categories
-	virtual BaseLib::PVariable createCategory(BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	BaseLib::PVariable createCategory(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 
-	virtual BaseLib::PVariable deleteCategory(uint64_t categoryId);
+	BaseLib::PVariable deleteCategory(uint64_t categoryId) override;
 
-	virtual BaseLib::PVariable getCategories(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls);
+	BaseLib::PVariable getCategories(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;
 
-	virtual BaseLib::PVariable getCategoryMetadata(uint64_t categoryId);
+	BaseLib::PVariable getCategoryMetadata(uint64_t categoryId) override;
 
-	virtual bool categoryExists(uint64_t categoryId);
+	bool categoryExists(uint64_t categoryId) override;
 
-	virtual BaseLib::PVariable setCategoryMetadata(uint64_t categoryId, BaseLib::PVariable metadata);
+	BaseLib::PVariable setCategoryMetadata(uint64_t categoryId, BaseLib::PVariable metadata) override;
 
-	virtual BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations, BaseLib::PVariable metadata);
+	BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 	// }}}
 
 	// {{{ Node data
-	virtual BaseLib::PVariable setNodeData(std::string& node, std::string& key, BaseLib::PVariable& value);
+	BaseLib::PVariable setNodeData(std::string& node, std::string& key, BaseLib::PVariable& value) override;
 
-	virtual BaseLib::PVariable getNodeData(std::string& node, std::string& key, bool requestFromTrustedServer = false);
+	BaseLib::PVariable getNodeData(std::string& node, std::string& key, bool requestFromTrustedServer = false) override;
 
-	virtual std::set<std::string> getAllNodeDataNodes();
+	std::set<std::string> getAllNodeDataNodes() override;
 
-	virtual BaseLib::PVariable deleteNodeData(std::string& node, std::string& key);
+	BaseLib::PVariable deleteNodeData(std::string& node, std::string& key) override;
 	// }}}
 
 	// {{{ Metadata
-	virtual BaseLib::PVariable setMetadata(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata);
+	BaseLib::PVariable setMetadata(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string& serialNumber, std::string& dataId, BaseLib::PVariable& metadata) override;
 
-	virtual BaseLib::PVariable getMetadata(uint64_t peerId, std::string& dataId);
+	BaseLib::PVariable getMetadata(uint64_t peerId, std::string& dataId) override;
 
-	virtual BaseLib::PVariable getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls);
+	BaseLib::PVariable getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls) override;
 
-	virtual BaseLib::PVariable deleteMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId);
+	BaseLib::PVariable deleteMetadata(uint64_t peerId, std::string& serialNumber, std::string& dataId) override;
 	// }}}
 
 	// {{{ System variables
 	virtual BaseLib::PVariable deleteSystemVariable(std::string& variableId);
 
-	virtual BaseLib::PVariable getSystemVariable(std::string& variableId);
+	virtual BaseLib::PVariable getSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, bool checkAcls);
 
 	virtual BaseLib::Database::PSystemVariable getSystemVariableInternal(std::string& variableId);
 
@@ -208,7 +208,7 @@ public:
 
 	virtual void removeRoomFromSystemVariables(uint64_t roomId);
 
-	virtual BaseLib::PVariable setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value);
+	virtual BaseLib::PVariable setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value, int32_t flags, bool checkAcls);
 
 	virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categories);
 
