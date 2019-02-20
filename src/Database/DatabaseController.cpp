@@ -96,7 +96,7 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT, flags INTEGER)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
@@ -358,7 +358,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.7")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.8")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -436,7 +436,7 @@ bool DatabaseController::convertDatabase()
 		int64_t versionId = result->at(0).at(0)->intValue;
 		std::string version = result->at(0).at(3)->textValue;
 
-		if(version == "0.7.7") return false; //Up to date
+		if(version == "0.7.8") return false; //Up to date
 		/*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -770,8 +770,26 @@ bool DatabaseController::convertDatabase()
 
 			version = "0.7.7";
 		}
+		if(version == "0.7.7")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.7.8...");
 
-		if(version != "0.7.7")
+			data.clear();
+            _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN flags INTEGER");
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.8")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			_db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+			version = "0.7.8";
+		}
+
+		if(version != "0.7.8")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
@@ -2543,15 +2561,15 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsAndCategories, bool checkAcls)
+BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesFlags, bool checkAcls)
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, room, categories FROM systemVariables");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, room, categories, flags FROM systemVariables");
 
 		BaseLib::PVariable systemVariableStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 		if(rows->empty()) return systemVariableStruct;
-		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+		for(auto i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 4) continue;
 
@@ -2568,14 +2586,16 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
 				systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
 				systemVariable->name = i->second.at(0)->textValue;
 				systemVariable->value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
-				systemVariable->room = rows->at(0).at(2)->intValue;
+				systemVariable->room = (uint64_t)rows->at(0).at(2)->intValue;
 
 				std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
-				for(auto categoryString : categoryStrings)
+				for(auto& categoryString : categoryStrings)
 				{
-					uint64_t category = BaseLib::Math::getNumber64(categoryString);
+					uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 					if(category != 0) systemVariable->categories.emplace(category);
 				}
+
+				systemVariable->flags = (int32_t)rows->at(0).at(4)->intValue;
 
 				std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 				_systemVariables.emplace(systemVariable->name, systemVariable);
@@ -2583,7 +2603,16 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
 
 			if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 
-			if(returnRoomsAndCategories)
+            if(systemVariable->flags & 2)
+            {
+                auto& source = clientInfo->initInterfaceId;
+                if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
+                {
+                    continue;
+                }
+            }
+
+			if(returnRoomsCategoriesFlags)
 			{
 				BaseLib::PVariable element = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
@@ -2596,6 +2625,8 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
 					if(category != 0) categoriesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
 				}
 				if(!categoriesArray->arrayValue->empty()) element->structValue->emplace("CATEGORIES", categoriesArray);
+
+				if(systemVariable->flags > 0) element->structValue->emplace("FLAGS", std::make_shared<BaseLib::Variable>(systemVariable->flags));
 
 				element->structValue->emplace("VALUE", systemVariable->value);
 
@@ -2628,7 +2659,7 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId)
 		if(categoryId == 0) return;
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, categories FROM systemVariables");
 
-		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+		for(auto i = rows->begin(); i != rows->end(); ++i)
 		{
 			std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
 			bool containsCategory = false;
@@ -2636,7 +2667,7 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId)
 			std::ostringstream categoryStream;
 			for(auto& categoryString : categoryStrings)
 			{
-				uint64_t category = (uint64_t) BaseLib::Math::getNumber64(categoryString);
+				uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 				if(category == categoryId) containsCategory = true;
 				else categoryStream << std::to_string(category) << ",";
 			}
@@ -2688,14 +2719,25 @@ void DatabaseController::removeRoomFromSystemVariables(uint64_t roomId)
 	}
 }
 
-BaseLib::PVariable DatabaseController::getSystemVariable(std::string& variableId)
+BaseLib::PVariable DatabaseController::getSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, bool checkAcls)
 {
 	try
 	{
 		if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
 
 		auto systemVariable = getSystemVariableInternal(variableId);
-		if(systemVariable) return std::make_shared<BaseLib::Variable>();
+		if(!systemVariable) return std::make_shared<BaseLib::Variable>();
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+		if(systemVariable->flags & 2)
+        {
+		    auto& source = clientInfo->initInterfaceId;
+            if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
+            {
+                return BaseLib::Variable::createError(-32603, "Unauthorized.");
+            }
+        }
 
 		return systemVariable->value;
 	}
@@ -2728,9 +2770,9 @@ BaseLib::Database::PSystemVariable DatabaseController::getSystemVariableInternal
 		}
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories FROM systemVariables WHERE variableID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories, flags FROM systemVariables WHERE variableID=?", data);
 		if(rows->empty() || rows->at(0).empty()) return BaseLib::Database::PSystemVariable();
 
 		auto value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
@@ -2738,14 +2780,16 @@ BaseLib::Database::PSystemVariable DatabaseController::getSystemVariableInternal
 		auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
 		systemVariable->name = variableId;
 		systemVariable->value = value;
-		systemVariable->room = rows->at(0).at(1)->intValue;
+		systemVariable->room = (uint64_t)rows->at(0).at(1)->intValue;
 
 		std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
-		for(auto categoryString : categoryStrings)
+		for(auto& categoryString : categoryStrings)
 		{
-			uint64_t category = BaseLib::Math::getNumber64(categoryString);
+			uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 			if(category != 0) systemVariable->categories.emplace(category);
 		}
+
+        systemVariable->flags = (int32_t)rows->at(0).at(3)->intValue;
 
 		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 		_systemVariables.emplace(variableId, systemVariable);
@@ -2810,9 +2854,9 @@ std::set<uint64_t> DatabaseController::getSystemVariableCategoriesInternal(std::
 		}
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories FROM systemVariables WHERE variableID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories, flags FROM systemVariables WHERE variableID=?", data);
 		if(rows->empty() || rows->at(0).empty()) return std::set<uint64_t>();
 
 		auto value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
@@ -2820,14 +2864,16 @@ std::set<uint64_t> DatabaseController::getSystemVariableCategoriesInternal(std::
 		auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
 		systemVariable->name = variableId;
 		systemVariable->value = value;
-		systemVariable->room = rows->at(0).at(1)->intValue;
+		systemVariable->room = (uint64_t)rows->at(0).at(1)->intValue;
 
 		std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
-		for(auto categoryString : categoryStrings)
+		for(auto& categoryString : categoryStrings)
 		{
-			uint64_t category = BaseLib::Math::getNumber64(categoryString);
+			uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 			if(category != 0) systemVariable->categories.emplace(category);
 		}
+
+		systemVariable->flags = (int32_t)rows->at(0).at(3)->intValue;
 
 		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 		_systemVariables.emplace(variableId, systemVariable);
@@ -2857,12 +2903,12 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInCategory(BaseLib::PRp
 {
 	try
 	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, room, categories FROM systemVariables");
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, room, categories, flags FROM systemVariables");
 
 		BaseLib::PVariable systemVariableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		systemVariableArray->arrayValue->reserve(rows->size());
 		if(rows->empty()) return systemVariableArray;
-		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+		for(auto i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 4) continue;
 
@@ -2884,15 +2930,26 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInCategory(BaseLib::PRp
 				std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(3)->textValue, ',');
 				for(auto& categoryString : categoryStrings)
 				{
-					uint64_t category = (uint64_t) BaseLib::Math::getNumber64(categoryString);
+					uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 					if(category != 0) systemVariable->categories.emplace(category);
 				}
+
+				systemVariable->flags = (int32_t)i->second.at(3)->intValue;
 
 				std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 				_systemVariables.emplace(systemVariable->name, systemVariable);
 			}
 
-			if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+			if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+
+            if(systemVariable->flags & 2)
+            {
+                auto& source = clientInfo->initInterfaceId;
+                if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
+                {
+                    continue;
+                }
+            }
 
 			if((systemVariable->categories.empty() && categoryId == 0) || systemVariable->categories.find(categoryId) != systemVariable->categories.end())
 			{
@@ -2923,12 +2980,12 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInRoom(BaseLib::PRpcCli
 	{
 		BaseLib::Database::DataRow data;
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, categories FROM systemVariables WHERE room=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, categories, flags FROM systemVariables WHERE room=?", data);
 
 		BaseLib::PVariable systemVariableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 		systemVariableArray->arrayValue->reserve(rows->size());
 		if(rows->empty()) return systemVariableArray;
-		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+		for(auto i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 3) continue;
 
@@ -2950,15 +3007,26 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInRoom(BaseLib::PRpcCli
 				std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(2)->textValue, ',');
 				for(auto& categoryString : categoryStrings)
 				{
-					uint64_t category = (uint64_t) BaseLib::Math::getNumber64(categoryString);
+					uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 					if(category != 0) systemVariable->categories.emplace(category);
 				}
+
+				systemVariable->flags = (int32_t)i->second.at(3)->intValue;
 
 				std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 				_systemVariables.emplace(systemVariable->name, systemVariable);
 			}
 
-			if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+			if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+
+            if(systemVariable->flags & 2)
+            {
+                auto& source = clientInfo->initInterfaceId;
+                if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
+                {
+                    continue;
+                }
+            }
 
 			systemVariableArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(systemVariable->name));
 		}
@@ -2996,9 +3064,9 @@ uint64_t DatabaseController::getSystemVariableRoomInternal(std::string& variable
 		}
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
 
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories FROM systemVariables WHERE variableID=?", data);
+		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject, room, categories, flags FROM systemVariables WHERE variableID=?", data);
 		if(rows->empty() || rows->at(0).empty()) return 0;
 
 		auto value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
@@ -3006,14 +3074,16 @@ uint64_t DatabaseController::getSystemVariableRoomInternal(std::string& variable
 		auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
 		systemVariable->name = variableId;
 		systemVariable->value = value;
-		systemVariable->room = rows->at(0).at(1)->intValue;
+		systemVariable->room = (uint64_t)rows->at(0).at(1)->intValue;
 
 		std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(2)->textValue, ',');
-		for(auto categoryString : categoryStrings)
+		for(auto& categoryString : categoryStrings)
 		{
-			uint64_t category = BaseLib::Math::getNumber64(categoryString);
+			uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
 			if(category != 0) systemVariable->categories.emplace(category);
 		}
+
+		systemVariable->flags = (int32_t)rows->at(0).at(3)->intValue;
 
 		std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 		_systemVariables.emplace(variableId, systemVariable);
@@ -3034,7 +3104,7 @@ uint64_t DatabaseController::getSystemVariableRoomInternal(std::string& variable
 	return 0;
 }
 
-BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value)
+BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value, int32_t flags, bool checkAcls)
 {
 	try
 	{
@@ -3045,7 +3115,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
 		if(value->type != BaseLib::VariableType::tBase64 && value->type != BaseLib::VariableType::tString && value->type != BaseLib::VariableType::tInteger && value->type != BaseLib::VariableType::tInteger64 && value->type != BaseLib::VariableType::tFloat && value->type != BaseLib::VariableType::tBoolean && value->type != BaseLib::VariableType::tStruct && value->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM systemVariables");
-		if(rows->size() == 0 || rows->at(0).size() == 0)
+		if(rows->empty() || rows->at(0).empty())
 		{
 			return BaseLib::Variable::createError(-32500, "Error counting system variables in database.");
 		}
@@ -3062,10 +3132,45 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
 				systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
 				systemVariable->name = variableId;
 				systemVariable->value = value;
+				systemVariable->flags = flags;
+
+                if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
 				std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
 				_systemVariables.emplace(variableId, systemVariable);
 			}
-			else systemVariable->value = value;
+			else
+			{
+                if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+                { //Check flags
+                    if(systemVariable->flags & 3) //Readonly or invisible
+                    {
+                        auto& source = clientInfo->initInterfaceId;
+                        if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
+                        {
+                            return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                        }
+                    }
+                }
+
+                //Set type to old value type, value already is converted by constructor of class Variable or RpcDecoder
+                if(systemVariable->value->type != BaseLib::VariableType::tVoid)
+				{
+					if(value->type != systemVariable->value->type)
+					{
+						value->type = systemVariable->value->type;
+					}
+
+					if(value->type == BaseLib::VariableType::tInteger64 && value->integerValue64 == (int64_t)value->integerValue)
+					{
+						value->type = BaseLib::VariableType::tInteger;
+					}
+				}
+
+				systemVariable->value = value;
+                if(flags != -1) systemVariable->flags = flags;
+			}
 		}
 
 		BaseLib::Database::DataRow data;
@@ -3081,8 +3186,9 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
 		}
 		std::string categoryString = categories.str();
 		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryString));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(flags));
 
-		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject, room, categories) VALUES(?, ?, ?, ?)", data);
+		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO systemVariables(variableID, serializedObject, room, categories, flags) VALUES(?, ?, ?, ?, ?)", data);
 		enqueue(0, entry);
 
 #ifdef EVENTHANDLER
@@ -3128,7 +3234,7 @@ BaseLib::PVariable DatabaseController::setSystemVariableCategories(std::string& 
 			auto systemVariableIterator = _systemVariables.find(variableId);
 			if(systemVariableIterator == _systemVariables.end())
 			{
-				auto value = getSystemVariable(variableId);
+				auto value = getSystemVariableInternal(variableId);
 				systemVariableIterator = _systemVariables.find(variableId);
 				if(systemVariableIterator == _systemVariables.end()) return BaseLib::Variable::createError(-5, "Unknown variable.");
 			}
@@ -3144,8 +3250,8 @@ BaseLib::PVariable DatabaseController::setSystemVariableCategories(std::string& 
 		std::string categoryString = categories.str();
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(categoryString)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryString));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
 		_db.executeCommand("UPDATE systemVariables SET categories=? WHERE variableID=?", data);
 
 		return std::make_shared<BaseLib::Variable>();
@@ -3177,7 +3283,7 @@ BaseLib::PVariable DatabaseController::setSystemVariableRoom(std::string& variab
 			auto systemVariableIterator = _systemVariables.find(variableId);
 			if(systemVariableIterator == _systemVariables.end())
 			{
-				auto value = getSystemVariable(variableId);
+				auto value = getSystemVariableInternal(variableId);
 				systemVariableIterator = _systemVariables.find(variableId);
 				if(systemVariableIterator == _systemVariables.end()) return BaseLib::Variable::createError(-5, "Unknown variable.");
 			}
@@ -3187,8 +3293,8 @@ BaseLib::PVariable DatabaseController::setSystemVariableRoom(std::string& variab
 		}
 
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(roomId)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
 		_db.executeCommand("UPDATE systemVariables SET room=? WHERE variableID=?", data);
 
 		return std::make_shared<BaseLib::Variable>();
@@ -3323,10 +3429,10 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 		{
 			if(salt.empty()) return false;
 			BaseLib::Database::DataRow data;
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(passwordHash));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(salt));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupBlob));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
 			_db.executeCommand("UPDATE users SET password=?, salt=?, groups=? WHERE userID=?", data);
 
 			rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND groups=? AND userID=?", data);
@@ -3335,9 +3441,9 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 		{
 			if(salt.empty()) return false;
 			BaseLib::Database::DataRow data;
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(passwordHash));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(salt));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
 			_db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
 
 			rows = _db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
@@ -3345,8 +3451,8 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t>& pas
 		else if(!groups.empty())
 		{
 			BaseLib::Database::DataRow data;
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(groupBlob)));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(groupBlob));
+			data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
 			_db.executeCommand("UPDATE users SET groups=? WHERE userID=?", data);
 
 			rows = _db.executeCommand("SELECT userID FROM users WHERE groups=? AND userID=?", data);
@@ -3375,7 +3481,7 @@ bool DatabaseController::deleteUser(uint64_t id)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
 		_db.executeCommand("DELETE FROM users WHERE userID=?", data);
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
@@ -3401,7 +3507,7 @@ bool DatabaseController::userNameExists(const std::string& name)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(name));
 		return !_db.executeCommand("SELECT userID FROM users WHERE name=?", data)->empty();
 	}
 	catch(const std::exception& ex)
@@ -3424,10 +3530,10 @@ uint64_t DatabaseController::getUserId(const std::string& name)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(name));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT userID FROM users WHERE name=?", data);
 		if(result->empty()) return 0;
-		return result->at(0).at(0)->intValue;
+		return (uint64_t)result->at(0).at(0)->intValue;
 	}
 	catch(const std::exception& ex)
 	{
@@ -3449,7 +3555,7 @@ int64_t DatabaseController::getUserKeyIndex1(uint64_t userId)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(userId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT keyIndex1 FROM users WHERE userID=?", data);
 		if(result->empty()) return 0;
 		return result->at(0).at(0)->intValue;
@@ -3474,7 +3580,7 @@ int64_t DatabaseController::getUserKeyIndex2(uint64_t userId)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(userId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT keyIndex2 FROM users WHERE userID=?", data);
 		if(result->empty()) return 0;
 		return result->at(0).at(0)->intValue;
@@ -3499,7 +3605,7 @@ std::vector<uint64_t> DatabaseController::getUsersGroups(uint64_t userId)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(userId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT groups FROM users WHERE userID=?", data);
 		if(result->empty()) return std::vector<uint64_t>();
 		auto decodedData = _rpcDecoder->decodeResponse(*result->at(0).at(0)->binaryValue);
@@ -3558,7 +3664,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(co
 	try
 	{
 		BaseLib::Database::DataRow dataSelect;
-		dataSelect.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
+		dataSelect.push_back(std::make_shared<BaseLib::Database::DataColumn>(name));
 		std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
 		return rows;
 	}
@@ -3670,7 +3776,7 @@ BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translatio
 			GD::out.printError("Error: Could not retrieve largest group ID.");
 			return BaseLib::Variable::createError(-32500, "Unknown application error.");
 		}
-		uint64_t largestId = idResult->at(0).at(0)->intValue;
+		uint64_t largestId = (uint64_t)idResult->at(0).at(0)->intValue;
 
 		std::vector<char> translationsBlob;
 		_rpcEncoder->encodeResponse(translations, translationsBlob);
@@ -4008,7 +4114,7 @@ void DatabaseController::deleteEvent(std::string& name)
 void DatabaseController::deleteFamily(int32_t familyId)
 {
 	BaseLib::Database::DataRow data;
-	data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(familyId)));
+	data.push_back(std::make_shared<BaseLib::Database::DataColumn>(familyId));
 	std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM familyVariables WHERE familyID=?", data);
 	enqueue(0, entry);
 }
@@ -4086,7 +4192,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getFamilyVaria
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(familyId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(familyId));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM familyVariables WHERE familyID=?", data);
 		return result;
 	}
@@ -4156,7 +4262,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDevices(uin
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(family)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(family));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM devices WHERE deviceFamily=?", data);
 		return result;
 	}
@@ -4180,7 +4286,7 @@ void DatabaseController::deleteDevice(uint64_t id)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
 		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM devices WHERE deviceID=?", data);
 		enqueue(0, entry);
 		entry = std::make_shared<QueueEntry>("DELETE FROM deviceVariables WHERE deviceID=?", data);
@@ -4205,14 +4311,14 @@ uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::strin
 	try
 	{
 		BaseLib::Database::DataRow data;
-		if(id != 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		else data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(address)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(type)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(family)));
-		int32_t result = _db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
-		return result;
+		if(id != 0) data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
+		else data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(address));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(serialNumber));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(type));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(family));
+		auto result = _db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
+		return (uint64_t)result;
 	}
 	catch(const std::exception& ex)
 	{
@@ -4302,7 +4408,7 @@ void DatabaseController::deletePeers(int32_t deviceID)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(deviceID));
 		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM peers WHERE parent=?", data);
 		enqueue(0, entry);
 	}
@@ -4325,7 +4431,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeers(uint6
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(deviceID));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM peers WHERE parent=?", data);
 		return result;
 	}
@@ -4349,7 +4455,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDeviceVaria
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(deviceID));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=?", data);
 		return result;
 	}
@@ -4374,7 +4480,7 @@ void DatabaseController::deletePeer(uint64_t id)
 {
 	try
 	{
-		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id))});
+		BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(id)});
 		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM parameters WHERE peerID=?", data);
 		enqueue(0, entry);
 		entry = std::make_shared<QueueEntry>("DELETE FROM peerVariables WHERE peerID=?", data);
@@ -4403,12 +4509,12 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 	try
 	{
 		BaseLib::Database::DataRow data;
-		if(id > 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
-		else data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(parentID)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(address)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(type)));
+		if(id > 0) data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
+		else data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(parentID));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(address));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(serialNumber));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(type));
 		uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
 		return result;
 	}
@@ -4602,7 +4708,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerParamet
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(peerID));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
 		return result;
 	}
@@ -4626,7 +4732,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerVariabl
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(peerID));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
 		return result;
 	}
@@ -4691,7 +4797,7 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 
 bool DatabaseController::peerExists(uint64_t id)
 {
-	BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id))});
+	BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(id)});
 	std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT 1 FROM peers WHERE peerID=?", data);
 	return !result->empty();
 }
@@ -4701,8 +4807,8 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(newPeerID)));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(oldPeerID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(newPeerID));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(oldPeerID));
 		std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE peers SET peerID=? WHERE peerID=?", data);
 		enqueue(0, entry);
 		entry = std::make_shared<QueueEntry>("UPDATE parameters SET peerID=? WHERE peerID=?", data);
@@ -4717,8 +4823,8 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
 		_metadata.erase(oldPeerID);
 		_metadataMutex.unlock();
 		data.clear();
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(newPeerID))));
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(oldPeerID))));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(newPeerID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(oldPeerID)));
 		entry = std::make_shared<QueueEntry>("UPDATE metadata SET objectID=? WHERE objectID=?", data);
 		enqueue(0, entry);
 		return true;
@@ -4745,7 +4851,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getServiceMess
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(peerID));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM serviceMessages WHERE peerID=?", data);
 		return result;
 	}
@@ -4913,7 +5019,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getLicenseVari
 	try
 	{
 		BaseLib::Database::DataRow data;
-		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(moduleId)));
+		data.push_back(std::make_shared<BaseLib::Database::DataColumn>(moduleId));
 		std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM licenseVariables WHERE moduleID=?", data);
 		return result;
 	}

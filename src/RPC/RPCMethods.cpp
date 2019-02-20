@@ -1967,7 +1967,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAllSystemVariables")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
-        bool returnRoomsAndCategories = false;
+        bool returnRoomsCategoriesFlags = false;
         if(parameters->size() > 0)
         {
             ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -1975,10 +1975,10 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
                                                                                                                      }));
             if(error != ParameterError::Enum::noError) return getError(error);
 
-            returnRoomsAndCategories = parameters->at(0)->booleanValue;
+            returnRoomsCategoriesFlags = parameters->at(0)->booleanValue;
         }
 
-        return GD::bl->db->getAllSystemVariables(clientInfo, returnRoomsAndCategories, checkAcls);
+        return GD::bl->db->getAllSystemVariables(clientInfo, returnRoomsCategoriesFlags, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4097,12 +4097,39 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
+        return GD::bl->db->getSystemVariable(clientInfo, parameters->at(0)->stringValue, checkAcls);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetSystemVariableFlags::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getSystemVariableFlags")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesReadSet();
+
+        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
         auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
-        if(!systemVariable) return std::make_shared<BaseLib::Variable>();
+        if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return systemVariable->value;
+        return std::make_shared<BaseLib::Variable>(systemVariable->flags);
     }
     catch(const std::exception& ex)
     {
@@ -7013,25 +7040,15 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}),
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tVariant})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tVariant}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(checkAcls)
-        {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
-            if(!systemVariable)
-            {
-                systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
-                systemVariable->name = parameters->at(0)->stringValue;
-                systemVariable->value = std::make_shared<BaseLib::Variable>();
-            }
-            if(!clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        }
-
         BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
+        int32_t flags = parameters->size() > 2 ? parameters->at(2)->integerValue : -1;
 
-        return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value);
+        return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value, flags, checkAcls);
     }
     catch(const std::exception& ex)
     {

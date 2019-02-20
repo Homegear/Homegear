@@ -191,11 +191,12 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("getStories", std::make_shared<RPCGetStories>());
     _rpcMethods->emplace("getStoryMetadata", std::make_shared<RPCGetStoryMetadata>());
     _rpcMethods->emplace("getSystemVariable", std::make_shared<RPCGetSystemVariable>());
+    _rpcMethods->emplace("getSystemVariableFlags", std::make_shared<RPCGetSystemVariableFlags>());
+    _rpcMethods->emplace("getSystemVariablesInCategory", std::make_shared<RPCGetSystemVariablesInCategory>());
+    _rpcMethods->emplace("getSystemVariablesInRoom", std::make_shared<RPCGetSystemVariablesInRoom>());
     _rpcMethods->emplace("getUpdateStatus", std::make_shared<RPCGetUpdateStatus>());
     _rpcMethods->emplace("getValue", std::make_shared<RPCGetValue>());
     _rpcMethods->emplace("getVariableDescription", std::make_shared<RPCGetVariableDescription>());
-    _rpcMethods->emplace("getSystemVariablesInCategory", std::make_shared<RPCGetSystemVariablesInCategory>());
-    _rpcMethods->emplace("getSystemVariablesInRoom", std::make_shared<RPCGetSystemVariablesInRoom>());
     _rpcMethods->emplace("getVariablesInCategory", std::make_shared<RPCGetVariablesInCategory>());
     _rpcMethods->emplace("getVariablesInRoom", std::make_shared<RPCGetVariablesInRoom>());
     _rpcMethods->emplace("getVersion", std::make_shared<RPCGetVersion>());

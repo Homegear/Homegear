@@ -67,7 +67,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 		std::vector<char> content;
 		if(!path.empty() && path.front() == '/') path = path.substr(1);
 
-		if(GD::bl->settings.enableNodeBlue() && (path.compare(0, 6, "flows/") == 0 || path == "flows"))
+		if(GD::bl->settings.enableNodeBlue() && (path.compare(0, 6, "flows/") == 0 || path == "flows" || path.compare(0, 3, "nb/") == 0 || path == "nb"))
 		{
 			path = "/node-blue/";
 			std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
