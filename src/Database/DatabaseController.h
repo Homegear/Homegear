@@ -202,7 +202,7 @@ public:
 
 	virtual uint64_t getSystemVariableRoomInternal(std::string& variableId);
 
-	virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsAndCategories, bool checkAcls);
+	virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesFlags, bool checkAcls);
 
 	virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
 

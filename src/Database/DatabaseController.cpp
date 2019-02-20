@@ -2561,7 +2561,7 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsAndCategories, bool checkAcls)
+BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesFlags, bool checkAcls)
 {
 	try
 	{
@@ -2612,7 +2612,7 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
                 }
             }
 
-			if(returnRoomsAndCategories)
+			if(returnRoomsCategoriesFlags)
 			{
 				BaseLib::PVariable element = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
@@ -2625,6 +2625,8 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
 					if(category != 0) categoriesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
 				}
 				if(!categoriesArray->arrayValue->empty()) element->structValue->emplace("CATEGORIES", categoriesArray);
+
+				if(systemVariable->flags > 0) element->structValue->emplace("FLAGS", std::make_shared<BaseLib::Variable>(systemVariable->flags));
 
 				element->structValue->emplace("VALUE", systemVariable->value);
 
