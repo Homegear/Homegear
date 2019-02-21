@@ -92,7 +92,7 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, messageID INTEGER NOT NULL, messageSubID TEXT, timestamp INTEGER, integerValue INTEGER, message TEXT, variables BLOB, binaryData BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp)");
-		_db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, categories TEXT)");
+		_db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, categories TEXT, roles TEXT)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
@@ -120,6 +120,8 @@ void DatabaseController::initializeDatabase()
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS storiesIndex ON stories (id)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)");
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS roles (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS rolesIndex ON roles (id)");
 		_db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB)");
 		_db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id, element)");
 
@@ -358,7 +360,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.8")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.9")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			_db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -436,7 +438,7 @@ bool DatabaseController::convertDatabase()
 		int64_t versionId = result->at(0).at(0)->intValue;
 		std::string version = result->at(0).at(3)->textValue;
 
-		if(version == "0.7.8") return false; //Up to date
+		if(version == "0.7.9") return false; //Up to date
 		/*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -788,8 +790,26 @@ bool DatabaseController::convertDatabase()
 
 			version = "0.7.8";
 		}
+        if(version == "0.7.8")
+        {
+            GD::out.printMessage("Converting database from version " + version + " to version 0.7.9...");
 
-		if(version != "0.7.8")
+            data.clear();
+            _db.executeCommand("ALTER TABLE parameters ADD COLUMN roles TEXT");
+
+            data.clear();
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+            //Don't forget to set new version in initializeDatabase!!!
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.9")));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+            _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.7.9";
+        }
+
+		if(version != "0.7.9")
 		{
 			GD::out.printCritical("Critical: Unknown database version: " + version);
 			return true; //Don't know, what to do
@@ -2076,6 +2096,253 @@ BaseLib::PVariable DatabaseController::updateCategory(uint64_t categoryId, BaseL
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//}}}
+
+//{{{ Roles
+BaseLib::PVariable DatabaseController::createRole(BaseLib::PVariable translations, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+
+        std::vector<char> translationsBlob;
+        _rpcEncoder->encodeResponse(translations, translationsBlob);
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+        uint64_t result = _db.executeWriteCommand("REPLACE INTO roles VALUES(?, ?, ?)", data);
+
+        return std::make_shared<BaseLib::Variable>(result);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::deleteRole(uint64_t roleId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roleId));
+        if(_db.executeCommand("SELECT id FROM roles WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        _db.executeWriteCommand("DELETE FROM roles WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getRoles(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls)
+{
+    try
+    {
+        std::multimap<int32_t, BaseLib::PVariable> sortedRoles;
+        int32_t pos = 0;
+
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM roles");
+        for(auto& row : *rows)
+        {
+            if(checkAcls && !clientInfo->acls->checkRoleReadAccess(row.second.at(0)->intValue)) continue;
+            BaseLib::PVariable role = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+			role->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
+            BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+            if(languageCode.empty()) role->structValue->emplace("TRANSLATIONS", translations);
+            else
+            {
+                auto translationIterator = translations->structValue->find(languageCode);
+                if(translationIterator != translations->structValue->end()) role->structValue->emplace("NAME", translationIterator->second);
+                else
+                {
+                    translationIterator = translations->structValue->find("en-US");
+                    if(translationIterator != translations->structValue->end()) role->structValue->emplace("NAME", translationIterator->second);
+                    else role->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+                }
+            }
+            if(!row.second.at(2)->binaryValue->empty())
+            {
+                BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+				role->structValue->emplace("METADATA", metadata);
+
+                auto positionIterator = metadata->structValue->find("position");
+                if(positionIterator != metadata->structValue->end()) sortedRoles.emplace(positionIterator->second->integerValue64, role);
+                else sortedRoles.emplace(pos++, role);
+            }
+            else
+            {
+				role->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+                sortedRoles.emplace(pos++, role);
+            }
+        }
+
+        BaseLib::PVariable roles = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+		roles->arrayValue->reserve(sortedRoles.size());
+        for(auto& role : sortedRoles)
+        {
+			roles->arrayValue->emplace_back(role.second);
+        }
+        return roles;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getRoleMetadata(uint64_t roleId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roleId));
+        auto rows = _db.executeCommand("SELECT metadata FROM roles WHERE id=?", data);
+
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool DatabaseController::roleExists(uint64_t roleId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roleId));
+        return !_db.executeCommand("SELECT id FROM roles WHERE id=?", data)->empty();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+BaseLib::PVariable DatabaseController::setRoleMetadata(uint64_t roleId, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roleId));
+        if(_db.executeCommand("SELECT id FROM roles WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+        _db.executeCommand("UPDATE roles SET metadata=? WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::updateRole(uint64_t roleId, BaseLib::PVariable translations, BaseLib::PVariable metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roleId));
+        if(_db.executeCommand("SELECT id FROM roles WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        std::vector<char> translationsBlob;
+        _rpcEncoder->encodeResponse(translations, translationsBlob);
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+        if(!metadata->structValue->empty())
+        {
+            std::vector<char> metadataBlob;
+            _rpcEncoder->encodeResponse(metadata, metadataBlob);
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+            _db.executeCommand("UPDATE roles SET metadata=?, translations=? WHERE id=?", data);
+        }
+        else _db.executeCommand("UPDATE roles SET translations=? WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 //}}}
 
@@ -4618,6 +4885,35 @@ void DatabaseController::savePeerParameterCategoriesAsynchronous(BaseLib::Databa
 				return;
 			}
 			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET categories=? WHERE parameterID=?", data);
+			enqueue(0, entry);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void DatabaseController::savePeerParameterRolesAsynchronous(BaseLib::Database::DataRow& data)
+{
+	try
+	{
+		if(data.size() == 2)
+		{
+			if(data.at(1)->intValue == 0)
+			{
+				GD::out.printError("Error: Could not save roles of peer parameter. Parameter ID is \"0\".");
+				return;
+			}
+			std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET roles=? WHERE parameterID=?", data);
 			enqueue(0, entry);
 		}
 	}
