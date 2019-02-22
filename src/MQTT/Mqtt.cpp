@@ -1254,7 +1254,7 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 				messageJson2->topic = "jsonobj/" + std::to_string(peerId) + '/' + std::to_string(channel) + '/' + key;
 				BaseLib::PVariable structValue = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 				structValue->structValue->emplace("value", value);
-				structValue->structValue->emplace("timestamp", BaseLib::HelperFunctions::getTime());
+				structValue->structValue->emplace("timestamp", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime()));
 				structValue->structValue->emplace("eventSource", std::make_shared<BaseLib::Variable>(source));
 				_jsonEncoder->encode(structValue, messageJson2->message);
 				messageJson2->retain = retain;
