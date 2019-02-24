@@ -228,6 +228,7 @@ void Mqtt::getResponseByType(const std::vector<char>& packet, std::vector<char>&
 {
 	try
 	{
+		std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
 		if(!_socket->connected())
 		{
 			if(errors) _out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
@@ -280,6 +281,7 @@ void Mqtt::getResponse(const std::vector<char>& packet, std::vector<char>& respo
 {
 	try
 	{
+		std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
 		if(!_socket->connected())
 		{
 			_out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
@@ -1139,6 +1141,7 @@ void Mqtt::disconnect()
 {
 	try
 	{
+		std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
 		_connected = false;
 		std::vector<char> disconnect = {(char) MQTT_PACKET_DISCONN, 0};
 		if(_socket->connected()) _socket->proofwrite(disconnect);

@@ -1077,6 +1077,17 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCGetSystemVariableFlags : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCGetSystemVariableFlags()
+    {
+        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCGetSystemVariablesInCategory : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -1758,6 +1769,7 @@ public:
     RPCSetSystemVariable()
     {
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);

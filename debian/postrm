@@ -9,7 +9,6 @@ case "$1" in
 
 	purge)
 		insserv -rf homegear >/dev/null 2>&1
-		rm -Rf /etc/homegear > /dev/null 2>&1
 		rm -Rf /var/lib/homegear > /dev/null 2>&1
 		rm -Rf /usr/share/homegear > /dev/null 2>&1
 		rm -Rf /var/log/homegear > /dev/null 2>&1
