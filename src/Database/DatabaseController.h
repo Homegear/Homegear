@@ -164,6 +164,8 @@ public:
 	// }}}
 
     // {{{ Roles
+	void createRoleInternal(uint64_t roleId, const BaseLib::PVariable& translations, const BaseLib::PVariable& metadata);
+
     BaseLib::PVariable createRole(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 
     BaseLib::PVariable deleteRole(uint64_t roleId) override;

@@ -265,6 +265,7 @@ RpcServer::RpcServer()
 
     { // Roles
         _rpcMethods->emplace("addRoleToVariable", std::make_shared<RPCAddRoleToVariable>());
+        _rpcMethods->emplace("aggregateRoles", std::make_shared<RPCAggregateRoles>());
         _rpcMethods->emplace("createRole", std::make_shared<RPCCreateRole>());
         _rpcMethods->emplace("deleteRole", std::make_shared<RPCDeleteRole>());
         _rpcMethods->emplace("getRoles", std::make_shared<RPCGetRoles>());
