@@ -1,0 +1,240 @@
+[
+{
+	"id": 100000,
+	"translations": {
+		"en-US": "Light", 
+		"de-DE": "Licht"
+	}
+},
+{
+	"id": 101000,
+	"translations": {
+		"en-US": "Light - brightness", 
+		"de-DE": "Licht - Helligkeit"
+	}
+},
+{
+	"id": 102000,
+	"translations": {
+		"en-US": "Light - color", 
+		"de-DE": "Licht - Farbe"
+	}
+},
+{
+	"id": 102001,
+	"translations": {
+		"en-US": "Light - color - RGB", 
+		"de-DE": "Licht - Farbe - RGB"
+	}
+},
+{
+	"id": 102002,
+	"translations": {
+		"en-US": "Light - color - hue", 
+		"de-DE": "Licht - Farbe - Farbton"
+	}
+},
+{
+	"id": 102003,
+	"translations": {
+		"en-US": "Light - color - saturation", 
+		"de-DE": "Licht - Farbe - Sättigung"
+	}
+},
+{
+	"id": 102004,
+	"translations": {
+		"en-US": "Light - color - XY", 
+		"de-DE": "Licht - Farbe - XY"
+	}
+},
+{
+	"id": 103000,
+	"translations": {
+		"en-US": "Light - cold white/warm white", 
+		"de-DE": "Licht - Kaltweiß/warmweiß"
+	}
+},
+{
+	"id": 103001,
+	"translations": {
+		"en-US": "Light - color temperature white", 
+		"de-DE": "Licht - Farbtemperatur weiß"
+	}
+},
+{
+	"id": 200000,
+	"translations": {
+		"en-US": "HVAC", 
+		"de-DE": "HLK"
+	}
+},
+{
+	"id": 201000,
+	"translations": {
+		"en-US": "Heating", 
+		"de-DE": "Heizung"
+	}
+},
+{
+	"id": 201001,
+	"translations": {
+		"en-US": "Heating - current temperature", 
+		"de-DE": "Heizung - Ist-Temperatur"
+	}
+},
+{
+	"id": 201002,
+	"translations": {
+		"en-US": "Heating - setpoint temperature", 
+		"de-DE": "Heizung - Soll-Temperatur"
+	}
+},
+{
+	"id": 201003,
+	"translations": {
+		"en-US": "Heating - temperature mode", 
+		"de-DE": "Heizung - Temperaturmodus"
+	}
+},
+{
+	"id": 201004,
+	"translations": {
+		"en-US": "Heating - comfort temperature", 
+		"de-DE": "Heizung - Komforttemperatur"
+	}
+},
+{
+	"id": 201005,
+	"translations": {
+		"en-US": "Heating - eco temperature", 
+		"de-DE": "Heizung - Absenktemperatur"
+	}
+},
+{
+	"id": 201006,
+	"translations": {
+		"en-US": "Heating - frost protection temperature", 
+		"de-DE": "Heizung - Frostschutztemperatur"
+	}
+},
+{
+	"id": 300000,
+	"translations": {
+		"en-US": "Security", 
+		"de-DE": "Sicherheit"
+	}
+},
+{
+	"id": 301000,
+	"translations": {
+		"en-US": "Security - contact sensor", 
+		"de-DE": "Sicherheit - Kontaktsensor"
+	}
+},
+{
+	"id": 301001,
+	"translations": {
+		"en-US": "Security - Door state", 
+		"de-DE": "Sicherheit - Türzustand"
+	}
+},
+{
+	"id": 301002,
+	"translations": {
+		"en-US": "Security - Window state", 
+		"de-DE": "Sicherheit - Fensterzustand"
+	}
+},
+{
+	"id": 400000,
+	"translations": {
+		"en-US": "Socket", 
+		"de-DE": "Steckdose"
+	}
+},
+{
+	"id": 401000,
+	"translations": {
+		"en-US": "Socket - state", 
+		"de-DE": "Steckdose - Zustand"
+	}
+},
+{
+	"id": 500000,
+	"translations": {
+		"en-US": "Shading", 
+		"de-DE": "Beschattung"
+	}
+},
+{
+	"id": 501000,
+	"translations": {
+		"en-US": "Shading - blind", 
+		"de-DE": "Beschattung - Rollladen"
+	}
+},
+{
+	"id": 501001,
+	"translations": {
+		"en-US": "Shading - blind - up", 
+		"de-DE": "Beschattung - hoch"
+	}
+},
+{
+	"id": 501002,
+	"translations": {
+		"en-US": "Shading - blind - down", 
+		"de-DE": "Beschattung - runter"
+	}
+},
+{
+	"id": 501003,
+	"translations": {
+		"en-US": "Shading - blind - position", 
+		"de-DE": "Beschattung - Position"
+	}
+},
+{
+	"id": 501003,
+	"translations": {
+		"en-US": "Shading - blind - stop", 
+		"de-DE": "Beschattung - Stop"
+	}
+},
+{
+	"id": 502000,
+	"translations": {
+		"en-US": "Shading - awning", 
+		"de-DE": "Beschattung - Markise"
+	}
+},
+{
+	"id": 502001,
+	"translations": {
+		"en-US": "Shading - awning - retract", 
+		"de-DE": "Beschattung - Markise - einfahren"
+	}
+},
+{
+	"id": 502002,
+	"translations": {
+		"en-US": "Shading - awning - extend", 
+		"de-DE": "Beschattung - Markise - ausfahren"
+	}
+},
+{
+	"id": 502003,
+	"translations": {
+		"en-US": "Shading - awning - position", 
+		"de-DE": "Beschattung - Markise - Position"
+	}
+},
+{
+	"id": 502003,
+	"translations": {
+		"en-US": "Shading - awning - stop", 
+		"de-DE": "Beschattung - Markise - Stop"
+	}
+}
+]
