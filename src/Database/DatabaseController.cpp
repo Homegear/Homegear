@@ -351,6 +351,37 @@ void DatabaseController::initializeDatabase()
 		}
 		//}}}
 
+		//{{{ Create default roles
+			{
+				auto result = _db.executeCommand("SELECT count(*) FROM roles");
+				if(!result->empty() && result->begin()->second.begin()->second->intValue == 0)
+				{
+					std::string defaultRolesFile = GD::bl->settings.dataPath() + "defaultRoles.json";
+					if(GD::bl->io.fileExists(defaultRolesFile))
+					{
+						auto rawRoles = GD::bl->io.getFileContent(defaultRolesFile);
+						if(!BaseLib::HelperFunctions::trim(rawRoles).empty())
+						{
+							BaseLib::Rpc::JsonDecoder jsonDecoder(GD::bl.get());
+							BaseLib::PVariable roles;
+							try
+                            {
+                                roles = jsonDecoder.decode(rawRoles);
+                                for(auto& roleEntry : *roles->arrayValue)
+                                {
+
+                                }
+                            }
+                            catch(BaseLib::Exception& ex)
+                            {
+                                GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+                            }
+						}
+					}
+				}
+			}
+		//}}}
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 		auto result = _db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);

@@ -1975,6 +1975,53 @@ BaseLib::PVariable RPCFamilyExists::invoke(BaseLib::PRpcClientInfo clientInfo, B
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCForceConfigUpdate::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("forceConfigUpdate")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        uint64_t peerId = (uint64_t)parameters->at(0)->integerValue64;
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(!central || !central->peerExists(peerId)) continue;
+
+            auto peer = central->getPeer(peerId);
+            if(!peer) return BaseLib::Variable::createError(-2, "Device not found.");
+
+            if(clientInfo->acls->roomsCategoriesRolesDevicesWriteSet())
+            {
+                if(!clientInfo->acls->checkDeviceWriteAccess(peer)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+            }
+
+            return peer->forceConfigUpdate(clientInfo);
+        }
+
+        return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try

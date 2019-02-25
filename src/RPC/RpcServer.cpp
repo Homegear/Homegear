@@ -148,6 +148,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("enableEvent", std::make_shared<RPCEnableEvent>());
     _rpcMethods->emplace("executeMiscellaneousDeviceMethod", std::make_shared<RPCExecuteMiscellaneousDeviceMethod>());
     _rpcMethods->emplace("familyExists", std::make_shared<RPCFamilyExists>());
+    _rpcMethods->emplace("forceConfigUpdate", std::make_shared<RPCForceConfigUpdate>());
     _rpcMethods->emplace("getAllConfig", std::make_shared<RPCGetAllConfig>());
     _rpcMethods->emplace("getAllMetadata", std::make_shared<RPCGetAllMetadata>());
     _rpcMethods->emplace("getAllScripts", std::make_shared<RPCGetAllScripts>());

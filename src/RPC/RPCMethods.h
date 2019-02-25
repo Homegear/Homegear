@@ -540,7 +540,17 @@ public:
     RPCFamilyExists()
     {
         addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    }
 
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCForceConfigUpdate : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCForceConfigUpdate()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
