@@ -163,6 +163,24 @@ public:
 	BaseLib::PVariable updateCategory(uint64_t categoryId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 	// }}}
 
+    // {{{ Roles
+	void createRoleInternal(uint64_t roleId, const BaseLib::PVariable& translations, const BaseLib::PVariable& metadata);
+
+    BaseLib::PVariable createRole(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+
+    BaseLib::PVariable deleteRole(uint64_t roleId) override;
+
+    BaseLib::PVariable getRoles(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;
+
+    BaseLib::PVariable getRoleMetadata(uint64_t roleId) override;
+
+    bool roleExists(uint64_t roleId) override;
+
+    BaseLib::PVariable setRoleMetadata(uint64_t roleId, BaseLib::PVariable metadata) override;
+
+    BaseLib::PVariable updateRole(uint64_t roleId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+    // }}}
+
 	// {{{ Node data
 	BaseLib::PVariable setNodeData(std::string& node, std::string& key, BaseLib::PVariable& value) override;
 
@@ -298,51 +316,52 @@ public:
 	// }}}
 
 	// {{{ Peer
-	virtual void deletePeer(uint64_t id);
+	void deletePeer(uint64_t id) override;
 
-	virtual uint64_t savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type);
+	uint64_t savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type) override;
 
-	virtual void savePeerParameterAsynchronous(BaseLib::Database::DataRow& data);
+	void savePeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
 
-	virtual void savePeerParameterRoomAsynchronous(BaseLib::Database::DataRow& data);
+	void savePeerParameterRoomAsynchronous(BaseLib::Database::DataRow& data) override;
 
-	virtual void savePeerParameterCategoriesAsynchronous(BaseLib::Database::DataRow& data);
+	void savePeerParameterCategoriesAsynchronous(BaseLib::Database::DataRow& data) override;
 
-	virtual void savePeerVariableAsynchronous(BaseLib::Database::DataRow& data);
+	void savePeerParameterRolesAsynchronous(BaseLib::Database::DataRow& data) override;
 
-	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerParameters(uint64_t peerID);
+	void savePeerVariableAsynchronous(BaseLib::Database::DataRow& data) override;
 
-	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID);
+	std::shared_ptr<BaseLib::Database::DataTable> getPeerParameters(uint64_t peerID) override;
 
-	virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data);
+	std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID) override;
 
-	virtual bool peerExists(uint64_t peerId);
+	void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow& data) override;
+
+	bool peerExists(uint64_t peerId) override;
 
 	/**
      * {@inheritDoc}
      */
-	virtual bool setPeerID(uint64_t oldPeerID, uint64_t newPeerID);
-	//End Peer
+	bool setPeerID(uint64_t oldPeerID, uint64_t newPeerID) override;
 	// }}}
 
 	// {{{ Service messages
-	virtual std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerId);
+	std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerId) override;
 
-	virtual void saveServiceMessageAsynchronous(uint64_t peerId, BaseLib::Database::DataRow& data);
+	void saveServiceMessageAsynchronous(uint64_t peerId, BaseLib::Database::DataRow& data) override;
 
-	virtual void saveGlobalServiceMessageAsynchronous(BaseLib::Database::DataRow& data);
+	void saveGlobalServiceMessageAsynchronous(BaseLib::Database::DataRow& data) override;
 
-	virtual void deleteServiceMessage(uint64_t databaseId);
+	void deleteServiceMessage(uint64_t databaseId) override;
 
-	virtual void deleteGlobalServiceMessage(int32_t familyId, int32_t messageId, std::string& messageSubId, std::string& message);
+	void deleteGlobalServiceMessage(int32_t familyId, int32_t messageId, std::string& messageSubId, std::string& message) override;
 	// }}}
 
 	// {{{ License modules
-	virtual std::shared_ptr<BaseLib::Database::DataTable> getLicenseVariables(int32_t moduleId);
+	std::shared_ptr<BaseLib::Database::DataTable> getLicenseVariables(int32_t moduleId) override;
 
-	virtual void saveLicenseVariable(int32_t moduleId, BaseLib::Database::DataRow& data);
+	void saveLicenseVariable(int32_t moduleId, BaseLib::Database::DataRow& data) override;
 
-	virtual void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey);
+	void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey) override;
 	// }}}
 protected:
 	std::atomic_bool _disposing;

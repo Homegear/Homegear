@@ -89,6 +89,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
     _rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
     _rpcMethods.emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
+    _rpcMethods.emplace("forceConfigUpdate", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCForceConfigUpdate()));
     _rpcMethods.emplace("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig()));
     _rpcMethods.emplace("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata()));
     _rpcMethods.emplace("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts()));
@@ -222,6 +223,19 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _rpcMethods.emplace("removeCategoryFromVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromVariable()));
         _rpcMethods.emplace("setCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetCategoryMetadata()));
         _rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
+    }
+
+    { // Roles
+        _rpcMethods.emplace("addRoleToVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAddRoleToVariable>()));
+        _rpcMethods.emplace("aggregateRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAggregateRoles>()));
+        _rpcMethods.emplace("createRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCreateRole>()));
+        _rpcMethods.emplace("deleteRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteRole>()));
+        _rpcMethods.emplace("getRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoles>()));
+        _rpcMethods.emplace("getRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoleMetadata>()));
+        _rpcMethods.emplace("getVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetVariablesInRole>()));
+        _rpcMethods.emplace("removeRoleFromVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromVariable>()));
+        _rpcMethods.emplace("setRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetRoleMetadata>()));
+        _rpcMethods.emplace("updateRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCUpdateRole>()));
     }
 
     { // UI
@@ -921,7 +935,7 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
         if(_shuttingDown) return;
         if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-        bool checkAcls = _scriptEngineClientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+        bool checkAcls = _scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
         std::shared_ptr<BaseLib::Systems::Peer> peer;
         if(checkAcls)
         {
@@ -943,7 +957,7 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
             {
                 if(id == 0)
                 {
-                    if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesReadSet())
+                    if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
                     {
                         auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
                         if(systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
@@ -1007,7 +1021,7 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib
         if(_shuttingDown) return;
 
         if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-        if(_scriptEngineClientInfo->acls->roomsCategoriesDevicesReadSet())
+        if(_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet())
         {
             std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
             for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -1098,7 +1112,7 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
         if(_shuttingDown) return;
 
         if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-        if(_scriptEngineClientInfo->acls->roomsCategoriesDevicesReadSet())
+        if(_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet())
         {
             std::shared_ptr<BaseLib::Systems::Peer> peer;
             std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -2329,7 +2343,7 @@ BaseLib::PVariable ScriptEngineServer::peerExists(PScriptEngineClientData& clien
         if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
         if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
-        if(scriptInfo->clientInfo->acls->roomsCategoriesDevicesReadSet())
+        if(scriptInfo->clientInfo->acls->roomsCategoriesRolesDevicesReadSet())
         {
             auto families = GD::familyController->getFamilies();
             for(auto& family : families)

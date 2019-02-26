@@ -290,7 +290,7 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("event")) continue;
             if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
-            bool checkAcls = server->second->getServerClientInfo()->acls->variablesRoomsCategoriesDevicesReadSet();
+            bool checkAcls = server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesDevicesReadSet();
             std::shared_ptr<BaseLib::Systems::Peer> peer;
             if(checkAcls)
             {
@@ -312,7 +312,7 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
                     {
                         if(id == 0)
                         {
-                            if(server->second->getServerClientInfo()->acls->variablesRoomsCategoriesReadSet())
+                            if(server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet())
                             {
                                 auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
                                 if(!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable)) continue;
@@ -345,7 +345,7 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
                     {
                         if(id == 0)
                         {
-                            if(server->second->getServerClientInfo()->acls->variablesRoomsCategoriesReadSet())
+                            if(server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet())
                             {
                                 auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
                                 if(!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable)) continue;
@@ -551,7 +551,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string>& address)
         if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("newDevices")) return;
 
-        bool checkAcls = server->getServerClientInfo()->acls->roomsCategoriesDevicesReadSet();
+        bool checkAcls = server->getServerClientInfo()->acls->roomsCategoriesRolesDevicesReadSet();
 
         BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -705,7 +705,7 @@ void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable 
         {
             if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newDevices") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess(methodName)) continue;
-            if(server->second->getServerClientInfo()->acls->roomsCategoriesDevicesReadSet())
+            if(server->second->getServerClientInfo()->acls->roomsCategoriesRolesDevicesReadSet())
             {
                 bool abort = false;
                 for(auto& peer : peers)
@@ -868,7 +868,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
             bool checkAcls = server->second->getServerClientInfo()->acls->devicesReadSet();
             if(id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end()) continue;
 
-            if(server->second->getServerClientInfo()->acls->roomsCategoriesDevicesReadSet())
+            if(server->second->getServerClientInfo()->acls->roomsCategoriesRolesDevicesReadSet())
             {
                 std::shared_ptr<BaseLib::Systems::Peer> peer;
                 std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();

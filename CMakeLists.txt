@@ -78,12 +78,15 @@ set(SOURCE_FILES
         src/RPC/RemoteRpcServer.h
         src/RPC/RestServer.cpp
         src/RPC/RestServer.h
+        src/RPC/Roles.cpp
+        src/RPC/Roles.h
         src/RPC/RpcClient.cpp
         src/RPC/RpcClient.h
         src/RPC/RPCMethods.cpp
         src/RPC/RPCMethods.h
         src/RPC/RpcServer.cpp
         src/RPC/RpcServer.h
+        src/ScriptEngine/CacheInfo.h
         src/ScriptEngine/php_config_fixes.h
         src/ScriptEngine/php_homegear_globals.cpp
         src/ScriptEngine/php_homegear_globals.h
@@ -117,7 +120,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/Monitor.cpp
         src/Monitor.h
-        config.h src/ScriptEngine/CacheInfo.h)
+        config.h)
 
 add_custom_target(homegear COMMAND ../../devscripts/makeAll.sh SOURCES ${SOURCE_FILES})
 
