@@ -2938,7 +2938,7 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 
-            if(systemVariable->flags & 2)
+            if(systemVariable->flags != -1 && (systemVariable->flags & 2))
             {
                 auto& source = clientInfo->initInterfaceId;
                 if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
@@ -3065,7 +3065,7 @@ BaseLib::PVariable DatabaseController::getSystemVariable(BaseLib::PRpcClientInfo
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        if(systemVariable->flags & 2)
+        if(systemVariable->flags != -1 && (systemVariable->flags & 2))
         {
             auto& source = clientInfo->initInterfaceId;
             if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
@@ -3277,7 +3277,7 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInCategory(BaseLib::PRp
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 
-            if(systemVariable->flags & 2)
+            if(systemVariable->flags != -1 && (systemVariable->flags & 2))
             {
                 auto& source = clientInfo->initInterfaceId;
                 if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
@@ -3354,7 +3354,7 @@ BaseLib::PVariable DatabaseController::getSystemVariablesInRoom(BaseLib::PRpcCli
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 
-            if(systemVariable->flags & 2)
+            if(systemVariable->flags != -1 && (systemVariable->flags & 2))
             {
                 auto& source = clientInfo->initInterfaceId;
                 if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
@@ -3479,7 +3479,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
                 if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
                 { //Check flags
-                    if(systemVariable->flags & 3) //Readonly or invisible
+                    if(systemVariable->flags != -1 && (systemVariable->flags & 3)) //Readonly or invisible
                     {
                         auto& source = clientInfo->initInterfaceId;
                         if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
