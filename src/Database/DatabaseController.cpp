@@ -375,7 +375,16 @@ void DatabaseController::initializeDatabase()
 
                                 int64_t id = idIterator->second->integerValue64;
                                 if(id <= 0) continue;
-                                createRoleInternal(id, translationsIterator->second, std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+                                auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                                auto addVariablesIterator = roleEntry->structValue->find("addVariables");
+                                if(addVariablesIterator != roleEntry->structValue->end())
+                                {
+                                    metadata->structValue->emplace("addVariables", addVariablesIterator->second);
+                                }
+
+                                createRoleInternal(id, translationsIterator->second, metadata);
                             }
                         }
                         catch(BaseLib::Exception& ex)

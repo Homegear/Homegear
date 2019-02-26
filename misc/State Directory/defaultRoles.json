@@ -2,63 +2,63 @@
 {
 	"id": 100000,
 	"translations": {
-		"en-US": "Light", 
+		"en-US": "light", 
 		"de-DE": "Licht"
 	}
 },
 {
 	"id": 101000,
 	"translations": {
-		"en-US": "Light - brightness", 
+		"en-US": "light - brightness", 
 		"de-DE": "Licht - Helligkeit"
 	}
 },
 {
 	"id": 102000,
 	"translations": {
-		"en-US": "Light - color", 
+		"en-US": "light - color", 
 		"de-DE": "Licht - Farbe"
 	}
 },
 {
 	"id": 102001,
 	"translations": {
-		"en-US": "Light - color - RGB", 
+		"en-US": "light - color - RGB", 
 		"de-DE": "Licht - Farbe - RGB"
 	}
 },
 {
 	"id": 102002,
 	"translations": {
-		"en-US": "Light - color - hue", 
+		"en-US": "light - color - hue", 
 		"de-DE": "Licht - Farbe - Farbton"
 	}
 },
 {
 	"id": 102003,
 	"translations": {
-		"en-US": "Light - color - saturation", 
+		"en-US": "light - color - saturation", 
 		"de-DE": "Licht - Farbe - Sättigung"
 	}
 },
 {
 	"id": 102004,
 	"translations": {
-		"en-US": "Light - color - XY", 
+		"en-US": "light - color - XY", 
 		"de-DE": "Licht - Farbe - XY"
 	}
 },
 {
 	"id": 103000,
 	"translations": {
-		"en-US": "Light - cold white/warm white", 
+		"en-US": "light - cold white/warm white", 
 		"de-DE": "Licht - Kaltweiß/warmweiß"
 	}
 },
 {
 	"id": 103001,
 	"translations": {
-		"en-US": "Light - color temperature white", 
+		"en-US": "light - color temperature white", 
 		"de-DE": "Licht - Farbtemperatur weiß"
 	}
 },
@@ -72,168 +72,191 @@
 {
 	"id": 201000,
 	"translations": {
-		"en-US": "Heating", 
+		"en-US": "heating", 
 		"de-DE": "Heizung"
 	}
 },
 {
 	"id": 201001,
 	"translations": {
-		"en-US": "Heating - current temperature", 
+		"en-US": "heating - current temperature", 
 		"de-DE": "Heizung - Ist-Temperatur"
 	}
 },
 {
 	"id": 201002,
 	"translations": {
-		"en-US": "Heating - setpoint temperature", 
+		"en-US": "heating - setpoint temperature", 
 		"de-DE": "Heizung - Soll-Temperatur"
-	}
+	},
+	"addVariables": [
+		{
+			"id": "COMFORT_TEMPERATURE",
+			"type": "FLOAT",
+			"min": 0.0,
+			"max": 30.0,
+			"default": 21.0
+		},
+		{
+			"id": "ECO_TEMPERATURE",
+			"type": "FLOAT",
+			"min": 0.0,
+			"max": 30.0,
+			"default": 18.0
+		},
+		{
+			"id": "FROST_PROTECTION_TEMPERATURE",
+			"type": "FLOAT",
+			"min": 0.0,
+			"max": 30.0,
+			"default": 5.0
+		}
+	]
 },
 {
 	"id": 201003,
 	"translations": {
-		"en-US": "Heating - temperature mode", 
+		"en-US": "heating - temperature mode", 
 		"de-DE": "Heizung - Temperaturmodus"
 	}
 },
 {
 	"id": 201004,
 	"translations": {
-		"en-US": "Heating - comfort temperature", 
+		"en-US": "heating - comfort temperature", 
 		"de-DE": "Heizung - Komforttemperatur"
 	}
 },
 {
 	"id": 201005,
 	"translations": {
-		"en-US": "Heating - eco temperature", 
+		"en-US": "heating - eco temperature", 
 		"de-DE": "Heizung - Absenktemperatur"
 	}
 },
 {
 	"id": 201006,
 	"translations": {
-		"en-US": "Heating - frost protection temperature", 
+		"en-US": "heating - frost protection temperature", 
 		"de-DE": "Heizung - Frostschutztemperatur"
 	}
 },
 {
 	"id": 300000,
 	"translations": {
-		"en-US": "Security", 
+		"en-US": "security", 
 		"de-DE": "Sicherheit"
 	}
 },
 {
 	"id": 301000,
 	"translations": {
-		"en-US": "Security - contact sensor", 
+		"en-US": "security - contact sensor", 
 		"de-DE": "Sicherheit - Kontaktsensor"
 	}
 },
 {
 	"id": 301001,
 	"translations": {
-		"en-US": "Security - Door state", 
+		"en-US": "security - Door state", 
 		"de-DE": "Sicherheit - Türzustand"
 	}
 },
 {
 	"id": 301002,
 	"translations": {
-		"en-US": "Security - Window state", 
+		"en-US": "security - Window state", 
 		"de-DE": "Sicherheit - Fensterzustand"
 	}
 },
 {
 	"id": 400000,
 	"translations": {
-		"en-US": "Socket", 
+		"en-US": "socket", 
 		"de-DE": "Steckdose"
 	}
 },
 {
 	"id": 401000,
 	"translations": {
-		"en-US": "Socket - state", 
+		"en-US": "socket - state", 
 		"de-DE": "Steckdose - Zustand"
 	}
 },
 {
 	"id": 500000,
 	"translations": {
-		"en-US": "Shading", 
+		"en-US": "shading", 
 		"de-DE": "Beschattung"
 	}
 },
 {
 	"id": 501000,
 	"translations": {
-		"en-US": "Shading - blind", 
+		"en-US": "shading - blind", 
 		"de-DE": "Beschattung - Rollladen"
 	}
 },
 {
 	"id": 501001,
 	"translations": {
-		"en-US": "Shading - blind - up", 
+		"en-US": "shading - blind - up", 
 		"de-DE": "Beschattung - hoch"
 	}
 },
 {
 	"id": 501002,
 	"translations": {
-		"en-US": "Shading - blind - down", 
+		"en-US": "shading - blind - down", 
 		"de-DE": "Beschattung - runter"
 	}
 },
 {
 	"id": 501003,
 	"translations": {
-		"en-US": "Shading - blind - position", 
+		"en-US": "shading - blind - position", 
 		"de-DE": "Beschattung - Position"
 	}
 },
 {
 	"id": 501003,
 	"translations": {
-		"en-US": "Shading - blind - stop", 
+		"en-US": "shading - blind - stop", 
 		"de-DE": "Beschattung - Stop"
 	}
 },
 {
 	"id": 502000,
 	"translations": {
-		"en-US": "Shading - awning", 
+		"en-US": "shading - awning", 
 		"de-DE": "Beschattung - Markise"
 	}
 },
 {
 	"id": 502001,
 	"translations": {
-		"en-US": "Shading - awning - retract", 
+		"en-US": "shading - awning - retract", 
 		"de-DE": "Beschattung - Markise - einfahren"
 	}
 },
 {
 	"id": 502002,
 	"translations": {
-		"en-US": "Shading - awning - extend", 
+		"en-US": "shading - awning - extend", 
 		"de-DE": "Beschattung - Markise - ausfahren"
 	}
 },
 {
 	"id": 502003,
 	"translations": {
-		"en-US": "Shading - awning - position", 
+		"en-US": "shading - awning - position", 
 		"de-DE": "Beschattung - Markise - Position"
 	}
 },
 {
 	"id": 502003,
 	"translations": {
-		"en-US": "Shading - awning - stop", 
+		"en-US": "shading - awning - stop", 
 		"de-DE": "Beschattung - Markise - Stop"
 	}
 }
