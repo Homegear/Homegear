@@ -110,6 +110,17 @@
 			"min": 0.0,
 			"max": 30.0,
 			"default": 5.0
+		},
+		{
+			"id": "TEMPERATURE_MODE",
+			"type": "ENUM",
+			"default": 0,
+			"enumeration": [
+				"unset",
+				"comfort",
+				"eco",
+				"frostProtection"
+			]
 		}
 	]
 },
