@@ -4950,14 +4950,14 @@ void DatabaseController::saveSpecialPeerParameterAsynchronous(BaseLib::Database:
 {
     try
     {
-        if(data.size() != 7)
+        if(data.size() != 8)
         {
             GD::out.printError("Error: Invalid number of columns.");
             return;
         }
 
         data.push_front(data.at(3));
-        std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, parameterName, value, specialType, metadata) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)", data);
+        std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT OR REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, parameterName, value, specialType, metadata, roles) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?, ?)", data);
         enqueue(0, entry);
     }
     catch(const std::exception& ex)

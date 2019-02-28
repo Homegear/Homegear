@@ -1090,10 +1090,16 @@ BaseLib::PVariable RPCAggregateRoles::invoke(BaseLib::PRpcClientInfo clientInfo,
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray}),
             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct}),
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray}),
             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tStruct}),
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tArray}),
             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger}),
-            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger})
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger}),
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger}),
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger})
         }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -1109,7 +1115,7 @@ BaseLib::PVariable RPCAggregateRoles::invoke(BaseLib::PRpcClientInfo clientInfo,
         }
         else roles = parameters->at(1)->arrayValue;
 
-        auto& aggregationParameters = parameters->at(2);
+        auto aggregationParameters = parameters->size() >= 3 ? parameters->at(2) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
         uint64_t roomId = 0;
         if(parameters->size() >= 4) roomId = (uint64_t)parameters->at(3)->integerValue64;
