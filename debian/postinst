@@ -109,6 +109,7 @@ case $1 in
 				systemctl enable homegear.service
 			fi
 		fi
+		touch /var/lib/homegear/homegear_updated
 		;;
 
 	# Back out of an attempt to upgrade this package FROM THIS VERSION
