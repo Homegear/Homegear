@@ -322,6 +322,8 @@ public:
 
 	void savePeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
 
+	void saveSpecialPeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
+
 	void savePeerParameterRoomAsynchronous(BaseLib::Database::DataRow& data) override;
 
 	void savePeerParameterCategoriesAsynchronous(BaseLib::Database::DataRow& data) override;

@@ -95,21 +95,36 @@
 			"type": "FLOAT",
 			"min": 0.0,
 			"max": 30.0,
-			"default": 21.0
+			"default": 21.0,
+			"roles": [201004]
 		},
 		{
 			"id": "ECO_TEMPERATURE",
 			"type": "FLOAT",
 			"min": 0.0,
 			"max": 30.0,
-			"default": 18.0
+			"default": 18.0,
+			"roles": [201005]
 		},
 		{
 			"id": "FROST_PROTECTION_TEMPERATURE",
 			"type": "FLOAT",
 			"min": 0.0,
 			"max": 30.0,
-			"default": 5.0
+			"default": 5.0,
+			"roles": [201006]
+		},
+		{
+			"id": "TEMPERATURE_MODE",
+			"type": "ENUM",
+			"default": 0,
+			"enumeration": [
+				"unset",
+				"comfort",
+				"eco",
+				"frostProtection"
+			],
+			"roles": [201003]
 		}
 	]
 },
