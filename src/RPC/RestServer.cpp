@@ -160,7 +160,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 parameters->arrayValue->reserve(3);
                 parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
                 parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));;
+                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));;
                 std::string methodName = "getParamset";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
                 if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
@@ -333,7 +333,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 parameters->arrayValue->reserve(4);
                 parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
                 parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(5))));
+                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
                 parameters->arrayValue->push_back(json);
                 std::string methodName = "putParamset";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);

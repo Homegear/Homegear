@@ -338,7 +338,7 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
     {
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
-        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
         auto uiElements = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
         uiElements->arrayValue->reserve(_uiElements.size());
@@ -455,7 +455,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
         if(clientInfo->acls->roomsReadSet() && !clientInfo->acls->checkRoomReadAccess(roomId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
         auto roomIterator = _uiElementsByRoom.find(roomId);
         if(roomIterator == _uiElementsByRoom.end()) return BaseLib::Variable::createError(-1, "Unknown room.");
@@ -534,7 +534,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
         if(clientInfo->acls->categoriesReadSet() && !clientInfo->acls->checkCategoryReadAccess(categoryId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesDevicesReadSet();
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
         auto categoryIterator = _uiElementsByCategory.find(categoryId);
         if(categoryIterator == _uiElementsByCategory.end()) return BaseLib::Variable::createError(-1, "Unknown category.");

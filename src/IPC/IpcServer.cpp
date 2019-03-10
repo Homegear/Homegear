@@ -77,6 +77,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
 	_rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
 	_rpcMethods.emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
+	_rpcMethods.emplace("forceConfigUpdate", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCForceConfigUpdate()));
 	_rpcMethods.emplace("getAllConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllConfig()));
 	_rpcMethods.emplace("getAllMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllMetadata()));
 	_rpcMethods.emplace("getAllScripts", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllScripts()));
@@ -208,6 +209,19 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("removeCategoryFromVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveCategoryFromVariable()));
 		_rpcMethods.emplace("setCategoryMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetCategoryMetadata()));
 		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
+	}
+
+	{ // Roles
+		_rpcMethods.emplace("addRoleToVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAddRoleToVariable>()));
+        _rpcMethods.emplace("aggregateRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAggregateRoles>()));
+		_rpcMethods.emplace("createRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCreateRole>()));
+		_rpcMethods.emplace("deleteRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteRole>()));
+		_rpcMethods.emplace("getRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoles>()));
+		_rpcMethods.emplace("getRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoleMetadata>()));
+		_rpcMethods.emplace("getVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetVariablesInRole>()));
+		_rpcMethods.emplace("removeRoleFromVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromVariable>()));
+		_rpcMethods.emplace("setRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetRoleMetadata>()));
+		_rpcMethods.emplace("updateRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCUpdateRole>()));
 	}
 
 	{ // UI
@@ -408,7 +422,7 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 		if(_shuttingDown) return;
 		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-		if(_dummyClientInfo->acls->variablesRoomsCategoriesDevicesReadSet())
+		if(_dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet())
 		{
 			std::shared_ptr<BaseLib::Systems::Peer> peer;
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -429,7 +443,7 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 			{
 				if(id == 0)
 				{
-					if(_dummyClientInfo->acls->variablesRoomsCategoriesReadSet())
+					if(_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
 					{
 						auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
 						if(systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
@@ -493,7 +507,7 @@ void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
 		if(_shuttingDown) return;
 
 		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		if(_dummyClientInfo->acls->roomsCategoriesRolesDevicesReadSet())
 		{
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
 			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -587,7 +601,7 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 		if(_shuttingDown) return;
 
 		if(!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-		if(_dummyClientInfo->acls->roomsCategoriesDevicesReadSet())
+		if(_dummyClientInfo->acls->roomsCategoriesRolesDevicesReadSet())
 		{
 			std::shared_ptr<BaseLib::Systems::Peer> peer;
 			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();

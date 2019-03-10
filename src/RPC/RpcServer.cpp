@@ -147,7 +147,8 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("deleteSystemVariable", std::make_shared<RPCDeleteSystemVariable>());
     _rpcMethods->emplace("enableEvent", std::make_shared<RPCEnableEvent>());
     _rpcMethods->emplace("executeMiscellaneousDeviceMethod", std::make_shared<RPCExecuteMiscellaneousDeviceMethod>());
-    _rpcMethods->emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
+    _rpcMethods->emplace("familyExists", std::make_shared<RPCFamilyExists>());
+    _rpcMethods->emplace("forceConfigUpdate", std::make_shared<RPCForceConfigUpdate>());
     _rpcMethods->emplace("getAllConfig", std::make_shared<RPCGetAllConfig>());
     _rpcMethods->emplace("getAllMetadata", std::make_shared<RPCGetAllMetadata>());
     _rpcMethods->emplace("getAllScripts", std::make_shared<RPCGetAllScripts>());
@@ -212,7 +213,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("listTeams", std::make_shared<RPCListTeams>());
     _rpcMethods->emplace("logLevel", std::make_shared<RPCLogLevel>());
     _rpcMethods->emplace("nodeOutput", std::make_shared<RPCNodeOutput>());
-    _rpcMethods->emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
+    _rpcMethods->emplace("peerExists", std::make_shared<RPCPeerExists>());
     _rpcMethods->emplace("ping", std::make_shared<RPCPing>());
     _rpcMethods->emplace("putParamset", std::make_shared<RPCPutParamset>());
     _rpcMethods->emplace("removeCategoryFromChannel", std::make_shared<RPCRemoveCategoryFromChannel>());
@@ -262,18 +263,31 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
 
+    { // Roles
+        _rpcMethods->emplace("addRoleToVariable", std::make_shared<RPCAddRoleToVariable>());
+        _rpcMethods->emplace("aggregateRoles", std::make_shared<RPCAggregateRoles>());
+        _rpcMethods->emplace("createRole", std::make_shared<RPCCreateRole>());
+        _rpcMethods->emplace("deleteRole", std::make_shared<RPCDeleteRole>());
+        _rpcMethods->emplace("getRoles", std::make_shared<RPCGetRoles>());
+        _rpcMethods->emplace("getRoleMetadata", std::make_shared<RPCGetRoleMetadata>());
+        _rpcMethods->emplace("getVariablesInRole", std::make_shared<RPCGetVariablesInRole>());
+        _rpcMethods->emplace("removeRoleFromVariable", std::make_shared<RPCRemoveRoleFromVariable>());
+        _rpcMethods->emplace("setRoleMetadata", std::make_shared<RPCSetRoleMetadata>());
+        _rpcMethods->emplace("updateRole", std::make_shared<RPCUpdateRole>());
+    }
+    
     //{{{ UI
-    _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
-    _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
-    _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
-    _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
-    _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
-    _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
+        _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
+        _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
+        _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
+        _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
+        _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
+        _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
     //}}}
 
     //{{{ Users
-    _rpcMethods->emplace("getUserMetadata", std::make_shared<RPCGetUserMetadata>());
-    _rpcMethods->emplace("setUserMetadata", std::make_shared<RPCSetUserMetadata>());
+        _rpcMethods->emplace("getUserMetadata", std::make_shared<RPCGetUserMetadata>());
+        _rpcMethods->emplace("setUserMetadata", std::make_shared<RPCSetUserMetadata>());
     //}}}
 }
 
