@@ -327,7 +327,15 @@
       "social" : "Soziale",
       "storage" : "Speicher",
       "analysis" : "Analyse",
-      "advanced" : "fortgeschritten"
+      "advanced" : "fortgeschritten",
+      "heating" : "Heizung",
+      "general" : "Allgemein",
+      "communication" : "Kommunikation",
+      "notification" : "Benachrichtigung",
+      "logic" : "Logik",
+      "database" : "Datenbank",
+      "parsers" : "Parser",
+      "time" : "Zeit"
     },
     "event" : {
       "nodeAdded" : "Knoten zur Palette hinzugefügt:",
