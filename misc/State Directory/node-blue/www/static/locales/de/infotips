@@ -1,23 +1,23 @@
 {
-    "info": {
-        "tip0" : "You can remove the selected nodes or links with {{core:delete-selection}}",
-        "tip1" : "Search for nodes using {{core:search}}",
-        "tip2" : "{{core:toggle-sidebar}} will toggle the view of this sidebar",
-        "tip3" : "You can manage your palette of nodes with {{core:manage-palette}}",
-        "tip4" : "Your flow configuration nodes are listed in the sidebar panel. It can been accessed from the menu or with {{core:show-config-tab}}",
-        "tip5" : "Enable or disable these tips from the option in the settings",
-        "tip6" : "Move the selected nodes using the [left] [up] [down] and [right] keys. Hold [shift] to nudge them further",
-        "tip7" : "Dragging a node onto a wire will splice it into the link",
-        "tip8" : "Export the selected nodes, or the current tab with {{core:show-export-dialog}}",
-        "tip9" : "Import a flow by dragging its JSON into the editor, or with {{core:show-import-dialog}}",
-        "tip10" : "[shift] [click] and drag on a node port to move all of the attached wires or just the selected one",
-        "tip11" : "Show the Info tab with {{core:show-info-tab}} or the Debug tab with {{core:show-debug-tab}}",
-        "tip12" : "[ctrl] [click] in the workspace to open the quick-add dialog",
-        "tip13" : "Hold down [ctrl] when you [click] on a node port to enable quick-wiring",
-        "tip14" : "Hold down [shift] when you [click] on a node to also select all of its connected nodes",
-        "tip15" : "Hold down [ctrl] when you [click] on a node to add or remove it from the current selection",
-        "tip16" : "Switch flow tabs with {{core:show-previous-tab}} and {{core:show-next-tab}}",
-        "tip17" : "You can confirm your changes in the node edit tray with {{core:confirm-edit-tray}} or cancel them with {{core:cancel-edit-tray}}",
-        "tip18" : "Pressing {{core:edit-selected-node}} will edit the first node in the current selection"
-    }
+  "info" : {
+    "tip0" : "Sie können die ausgewählten Knoten oder Verbindungen mit {{ core:delete-selection }} entfernen.",
+    "tip1" : "Suche nach Knoten mit {{ core:search }}",
+    "tip2" : "{{ core:toggle-sidebar }} schaltet die Ansicht dieser Seitenleiste ein.",
+    "tip3" : "Sie können Ihre Palette von Knoten mit {{ core:manage-palette }} verwalten.",
+    "tip4" : "Ihre Flow-Konfigurationsknoten werden in der Seitenleiste angezeigt. Es kann über das Menü oder mit {{ core:show-config-tab }} aufgerufen werden.",
+    "tip5" : "Aktiviert oder inaktiviert diese Tipps von der Option in den Einstellungen",
+    "tip6" : "Verschieben Sie die ausgewählten Knoten mit Hilfe der [left] [up] [down] und [right] Tasten. Halten Sie [Shift] gedrückt, um das Fenster weiter zu schieben",
+    "tip7" : "Wenn Sie einen Knoten auf eine Verbindung ziehen, wird er in die Verbindung eingefügt.",
+    "tip8" : "Die ausgewählten Knoten exportieren oder die aktuelle Registerkarte mit {{ core:show-export-dialog }}",
+    "tip9" : "Importieren Sie einen Flow, indem Sie sein JSON in den Editor ziehen oder mit {{ core:show-import-dialog }}.",
+    "tip10" : "[Umschalt] [Klicken] und ziehen Sie auf einen Knotenanschluss, um alle angeschlossenen Verbindungen oder nur die ausgewählte zu verschieben.",
+    "tip11" : "Die Registerkarte \"Info\" mit {{ core:show-info-tab }} oder der Registerkarte \"Debug\" mit {{ core:show-debug-tab }} anzeigen",
+    "tip12" : "[ctrl] [Klicken] in den Arbeitsbereich, um den Schnellhinzufügedialog zu öffnen.",
+    "tip13" : "Halten Sie [ctrl] gedrückt, wenn Sie auf einem Knotenanschluss klicken, um eine Schnellverbindung zu aktivieren.",
+    "tip14" : "Halten Sie [Umschalt] gedrückt, wenn Sie auf einen Knoten klicken, um auch alle verbundenen Knoten auszuwählen.",
+    "tip15" : "Halten Sie [ctrl] gedrückt, wenn Sie auf einen Knoten klicken, um ihn aus der aktuellen Auswahl hinzuzufügen oder zu entfernen.",
+    "tip16" : "Indexzungen wechseln mit {{ core:show-previous-tab }} und {{ core:show-next-tab }}",
+    "tip17" : "Sie können die Änderungen im Editierrahmen des Knotens mit {{ core:confirm-edit-tray }} bestätigen oder sie mit {{ core:cancel-edit-tray }} abbrechen.",
+    "tip18" : "Durch Drücken von {{ core:edit-selected-node }} wird der erste Knoten in der aktuellen Auswahl bearbeitet."
+  }
 }
