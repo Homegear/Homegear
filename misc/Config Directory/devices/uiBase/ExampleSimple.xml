@@ -15,6 +15,9 @@
 		<!-- A string identifying the frontend UI element -->
 		<control>MyUiElement</control>
 
+		<!-- A role ID to associate this UI element with -->
+		<role>0x401010</role>
+
 		<!-- Input independent icons. Input dependent icons are defined in "variableInputs". -->
 		<icons>
 			<icon id="socket">
