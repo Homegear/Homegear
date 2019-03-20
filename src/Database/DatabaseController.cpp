@@ -384,6 +384,16 @@ void DatabaseController::initializeDatabase()
                                     metadata->structValue->emplace("addVariables", addVariablesIterator->second);
                                 }
 
+                                auto metadataIterator = roleEntry->structValue->find("metadata");
+                                if(metadataIterator != roleEntry->structValue->end())
+                                {
+                                    for(auto& metadataEntry : *metadataIterator->second->structValue)
+                                    {
+                                        if(metadataEntry.first == "addVariables") continue;
+                                        metadata->structValue->emplace(metadataEntry.first, metadataEntry.second);
+                                    }
+                                }
+
                                 createRoleInternal(id, translationsIterator->second, metadata);
                             }
                         }
