@@ -117,6 +117,8 @@ ZEND_FUNCTION(hg_set_language);
 ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_FUNCTION(hg_get_http_contents);
 ZEND_FUNCTION(hg_download);
+ZEND_FUNCTION(hg_json_encode);
+ZEND_FUNCTION(hg_json_decode);
 ZEND_FUNCTION(hg_ssdp_search);
 ZEND_FUNCTION(hg_configure_gateway);
 ZEND_FUNCTION(hg_check_license);
@@ -176,6 +178,8 @@ static const zend_function_entry homegear_functions[] = {
         ZEND_FE(hg_set_script_log_level, NULL)
         ZEND_FE(hg_get_http_contents, NULL)
         ZEND_FE(hg_download, NULL)
+        ZEND_FE(hg_json_encode, NULL)
+        ZEND_FE(hg_json_decode, NULL)
         ZEND_FE(hg_ssdp_search, NULL)
         ZEND_FE(hg_configure_gateway, NULL)
         ZEND_FE(hg_check_license, NULL)
@@ -709,7 +713,7 @@ ZEND_FUNCTION(hg_register_thread)
     if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
     std::string tokenPairString;
     if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::registerThread().");
-    else if(argc >= 1)
+    else if(argc == 1)
     {
         if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "stringId is not of type string.");
         else
@@ -717,6 +721,12 @@ ZEND_FUNCTION(hg_register_thread)
             if(Z_STRLEN(args[0]) > 0) tokenPairString = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
         }
     }
+    if(tokenPairString.empty())
+    {
+        php_error_docref(NULL, E_WARNING, "stringId must not be empty.");
+        RETURN_FALSE;
+    }
+
     int32_t scriptId;
     std::pair<std::string, std::string> tokenPair = BaseLib::HelperFunctions::splitFirst(tokenPairString, ',');
     scriptId = BaseLib::Math::getNumber(tokenPair.first, false);
@@ -1564,6 +1574,51 @@ ZEND_FUNCTION(hg_download)
     }
 
     RETURN_TRUE;
+}
+
+ZEND_FUNCTION(hg_json_encode)
+{
+    if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    BaseLib::PVariable value;
+    if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::jsonEncode().");
+    else if(argc == 1)
+    {
+        value = Homegear::PhpVariableConverter::getVariable(&args[0]);
+    }
+    if(!value) RETURN_FALSE;
+
+    BaseLib::Rpc::JsonEncoder jsonEncoder(Homegear::GD::bl.get());
+    std::string json;
+    jsonEncoder.encode(value, json);
+
+    ZVAL_STRINGL(return_value, json.c_str(), json.size());
+}
+
+ZEND_FUNCTION(hg_json_decode)
+{
+    if(_disposed) RETURN_NULL();
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string json;
+    if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to Homegear::jsonDecode().");
+    else if(argc == 1)
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "value is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) json = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+    }
+    if(json.empty()) RETURN_FALSE;
+
+    BaseLib::Rpc::JsonDecoder jsonDecoder(Homegear::GD::bl.get());
+    auto value = jsonDecoder.decode(json);
+
+    Homegear::PhpVariableConverter::getPHPVariable(value, return_value);
 }
 
 ZEND_FUNCTION(hg_ssdp_search)
@@ -2481,6 +2536,8 @@ static const zend_function_entry homegear_methods[] = {
         ZEND_ME_MAPPING(setScriptLogLevel, hg_set_script_log_level, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(jsonEncode, hg_json_encode, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(jsonDecode, hg_json_decode, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(ssdpSearch, hg_ssdp_search, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(configureGateway, hg_configure_gateway, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
