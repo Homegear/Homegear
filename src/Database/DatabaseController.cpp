@@ -4879,31 +4879,16 @@ void DatabaseController::deletePeer(uint64_t id)
 
 uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type)
 {
-    try
-    {
-        BaseLib::Database::DataRow data;
-        if(id > 0) data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
-        else data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(parentID));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(address));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(serialNumber));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(type));
-        uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
-        return result;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
+    BaseLib::Database::DataRow data;
+    if(id > 0) data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
+    else data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(parentID));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(address));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(serialNumber));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(type));
+    uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
+    if(result == 0) throw BaseLib::Exception("Error saving peer to database. See previous errors in log for more information.");
+    return result;
 }
 
 void DatabaseController::savePeerParameterAsynchronous(BaseLib::Database::DataRow& data)
