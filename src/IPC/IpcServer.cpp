@@ -288,10 +288,6 @@ void IpcServer::collectGarbage()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -316,10 +312,6 @@ bool IpcServer::start()
 		return true;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -368,10 +360,6 @@ void IpcServer::stop()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -402,10 +390,6 @@ void IpcServer::homegearShuttingDown()
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -490,10 +474,6 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -545,10 +525,6 @@ void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -581,10 +557,6 @@ void IpcServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -634,10 +606,6 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -664,13 +632,9 @@ void IpcServer::closeClientConnection(PIpcClientData client)
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -688,10 +652,6 @@ bool IpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& me
 		return clientIterator != _clientsByRpcMethods.end();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -745,10 +705,6 @@ BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, 
 
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -869,10 +825,6 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -898,10 +850,6 @@ BaseLib::PVariable IpcServer::send(PIpcClientData& clientData, std::vector<char>
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -979,10 +927,6 @@ BaseLib::PVariable IpcServer::sendRequest(PIpcClientData& clientData, std::strin
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1000,10 +944,6 @@ void IpcServer::sendResponse(PIpcClientData& clientData, BaseLib::PVariable& thr
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1135,10 +1075,6 @@ void IpcServer::mainThread()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1177,15 +1113,11 @@ void IpcServer::readClient(PIpcClientData& clientData)
 		}
 		catch(BaseLib::Rpc::BinaryRpcException& ex)
 		{
-			_out.printError("Error processing packet: " + ex.what());
+			_out.printError(std::string("Error processing packet: ") + ex.what());
 			clientData->binaryRpc->reset();
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1264,10 +1196,6 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1292,10 +1220,6 @@ std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> IpcSer
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1311,10 +1235,6 @@ BaseLib::PVariable IpcServer::getClientId(PIpcClientData& clientData, int32_t th
 		return std::make_shared<BaseLib::Variable>(clientData->id);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1362,10 +1282,6 @@ BaseLib::PVariable IpcServer::registerRpcMethod(PIpcClientData& clientData, int3
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1388,10 +1304,6 @@ BaseLib::PVariable IpcServer::cliGeneralCommand(PIpcClientData& clientData, int3
 		return cliServer.generalCommand(command);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1421,10 +1333,6 @@ BaseLib::PVariable IpcServer::cliFamilyCommand(PIpcClientData& clientData, int32
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1451,10 +1359,6 @@ BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData& clientData, int32_t
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1474,10 +1378,6 @@ BaseLib::PVariable IpcServer::ptyOutput(PIpcClientData& clientData, int32_t thre
 		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

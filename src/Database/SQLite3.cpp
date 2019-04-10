@@ -181,10 +181,6 @@ void SQLite3::hotBackup()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -216,7 +212,7 @@ bool SQLite3::checkIntegrity(std::string databasePath)
         {
             getDataRows(statement, integrityResult);
         }
-        catch(const BaseLib::Exception& ex)
+        catch(const std::exception& ex)
         {
             sqlite3_close(database);
             return false;
@@ -236,10 +232,6 @@ bool SQLite3::checkIntegrity(std::string databasePath)
         }
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -319,10 +311,6 @@ void SQLite3::openDatabase(bool lockMutex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -362,10 +350,6 @@ void SQLite3::closeDatabase(bool lockMutex)
         _database = nullptr;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -496,10 +480,6 @@ uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -545,10 +525,6 @@ uint32_t SQLite3::executeWriteCommand(std::string command, BaseLib::Database::Da
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -579,11 +555,11 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::strin
         {
             getDataRows(statement, dataRows);
         }
-        catch(const BaseLib::Exception& ex)
+        catch(const std::exception& ex)
         {
             if(command.compare(0, 7, "RELEASE") == 0)
             {
-                GD::out.printInfo("Info: " + ex.what());
+                GD::out.printInfo(std::string("Info: ") + ex.what());
                 sqlite3_clear_bindings(statement);
                 return dataRows;
             }
@@ -594,10 +570,6 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::strin
         if(result) GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -630,11 +602,11 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::strin
         {
             getDataRows(statement, dataRows);
         }
-        catch(const BaseLib::Exception& ex)
+        catch(const std::exception& ex)
         {
             if(command.compare(0, 7, "RELEASE") == 0)
             {
-                GD::out.printInfo("Info: " + ex.what());
+                GD::out.printInfo(std::string("Info: ") + ex.what());
                 sqlite3_clear_bindings(statement);
                 return dataRows;
             }
@@ -648,10 +620,6 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::strin
         }
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

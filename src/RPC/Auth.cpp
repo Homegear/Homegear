@@ -72,7 +72,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bo
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			throw AuthException("Authorization failed because of socket exception: " + ex.what());
+			throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
 		}
 	}
 	else
@@ -93,7 +93,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bo
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			throw AuthException("Authorization failed because of socket exception: " + ex.what());
+			throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
 		}
 	}
 }
@@ -179,12 +179,12 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Htt
 			}
 			catch(BaseLib::HttpException& ex)
 			{
-				throw AuthException("Authorization failed because of HTTP exception: " + ex.what());
+				throw AuthException(std::string("Authorization failed because of HTTP exception: ") + ex.what());
 			}
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			throw AuthException("Authorization failed because of socket exception: " + ex.what());
+			throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
 		}
 	}
 	else _http = httpPacket;

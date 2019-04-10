@@ -199,10 +199,6 @@ void sigchld_handler(int32_t signalNumber)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -272,10 +268,6 @@ void terminateThread()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -337,10 +329,6 @@ void reloadThread()
 #endif
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -451,10 +439,6 @@ void terminate(int signalNumber)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -652,10 +636,6 @@ void startMainProcess()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -692,10 +672,6 @@ void startDaemon()
 		startMainProcess();
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -831,10 +807,6 @@ void startUp()
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
 				catch(...)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -864,10 +836,6 @@ void startUp()
 					files = GD::bl->io.getFiles(currentPath, false);
 				}
 				catch(const std::exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
@@ -902,10 +870,6 @@ void startUp()
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
 				catch(...)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -936,7 +900,7 @@ void startUp()
             catch (BaseLib::NetException& ex)
             {
                 if(_shutdownQueued) exitHomegear(1);
-                GD::out.printError("Error binding RPC servers: " + ex.what() + " Retrying in 5 seconds...");
+                GD::out.printError("Error binding RPC servers: " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
             }
@@ -1038,10 +1002,6 @@ void startUp()
 			}
 		}
 		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
@@ -1213,10 +1173,6 @@ void startUp()
         while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1699,10 +1655,6 @@ int main(int argc, char* argv[])
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
 		catch(...)
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1753,10 +1705,6 @@ int main(int argc, char* argv[])
         return 0;
     }
     catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

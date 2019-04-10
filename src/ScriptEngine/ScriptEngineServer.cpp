@@ -440,10 +440,6 @@ void ScriptEngineServer::socketOutput(int32_t packetId, PScriptEngineClientData&
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -511,10 +507,6 @@ void ScriptEngineServer::collectGarbage()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -539,10 +531,6 @@ bool ScriptEngineServer::start()
         return true;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -598,10 +586,6 @@ void ScriptEngineServer::stop()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -641,10 +625,6 @@ void ScriptEngineServer::homegearShuttingDown()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -671,10 +651,6 @@ void ScriptEngineServer::homegearReloading()
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -722,10 +698,6 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -755,10 +727,6 @@ void ScriptEngineServer::devTestClient()
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -793,10 +761,6 @@ uint32_t ScriptEngineServer::scriptCount()
         return count;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -839,10 +803,6 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -878,10 +838,6 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& par
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -914,10 +870,6 @@ BaseLib::PVariable ScriptEngineServer::executeDeviceMethod(BaseLib::PArray& para
         return result;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1004,10 +956,6 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1059,10 +1007,6 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1092,10 +1036,6 @@ void ScriptEngineServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1145,10 +1085,6 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1164,10 +1100,6 @@ void ScriptEngineServer::closeClientConnection(PScriptEngineClientData client)
         client->closed = true;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1198,10 +1130,6 @@ void ScriptEngineServer::stopDevices()
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1333,10 +1261,6 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1362,10 +1286,6 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1453,10 +1373,6 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1477,10 +1393,6 @@ void ScriptEngineServer::sendResponse(PScriptEngineClientData& clientData, BaseL
         send(clientData, data);
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1612,10 +1524,6 @@ void ScriptEngineServer::mainThread()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1686,10 +1594,6 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1769,15 +1673,11 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
         }
         catch(BaseLib::Rpc::BinaryRpcException& ex)
         {
-            _out.printError("Error processing packet: " + ex.what());
+            _out.printError("Error processing packet: " + std::string(ex.what()));
             clientData->binaryRpc->reset();
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1856,10 +1756,6 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1908,10 +1804,6 @@ std::string ScriptEngineServer::checkSessionId(const std::string& sessionId)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1935,10 +1827,6 @@ void ScriptEngineServer::invokeScriptFinished(PScriptEngineProcess process, int3
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1952,10 +1840,6 @@ void ScriptEngineServer::invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32
         if(scriptInfo->scriptFinishedCallback) scriptInfo->scriptFinishedCallback(scriptInfo, exitCode);
     }
     catch(const std::exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2121,10 +2005,6 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2149,10 +2029,6 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2171,10 +2047,6 @@ void ScriptEngineServer::unregisterNode(std::string nodeId)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2189,10 +2061,6 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId)
         _deviceClientIdMap.erase(peerId);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2240,10 +2108,6 @@ BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineC
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2266,10 +2130,6 @@ BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData& c
         return BaseLib::PVariable(new BaseLib::Variable());
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2297,10 +2157,6 @@ BaseLib::PVariable ScriptEngineServer::scriptHeaders(PScriptEngineClientData& cl
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2321,10 +2177,6 @@ BaseLib::PVariable ScriptEngineServer::scriptOutput(PScriptEngineClientData& cli
         return BaseLib::PVariable(new BaseLib::Variable());
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2360,10 +2212,6 @@ BaseLib::PVariable ScriptEngineServer::peerExists(PScriptEngineClientData& clien
         return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->peerExists((uint64_t) parameters->at(0)->integerValue64)));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2413,10 +2261,6 @@ BaseLib::PVariable ScriptEngineServer::listRpcClients(PScriptEngineClientData& c
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2437,10 +2281,6 @@ BaseLib::PVariable ScriptEngineServer::raiseDeleteDevice(PScriptEngineClientData
         return BaseLib::PVariable(new BaseLib::Variable());
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2473,7 +2313,7 @@ BaseLib::PVariable ScriptEngineServer::getFamilySetting(PScriptEngineClientData&
                 {
                     return _rpcDecoder->decodeResponse(setting->binaryValue);
                 }
-                catch(BaseLib::Exception& ex)
+                catch(std::exception& ex)
                 {
                     return BaseLib::PVariable(new BaseLib::Variable(setting->binaryValue));
                 }
@@ -2483,10 +2323,6 @@ BaseLib::PVariable ScriptEngineServer::getFamilySetting(PScriptEngineClientData&
         else return BaseLib::PVariable(new BaseLib::Variable(setting->integerValue));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2522,10 +2358,6 @@ BaseLib::PVariable ScriptEngineServer::setFamilySetting(PScriptEngineClientData&
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2548,10 +2380,6 @@ BaseLib::PVariable ScriptEngineServer::deleteFamilySetting(PScriptEngineClientDa
         return BaseLib::PVariable(new BaseLib::Variable());
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2580,10 +2408,6 @@ BaseLib::PVariable ScriptEngineServer::mqttPublish(PScriptEngineClientData& clie
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2608,10 +2432,6 @@ BaseLib::PVariable ScriptEngineServer::auth(PScriptEngineClientData& clientData,
         return std::make_shared<BaseLib::Variable>(User::verify(parameters->at(0)->stringValue, parameters->at(1)->stringValue));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2649,10 +2469,6 @@ BaseLib::PVariable ScriptEngineServer::createUser(PScriptEngineClientData& clien
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2675,10 +2491,6 @@ BaseLib::PVariable ScriptEngineServer::deleteUser(PScriptEngineClientData& clien
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2697,10 +2509,6 @@ BaseLib::PVariable ScriptEngineServer::getUserMetadata(PScriptEngineClientData& 
         return User::getMetadata(parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2736,10 +2544,6 @@ BaseLib::PVariable ScriptEngineServer::getUsersGroups(PScriptEngineClientData& c
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2759,10 +2563,6 @@ BaseLib::PVariable ScriptEngineServer::setUserMetadata(PScriptEngineClientData& 
         return std::make_shared<BaseLib::Variable>(User::setMetadata(parameters->at(0)->stringValue, parameters->at(1)));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2805,10 +2605,6 @@ BaseLib::PVariable ScriptEngineServer::updateUser(PScriptEngineClientData& clien
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2830,10 +2626,6 @@ BaseLib::PVariable ScriptEngineServer::userExists(PScriptEngineClientData& clien
         return std::make_shared<BaseLib::Variable>(User::exists(parameters->at(0)->stringValue));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2881,10 +2673,6 @@ BaseLib::PVariable ScriptEngineServer::listUsers(PScriptEngineClientData& client
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2925,10 +2713,6 @@ BaseLib::PVariable ScriptEngineServer::createOauthKeys(PScriptEngineClientData& 
         return oauthResponse;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2976,10 +2760,6 @@ BaseLib::PVariable ScriptEngineServer::refreshOauthKey(PScriptEngineClientData& 
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3016,10 +2796,6 @@ BaseLib::PVariable ScriptEngineServer::verifyOauthKey(PScriptEngineClientData& c
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3044,10 +2820,6 @@ BaseLib::PVariable ScriptEngineServer::createGroup(PScriptEngineClientData& clie
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3066,10 +2838,6 @@ BaseLib::PVariable ScriptEngineServer::deleteGroup(PScriptEngineClientData& clie
         return _bl->db->deleteGroup(parameters->at(0)->integerValue64);
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3097,10 +2865,6 @@ BaseLib::PVariable ScriptEngineServer::getGroup(PScriptEngineClientData& clientD
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3119,10 +2883,6 @@ BaseLib::PVariable ScriptEngineServer::getGroups(PScriptEngineClientData& client
         return _bl->db->getGroups(parameters->empty() ? "" : parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3147,10 +2907,6 @@ BaseLib::PVariable ScriptEngineServer::groupExists(PScriptEngineClientData& clie
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3172,10 +2928,6 @@ BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData& clie
         else return _bl->db->updateGroup(parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3218,10 +2970,6 @@ BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData& clie
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3241,10 +2989,6 @@ BaseLib::PVariable ScriptEngineServer::loadModule(PScriptEngineClientData& clien
         return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->loadModule(parameters->at(0)->stringValue)));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3270,10 +3014,6 @@ BaseLib::PVariable ScriptEngineServer::unloadModule(PScriptEngineClientData& cli
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3293,10 +3033,6 @@ BaseLib::PVariable ScriptEngineServer::reloadModule(PScriptEngineClientData& cli
         return BaseLib::PVariable(new BaseLib::Variable(GD::familyController->reloadModule(parameters->at(0)->stringValue)));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3338,10 +3074,6 @@ BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData& cli
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3375,10 +3107,6 @@ BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData& cl
         return BaseLib::PVariable(new BaseLib::Variable(true));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3431,10 +3159,6 @@ BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData&
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3469,10 +3193,6 @@ BaseLib::PVariable ScriptEngineServer::getTrialStartTime(PScriptEngineClientData
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3493,10 +3213,6 @@ BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData& client
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3524,10 +3240,6 @@ BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData& clien
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3550,10 +3262,6 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineCli
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

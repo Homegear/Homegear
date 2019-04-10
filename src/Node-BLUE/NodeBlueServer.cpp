@@ -312,10 +312,6 @@ void NodeBlueServer::collectGarbage()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -337,10 +333,6 @@ void NodeBlueServer::getMaxThreadCounts()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -358,10 +350,6 @@ bool NodeBlueServer::checkIntegrity(std::string flowsFile)
 		return true;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printError(std::string("Integrity check of flows file returned error: ") + ex.what());
-	}
-	catch(const BaseLib::Exception& ex)
 	{
 		_out.printError(std::string("Integrity check of flows file returned error: ") + ex.what());
 	}
@@ -444,10 +432,6 @@ void NodeBlueServer::backupFlows()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -479,10 +463,6 @@ bool NodeBlueServer::start()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -508,10 +488,6 @@ void NodeBlueServer::stop()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -527,10 +503,6 @@ void NodeBlueServer::homegearShuttingDown()
 		sendShutdown();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -561,10 +533,6 @@ void NodeBlueServer::homegearReloading()
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -615,10 +583,6 @@ void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, 
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -656,10 +620,6 @@ void NodeBlueServer::nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVa
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -692,10 +652,6 @@ BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs()
 		return nodeStruct;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -739,10 +695,6 @@ BaseLib::PVariable NodeBlueServer::getNodeVariable(std::string nodeId, std::stri
 		return sendRequest(clientData, isFlow ? "getFlowVariable" : "getNodeVariable", parameters, true);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -790,10 +742,6 @@ void NodeBlueServer::setNodeVariable(std::string nodeId, std::string topic, Base
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -828,10 +776,6 @@ void NodeBlueServer::enableNodeEvents()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -863,10 +807,6 @@ void NodeBlueServer::disableNodeEvents()
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1079,10 +1019,6 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 		return subsubflows;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1301,10 +1237,6 @@ void NodeBlueServer::startFlows()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1343,10 +1275,6 @@ void NodeBlueServer::sendShutdown()
 		_nodeClientIdMap.clear();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1394,10 +1322,6 @@ bool NodeBlueServer::sendReset()
 		return true;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1450,10 +1374,6 @@ void NodeBlueServer::closeClientConnections()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1485,10 +1405,6 @@ void NodeBlueServer::stopNodes()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1515,10 +1431,6 @@ void NodeBlueServer::restartFlows()
 		startFlows();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1699,10 +1611,6 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1771,10 +1679,6 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1809,10 +1713,6 @@ uint32_t NodeBlueServer::flowCount()
 		return count;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -1900,10 +1800,6 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1943,10 +1839,6 @@ void NodeBlueServer::broadcastFlowVariableEvent(std::string& flowId, std::string
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1982,10 +1874,6 @@ void NodeBlueServer::broadcastGlobalVariableEvent(std::string& variable, BaseLib
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2041,10 +1929,6 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PV
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2075,10 +1959,6 @@ void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2129,10 +2009,6 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2148,10 +2024,6 @@ void NodeBlueServer::closeClientConnection(PNodeBlueClientData client)
 		client->closed = true;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2257,10 +2129,6 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2286,10 +2154,6 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2374,10 +2238,6 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2395,10 +2255,6 @@ void NodeBlueServer::sendResponse(PNodeBlueClientData& clientData, BaseLib::PVar
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2530,10 +2386,6 @@ void NodeBlueServer::mainThread()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2609,10 +2461,6 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2671,15 +2519,11 @@ void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
 		}
 		catch(BaseLib::Rpc::BinaryRpcException& ex)
 		{
-			_out.printError("Error processing packet: " + ex.what());
+			_out.printError("Error processing packet: " + std::string(ex.what()));
 			clientData->binaryRpc->reset();
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2758,10 +2602,6 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2834,10 +2674,6 @@ void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>&
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2867,10 +2703,6 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& par
 		return sendRequest(clientData, "executePhpNodeBaseMethod", parameters, true);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2924,10 +2756,6 @@ BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clie
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2975,10 +2803,6 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData& clientDat
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2995,10 +2819,6 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeMethod(PNodeBlueClientData& cli
 		return GD::scriptEngineServer->executePhpNodeMethod(parameters);
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -3039,10 +2859,6 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientD
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3071,10 +2887,6 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, Ba
 		return std::make_shared<BaseLib::Variable>();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

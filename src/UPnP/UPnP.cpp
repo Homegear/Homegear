@@ -47,10 +47,6 @@ UPnP::UPnP()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -64,10 +60,6 @@ UPnP::~UPnP()
 		stop();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -98,10 +90,6 @@ void UPnP::start()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -123,10 +111,6 @@ void UPnP::stop()
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -157,10 +141,6 @@ void UPnP::getUDN()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -184,10 +164,6 @@ void UPnP::getAddress()
 		else _address = GD::bl->settings.uPnPIpAddress();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -263,10 +239,6 @@ void UPnP::listen()
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
 			catch(...)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -274,10 +246,6 @@ void UPnP::listen()
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -320,10 +288,6 @@ void UPnP::processPacket(BaseLib::Http& http)
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -397,10 +361,6 @@ void UPnP::registerServers()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -438,10 +398,6 @@ void UPnP::sendOK(std::string destinationIpAddress, int32_t destinationPort, boo
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -483,10 +439,6 @@ void UPnP::sendNotify()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -521,10 +473,6 @@ void UPnP::sendByebye()
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -592,10 +540,6 @@ void UPnP::getSocketDescriptor()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -624,11 +568,11 @@ bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpReque
 			}
 			catch(BaseLib::SocketDataLimitException& ex)
 			{
-				_out.printWarning("Warning: " + ex.what());
+				_out.printWarning("Warning: " + std::string(ex.what()));
 			}
 			catch(const BaseLib::SocketOperationException& ex)
 			{
-				_out.printError("Error: " + ex.what());
+				_out.printError("Error: " + std::string(ex.what()));
 			}
 			socket->close();
 			return true;

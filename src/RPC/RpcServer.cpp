@@ -331,10 +331,6 @@ bool RpcServer::lifetick()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -464,7 +460,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
                     binaryData = GD::bl->io.getUBinaryFileContent(_info->dhParamPath);
                     binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
                 }
-                catch(BaseLib::Exception& ex)
+                catch(std::exception& ex)
                 {
                     _out.printError("Error: Could not load DH parameter file \"" + _info->dhParamPath + "\": " + std::string(ex.what()));
                     gnutls_certificate_free_credentials(_x509Cred);
@@ -514,10 +510,6 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
         _stopped = false;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -572,10 +564,6 @@ void RpcServer::stop()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -591,10 +579,6 @@ uint32_t RpcServer::connectionCount()
         return connectionCount;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -614,10 +598,6 @@ void RpcServer::closeClientConnection(std::shared_ptr<Client> client)
         client->closed = true;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -714,11 +694,6 @@ void RpcServer::mainThread()
                     closeClientConnection(client);
                     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
                 }
-                catch(BaseLib::Exception& ex)
-                {
-                    closeClientConnection(client);
-                    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-                }
                 catch(...)
                 {
                     closeClientConnection(client);
@@ -729,10 +704,6 @@ void RpcServer::mainThread()
             {
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
             }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
             catch(...)
             {
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -740,10 +711,6 @@ void RpcServer::mainThread()
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -762,10 +729,6 @@ bool RpcServer::clientValid(std::shared_ptr<Client>& client)
         return true;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -793,20 +756,16 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
         }
         catch(BaseLib::SocketDataLimitException& ex)
         {
-            _out.printWarning("Warning: " + ex.what());
+            _out.printWarning(std::string("Warning: ") + ex.what());
         }
         catch(const BaseLib::SocketOperationException& ex)
         {
-            _out.printError("Error: " + ex.what());
+            _out.printError(std::string("Error: ") + ex.what());
             error = true;
         }
         if(!keepAlive || error) closeClientConnection(client);
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -891,10 +850,6 @@ void RpcServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& pa
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -958,10 +913,6 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -977,10 +928,6 @@ bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& me
         return _rpcMethods->find(methodName) != _rpcMethods->end() || GD::ipcServer->methodExists(clientInfo, methodName) || (_info->familyServer && GD::familyServer->methodExists(clientInfo, methodName));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1031,10 +978,6 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
         return ret;
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1105,10 +1048,6 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1155,10 +1094,6 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1173,10 +1108,6 @@ void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>
         else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse || packetType == PacketType::Enum::jsonResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1199,10 +1130,6 @@ const std::vector<BaseLib::PRpcClientInfo> RpcServer::getClientInfo()
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1259,10 +1186,6 @@ void RpcServer::collectGarbage()
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1390,10 +1313,6 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1431,7 +1350,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
             }
             catch(const BaseLib::SocketClosedException& ex)
             {
-                if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: " + ex.what());
+                if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: " + std::string(ex.what()));
                 break;
             }
             catch(const BaseLib::SocketOperationException& ex)
@@ -1476,7 +1395,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                 }
                                 catch(AuthException& ex)
                                 {
-                                    _out.printError("Error: Authorization failed. Closing connection. Error was: " + ex.what());
+                                    _out.printError("Error: Authorization failed. Closing connection. Error was: " + std::string(ex.what()));
                                     doBreak = true;
                                     break;
                                 }
@@ -1492,7 +1411,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                 }
                 catch(BaseLib::Rpc::BinaryRpcException& ex)
                 {
-                    _out.printError("Error processing binary RPC packet. Closing connection. Error was: " + ex.what());
+                    _out.printError("Error processing binary RPC packet. Closing connection. Error was: " + std::string(ex.what()));
                     binaryRpc.reset();
                     break;
                 }
@@ -1716,7 +1635,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                     }
                     catch(BaseLib::HttpException& ex)
                     {
-                        _out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer.begin(), buffer.begin() + bytesRead));
+                        _out.printError("XML RPC Server: Could not process HTTP packet: " + std::string(ex.what()) + " Buffer: " + std::string(buffer.begin(), buffer.begin() + bytesRead));
                         std::vector<char> data;
                         _webServer->getError(400, "Bad Request", "Your client sent a request that this server could not understand.", data);
                         sendRPCResponseToClient(client, data, false);
@@ -1733,10 +1652,6 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
         }
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1826,10 +1741,6 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
         _out.printInfo("Info: Connection from " + address + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->id));
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1927,10 +1838,6 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2014,10 +1921,6 @@ void RpcServer::getSocketDescriptor()
         if(_info->address == "0.0.0.0" || _info->address == "::") _info->address = BaseLib::Net::getMyIpAddress();
     }
     catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
