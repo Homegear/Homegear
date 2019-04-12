@@ -374,16 +374,16 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
 	std::mutex _systemVariableMutex;
-	std::map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
+	std::unordered_map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
 
 	std::mutex _dataMutex;
-	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
+	std::unordered_map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
 
 	std::mutex _nodeDataMutex;
-	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _nodeData;
+	std::unordered_map<std::string, std::map<std::string, BaseLib::PVariable>> _nodeData;
 
 	std::mutex _metadataMutex;
-	std::map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;
+	std::unordered_map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;
 
 	virtual void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };

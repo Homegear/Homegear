@@ -247,7 +247,8 @@ void SQLite3::openDatabase(bool lockMutex)
 {
     try
     {
-        if(lockMutex) _databaseMutex.lock();
+        std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
+        if(lockMutex) databaseGuard.lock();
         char* errorMessage = nullptr;
         std::string fullDatabasePath = _databasePath + _databaseFilename;
         int result = sqlite3_open(fullDatabasePath.c_str(), &_database);
@@ -256,7 +257,6 @@ void SQLite3::openDatabase(bool lockMutex)
             GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
             if(_database) sqlite3_close(_database);
             _database = nullptr;
-            if(lockMutex) _databaseMutex.unlock();
             return;
         }
         sqlite3_extended_result_codes(_database, 1);
@@ -315,7 +315,6 @@ void SQLite3::openDatabase(bool lockMutex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    if(lockMutex) _databaseMutex.unlock();
 }
 
 void SQLite3::closeDatabase(bool lockMutex)

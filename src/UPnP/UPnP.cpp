@@ -562,7 +562,7 @@ bool UPnP::onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpReque
 			content.insert(content.begin(), header.begin(), header.end());
 			try
 			{
-				//Sleep a tiny little bit. Some clients like don't accept responses too fast.
+				//Sleep a tiny little bit. Some clients don't accept responses too fast.
 				std::this_thread::sleep_for(std::chrono::milliseconds(22));
 				socket->proofwrite(content);
 			}

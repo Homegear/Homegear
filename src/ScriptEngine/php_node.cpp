@@ -280,7 +280,7 @@ ZEND_FUNCTION(hg_node_set_node_data)
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
     parameters->arrayValue->push_back(value);
-    php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+    php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_node_get_flow_data)
@@ -334,7 +334,7 @@ ZEND_FUNCTION(hg_node_set_flow_data)
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(flowId)));
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
     parameters->arrayValue->push_back(value);
-    php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+    php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_node_get_global_data)
@@ -385,7 +385,7 @@ ZEND_FUNCTION(hg_node_set_global_data)
     parameters->arrayValue->reserve(2);
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
     parameters->arrayValue->push_back(value);
-    php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+    php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_node_set_internal_message)

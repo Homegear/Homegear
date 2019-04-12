@@ -53,10 +53,6 @@ BaseLib::PVariable RPCDevTest::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -91,10 +87,6 @@ BaseLib::PVariable RPCSystemGetCapabilities::invoke(BaseLib::PRpcClientInfo clie
         return capabilities;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -136,10 +128,6 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -173,10 +161,6 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
         return help;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -219,10 +203,6 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
         return signature;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -281,10 +261,6 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -304,10 +280,6 @@ BaseLib::PVariable RPCAbortEventReset::invoke(BaseLib::PRpcClientInfo clientInfo
         return GD::eventHandler->abortReset(parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -336,10 +308,6 @@ BaseLib::PVariable RPCAcknowledgeGlobalServiceMessage::invoke(BaseLib::PRpcClien
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -419,10 +387,6 @@ BaseLib::PVariable RPCActivateLinkParamset::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -466,10 +430,6 @@ BaseLib::PVariable RPCAddCategoryToChannel::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -510,10 +470,6 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -561,10 +517,6 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -596,10 +548,6 @@ BaseLib::PVariable RPCAddCategoryToSystemVariable::invoke(BaseLib::PRpcClientInf
         return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -647,10 +595,6 @@ BaseLib::PVariable RPCAddCategoryToVariable::invoke(BaseLib::PRpcClientInfo clie
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -691,10 +635,6 @@ BaseLib::PVariable RPCAddChannelToRoom::invoke(BaseLib::PRpcClientInfo clientInf
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -753,10 +693,6 @@ BaseLib::PVariable RPCAddDevice::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -800,10 +736,6 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -824,10 +756,6 @@ BaseLib::PVariable RPCAddEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         return GD::eventHandler->add(parameters->at(0));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -934,10 +862,6 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -959,10 +883,6 @@ BaseLib::PVariable RPCAddRoomToStory::invoke(BaseLib::PRpcClientInfo clientInfo,
         return GD::bl->db->addRoomToStory((uint64_t) parameters->at(0)->integerValue64, (uint64_t) parameters->at(1)->integerValue64);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -998,10 +918,6 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1023,10 +939,6 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
         return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1071,10 +983,6 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1126,10 +1034,6 @@ BaseLib::PVariable RPCAggregateRoles::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1151,10 +1055,6 @@ BaseLib::PVariable RPCCheckServiceAccess::invoke(BaseLib::PRpcClientInfo clientI
         return std::make_shared<BaseLib::Variable>(clientInfo->acls->checkServiceAccess(parameters->at(0)->stringValue));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1270,10 +1170,6 @@ BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1292,10 +1188,6 @@ BaseLib::PVariable RPCClientServerInitialized::invoke(BaseLib::PRpcClientInfo cl
         return GD::rpcClient->clientServerInitialized(id);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1320,10 +1212,6 @@ BaseLib::PVariable RPCCreateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
         return GD::bl->db->createCategory(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1357,10 +1245,6 @@ BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, B
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1382,10 +1266,6 @@ BaseLib::PVariable RPCCreateRole::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         return GD::bl->db->createRole(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1413,10 +1293,6 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1438,10 +1314,6 @@ BaseLib::PVariable RPCCreateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::bl->db->createStory(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1498,10 +1370,6 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1524,10 +1392,6 @@ BaseLib::PVariable RPCDeleteData::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         return GD::bl->db->deleteData(parameters->at(0)->stringValue, key);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1582,10 +1446,6 @@ BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, B
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1655,10 +1515,6 @@ BaseLib::PVariable RPCDeleteMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1681,10 +1537,6 @@ BaseLib::PVariable RPCDeleteNodeData::invoke(BaseLib::PRpcClientInfo clientInfo,
         return GD::bl->db->deleteNodeData(parameters->at(0)->stringValue, key);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1727,10 +1579,6 @@ BaseLib::PVariable RPCDeleteRole::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         return result;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1788,10 +1636,6 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1813,10 +1657,6 @@ BaseLib::PVariable RPCDeleteStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::bl->db->deleteStory((uint64_t) parameters->at(0)->integerValue64);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1847,10 +1687,6 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1870,10 +1706,6 @@ BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::eventHandler->enable(parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1921,10 +1753,6 @@ BaseLib::PVariable RPCExecuteMiscellaneousDeviceMethod::invoke(BaseLib::PRpcClie
         return GD::scriptEngineServer->executeDeviceMethod(parameters);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1988,10 +1816,6 @@ BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, B
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2013,10 +1837,6 @@ BaseLib::PVariable RPCFamilyExists::invoke(BaseLib::PRpcClientInfo clientInfo, B
         return std::make_shared<BaseLib::Variable>((bool) GD::familyController->getFamily(parameters->at(0)->integerValue));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2060,10 +1880,6 @@ BaseLib::PVariable RPCForceConfigUpdate::invoke(BaseLib::PRpcClientInfo clientIn
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2143,10 +1959,6 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2168,10 +1980,6 @@ BaseLib::PVariable RPCGetAllScripts::invoke(BaseLib::PRpcClientInfo clientInfo, 
 #endif
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2205,10 +2013,6 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2230,10 +2034,6 @@ BaseLib::PVariable RPCGetAllUiElements::invoke(BaseLib::PRpcClientInfo clientInf
         return GD::uiController->getAllUiElements(clientInfo, parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2328,10 +2128,6 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2353,10 +2149,6 @@ BaseLib::PVariable RPCGetAvailableUiElements::invoke(BaseLib::PRpcClientInfo cli
         return GD::uiController->getAvailableUiElements(clientInfo, parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2389,10 +2181,6 @@ BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2417,10 +2205,6 @@ BaseLib::PVariable RPCGetCategoryMetadata::invoke(BaseLib::PRpcClientInfo client
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2442,10 +2226,6 @@ BaseLib::PVariable RPCGetCategoryUiElements::invoke(BaseLib::PRpcClientInfo clie
         return GD::uiController->getUiElementsInCategory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2489,10 +2269,6 @@ BaseLib::PVariable RPCGetChannelsInCategory::invoke(BaseLib::PRpcClientInfo clie
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2530,10 +2306,6 @@ BaseLib::PVariable RPCGetChannelsInRoom::invoke(BaseLib::PRpcClientInfo clientIn
         return result;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2603,10 +2375,6 @@ BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientI
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2629,10 +2397,6 @@ BaseLib::PVariable RPCGetData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
         return GD::bl->db->getData(parameters->at(0)->stringValue, key);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2726,10 +2490,6 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2813,10 +2573,6 @@ BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2855,10 +2611,6 @@ BaseLib::PVariable RPCGetDevicesInCategory::invoke(BaseLib::PRpcClientInfo clien
         return result;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2903,10 +2655,6 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -2926,10 +2674,6 @@ BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         return GD::eventHandler->get(parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2962,10 +2706,6 @@ BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, 
         return GD::rpcClient->getLastEvents(ids, parameters->at(1)->integerValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3018,10 +2758,6 @@ BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3039,10 +2775,6 @@ BaseLib::PVariable RPCGetKeyMismatchDevice::invoke(BaseLib::PRpcClientInfo clien
         return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tString));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3125,10 +2857,6 @@ BaseLib::PVariable RPCGetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3198,10 +2926,6 @@ BaseLib::PVariable RPCGetLinkPeers::invoke(BaseLib::PRpcClientInfo clientInfo, B
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3302,10 +3026,6 @@ BaseLib::PVariable RPCGetLinks::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3381,10 +3101,6 @@ BaseLib::PVariable RPCGetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3427,10 +3143,6 @@ BaseLib::PVariable RPCGetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3457,10 +3169,6 @@ BaseLib::PVariable RPCGetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3484,10 +3192,6 @@ BaseLib::PVariable RPCGetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::bl->db->getNodeData(parameters->at(0)->stringValue, key, clientInfo->flowsServer || clientInfo->scriptEngineServer);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3518,10 +3222,6 @@ BaseLib::PVariable RPCGetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3541,10 +3241,6 @@ BaseLib::PVariable RPCGetNodeEvents::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3561,10 +3257,6 @@ BaseLib::PVariable RPCGetNodesWithFixedInputs::invoke(BaseLib::PRpcClientInfo cl
         if(GD::nodeBlueServer) return GD::nodeBlueServer->getNodesWithFixedInputs();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3589,10 +3281,6 @@ BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
         if(GD::nodeBlueServer) return GD::nodeBlueServer->getNodeVariable(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3623,10 +3311,6 @@ BaseLib::PVariable RPCGetPairingInfo::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3653,10 +3337,6 @@ BaseLib::PVariable RPCGetPairingState::invoke(BaseLib::PRpcClientInfo clientInfo
         return central->getPairingState(clientInfo);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3774,10 +3454,6 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo cli
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -3880,10 +3556,6 @@ BaseLib::PVariable RPCGetParamsetId::invoke(BaseLib::PRpcClientInfo clientInfo, 
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -3991,10 +3663,6 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4035,10 +3703,6 @@ BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4068,10 +3732,6 @@ BaseLib::PVariable RPCGetRoles::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4096,10 +3756,6 @@ BaseLib::PVariable RPCGetRoleMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4121,10 +3777,6 @@ BaseLib::PVariable RPCGetRoomMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
         return GD::bl->db->getRoomMetadata((uint64_t) parameters->at(0)->integerValue64);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -4157,10 +3809,6 @@ BaseLib::PVariable RPCGetRooms::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4186,10 +3834,6 @@ BaseLib::PVariable RPCGetRoomsInStory::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4211,10 +3855,6 @@ BaseLib::PVariable RPCGetRoomUiElements::invoke(BaseLib::PRpcClientInfo clientIn
         return GD::uiController->getUiElementsInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -4263,10 +3903,6 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4298,10 +3934,6 @@ BaseLib::PVariable RPCGetSniffedDevices::invoke(BaseLib::PRpcClientInfo clientIn
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4330,10 +3962,6 @@ BaseLib::PVariable RPCGetStories::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4358,10 +3986,6 @@ BaseLib::PVariable RPCGetStoryMetadata::invoke(BaseLib::PRpcClientInfo clientInf
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4382,10 +4006,6 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         return GD::bl->db->getSystemVariable(clientInfo, parameters->at(0)->stringValue, checkAcls);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -4417,10 +4037,6 @@ BaseLib::PVariable RPCGetSystemVariableFlags::invoke(BaseLib::PRpcClientInfo cli
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4448,10 +4064,6 @@ BaseLib::PVariable RPCGetSystemVariablesInCategory::invoke(BaseLib::PRpcClientIn
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4476,10 +4088,6 @@ BaseLib::PVariable RPCGetSystemVariablesInRoom::invoke(BaseLib::PRpcClientInfo c
         return GD::bl->db->getSystemVariablesInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -4524,10 +4132,6 @@ BaseLib::PVariable RPCGetVariablesInCategory::invoke(BaseLib::PRpcClientInfo cli
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4566,10 +4170,6 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
         return result;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -4614,10 +4214,6 @@ BaseLib::PVariable RPCGetVariablesInRoom::invoke(BaseLib::PRpcClientInfo clientI
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4657,10 +4253,6 @@ BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4680,10 +4272,6 @@ BaseLib::PVariable RPCGetUserMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
         return User::getMetadata(clientInfo->user);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -4789,10 +4377,6 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4834,10 +4418,6 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4861,10 +4441,6 @@ BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -4882,10 +4458,6 @@ RPCInit::~RPCInit()
         _initServerThreadMutex.unlock();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5108,10 +4680,6 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5137,10 +4705,6 @@ BaseLib::PVariable RPCInvokeFamilyMethod::invoke(BaseLib::PRpcClientInfo clientI
         return central->invokeFamilyMethod(clientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5179,10 +4743,6 @@ BaseLib::PVariable RPCListBidcosInterfaces::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5206,10 +4766,6 @@ BaseLib::PVariable RPCListClientServers::invoke(BaseLib::PRpcClientInfo clientIn
         return GD::rpcClient->listClientServers(id);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5279,10 +4835,6 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5327,10 +4879,6 @@ BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5363,10 +4911,6 @@ BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, B
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5394,10 +4938,6 @@ BaseLib::PVariable RPCListInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo,
         return GD::familyController->listInterfaces(familyID);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5467,10 +5007,6 @@ BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5503,10 +5039,6 @@ BaseLib::PVariable RPCListTeams::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5535,10 +5067,6 @@ BaseLib::PVariable RPCLogLevel::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5563,10 +5091,6 @@ BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5616,10 +5140,6 @@ BaseLib::PVariable RPCPeerExists::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5652,10 +5172,6 @@ BaseLib::PVariable RPCPing::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
         return BaseLib::PVariable(new BaseLib::Variable(true));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5770,10 +5286,6 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5814,10 +5326,6 @@ BaseLib::PVariable RPCRemoveCategoryFromChannel::invoke(BaseLib::PRpcClientInfo 
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5864,10 +5372,6 @@ BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo c
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5899,10 +5403,6 @@ BaseLib::PVariable RPCRemoveCategoryFromSystemVariable::invoke(BaseLib::PRpcClie
         return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -5950,10 +5450,6 @@ BaseLib::PVariable RPCRemoveCategoryFromVariable::invoke(BaseLib::PRpcClientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -5994,10 +5490,6 @@ BaseLib::PVariable RPCRemoveChannelFromRoom::invoke(BaseLib::PRpcClientInfo clie
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6044,10 +5536,6 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6068,10 +5556,6 @@ BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::eventHandler->remove(parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6157,10 +5641,6 @@ BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6205,10 +5685,6 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6230,10 +5706,6 @@ BaseLib::PVariable RPCRemoveRoomFromStory::invoke(BaseLib::PRpcClientInfo client
         return GD::bl->db->removeRoomFromStory((uint64_t) parameters->at(0)->integerValue64, (uint64_t) parameters->at(1)->integerValue64);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6272,10 +5744,6 @@ BaseLib::PVariable RPCRemoveSystemVariableFromRoom::invoke(BaseLib::PRpcClientIn
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6297,10 +5765,6 @@ BaseLib::PVariable RPCRemoveUiElement::invoke(BaseLib::PRpcClientInfo clientInfo
         return GD::uiController->removeUiElement(clientInfo, (uint64_t) parameters->at(0)->integerValue64);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6351,10 +5815,6 @@ BaseLib::PVariable RPCRemoveVariableFromRoom::invoke(BaseLib::PRpcClientInfo cli
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6409,10 +5869,6 @@ BaseLib::PVariable RPCReportValueUsage::invoke(BaseLib::PRpcClientInfo clientInf
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6447,10 +5903,6 @@ BaseLib::PVariable RPCRssiInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         return response;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6588,10 +6040,6 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6636,10 +6084,6 @@ BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, 
         return result;
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6693,10 +6137,6 @@ BaseLib::PVariable RPCSearchInterfaces::invoke(BaseLib::PRpcClientInfo clientInf
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6721,10 +6161,6 @@ BaseLib::PVariable RPCSetCategoryMetadata::invoke(BaseLib::PRpcClientInfo client
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6746,10 +6182,6 @@ BaseLib::PVariable RPCSetData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
         return GD::bl->db->setData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6781,10 +6213,6 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6839,10 +6267,6 @@ BaseLib::PVariable RPCSetId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib:
         return BaseLib::Variable::createError(-2, "Device not found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -6912,10 +6336,6 @@ BaseLib::PVariable RPCSetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6959,10 +6379,6 @@ BaseLib::PVariable RPCSetInterface::invoke(BaseLib::PRpcClientInfo clientInfo, B
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -6986,10 +6402,6 @@ BaseLib::PVariable RPCSetLanguage::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7093,10 +6505,6 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7172,10 +6580,6 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7221,10 +6625,6 @@ BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7246,10 +6646,6 @@ BaseLib::PVariable RPCSetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::bl->db->setNodeData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7276,10 +6672,6 @@ BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         return GD::bl->db->setNodeData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7310,10 +6702,6 @@ BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7336,10 +6724,6 @@ BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7367,10 +6751,6 @@ BaseLib::PVariable RPCSetRoleMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7395,10 +6775,6 @@ BaseLib::PVariable RPCSetRoomMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7420,10 +6796,6 @@ BaseLib::PVariable RPCSetStoryMetadata::invoke(BaseLib::PRpcClientInfo clientInf
         return GD::bl->db->setStoryMetadata((uint64_t) parameters->at(0)->integerValue64, parameters->at(1));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7454,10 +6826,6 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value, flags, checkAcls);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7552,10 +6920,6 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7577,10 +6941,6 @@ BaseLib::PVariable RPCSetUserMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
         return std::make_shared<BaseLib::Variable>(User::setMetadata(clientInfo->user, parameters->at(0)));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7692,10 +7052,6 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7727,10 +7083,6 @@ BaseLib::PVariable RPCStartSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7759,10 +7111,6 @@ BaseLib::PVariable RPCStopSniffing::invoke(BaseLib::PRpcClientInfo clientInfo, B
         return BaseLib::Variable::createError(-32500, "No central found.");
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7813,10 +7161,6 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7837,10 +7181,6 @@ BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, B
         return GD::eventHandler->trigger(parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7873,10 +7213,6 @@ BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo
         return BaseLib::PVariable(new BaseLib::Variable());
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -7927,10 +7263,6 @@ BaseLib::PVariable RPCUnsubscribePeers::invoke(BaseLib::PRpcClientInfo clientInf
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -7954,10 +7286,6 @@ BaseLib::PVariable RPCUpdateCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
         else return GD::bl->db->updateCategory((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -8052,10 +7380,6 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -8079,10 +7403,6 @@ BaseLib::PVariable RPCUpdateRole::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         else return GD::bl->db->updateRole((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -8112,10 +7432,6 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -8139,10 +7455,6 @@ BaseLib::PVariable RPCUpdateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
         else return GD::bl->db->updateStory((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -8171,10 +7483,6 @@ BaseLib::PVariable RPCWriteLog::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

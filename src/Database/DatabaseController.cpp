@@ -2525,19 +2525,20 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string&
         if(dataID.size() > 250) return BaseLib::Variable::createError(-32602, "dataID has more than 250 characters.");
 
         BaseLib::PVariable metadata;
-        _metadataMutex.lock();
-        std::map<uint64_t, std::map<std::string, BaseLib::PVariable>>::iterator peerIterator = _metadata.find(peerID);
-        if(peerIterator != _metadata.end())
+
         {
-            std::map<std::string, BaseLib::PVariable>::iterator dataIterator = peerIterator->second.find(dataID);
-            if(dataIterator != peerIterator->second.end())
+            std::lock_guard<std::mutex> metadataGuard(_metadataMutex);
+            auto peerIterator = _metadata.find(peerID);
+            if(peerIterator != _metadata.end())
             {
-                metadata = dataIterator->second;
-                _metadataMutex.unlock();
-                return metadata;
+                std::map<std::string, BaseLib::PVariable>::iterator dataIterator = peerIterator->second.find(dataID);
+                if(dataIterator != peerIterator->second.end())
+                {
+                    metadata = dataIterator->second;
+                    return metadata;
+                }
             }
         }
-        _metadataMutex.unlock();
 
         BaseLib::Database::DataRow data;
         data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -2547,9 +2548,8 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string&
         if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
 
         metadata = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
-        _metadataMutex.lock();
+        std::lock_guard<std::mutex> metadataGuard(_metadataMutex);
         _metadata[peerID][dataID] = metadata;
-        _metadataMutex.unlock();
         return metadata;
     }
     catch(const std::exception& ex)
@@ -2583,9 +2583,10 @@ BaseLib::PVariable DatabaseController::setMetadata(BaseLib::PRpcClientInfo clien
             return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
         }
 
-        _metadataMutex.lock();
-        _metadata[peerID][dataID] = metadata;
-        _metadataMutex.unlock();
+        {
+            std::lock_guard<std::mutex> metadataGuard(_metadataMutex);
+            _metadata[peerID][dataID] = metadata;
+        }
 
         BaseLib::Database::DataRow data;
         data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -2632,16 +2633,17 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
     {
         if(dataID.size() > 250) return BaseLib::Variable::createError(-32602, "dataID has more than 250 characters.");
 
-        _metadataMutex.lock();
-        if(dataID.empty())
         {
-            if(_metadata.find(peerID) != _metadata.end()) _metadata.erase(peerID);
+            std::lock_guard<std::mutex> metadataGuard(_metadataMutex);
+            if(dataID.empty())
+            {
+                if(_metadata.find(peerID) != _metadata.end()) _metadata.erase(peerID);
+            }
+            else
+            {
+                if(_metadata.find(peerID) != _metadata.end() && _metadata[peerID].find(dataID) != _metadata[peerID].end()) _metadata[peerID].erase(dataID);
+            }
         }
-        else
-        {
-            if(_metadata.find(peerID) != _metadata.end() && _metadata[peerID].find(dataID) != _metadata[peerID].end()) _metadata[peerID].erase(dataID);
-        }
-        _metadataMutex.unlock();
 
         BaseLib::Database::DataRow data;
         data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
@@ -4816,9 +4818,12 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID)
         enqueue(0, entry);
         entry = std::make_shared<QueueEntry>("UPDATE events SET peerID=? WHERE peerID=?", data);
         enqueue(0, entry);
-        _metadataMutex.lock();
-        _metadata.erase(oldPeerID);
-        _metadataMutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> metadataGuard(_metadataMutex);
+            _metadata.erase(oldPeerID);
+        }
+
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(newPeerID)));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(oldPeerID)));
