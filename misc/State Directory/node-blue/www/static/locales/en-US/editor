@@ -300,15 +300,7 @@
             "social": "social",
             "storage": "storage",
             "analysis": "analysis",
-            "advanced": "advanced",
-            "heating" : "heating",
-            "general" : "general",
-            "communication" : "communication",
-            "notification" : "notification",
-            "logic" : "logic",
-            "database" : "database",
-            "parsers" : "parsers",
-            "time" : "time"
+            "advanced": "advanced"
         },
         "event": {
             "nodeAdded": "Node added to palette:",

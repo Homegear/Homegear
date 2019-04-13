@@ -82,14 +82,6 @@ bool Client::lifetick()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
@@ -124,14 +116,6 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 BaseLib::PVariable Client::getLastEvents(std::set<uint64_t> ids, uint32_t timespan)
@@ -165,14 +149,6 @@ BaseLib::PVariable Client::getLastEvents(std::set<uint64_t> ids, uint32_t timesp
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
@@ -196,14 +172,6 @@ BaseLib::PVariable Client::getNodeEvents()
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
@@ -249,14 +217,6 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -404,14 +364,6 @@ void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, s
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::systemListMethods(std::pair<std::string, std::string>& address)
@@ -457,14 +409,6 @@ void Client::systemListMethods(std::pair<std::string, std::string>& address)
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -532,14 +476,6 @@ void Client::listDevices(std::pair<std::string, std::string>& address)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::sendUnknownDevices(std::pair<std::string, std::string>& address)
@@ -584,14 +520,6 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string>& address)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::sendError(std::pair<std::string, std::string> address, int32_t level, std::string message)
@@ -615,14 +543,6 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -653,20 +573,6 @@ void Client::broadcastError(int32_t level, std::string message)
                   << ": " << ex.what() << std::endl;
         std::cerr << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
                   << ": " << ex.what() << std::endl;
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        std::cout << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
-                  << ": " << ex.what() << std::endl;
-        std::cerr << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
-                  << ": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-        std::cout << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
-                  << "." << std::endl;
-        std::cerr << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
-                  << "." << std::endl;
     }
 }
 
@@ -733,14 +639,6 @@ void Client::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
@@ -762,14 +660,6 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -805,14 +695,6 @@ void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable)
@@ -838,14 +720,6 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -902,14 +776,6 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable)
@@ -936,14 +802,6 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::broadcastPtyOutput(std::string& output)
@@ -965,14 +823,6 @@ void Client::broadcastPtyOutput(std::string& output)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::reset()
@@ -985,14 +835,6 @@ void Client::reset()
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1036,14 +878,6 @@ void Client::collectGarbage()
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1089,20 +923,6 @@ std::string Client::getIPAddress(std::string address)
         std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ << " line " << __LINE__
                   << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
     }
-    catch(BaseLib::Exception& ex)
-    {
-        std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ << " line " << __LINE__
-                  << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-        std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ << " line " << __LINE__
-                  << " in function " << __PRETTY_FUNCTION__ << ": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-        std::cout << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ << " line " << __LINE__
-                  << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
-        std::cerr << BaseLib::Output::getTimeString() << " " << "Error in file " << __FILE__ << " line " << __LINE__
-                  << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
-    }
     return "";
 }
 
@@ -1143,14 +963,6 @@ std::shared_ptr<RemoteRpcServer> Client::addServer(std::pair<std::string, std::s
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::make_shared<RemoteRpcServer>(_client, clientInfo);
 }
 
@@ -1176,14 +988,6 @@ std::shared_ptr<RemoteRpcServer> Client::addSingleConnectionServer(std::pair<std
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::make_shared<RemoteRpcServer>(_client, clientInfo);
 }
@@ -1252,14 +1056,6 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::make_shared<RemoteRpcServer>(_client, clientInfo);
 }
 
@@ -1297,14 +1093,6 @@ void Client::removeServer(std::pair<std::string, std::string> server)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void Client::disconnectRega()
@@ -1328,14 +1116,6 @@ void Client::disconnectRega()
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1368,14 +1148,6 @@ void Client::removeServer(int32_t uid)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 std::shared_ptr<RemoteRpcServer> Client::getServer(std::pair<std::string, std::string> address)
@@ -1397,14 +1169,6 @@ std::shared_ptr<RemoteRpcServer> Client::getServer(std::pair<std::string, std::s
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RemoteRpcServer>();
 }
@@ -1454,14 +1218,6 @@ BaseLib::PVariable Client::listClientServers(std::string id)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1485,14 +1241,6 @@ BaseLib::PVariable Client::clientServerInitialized(std::string id)
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
