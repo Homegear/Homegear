@@ -110,14 +110,6 @@ void CliClient::onConnect()
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Ipc::IpcException& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void CliClient::onDisconnect()

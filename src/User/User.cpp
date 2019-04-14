@@ -359,14 +359,6 @@ bool User::oauthCreate(const std::string& userName, const std::string& privateKe
     {
         GD::out.printError("Error creating OAuth key for user: " + std::string(ex.what()));
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printError("Error creating OAuth key for user: " + std::string(ex.what()));
-    }
-    catch(...)
-    {
-        GD::out.printError("Unknown error creating OAuth key for user.");
-    }
     return false;
 }
 
@@ -414,14 +406,6 @@ bool User::oauthVerify(const std::string& key, const std::string& privateKey, co
     catch(std::exception& ex)
     {
         GD::out.printError("Error verifying OAuth key of user: " + std::string(ex.what()));
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printError("Error verifying OAuth key of user: " + std::string(ex.what()));
-    }
-    catch(...)
-    {
-        GD::out.printError("Unknown error verifying OAuth key of user.");
     }
     return false;
 }
@@ -477,14 +461,6 @@ bool User::oauthRefresh(const std::string& refreshKey, const std::string& privat
     catch(std::exception& ex)
     {
         GD::out.printError("Error refreshing OAuth key for user: " + std::string(ex.what()));
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printError("Error refreshing OAuth key for user: " + std::string(ex.what()));
-    }
-    catch(...)
-    {
-        GD::out.printError("Unknown error refreshing OAuth key for user.");
     }
     return false;
 }

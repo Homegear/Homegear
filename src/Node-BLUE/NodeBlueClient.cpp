@@ -441,7 +441,7 @@ void NodeBlueClient::start()
             }
             catch(Flows::BinaryRpcException& ex)
             {
-                _out.printError("Error processing packet: " + ex.what());
+                _out.printError("Error processing packet: " + std::string(ex.what()));
                 _binaryRpc->reset();
             }
         }
