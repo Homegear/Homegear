@@ -2,6 +2,7 @@
 dir=`mktemp -d`
 cat > "$dir/libhomegear-base-version.cpp" <<-'EOF'
 #include <homegear-base/BaseLib.h>
+#include <iostream>
 
 int main(int argc, char** argv)
 {
