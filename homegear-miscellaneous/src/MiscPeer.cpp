@@ -31,6 +31,9 @@
 #include "MiscPeer.h"
 #include "MiscCentral.h"
 #include "GD.h"
+
+#include <iomanip>
+
 #include "sys/wait.h"
 #include "sys/stat.h"
 

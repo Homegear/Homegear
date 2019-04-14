@@ -31,6 +31,8 @@
 #include "MiscCentral.h"
 #include "GD.h"
 
+#include <iomanip>
+
 namespace Misc {
 
 MiscCentral::MiscCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, GD::bl, eventHandler)
