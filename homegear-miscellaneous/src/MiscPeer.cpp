@@ -32,6 +32,8 @@
 #include "MiscCentral.h"
 #include "GD.h"
 
+#include <homegear-base/Managers/ProcessManager.h>
+
 #include <iomanip>
 
 #include "sys/wait.h"
@@ -261,7 +263,7 @@ void MiscPeer::runProgram()
                 if(_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
                 continue;
             }
-            _programPID = GD::bl->hf.system(path, arguments);
+            _programPID = BaseLib::ProcessManager::system(path, arguments, GD::bl->fileDescriptorManager.getMax());
             if(_programPID < 0)
             {
                 GD::out.printError("Error: Could not execute script.");

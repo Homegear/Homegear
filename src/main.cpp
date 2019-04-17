@@ -36,6 +36,7 @@
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
+#include <homegear-base/Managers/ProcessManager.h>
 #include "../config.h"
 
 #include <execinfo.h>
@@ -56,6 +57,7 @@
 #include <algorithm>
 
 #include <gcrypt.h>
+#include <grp.h>
 
 using namespace Homegear;
 
@@ -146,54 +148,32 @@ void stopRPCServers(bool dispose)
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
 }
 
-void sigchld_handler(int32_t signalNumber)
+void sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped)
 {
 	try
 	{
-		pid_t pid;
-		int status;
+        GD::out.printInfo("Info: Process with id " + std::to_string(pid) + " ended.");
+        if(pid == _mainProcessId)
+        {
+            _mainProcessId = 0;
+            bool stop = false;
+            if(signal != -1)
+            {
+                if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
+                if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
+                if(coreDumped) GD::out.printError("Error: Core was dumped.");
+            }
+            else stop = true;
+            if(stop)
+            {
+                GD::out.printInfo("Info: Homegear exited with exit code " + std::to_string(exitCode) + ". Stopping monitor process.");
+                exit(0);
+            }
 
-		while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
-		{
-			int32_t exitStatus = WEXITSTATUS(status);
-			int32_t signal = -1;
-			bool coreDumped = false;
-			if(WIFSIGNALED(status))
-			{
-				signal = WTERMSIG(status);
-				if(WCOREDUMP(status)) coreDumped = true;
-			}
-
-			GD::out.printInfo("Info: Process with id " + std::to_string(pid) + " ended.");
-			if(pid == _mainProcessId)
-			{
-				_mainProcessId = 0;
-				bool stop = false;
-				if(signal != -1)
-				{
-					if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
-					if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
-					if(coreDumped) GD::out.printError("Error: Core was dumped.");
-				}
-				else stop = true;
-				if(stop)
-				{
-					GD::out.printInfo("Info: Homegear exited with exit code " + std::to_string(exitStatus) + ". Stopping monitor process.");
-					exit(0);
-				}
-
-				GD::out.printError("Homegear was terminated. Restarting (1)...");
-				_monitor.suspend();
-				_fork = true;
-			}
-			else
-			{
-#ifndef NO_SCRIPTENGINE
-				if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
-#endif
-				if(GD::nodeBlueServer) GD::nodeBlueServer->processKilled(pid, exitStatus, signal, coreDumped);
-			}
-		}
+            GD::out.printError("Homegear was terminated. Restarting (1)...");
+            _monitor.suspend();
+            _fork = true;
+        }
 	}
 	catch(const std::exception& ex)
     {
@@ -696,25 +676,25 @@ void startUp()
 		sa.sa_handler = terminate;
 
 		//Use sigaction over signal because of different behavior in Linux and BSD
-    	sigaction(SIGHUP, &sa, NULL);
-    	sigaction(SIGTERM, &sa, NULL);
-		sigaction(SIGINT, &sa, NULL);
-    	sigaction(SIGABRT, &sa, NULL);
-    	sigaction(SIGSEGV, &sa, NULL);
-		sigaction(SIGQUIT, &sa, NULL);
-		sigaction(SIGILL, &sa, NULL);
-		sigaction(SIGABRT, &sa, NULL);
-		sigaction(SIGFPE, &sa, NULL);
-		sigaction(SIGALRM, &sa, NULL);
-		sigaction(SIGUSR1, &sa, NULL);
-		sigaction(SIGUSR2, &sa, NULL);
-		sigaction(SIGTSTP, &sa, NULL);
-		sigaction(SIGTTIN, &sa, NULL);
-		sigaction(SIGTTOU, &sa, NULL);
-    	sa.sa_handler = sigchld_handler;
-    	sigaction(SIGCHLD, &sa, NULL);
+    	sigaction(SIGHUP, &sa, nullptr);
+    	sigaction(SIGTERM, &sa, nullptr);
+		sigaction(SIGINT, &sa, nullptr);
+    	sigaction(SIGABRT, &sa, nullptr);
+    	sigaction(SIGSEGV, &sa, nullptr);
+		sigaction(SIGQUIT, &sa, nullptr);
+		sigaction(SIGILL, &sa, nullptr);
+		sigaction(SIGABRT, &sa, nullptr);
+		sigaction(SIGFPE, &sa, nullptr);
+		sigaction(SIGALRM, &sa, nullptr);
+		sigaction(SIGUSR1, &sa, nullptr);
+		sigaction(SIGUSR2, &sa, nullptr);
+		sigaction(SIGTSTP, &sa, nullptr);
+		sigaction(SIGTTIN, &sa, nullptr);
+		sigaction(SIGTTOU, &sa, nullptr);
 		sa.sa_handler = SIG_IGN;
-		sigaction(SIGPIPE, &sa, NULL);
+		sigaction(SIGPIPE, &sa, nullptr);
+		BaseLib::ProcessManager::registerSignalHandler();
+		BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(sigchildHandler, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 
     	if(_startAsDaemon || _nonInteractive)
 		{
@@ -1646,7 +1626,7 @@ int main(int argc, char* argv[])
     	{
     		// {{{ Get maximum thread count
 				std::string output;
-				BaseLib::HelperFunctions::exec(GD::executablePath + GD::executableFile + " -tc", output);
+				BaseLib::ProcessManager::exec(GD::executablePath + GD::executableFile + " -tc", GD::bl->fileDescriptorManager.getMax(), output);
 				BaseLib::HelperFunctions::trim(output);
 				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
 			// }}}

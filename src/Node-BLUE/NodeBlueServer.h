@@ -138,6 +138,7 @@ private:
 	std::thread _maintenanceThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+	std::atomic<int32_t> _processCallbackHandlerId{-1};
 	std::mutex _processRequestMutex;
 	std::mutex _newProcessMutex;
 	std::mutex _processMutex;

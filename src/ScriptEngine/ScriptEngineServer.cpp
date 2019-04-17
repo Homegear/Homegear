@@ -33,6 +33,7 @@
 #include "ScriptEngineServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
+#include <homegear-base/Managers/ProcessManager.h>
 
 namespace Homegear
 {
@@ -518,6 +519,7 @@ bool ScriptEngineServer::start()
     try
     {
         stop();
+        _processCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&ScriptEngineServer::processKilled, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
         _socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
         _shuttingDown = false;
         _stopServer = false;
@@ -581,6 +583,7 @@ void ScriptEngineServer::stop()
         stopQueue(1);
         stopQueue(2);
         unlink(_socketPath.c_str());
+        BaseLib::ProcessManager::unregisterCallbackHandler(_processCallbackHandlerId);
     }
     catch(const std::exception& ex)
     {
@@ -1573,7 +1576,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
         }
         else
         {
-            process->setPid(GD::bl->hf.system(GD::executablePath + "/" + GD::executableFile, arguments));
+            process->setPid(BaseLib::ProcessManager::system(GD::executablePath + "/" + GD::executableFile, arguments, _bl->fileDescriptorManager.getMax()));
         }
         if(process->getPid() != -1)
         {

@@ -28,6 +28,7 @@
  * files in the program, then also delete it here.
 */
 
+#include <homegear-base/Managers/ProcessManager.h>
 #include "RPCMethods.h"
 #include "../GD/GD.h"
 #include "Roles.h"
@@ -6030,7 +6031,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, Base
                 return result;
             }
 
-            exitCode->integerValue = BaseLib::HelperFunctions::exec(command.c_str(), output->stringValue);
+            exitCode->integerValue = BaseLib::ProcessManager::exec(command, GD::bl->fileDescriptorManager.getMax(), output->stringValue);
             return result;
 #ifndef NO_SCRIPTENGINE
         }
