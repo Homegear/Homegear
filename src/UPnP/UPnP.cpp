@@ -312,7 +312,7 @@ void UPnP::registerServers()
 			if(_webserverEventHandler) server.second->removeWebserverEventHandler(_webserverEventHandler);
 			_webserverEventHandler = server.second->addWebserverEventHandler(this);
 
-			Packets packet = _packets[settings->port];
+			Packets& packet = _packets[settings->port];
 			std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + std::string(VERSION) + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\n";
 			std::string alivePacketRoot = notifyPacketBase + "NT: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\nNTS: ssdp:alive\r\n\r\n";
 			std::string alivePacketRootUUID = notifyPacketBase + "NT: " + _st + "\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
