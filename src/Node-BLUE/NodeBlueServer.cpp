@@ -2875,15 +2875,15 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, Ba
 	{
 		if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
-		if(BaseLib::HelperFunctions::getTime() - _lastNodeEvent >= 60000)
+		if(BaseLib::HelperFunctions::getTime() - _lastNodeEvent >= 10000)
 		{
 			_lastNodeEvent = BaseLib::HelperFunctions::getTime();
 			_nodeEventCounter = 0;
 		}
 
-		if((parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 || parameters->at(1)->stringValue.compare(0, 14, "highlightLink/") == 0) && _nodeEventCounter > 300) return std::make_shared<BaseLib::Variable>();
-		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > 600) return std::make_shared<BaseLib::Variable>();
-		else if(_nodeEventCounter > 900) return std::make_shared<BaseLib::Variable>();
+		if((parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 || parameters->at(1)->stringValue.compare(0, 14, "highlightLink/") == 0) && _nodeEventCounter > _bl->settings.nodeBlueEventLimit1()) return std::make_shared<BaseLib::Variable>();
+		else if(parameters->at(1)->stringValue != "debug" && _nodeEventCounter > _bl->settings.nodeBlueEventLimit2()) return std::make_shared<BaseLib::Variable>();
+		else if(_nodeEventCounter > _bl->settings.nodeBlueEventLimit3()) return std::make_shared<BaseLib::Variable>();
 		_nodeEventCounter++;
 
 		GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
