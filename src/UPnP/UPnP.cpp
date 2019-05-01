@@ -355,7 +355,7 @@ void UPnP::sendOK(std::string destinationIpAddress, int32_t destinationPort, boo
 	try
 	{
 		if(!_serverSocketDescriptor || _serverSocketDescriptor->descriptor == -1 || _packets.empty()) return;
-		struct sockaddr_in addessInfo;
+		struct sockaddr_in addessInfo{};
 		addessInfo.sin_family = AF_INET;
 		addessInfo.sin_addr.s_addr = inet_addr(destinationIpAddress.c_str());
 		addessInfo.sin_port = htons(destinationPort);
@@ -363,17 +363,17 @@ void UPnP::sendOK(std::string destinationIpAddress, int32_t destinationPort, boo
 		for(std::map<int32_t, Packets>::iterator i = _packets.begin(); i != _packets.end(); ++i)
 		{
 			if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending discovery response packets to " + destinationIpAddress + " on port " + std::to_string(destinationPort));
-			if(sendto(_serverSocketDescriptor->descriptor, &i->second.okRoot.at(0), i->second.okRoot.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
+			if(sendto(_serverSocketDescriptor->descriptor, i->second.okRoot.data(), i->second.okRoot.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 			{
 				_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 			}
 			if(!rootDeviceOnly)
 			{
-				if(sendto(_serverSocketDescriptor->descriptor, &i->second.okRootUUID.at(0), i->second.okRootUUID.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
+				if(sendto(_serverSocketDescriptor->descriptor, i->second.okRootUUID.data(), i->second.okRootUUID.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 				{
 					_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 				}
-				if(sendto(_serverSocketDescriptor->descriptor, &i->second.ok.at(0), i->second.ok.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
+				if(sendto(_serverSocketDescriptor->descriptor, i->second.ok.data(), i->second.ok.size(), 0, (struct sockaddr*) &addessInfo, sizeof(addessInfo)) == -1)
 				{
 					_out.printWarning("Warning: Error sending packet in UPnP server: " + std::string(strerror(errno)));
 				}
