@@ -888,10 +888,17 @@ void startUp()
                 bindRPCServers();
                 break;
             }
-            catch (BaseLib::NetException& ex)
+            catch(const BaseLib::NetException& ex)
             {
                 if(_shutdownQueued) exitHomegear(1);
-                GD::out.printError("Error binding RPC servers: " + std::string(ex.what()) + " Retrying in 5 seconds...");
+                GD::out.printError("Error binding RPC servers (1): " + std::string(ex.what()) + " Retrying in 5 seconds...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                continue;
+            }
+            catch(const BaseLib::SocketOperationException& ex)
+            {
+                if(_shutdownQueued) exitHomegear(1);
+                GD::out.printError("Error binding RPC servers (2): " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
             }
