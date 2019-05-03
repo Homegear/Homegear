@@ -734,6 +734,17 @@ void startUp()
 
     	initGnuTls();
 
+        if(GD::bl->settings.waitForCorrectTime())
+        {
+            while(BaseLib::HelperFunctions::getTime() < 1000000000000)
+            {
+                if(_shutdownQueued) exitHomegear(1);
+                GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+            }
+        }
+        GD::bl->setStartTime(BaseLib::HelperFunctions::getTime());
+
 		if(!GD::bl->io.directoryExists(GD::bl->settings.socketPath()))
 		{
 			if(!GD::bl->io.createDirectory(GD::bl->settings.socketPath(), S_IRWXU | S_IRWXG))
@@ -1016,16 +1027,6 @@ void startUp()
 				{
 					GD::out.printCritical("Critical: deleting temporary file \"" + phpTempPath + *i + "\": " + strerror(errno));
 				}
-			}
-		}
-
-	    if(GD::bl->settings.waitForCorrectTime())
-		{
-			while(BaseLib::HelperFunctions::getTime() < 1000000000000)
-			{
-				if(_shutdownQueued) exitHomegear(1);
-				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
-				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 			}
 		}
 

@@ -64,6 +64,17 @@ void DatabaseController::init()
     }
     _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
     _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), false, true));
+
+    {
+        auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
+        systemVariable->name = "homegearStartTime";
+        systemVariable->value = std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime());
+        systemVariable->flags = 1; //Readonly
+
+        std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+        _systemVariables.emplace("homegearStartTime", systemVariable);
+    }
+
     startQueue(0, true, 1, 0, SCHED_OTHER);
 }
 
@@ -2743,7 +2754,42 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
         std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, serializedObject, room, categories, flags FROM systemVariables");
 
         BaseLib::PVariable systemVariableStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        if(rows->empty()) return systemVariableStruct;
+
+        { //Insert special variables
+            BaseLib::Database::PSystemVariable systemVariable;
+
+            {
+                std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+                auto systemVariableIterator = _systemVariables.find("homegearStartTime");
+                if(systemVariableIterator != _systemVariables.end()) systemVariable = systemVariableIterator->second;
+            }
+
+            if(systemVariable && (!checkAcls || (checkAcls && clientInfo->acls->checkSystemVariableReadAccess(systemVariable))))
+            {
+                if(returnRoomsCategoriesFlags)
+                {
+                    BaseLib::PVariable element = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                    if(systemVariable->room != 0) element->structValue->emplace("ROOM", std::make_shared<BaseLib::Variable>(systemVariable->room));
+
+                    BaseLib::PVariable categoriesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    categoriesArray->arrayValue->reserve(systemVariable->categories.size());
+                    for(auto category : systemVariable->categories)
+                    {
+                        if(category != 0) categoriesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
+                    }
+                    if(!categoriesArray->arrayValue->empty()) element->structValue->emplace("CATEGORIES", categoriesArray);
+
+                    if(systemVariable->flags > 0) element->structValue->emplace("FLAGS", std::make_shared<BaseLib::Variable>(systemVariable->flags));
+
+                    element->structValue->emplace("VALUE", systemVariable->value);
+
+                    systemVariableStruct->structValue->insert(BaseLib::StructElement(systemVariable->name, element));
+                }
+                else systemVariableStruct->structValue->insert(BaseLib::StructElement(systemVariable->name, systemVariable->value));
+            }
+        }
+
         for(auto i = rows->begin(); i != rows->end(); ++i)
         {
             if(i->second.size() < 4) continue;
