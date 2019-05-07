@@ -686,6 +686,8 @@ RED.comms = (function() {
                 if(message.params[1] == "flowsStarted") {
                     RED.comms.homegear().invoke('setNodeVariable', null, RED.workspaces.active(), "enableEvents", true);
                     RED.notify(RED._("notification.info",{message:RED._("notification.infoMessages.flowsStarted")}),"success",false);
+                } else if(message.params[1] == "flowStartError") {
+                    RED.notify(RED._("notification.error",{message:RED._("notification.errors.flowStartError",{flow:message.params[2]})}),"error",false);
                 }
             } else {
                 if(message.params[2].format && !message.params[2].format.match(/string/g)) message.params[2].msg = JSON.stringify(message.params[2].msg);

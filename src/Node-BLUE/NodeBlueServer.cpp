@@ -2621,6 +2621,11 @@ void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>&
 		PNodeBlueProcess process = getFreeProcess(flowInfo->maxThreadCount);
 		if(!process)
 		{
+            std::string nodeId = "global";
+            std::string topic = "flowStartError";
+            BaseLib::PVariable value = std::make_shared<BaseLib::Variable>(flowInfo->nodeBlueId);
+            GD::rpcClient->broadcastNodeEvent(nodeId, topic, value);
+
 			_out.printError("Error: Could not get free process. Not executing flow.");
 			flowInfo->exitCode = -1;
 			return;

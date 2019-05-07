@@ -92,6 +92,10 @@
     }
   },
   "notification" : {
+    "info": "<strong>Info</strong>: __message__",
+    "infoMessages": {
+        "flowsStarted": "Flows wurden (neu)gestartet."
+    },
     "warning" : "<strong> Warnung </strong>: __message__",
     "warnings" : {
       "undeployedChanges" : "Knoten hat nicht implementierte Änderungen",
@@ -113,8 +117,9 @@
       "lostConnectionTry" : "Jetzt testen",
       "cannotAddSubflowToItself" : "Subflow kann nicht zu sich selbst hinzugefügt werden",
       "cannotAddCircularReference" : "Subflow kann nicht hinzugefügt werden-zirkuläre Referenz wurde erkannt",
-      "unsupportedVersion" : "<p> Verwenden einer nicht unterstützten Version von Node.js </p> <p> Sie sollten ein Upgrade auf das neueste LTS-Release von Node.js durchführen. </p>",
-      "failedToAppendNode" : "<p> Fehler beim Laden von '__module__' </p> <p> __error__ </p>"
+      "unsupportedVersion" : "<p>Verwenden einer nicht unterstützten Version von Node.js </p> <p> Sie sollten ein Upgrade auf das neueste LTS-Release von Node.js durchführen. </p>",
+      "failedToAppendNode" : "<p>Fehler beim Laden von '__module__' </p> <p> __error__ </p>",
+      "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Für weitere Informationen schauen Sie ins Fehlerlog.</p>"
     },
     "project" : {
       "change-branch" : "Wechseln Sie in die lokale Verzweigung '__project__'.",

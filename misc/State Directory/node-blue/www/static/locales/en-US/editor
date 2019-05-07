@@ -115,7 +115,8 @@
             "cannotAddSubflowToItself": "Cannot add subflow to itself",
             "cannotAddCircularReference": "Cannot add subflow - circular reference detected",
             "unsupportedVersion": "<p>Using an unsupported version of Node.js</p><p>You should upgrade to the latest Node.js LTS release</p>",
-            "failedToAppendNode": "<p>Failed to load '__module__'</p><p>__error__</p>"
+            "failedToAppendNode": "<p>Failed to load '__module__'</p><p>__error__</p>",
+            "flowStartError": "<p>Failed to start flow '__flow__'. Please see the error log for more details.</p>"
         }
     },
     "clipboard": {
