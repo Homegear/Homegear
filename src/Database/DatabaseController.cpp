@@ -2807,16 +2807,16 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
                 systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
                 systemVariable->name = i->second.at(0)->textValue;
                 systemVariable->value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
-                systemVariable->room = (uint64_t)rows->at(0).at(2)->intValue;
+                systemVariable->room = (uint64_t)i->second.at(2)->intValue;
 
-                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
+                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(3)->textValue, ',');
                 for(auto& categoryString : categoryStrings)
                 {
                     uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
                     if(category != 0) systemVariable->categories.emplace(category);
                 }
 
-                systemVariable->flags = (int32_t)rows->at(0).at(4)->intValue;
+                systemVariable->flags = (int32_t)i->second.at(4)->intValue;
 
                 std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
                 _systemVariables.emplace(systemVariable->name, systemVariable);
