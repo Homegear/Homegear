@@ -68,7 +68,7 @@ void DatabaseController::init()
     {
         auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
         systemVariable->name = "homegearStartTime";
-        systemVariable->value = std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime());
+        systemVariable->value = std::make_shared<BaseLib::Variable>((double)(BaseLib::HelperFunctions::getTime() / 1000.0));
         systemVariable->flags = 1; //Readonly
 
         std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
