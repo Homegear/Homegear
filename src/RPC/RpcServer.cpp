@@ -1613,8 +1613,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     client->rpcType = BaseLib::RpcType::webserver;
                                     http.getHeader().remoteAddress = client->address;
                                     http.getHeader().remotePort = client->port;
-                                    if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(http, client->socket);
-                                    else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket, _info->cacheAssets);
+                                    if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(client, http, client->socket);
+                                    else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(client, http, client->socket, _info->cacheAssets);
                                     if(http.getHeader().connection & BaseLib::Http::Connection::Enum::close) closeClientConnection(client);
                                     client->lastReceivedPacket = BaseLib::HelperFunctions::getTime();
                                 }
@@ -1829,7 +1829,12 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
                 }
                 else _out.printInfo("Info: Certificate authentication failed. Falling back to next authentication type. Error was: " + error);
             }
-            else _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
+            else
+            {
+                client->hasClientCertificate = true;
+                client->distinguishedName = client->user;
+                _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
+            }
         }
 
         return;

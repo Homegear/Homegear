@@ -1794,7 +1794,7 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
         else if(type == ScriptInfo::ScriptType::web)
         {
             if(parameters->at(2)->stringValue.empty()) return BaseLib::Variable::createError(-1, "Path is empty.");
-            scriptInfo.reset(new ScriptInfo(type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5), parameters->at(6)));
+            scriptInfo.reset(new ScriptInfo(GD::bl.get(), type, parameters->at(2)->stringValue, parameters->at(3)->stringValue, parameters->at(4)->stringValue, parameters->at(5), parameters->at(6), parameters->at(7)));
 
             if(scriptInfo->script.empty() && !GD::bl->io.fileExists(scriptInfo->fullPath))
             {

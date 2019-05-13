@@ -1925,7 +1925,8 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
                     BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
                     BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
                     scriptInfo->http.serialize(),
-                    scriptInfo->serverInfo->serialize()}));
+                    scriptInfo->serverInfo->serialize(),
+                    scriptInfo->clientInfo->serialize()}));
         }
         else if(scriptType == ScriptInfo::ScriptType::device || scriptType == ScriptInfo::ScriptType::device2)
         {

@@ -23,7 +23,7 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
+void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
 {
 	try
 	{
@@ -242,7 +242,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 #ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
 				scriptInfo->socket = socket;
 				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 				scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -316,7 +316,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 	}
 }
 
-void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
 {
 	try
 	{
@@ -499,7 +499,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				contentPath = GD::bl->settings.uiPath();
 			}
 			else fullPath = _serverInfo->contentPath + path;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
 			scriptInfo->socket = socket;
 			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 			scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
