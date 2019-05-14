@@ -650,7 +650,7 @@ void RpcServer::mainThread()
                 _out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 
                 client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
-                if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+                if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none)
                 {
                     std::vector<uint64_t> groups{8}; //No user
                     client->acls->fromGroups(groups);
