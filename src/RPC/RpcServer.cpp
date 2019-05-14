@@ -362,6 +362,11 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
             return;
         }
         if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
+        if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::undefined)
+        {
+            _out.printError("Error: authType is not set.");
+            return;
+        }
         _out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 
         if(info->familyServer)
