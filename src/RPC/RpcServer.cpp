@@ -1819,7 +1819,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
         if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
         {
             std::string error;
-            if(!client->auth->certificateServer(client->socketDescriptor, client->user, client->acls, error))
+            if(!client->auth->certificateServer(client->socketDescriptor, client->user, client->distinguishedName, client->acls, error))
             {
                 if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
                 {
@@ -1832,7 +1832,6 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
             else
             {
                 client->hasClientCertificate = true;
-                client->distinguishedName = client->user;
                 _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
             }
         }
