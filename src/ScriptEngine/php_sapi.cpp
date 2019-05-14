@@ -650,22 +650,27 @@ static void php_homegear_register_variables(zval* track_vars_array)
             BaseLib::HelperFunctions::toUpper(name);
             php_register_variable_safe((char*)name.c_str(), (char*)i->second.c_str(), i->second.size(), track_vars_array);
         }
-        if(scriptInfo->clientInfo && scriptInfo->clientInfo->hasClientCertificate)
+        if(scriptInfo->clientInfo)
         {
-            std::string sslClientVerify = "SUCCESS";
-            php_register_variable_safe((char*)"SSL_CLIENT_VERIFY", (char*)sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
-            php_register_variable_safe((char*)"SSL_CLIENT_S_DN", (char*)scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
-            auto dnParts = BaseLib::HelperFunctions::splitAll(scriptInfo->clientInfo->distinguishedName, ',');
-            for(auto& attribute : dnParts)
+            if(scriptInfo->clientInfo->authenticated) php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"true", 4, track_vars_array);
+            else php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"false", 5, track_vars_array);
+            if(scriptInfo->clientInfo->hasClientCertificate)
             {
-                auto attributePair = BaseLib::HelperFunctions::splitFirst(attribute, '=');
-                BaseLib::HelperFunctions::trim(attributePair.first);
-                BaseLib::HelperFunctions::toUpper(attributePair.first);
-                BaseLib::HelperFunctions::trim(attributePair.second);
-                BaseLib::HelperFunctions::toLower(attributePair.second);
-                if(attributePair.first.empty() || attributePair.second.empty()) continue;
-                std::string name = "SSL_CLIENT_S_DN_" + attributePair.first;
-                php_register_variable_safe((char*)name.c_str(), (char*)attributePair.second.c_str(), attributePair.second.size(), track_vars_array);
+                std::string sslClientVerify = "SUCCESS";
+                php_register_variable_safe((char*) "SSL_CLIENT_VERIFY", (char*) sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+                php_register_variable_safe((char*) "SSL_CLIENT_S_DN", (char*) scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
+                auto dnParts = BaseLib::HelperFunctions::splitAll(scriptInfo->clientInfo->distinguishedName, ',');
+                for(auto& attribute : dnParts)
+                {
+                    auto attributePair = BaseLib::HelperFunctions::splitFirst(attribute, '=');
+                    BaseLib::HelperFunctions::trim(attributePair.first);
+                    BaseLib::HelperFunctions::toUpper(attributePair.first);
+                    BaseLib::HelperFunctions::trim(attributePair.second);
+                    BaseLib::HelperFunctions::toLower(attributePair.second);
+                    if(attributePair.first.empty() || attributePair.second.empty()) continue;
+                    std::string name = "SSL_CLIENT_S_DN_" + attributePair.first;
+                    php_register_variable_safe((char*) name.c_str(), (char*) attributePair.second.c_str(), attributePair.second.size(), track_vars_array);
+                }
             }
         }
         else
