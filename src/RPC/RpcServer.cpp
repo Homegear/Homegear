@@ -400,6 +400,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
             _out.printWarning("Warning: RPC server has no WebSocket authorization enabled. This is very dangerous as every webpage opened in a browser (also remote one's!!!) can control this installation.");
         }
 
+        if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none) _out.printInfo("Info: Enabling no authentication.");
         if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication.");
         if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) _out.printInfo("Info: Enabling client certificate authentication.");
         if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication for WebSockets.");
@@ -1386,17 +1387,25 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                         if(binaryRpc.isFinished())
                         {
                             std::shared_ptr<BaseLib::Rpc::RpcHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
-                            if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+                            if(!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic))
                             {
                                 try
                                 {
                                     if(!client->auth->basicServer(client->socket, header, client->user, client->acls))
                                     {
-                                        _out.printError("Error: Authorization failed. Closing connection.");
-                                        doBreak = true;
-                                        break;
+                                        if(!(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                                        {
+                                            _out.printError("Error: Authorization failed. Closing connection.");
+                                            doBreak = true;
+                                            break;
+                                        }
+                                        else _out.printInfo("Info: Basic authentication failed. Falling back to no authentication.");
                                     }
-                                    else _out.printDebug("Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                    else
+                                    {
+                                        client->authenticated = true;
+                                        _out.printDebug("Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                    }
                                 }
                                 catch(AuthException& ex)
                                 {
@@ -1405,6 +1414,13 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     break;
                                 }
                             }
+                            else if(!client->authenticated && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                            {
+                                _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
+                                http.reset();
+                                break;
+                            }
+
 
                             packetType = (binaryRpc.getType() == BaseLib::Rpc::BinaryRpc::Type::request) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 
@@ -1577,17 +1593,25 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     break;
                                 }
 
-                                if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+                                if(!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic))
                                 {
                                     try
                                     {
                                         if(!client->auth->basicServer(client->socket, http, client->user, client->acls))
                                         {
-                                            _out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
-                                            http.reset();
-                                            break;
+                                            if(!(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                                            {
+                                                _out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
+                                                http.reset();
+                                                break;
+                                            }
+                                            else _out.printInfo("Info: Basic authentication failed. Falling back to no authentication.");
                                         }
-                                        else _out.printInfo("Info: Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                        else
+                                        {
+                                            client->authenticated = true;
+                                            _out.printInfo("Info: Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                        }
                                     }
                                     catch(AuthException& ex)
                                     {
@@ -1595,6 +1619,12 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                         http.reset();
                                         break;
                                     }
+                                }
+                                else if(!client->authenticated && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                                {
+                                    _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
+                                    http.reset();
+                                    break;
                                 }
                                 if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
                                 {
@@ -1836,6 +1866,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
             }
             else
             {
+                client->authenticated = true;
                 client->hasClientCertificate = true;
                 _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
             }
