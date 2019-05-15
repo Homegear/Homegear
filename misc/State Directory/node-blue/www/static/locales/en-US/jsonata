@@ -115,7 +115,6 @@
         "args": "array",
         "desc": "Returns the mean value of an `array` of numbers. It is an error if the input `array` contains an item which isn't a number."
     },
-
     "$boolean": {
         "args": "arg",
         "desc": "Casts the argument to a Boolean using the following rules:\n\n - `Boolean` : unchanged\n - `string`: empty : `false`\n - `string`: non-empty : `true`\n - `number`: `0` : `false`\n - `number`: non-zero : `true`\n - `null` : `false`\n - `array`: empty : `false`\n - `array`: contains a member that casts to `true` : `true`\n - `array`: all members cast to `false` : `false`\n - `object`: empty : `false`\n - `object`: non-empty : `true`\n - `function` : `false`"
@@ -189,12 +188,12 @@
         "desc":"Returns an aggregated value derived from applying the `function` parameter successively to each value in `array` in combination with the result of the previous application of the function.\n\nThe function must accept two arguments, and behaves like an infix operator between each value within the `array`.\n\nThe optional `init` parameter is used as the initial value in the aggregation."
     },
     "$flowContext": {
-        "args": "string",
-        "desc": "Retrieves a flow context property."
+        "args": "string[, string]",
+        "desc": "Retrieves a flow context property.\n\nThis is a Node-RED defined function."
     },
     "$globalContext": {
-        "args": "string",
-        "desc": "Retrieves a global context property."
+        "args": "string[, string]",
+        "desc": "Retrieves a global context property.\n\nThis is a Node-RED defined function."
     },
     "$pad": {
         "args": "string, width [, char]",
@@ -215,5 +214,22 @@
     "$toMillis": {
         "args": "timestamp",
         "desc": "Convert a `timestamp` string in the ISO 8601 format to the number of milliseconds since the Unix Epoch (1 January, 1970 UTC) as a number. An error is thrown if the string is not in the correct format."
+    },
+    "$env": {
+        "args": "arg",
+        "desc": "Returns the value of an environment variable.\n\nThis is a Node-RED defined function."
+    },
+    "$eval": {
+        "args": "expr [, context]",
+        "desc": "Parses and evaluates the string `expr` which contains literal JSON or a JSONata expression using the current context as the context for evaluation."
+    },
+    "$formatInteger": {
+        "args": "number, picture",
+        "desc": "Casts the `number` to a string and formats it to an integer representation as specified by the `picture` string. The picture string parameter defines how the number is formatted and has the same syntax as `fn:format-integer` from the XPath F&O 3.1 specification."
+    },
+    "$parseInteger": {
+        "args": "string, picture",
+        "desc": "Parses the contents of the `string` parameter to an integer (as a JSON number) using the format specified by the `picture` string. The `picture` string parameter has the same format as `$formatInteger`."
+
     }
 }

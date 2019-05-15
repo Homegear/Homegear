@@ -1,0 +1,51 @@
+{
+    "menu": {
+        "label": {
+            "powered": "Powered by Node-RED",
+            "nodebluewebsite": "Node-BLUE website"
+        }
+    },
+    "notification": {
+        "info": "<strong>Info</strong>: __message__",
+        "infoMessages": {
+            "flowsStarted": "Flows wurden (neu)gestartet."
+        },
+        "warnings": {
+            "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
+        },
+        "errors": {
+             "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Für weitere Informationen schauen Sie ins Fehlerlog.</p>"
+        }
+    },
+    "editor" : {
+        "nodesUse_plural" : "__count__ Knoten verwenden diese Konfiguration",
+        "addNewConfig" : "Neuen __type__-Konfigurationsknoten hinzufügen",
+        "editNode" : "__type__-Knoten bearbeiten",
+        "editConfig" : "__type__-Konfigurationsknoten bearbeiten",
+        "addNewType" : "Neuen __type__-Knoten hinzufügen ..."
+    },
+    "palette" : {
+        "filter": "Knoten filtern",
+        "label" : {
+            "subflows" : "Subflows",
+            "heating" : "Heizung",
+            "general" : "Allgemein",
+            "communication" : "Kommunikation",
+            "notification" : "Benachrichtigung",
+            "logic" : "Logik",
+            "database" : "Datenbank",
+            "parsers" : "Parser",
+            "time" : "Zeit"
+        }
+    },
+    "history": {
+        "title": "History",
+        "lastValue": "Last value:"
+    },
+    "fixedInputs": {
+        "title": "Set fixed input",
+        "description": "You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.",
+        "clear": "Clear",
+        "set": "Set"
+    }
+}

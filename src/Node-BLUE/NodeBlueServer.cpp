@@ -1468,7 +1468,12 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		}
 
 		std::string contentString;
-		if(path == "node-blue/locales/nodes")
+	    if(path.compare(0, 18, "node-blue/context/") == 0)
+        {
+            contentString = "{\"memory\":{}}";
+            responseEncoding = "application/json";
+        }
+		else if(path == "node-blue/locales/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string language = "en-US";
@@ -1500,9 +1505,61 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 					break;
 				}
 			}
-			path = path.substr(17);
-			path = localePath + language + path;
+			auto file = path.substr(17);
+			path = localePath + language + file;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			if(GD::bl->io.fileExists(path + "-extra"))
+            {
+			    auto extraContent = GD::bl->io.getFileContent(path + "-extra");
+			    auto decodedContent = BaseLib::Rpc::JsonDecoder::decode(contentString);
+			    contentString.clear();
+			    auto decodedExtraContent = BaseLib::Rpc::JsonDecoder::decode(extraContent);
+
+			    for(auto& element : *decodedExtraContent->structValue)
+                {
+                    auto subelementIterator = decodedContent->structValue->find(element.first);
+                    if(subelementIterator == decodedContent->structValue->end())
+                    {
+                        decodedContent->structValue->emplace(element.first, element.second);
+                        continue;
+                    }
+
+			        if(element.second->type == BaseLib::VariableType::tStruct)
+                    {
+                        for(auto& subelement : *element.second->structValue)
+                        {
+                            auto subsubelementIterator = subelementIterator->second->structValue->find(subelement.first);
+                            if(subsubelementIterator == subelementIterator->second->structValue->end())
+                            {
+                                subelementIterator->second->structValue->emplace(subelement.first, subelement.second);
+                                continue;
+                            }
+
+                            if(subelement.second->type == BaseLib::VariableType::tStruct)
+                            {
+                                for(auto& subsubelement : *subelement.second->structValue)
+                                {
+                                    if(subsubelement.second->type == BaseLib::VariableType::tStruct)
+                                    {
+                                        _out.printWarning("Warning: File " + path + "-extra has two many levels. Only three levels are allowed.");
+                                    }
+                                    else (*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first] = subsubelement.second;
+                                }
+                            }
+                            else
+                            {
+                                (*(*decodedContent->structValue)[element.first]->structValue)[subelement.first] = subelement.second;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        (*decodedContent->structValue)[element.first] = element.second;
+                    }
+                }
+
+                _jsonEncoder->encode(decodedContent, contentString);
+            }
 			responseEncoding = "application/json";
 		}
 		else if(path == "node-blue/flows")

@@ -71,7 +71,7 @@
       "editPalette" : "Palette verwalten",
       "other" : "Sonstige",
       "showTips" : "Tipps anzeigen",
-      "help" : "Node-BLUE-Website",
+      "help" : "Node-RED-Website",
       "projects" : "Projekte",
       "projects-new" : "Neu",
       "projects-open" : "Öffnen",
@@ -92,10 +92,6 @@
     }
   },
   "notification" : {
-    "info": "<strong>Info</strong>: __message__",
-    "infoMessages": {
-        "flowsStarted": "Flows wurden (neu)gestartet."
-    },
     "warning" : "<strong> Warnung </strong>: __message__",
     "warnings" : {
       "undeployedChanges" : "Knoten hat nicht implementierte Änderungen",
@@ -117,9 +113,8 @@
       "lostConnectionTry" : "Jetzt testen",
       "cannotAddSubflowToItself" : "Subflow kann nicht zu sich selbst hinzugefügt werden",
       "cannotAddCircularReference" : "Subflow kann nicht hinzugefügt werden-zirkuläre Referenz wurde erkannt",
-      "unsupportedVersion" : "<p>Verwenden einer nicht unterstützten Version von Node.js </p> <p> Sie sollten ein Upgrade auf das neueste LTS-Release von Node.js durchführen. </p>",
-      "failedToAppendNode" : "<p>Fehler beim Laden von '__module__' </p> <p> __error__ </p>",
-      "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Für weitere Informationen schauen Sie ins Fehlerlog.</p>"
+      "unsupportedVersion" : "<p> Verwenden einer nicht unterstützten Version von Node.js </p> <p> Sie sollten ein Upgrade auf das neueste LTS-Release von Node.js durchführen. </p>",
+      "failedToAppendNode" : "<p> Fehler beim Laden von '__module__' </p> <p> __error__ </p>"
     },
     "project" : {
       "change-branch" : "Wechseln Sie in die lokale Verzweigung '__project__'.",
@@ -257,11 +252,11 @@
     "configUpdate" : "Aktualisieren",
     "configDelete" : "Löschen",
     "nodesUse" : "__count__node verwendet diese Konfiguration",
-    "nodesUse_plural" : "__count__ Knoten verwenden diese Konfiguration",
-    "addNewConfig" : "Neuen __type__-Konfigurationsknoten hinzufügen",
-    "editNode" : "__type__-Knoten bearbeiten",
-    "editConfig" : "__type__-Konfigurationsknoten bearbeiten",
-    "addNewType" : "Neuen __type__-Knoten hinzufügen ...",
+    "nodesUse_plural" : "__count__ -Knoten verwenden diese Konfiguration",
+    "addNewConfig" : "Neuen __type__config-Knoten hinzufügen",
+    "editNode" : "__type__ Knoten bearbeiten",
+    "editConfig" : "__type__config-Knoten bearbeiten",
+    "addNewType" : "Neuen __type__ hinzufügen ...",
     "nodeProperties" : "Knoteneigenschaften",
     "portLabels" : "Knoteneinstellungen",
     "labelInputs" : "Eingänge",
@@ -321,26 +316,18 @@
   },
   "palette" : {
     "noInfo" : "Keine Informationen verfügbar",
-    "filter" : "Knoten filtern",
+    "filter" : "Filterknoten",
     "search" : "Suchmodule",
     "addCategory" : "Neu hinzufügen ...",
     "label" : {
-      "subflows" : "Subflows",
+      "subflows" : "untergeordnete Nachrichtenflüsse",
       "input" : "Eingabe",
       "output" : "Ausgabe",
       "function" : "Funktion",
       "social" : "Soziale",
       "storage" : "Speicher",
       "analysis" : "Analyse",
-      "advanced" : "fortgeschritten",
-      "heating" : "Heizung",
-      "general" : "Allgemein",
-      "communication" : "Kommunikation",
-      "notification" : "Benachrichtigung",
-      "logic" : "Logik",
-      "database" : "Datenbank",
-      "parsers" : "Parser",
-      "time" : "Zeit"
+      "advanced" : "fortgeschritten"
     },
     "event" : {
       "nodeAdded" : "Knoten zur Palette hinzugefügt:",
@@ -406,15 +393,15 @@
       },
       "confirm" : {
         "install" : {
-          "body" : "<p> Installieren von '__module__' </p> <p> Vor der Installation von lesen Sie bitte die Dokumentation des Knotens. Einige Knoten haben Abhängigkeiten, die nicht automatisch aufgelöst werden können und einen Neustart von 'Node-BLUE' erfordern. </p>",
+          "body" : "<p> Installieren von '__module__' </p> <p> Vor der Installation von lesen Sie bitte die Dokumentation des Knotens. Einige Knoten haben Abhängigkeiten, die nicht automatisch aufgelöst werden können und einen Neustart von 'Node-RED' erfordern. </p>",
           "title" : "Knoten installieren"
         },
         "remove" : {
-          "body" : "<p> Entfernen von '__module__' </p> <p>-Der Knoten deinstalliert ihn aus Node-BLUE. Der Knoten kann weiterhin Ressourcen verwenden, bis Node-BLUE erneut gestartet wird. </p>",
+          "body" : "<p> Entfernen von '__module__' </p> <p>-Der Knoten deinstalliert ihn aus Node-RED. Der Knoten kann weiterhin Ressourcen verwenden, bis Node-RED erneut gestartet wird. </p>",
           "title" : "Knoten entfernen"
         },
         "update" : {
-          "body" : "<p> Aktualisieren von '__module__' </p> <p> Für die Aktualisierung des Knotens ist ein Neustart von 'Node-BLUE' erforderlich, damit die Aktualisierung abgeschlossen werden kann. Dies muss manuell geschehen. </p>",
+          "body" : "<p> Aktualisieren von '__module__' </p> <p> Für die Aktualisierung des Knotens ist ein Neustart von 'Node-RED' erforderlich, damit die Aktualisierung abgeschlossen werden kann. Dies muss manuell geschehen. </p>",
           "title" : "Knoten aktualisieren"
         },
         "cannotUpdate" : {
@@ -651,7 +638,7 @@
     "result" : "Ergebnis",
     "format" : "Formatiere Ausdruck",
     "compatMode" : "Kompatibilitätsmodus aktiviert",
-    "compatModeDesc" : "<h3> JSONata-Kompatibilitätsmodus </h3> <p>  Der aktuelle Ausdruck scheint immer noch auf  <code> msg </code>  zu verweisen, so dass er im Kompatibilitätsmodus ausgewertet wird. Aktualisieren Sie den Ausdruck so, dass  <code> msg </code>  nicht verwendet wird, da dieser Modus in der Zukunft entfernt wird. </p> <p>  Wenn die JSONata-Unterstützung zuerst zu Node-BLUE hinzugefügt wurde, ist der Ausdruck erforderlich, um auf das Objekt  <code> msg </code>  zu verweisen. Beispiel:  <code> msg.payload </code>  würde für den Zugriff auf die Nutzdaten verwendet. </p> <p>  Das ist nicht mehr erforderlich, da der Ausdruck direkt anhand der Nachricht ausgewertet wird. Um auf die Nutzdaten zugreifen zu können, muss der Ausdruck nur  <code> Nutzdaten </code> sein. </p>",
+    "compatModeDesc" : "<h3> JSONata-Kompatibilitätsmodus </h3> <p>  Der aktuelle Ausdruck scheint immer noch auf  <code> msg </code>  zu verweisen, so dass er im Kompatibilitätsmodus ausgewertet wird. Aktualisieren Sie den Ausdruck so, dass  <code> msg </code>  nicht verwendet wird, da dieser Modus in der Zukunft entfernt wird. </p> <p>  Wenn die JSONata-Unterstützung zuerst zu Node-RED hinzugefügt wurde, ist der Ausdruck erforderlich, um auf das Objekt  <code> msg </code>  zu verweisen. Beispiel:  <code> msg.payload </code>  würde für den Zugriff auf die Nutzdaten verwendet. </p> <p>  Das ist nicht mehr erforderlich, da der Ausdruck direkt anhand der Nachricht ausgewertet wird. Um auf die Nutzdaten zugreifen zu können, muss der Ausdruck nur  <code> Nutzdaten </code> sein. </p>",
     "noMatch" : "Kein übereinstimmende Ergebnisse",
     "errors" : {
       "invalid-expr" : "Ungültiger JSONata-Ausdruck:\n  __message__",
@@ -679,7 +666,7 @@
   "projects" : {
     "config-git" : "Git-Client konfigurieren",
     "welcome" : {
-      "hello" : "Hallo! Wir haben 'Projekte' in 'Node-BLUE' eingeführt.",
+      "hello" : "Hallo! Wir haben 'Projekte' in 'Node-RED' eingeführt.",
       "desc0" : "Dies ist eine neue Methode für die Verwaltung Ihrer Datenflowsdateien und die Versionssteuerung Ihrer Abläufe.",
       "desc1" : "Um zu beginnen, können Sie Ihr erstes Projekt erstellen oder ein vorhandenes Projekt aus einem Git-Repository klonen.",
       "desc2" : "Wenn Sie sich nicht sicher sind, können Sie das jetzt überspringen. Sie können immer noch Ihr erstes Projekt aus dem 'Projects' -Menü erstellen.",
@@ -689,7 +676,7 @@
     },
     "git-config" : {
       "setup" : "Konfigurieren Sie Ihren Versionssteuerungsclient.",
-      "desc0" : "Node-BLUE verwendet das Open-Source-Tool Git für die Versionssteuerung. Es protokolliert Änderungen in Ihren Projektdateien und ermöglicht es Ihnen, sie in ferne Repositorys zu übertragen.",
+      "desc0" : "Node-RED verwendet das Open-Source-Tool Git für die Versionssteuerung. Es protokolliert Änderungen in Ihren Projektdateien und ermöglicht es Ihnen, sie in ferne Repositorys zu übertragen.",
       "desc1" : "Wenn Sie eine Reihe von Änderungen festschreiben, werden die Änderungen mit einem Benutzernamen und einer E-Mail-Adresse von GIT-Datensätzen vorgenommen. Der Benutzername kann alles sein, was Sie wollen-es muss nicht Ihr richtiger Name sein.",
       "desc2" : "Ihr Git-Client ist bereits mit den unten stehenden Details konfiguriert.",
       "desc3" : "Sie können diese Einstellungen später unter der Registerkarte \"Git config\" des Einstellungsdialogs ändern.",
@@ -748,7 +735,7 @@
       "desc4" : "Wenn Sie diese Berechtigungsnachweise in einem öffentlichen Git-Repository speichern möchten, müssen Sie sie verschlüsseln, indem Sie einen geheimen Schlüsselausdruck bereitstellen.",
       "desc5" : "Ihre Datei mit den Datenflowberechtigungsnachweisen wird derzeit mit der Eigenschaft credentialSecret aus Ihrer Einstellungsdatei als Schlüssel verschlüsselt.",
       "desc6" : "Die Datei mit den Datenflowberechtigungsnachweisen wird derzeit mit einem vom System generierten Schlüssel verschlüsselt. Sie sollten einen neuen geheimen Schlüssel für dieses Projekt angeben.",
-      "desc7" : "Der Schlüssel wird separat von den Projektdateien gespeichert. Sie müssen den Schlüssel angeben, damit dieses Projekt in einer anderen Instanz von Node-BLUE verwendet werden kann.",
+      "desc7" : "Der Schlüssel wird separat von den Projektdateien gespeichert. Sie müssen den Schlüssel angeben, damit dieses Projekt in einer anderen Instanz von Node-RED verwendet werden kann.",
       "credentials" : "Berechtigungsnachweis",
       "enable" : "Verschlüsselung aktivieren",
       "disable" : "Verschlüsselung inaktivieren",
@@ -764,7 +751,7 @@
     },
     "create-success" : {
       "success" : "Sie haben Ihr erstes Projekt erfolgreich erstellt!",
-      "desc0" : "Sie können jetzt weiterhin Node-BLUE verwenden, wie Sie es immer haben.",
+      "desc0" : "Sie können jetzt weiterhin Node-RED verwenden, wie Sie es immer haben.",
       "desc1" : "Auf der Registerkarte \"info\" in der Seitenleiste wird angezeigt, was Ihr aktuelles aktives Projekt ist. Die Schaltfläche neben dem Namen kann für den Zugriff auf die Sicht 'Projekteinstellungen' verwendet werden.",
       "desc2" : "Die Registerkarte 'Verlauf' in der Seitenleiste kann verwendet werden, um Dateien anzuzeigen, die sich in Ihrem Projekt geändert haben, und sie festzuschreiben. Es zeigt Ihnen eine vollständige Historie Ihrer Commits an und ermöglicht es Ihnen, Ihre Änderungen in ein fernes Repository zu übertragen."
     },

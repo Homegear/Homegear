@@ -13,7 +13,682 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-var RED = {};
+
+
+/**
+ * Trigger enabled/disabled events when element.prop("disabled",false/true) is
+ * called.
+ * Used by RED.popover to hide a popover when the trigger element is disabled
+ * as a disabled element doesn't emit mouseleave
+ */
+jQuery.propHooks.disabled = {
+    set: function (element, value) {
+        if (element.disabled !== value) {
+            element.disabled = value;
+            if (value) {
+                $(element).trigger('disabled');
+            } else {
+                $(element).trigger('enabled');
+            }
+        }
+    }
+};
+;/** This file was modified by Sathya Laufer */
+
+/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+var RED = (function() {
+    var firstHomegearReady = true;
+
+    function appendNodeConfig(nodeConfig,done) {
+        done = done || function(){};
+        var m = /<!-- --- \[red-module:(\S+)\] --- -->/.exec(nodeConfig.trim());
+        var moduleId;
+        if (m) {
+            moduleId = m[1];
+        } else {
+            moduleId = "unknown";
+        }
+        try {
+            var hasDeferred = false;
+
+            var nodeConfigEls = $("<div>"+nodeConfig+"</div>");
+            var scripts = nodeConfigEls.find("script");
+            var scriptCount = scripts.length;
+            scripts.each(function(i,el) {
+                var srcUrl = $(el).attr('src');
+                if (srcUrl && !/^\s*(https?:|\/|\.)/.test(srcUrl)) {
+                    $(el).remove();
+                    var newScript = document.createElement("script");
+                    newScript.onload = function() {
+                        scriptCount--;
+                        if (scriptCount === 0) {
+                            $("body").append(nodeConfigEls);
+                            done()
+                        }
+                    }
+                    $('body').append(newScript);
+                    newScript.src = RED.settings.apiRootUrl+srcUrl;
+                    hasDeferred = true;
+                } else {
+                    if (/\/ace.js$/.test(srcUrl) || /\/ext-language_tools.js$/.test(srcUrl)) {
+                        // Block any attempts to load ace.js from a CDN - this will
+                        // break the version of ace included in the editor.
+                        // At the time of commit, the contrib-python nodes did this.
+                        // This is a crude fix until the python nodes are fixed.
+                        console.warn("Blocked attempt to load",srcUrl,"by",moduleId)
+                        $(el).remove();
+                    }
+                    scriptCount--;
+                }
+            })
+            if (!hasDeferred) {
+                $("body").append(nodeConfigEls);
+                done();
+            }
+        } catch(err) {
+            RED.notify(RED._("notification.errors.failedToAppendNode",{module:moduleId, error:err.toString()}),{
+                type: "error",
+                timeout: 10000
+            });
+            console.log("["+moduleId+"] "+err.toString());
+            done();
+        }
+    }
+
+    function loadNodeList() {
+        $.ajax({
+            headers: {
+                "Accept":"application/json"
+            },
+            cache: false,
+            url: 'nodes',
+            success: function(data) {
+                RED.nodes.setNodeList(data);
+                RED.i18n.loadNodeCatalogs(function() {
+                    loadIconList(loadNodes);
+                });
+            }
+        });
+    }
+
+    function loadIconList(done) {
+        $.ajax({
+            headers: {
+                "Accept":"application/json"
+            },
+            cache: false,
+            url: 'icons',
+            success: function(data) {
+                RED.nodes.setIconSets(data);
+                if (done) {
+                    done();
+                }
+            }
+        });
+    }
+
+    function loadNodes() {
+        $.ajax({
+            headers: {
+                "Accept":"text/html"
+            },
+            cache: false,
+            url: 'nodes',
+            success: function(data) {
+                var configs = data.trim().split(/(?=<!-- --- \[red-module:\S+\] --- -->)/);
+                var stepConfig = function() {
+                    if (configs.length === 0) {
+                        $("body").i18n();
+                        $("#palette > .palette-spinner").hide();
+                        $(".palette-scroll").removeClass("hide");
+                        $("#palette-search").removeClass("hide");
+                        loadFlows(function() {
+                            if (RED.settings.theme("projects.enabled",false)) {
+                                RED.projects.refresh(function(activeProject) {
+                                    RED.sidebar.info.refresh()
+                                    if (!activeProject) {
+                                        // Projects enabled but no active project
+                                        RED.menu.setDisabled('menu-item-projects-open',true);
+                                        RED.menu.setDisabled('menu-item-projects-settings',true);
+                                        if (activeProject === false) {
+                                            // User previously decline the migration to projects.
+                                        } else { // null/undefined
+                                            RED.projects.showStartup();
+                                        }
+                                    }
+                                    completeLoad();
+                                });
+                            } else {
+                                // Projects disabled by the user
+                                RED.sidebar.info.refresh()
+                                completeLoad();
+                            }
+                        });
+                    } else {
+                        var config = configs.shift();
+                        appendNodeConfig(config,stepConfig);
+                    }
+                }
+                stepConfig();
+            }
+        });
+    }
+
+    function loadFlows(done) {
+        $.ajax({
+            headers: {
+                "Accept":"application/json",
+            },
+            cache: false,
+            url: 'flows',
+            success: function(nodes) {
+                if (nodes) {
+                    var currentHash = window.location.hash;
+                    RED.nodes.version(nodes.rev);
+                    RED.nodes.import(nodes.flows);
+                    RED.nodes.dirty(false);
+                    RED.view.redraw(true);
+                    if (/^#flow\/.+$/.test(currentHash)) {
+                        RED.workspaces.show(currentHash.substring(6));
+                    }
+                }
+                done();
+            }
+        });
+    }
+
+    function completeLoad() {
+        var persistentNotifications = {};
+        RED.comms.subscribe("notification/#",function(topic,msg) {
+            var parts = topic.split("/");
+            var notificationId = parts[1];
+            if (notificationId === "runtime-deploy") {
+                // handled in ui/deploy.js
+                return;
+            }
+            if (notificationId === "node") {
+                // handled below
+                return;
+            }
+            if (notificationId === "project-update") {
+                RED.nodes.clear();
+                RED.history.clear();
+                RED.view.redraw(true);
+                RED.projects.refresh(function() {
+                    loadFlows(function() {
+                        var project = RED.projects.getActiveProject();
+                        var message = {
+                            "change-branch": RED._("notification.project.change-branch", {project: project.git.branches.local}),
+                            "merge-abort": RED._("notification.project.merge-abort"),
+                            "loaded": RED._("notification.project.loaded", {project: msg.project}),
+                            "updated": RED._("notification.project.updated", {project: msg.project}),
+                            "pull": RED._("notification.project.pull", {project: msg.project}),
+                            "revert": RED._("notification.project.revert", {project: msg.project}),
+                            "merge-complete": RED._("notification.project.merge-complete")
+                        }[msg.action];
+                        RED.notify("<p>"+message+"</p>");
+                        RED.sidebar.info.refresh()
+                    });
+                });
+                return;
+            }
+
+            if (msg.text) {
+                msg.default = msg.text;
+                var text = RED._(msg.text,msg);
+                var options = {
+                    type: msg.type,
+                    fixed: msg.timeout === undefined,
+                    timeout: msg.timeout,
+                    id: notificationId
+                }
+                if (notificationId === "runtime-state") {
+                    if (msg.error === "safe-mode") {
+                        options.buttons = [
+                            {
+                                text: RED._("common.label.close"),
+                                click: function() {
+                                    persistentNotifications[notificationId].hideNotification();
+                                }
+                            }
+                        ]
+                    } else if (msg.error === "missing-types") {
+                        text+="<ul><li>"+msg.types.map(RED.utils.sanitize).join("</li><li>")+"</li></ul>";
+                        if (!!RED.projects.getActiveProject()) {
+                            options.buttons = [
+                                {
+                                    text: RED._("notification.label.manage-project-dep"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.projects.settings.show('deps');
+                                    }
+                                }
+                            ]
+                            // } else if (RED.settings.theme('palette.editable') !== false) {
+                        } else {
+                            options.buttons = [
+                                {
+                                    text: RED._("common.label.close"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "credentials_load_failed") {
+                        if (RED.settings.theme("projects.enabled",false)) {
+                            // projects enabled
+                            if (RED.user.hasPermission("projects.write")) {
+                                options.buttons = [
+                                    {
+                                        text: RED._("notification.project.setupCredentials"),
+                                        click: function() {
+                                            persistentNotifications[notificationId].hideNotification();
+                                            RED.projects.showCredentialsPrompt();
+                                        }
+                                    }
+                                ]
+                            }
+                        } else {
+                            options.buttons = [
+                                {
+                                    text: RED._("common.label.close"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "missing_flow_file") {
+                        if (RED.user.hasPermission("projects.write")) {
+                            options.buttons = [
+                                {
+                                    text: RED._("notification.project.setupProjectFiles"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.projects.showFilesPrompt();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "missing_package_file") {
+                        if (RED.user.hasPermission("projects.write")) {
+                            options.buttons = [
+                                {
+                                    text: RED._("notification.project.setupProjectFiles"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.projects.showFilesPrompt();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "project_empty") {
+                        if (RED.user.hasPermission("projects.write")) {
+                            options.buttons = [
+                                {
+                                    text: RED._("notification.project.no"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                    }
+                                },
+                                {
+                                    text: RED._("notification.project.createDefault"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.projects.createDefaultFileSet();
+                                    }
+                                }
+                            ]
+                        }
+                    } else if (msg.error === "git_merge_conflict") {
+                        RED.nodes.clear();
+                        RED.sidebar.versionControl.refresh(true);
+                        if (RED.user.hasPermission("projects.write")) {
+                            options.buttons = [
+                                {
+                                    text: RED._("notification.project.mergeConflict"),
+                                    click: function() {
+                                        persistentNotifications[notificationId].hideNotification();
+                                        RED.sidebar.versionControl.showLocalChanges();
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+                if (!persistentNotifications.hasOwnProperty(notificationId)) {
+                    persistentNotifications[notificationId] = RED.notify(text,options);
+                } else {
+                    persistentNotifications[notificationId].update(text,options);
+                }
+            } else if (persistentNotifications.hasOwnProperty(notificationId)) {
+                persistentNotifications[notificationId].close();
+                delete persistentNotifications[notificationId];
+            }
+        });
+        RED.comms.subscribe("statusTop/#",function(topic,msg) {
+            var parts = topic.split("/");
+            var node = RED.nodes.node(parts[1]);
+            if (node) {
+                if (msg.hasOwnProperty("text")) {
+                    if (msg.text[0] !== ".") {
+                        msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
+                    }
+                }
+                node.statusTop = msg;
+                node.dirty = true;
+                RED.view.redraw();
+            }
+        });
+        RED.comms.subscribe("statusBottom/#",function(topic,msg) {
+            var parts = topic.split("/");
+            var node = RED.nodes.node(parts[1]);
+            if (node) {
+                if (msg.hasOwnProperty("text")) {
+                    if (msg.text[0] !== ".") {
+                        msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
+                    }
+                }
+                node.statusBottom = msg;
+                node.dirty = true;
+                RED.view.redraw();
+            }
+        });
+        RED.comms.subscribe("highlightLink/#",function(topic,msg) {
+            var nodeId = topic.split("/")[1];
+            if(nodeId.indexOf(":") > -1) {
+                nodeId = nodeId.split(":")[0];
+            }
+            var node = RED.nodes.node(nodeId);
+            if (node) {
+                var index = 0;
+                if (msg.hasOwnProperty("index")) {
+                    index = msg.index;
+                }
+                activeLinks = RED.nodes.filterLinks({
+                    source:node,
+                    sourcePort:index                            
+                });
+                for(var i = 0; i < activeLinks.length; i++) {
+                    activeLinks[i].working = true;
+                }
+                setTimeout(function(activeLinks) {
+                    for(var i = 0; i < activeLinks.length; i++) {
+                        activeLinks[i].working = false;
+                    }
+                    node.dirty = true;
+                    RED.view.redraw();
+                }, 300, activeLinks);
+                node.dirty = true;
+                RED.view.redraw();
+            }
+        });
+        RED.comms.subscribe("highlightNode/#",function(topic,msg) {
+            var nodeId = topic.split("/")[1];
+            if(nodeId.indexOf(":") > -1) {
+                nodeId = nodeId.split(":")[0];
+            }
+            var node = RED.nodes.node(nodeId);
+            if (node) {
+                var timeout = 500;
+                if (msg.hasOwnProperty("timeout")) {
+                    timeout = msg.timeout;
+                }
+                node.working = true;
+                setTimeout(function(node) {
+                    node.working = false;
+                    node.dirty = true;
+                    RED.view.redraw();
+                }, timeout, node);
+                node.dirty = true;
+                RED.view.redraw();
+            }
+        });
+        RED.comms.subscribe("notification/node/#",function(topic,msg) {
+            var i,m;
+            var typeList;
+            var info;
+            if (topic == "notification/node/added") {
+                var addedTypes = [];
+                msg.forEach(function(m) {
+                    var id = m.id;
+                    RED.nodes.addNodeSet(m);
+                    addedTypes = addedTypes.concat(m.types);
+                    RED.i18n.loadNodeCatalog(id, function() {
+                        $.get('nodes/'+id, function(data) {
+                            appendNodeConfig(data);
+                        });
+                    });
+                });
+                if (addedTypes.length) {
+                    typeList = "<ul><li>"+addedTypes.join("</li><li>")+"</li></ul>";
+                    RED.notify(RED._("palette.event.nodeAdded", {count:addedTypes.length})+typeList,"success");
+                }
+                loadIconList();
+            } else if (topic == "notification/node/removed") {
+                for (i=0;i<msg.length;i++) {
+                    m = msg[i];
+                    info = RED.nodes.removeNodeSet(m.id);
+                    if (info.added) {
+                        typeList = "<ul><li>"+m.types.join("</li><li>")+"</li></ul>";
+                        RED.notify(RED._("palette.event.nodeRemoved", {count:m.types.length})+typeList,"success");
+                    }
+                }
+                loadIconList();
+            } else if (topic == "notification/node/enabled") {
+                if (msg.types) {
+                    info = RED.nodes.getNodeSet(msg.id);
+                    if (info.added) {
+                        RED.nodes.enableNodeSet(msg.id);
+                        typeList = "<ul><li>"+msg.types.join("</li><li>")+"</li></ul>";
+                        RED.notify(RED._("palette.event.nodeEnabled", {count:msg.types.length})+typeList,"success");
+                    } else {
+                        $.get('nodes/'+msg.id, function(data) {
+                            appendNodeConfig(data);
+                            typeList = "<ul><li>"+msg.types.join("</li><li>")+"</li></ul>";
+                            RED.notify(RED._("palette.event.nodeAdded", {count:msg.types.length})+typeList,"success");
+                        });
+                    }
+                }
+            } else if (topic == "notification/node/disabled") {
+                if (msg.types) {
+                    RED.nodes.disableNodeSet(msg.id);
+                    typeList = "<ul><li>"+msg.types.join("</li><li>")+"</li></ul>";
+                    RED.notify(RED._("palette.event.nodeDisabled", {count:msg.types.length})+typeList,"success");
+                }
+            } else if (topic == "notification/node/upgraded") {
+                RED.notify(RED._("palette.event.nodeUpgraded", {module:msg.module,version:msg.version}),"success");
+                RED.nodes.registry.setModulePendingUpdated(msg.module,msg.version);
+            }
+            // Refresh flow library to ensure any examples are updated
+            RED.library.loadFlowLibrary();
+        });
+        RED.comms.subscribe("event-log/#", function(topic,payload) {
+            var id = topic.substring(9);
+            RED.eventLog.log(id,payload);
+        });
+        RED.comms.getEvents();
+        RED.comms.getFixedInputs();
+    }
+
+    function showAbout() {
+        $.get('red/about', function(data) {
+            var aboutHeader = '<div style="text-align:center;">'+
+            '<img width="50px" src="red/images/node-red-icon.svg" />'+
+            '</div>';
+
+            RED.sidebar.info.set(aboutHeader+marked(data));
+            RED.sidebar.info.show();
+        });
+    }
+
+    function homegearReady() {
+        if(!firstHomegearReady) return;
+        firstHomegearReady = false;
+        $("#main-container").show();
+        $(".header-toolbar").show();
+
+        loadNodeList();
+    }
+
+    function loadEditor() {
+        var menuOptions = [];
+        if (RED.settings.theme("projects.enabled",false)) {
+            menuOptions.push({id:"menu-item-projects-menu",label:RED._("menu.label.projects"),options:[
+                {id:"menu-item-projects-new",label:RED._("menu.label.projects-new"),disabled:false,onselect:"core:new-project"},
+                {id:"menu-item-projects-open",label:RED._("menu.label.projects-open"),disabled:false,onselect:"core:open-project"},
+                {id:"menu-item-projects-settings",label:RED._("menu.label.projects-settings"),disabled:false,onselect:"core:show-project-settings"}
+            ]});
+        }
+
+
+        menuOptions.push({id:"menu-item-view-menu",label:RED._("menu.label.view.view"),options:[
+            // {id:"menu-item-view-show-grid",setting:"view-show-grid",label:RED._("menu.label.view.showGrid"),toggle:true,onselect:"core:toggle-show-grid"},
+            // {id:"menu-item-view-snap-grid",setting:"view-snap-grid",label:RED._("menu.label.view.snapGrid"),toggle:true,onselect:"core:toggle-snap-grid"},
+            // {id:"menu-item-status",setting:"node-show-status",label:RED._("menu.label.displayStatus"),toggle:true,onselect:"core:toggle-status", selected: true},
+            //null,
+            // {id:"menu-item-bidi",label:RED._("menu.label.view.textDir"),options:[
+            //     {id:"menu-item-bidi-default",toggle:"text-direction",label:RED._("menu.label.view.defaultDir"),selected: true, onselect:function(s) { if(s){RED.text.bidi.setTextDirection("")}}},
+            //     {id:"menu-item-bidi-ltr",toggle:"text-direction",label:RED._("menu.label.view.ltr"), onselect:function(s) { if(s){RED.text.bidi.setTextDirection("ltr")}}},
+            //     {id:"menu-item-bidi-rtl",toggle:"text-direction",label:RED._("menu.label.view.rtl"), onselect:function(s) { if(s){RED.text.bidi.setTextDirection("rtl")}}},
+            //     {id:"menu-item-bidi-auto",toggle:"text-direction",label:RED._("menu.label.view.auto"), onselect:function(s) { if(s){RED.text.bidi.setTextDirection("auto")}}}
+            // ]},
+            // null,
+            {id:"menu-item-palette",label:RED._("menu.label.palette.show"),toggle:true,onselect:"core:toggle-palette", selected: true},
+            {id:"menu-item-sidebar",label:RED._("menu.label.sidebar.show"),toggle:true,onselect:"core:toggle-sidebar", selected: true},
+            {id:"menu-item-event-log",label:RED._("eventLog.title"),onselect:"core:show-event-log"},
+            null
+        ]});
+        menuOptions.push(null);
+        menuOptions.push({id:"menu-item-import",label:RED._("menu.label.import"),options:[
+            {id:"menu-item-import-clipboard",label:RED._("menu.label.clipboard"),onselect:"core:show-import-dialog"}/*,
+            {id:"menu-item-import-library",label:RED._("menu.label.library"),options:[]}*/
+        ]});
+        menuOptions.push({id:"menu-item-export",label:RED._("menu.label.export"),options:[
+            {id:"menu-item-export-clipboard",label:RED._("menu.label.clipboard"),onselect:"core:show-export-dialog"}/*,
+            {id:"menu-item-export-library",label:RED._("menu.label.library"),disabled:true,onselect:"core:library-export"}*/
+        ]});
+        menuOptions.push(null);
+        menuOptions.push({id:"menu-item-search",label:RED._("menu.label.search"),onselect:"core:search"});
+        menuOptions.push(null);
+        menuOptions.push({id:"menu-item-config-nodes",label:RED._("menu.label.displayConfig"),onselect:"core:show-config-tab"});
+        menuOptions.push({id:"menu-item-workspace",label:RED._("menu.label.flows"),options:[
+            {id:"menu-item-workspace-add",label:RED._("menu.label.add"),onselect:"core:add-flow"},
+            {id:"menu-item-workspace-edit",label:RED._("menu.label.rename"),onselect:"core:edit-flow"},
+            {id:"menu-item-workspace-delete",label:RED._("menu.label.delete"),onselect:"core:remove-flow"}
+        ]});
+        menuOptions.push({id:"menu-item-subflow",label:RED._("menu.label.subflows"), options: [
+            {id:"menu-item-subflow-create",label:RED._("menu.label.createSubflow"),onselect:"core:create-subflow"}/*,
+            {id:"menu-item-subflow-convert",label:RED._("menu.label.selectionToSubflow"),disabled:true,onselect:"core:convert-to-subflow"},*/
+        ]});
+        menuOptions.push(null);
+        if (RED.settings.theme('palette.editable') !== false) {
+            menuOptions.push({id:"menu-item-edit-palette",label:RED._("menu.label.editPalette"),onselect:"core:manage-palette"});
+            menuOptions.push(null);
+        }
+
+        menuOptions.push({id:"menu-item-user-settings",label:RED._("menu.label.settings"),onselect:"core:show-user-settings"});
+        menuOptions.push(null);
+
+        menuOptions.push({id:"menu-item-keyboard-shortcuts",label:RED._("menu.label.keyboardShortcuts"),onselect:"core:show-help"});
+        menuOptions.push({id:"menu-item-help",
+            label: RED.settings.theme("menu.menu-item-help.label",RED._("menu.label.nodebluewebsite")),
+            href: RED.settings.theme("menu.menu-item-help.url","https://doc.homegear.eu/data/homegear-node-blue/")
+        });
+        menuOptions.push(null);
+        menuOptions.push({id:"menu-item-node-red-version", label:"v"+RED.settings.version, onselect: "core:show-about" });
+        menuOptions.push({id:"menu-item-node-red",
+            label: RED.settings.theme("menu.menu-item-logout.label",RED._("menu.label.powered")),
+            href: RED.settings.theme("menu.menu-item-logout.url","https://nodered.org/")
+        });
+        menuOptions.push(null);
+        menuOptions.push({id:"menu-item-logout",
+            label: RED.settings.theme("menu.menu-item-logout.label",RED._("menu.label.logout")),
+            hrefLocal: RED.settings.theme("menu.menu-item-logout.url","signin.php?logout=1")
+        });
+
+
+        RED.view.init();
+        RED.userSettings.init();
+        RED.user.init();
+        RED.library.init();
+        RED.keyboard.init();
+        RED.palette.init();
+        RED.eventLog.init();
+        if (RED.settings.theme('palette.editable') !== false) {
+            RED.palette.editor.init();
+        } else {
+            console.log("Palette editor disabled");
+        }
+
+        RED.sidebar.init();
+
+        if (RED.settings.theme("projects.enabled",false)) {
+            RED.projects.init();
+        } else {
+            console.log("Projects disabled");
+        }
+
+        RED.subflow.init();
+        RED.workspaces.init();
+        RED.clipboard.init();
+        RED.search.init();
+        RED.editor.init();
+        RED.diff.init();
+
+        RED.menu.init({id:"btn-sidemenu",options: menuOptions});
+
+        RED.deploy.init(RED.settings.theme("deployButton",null));
+        RED.notifications.init();
+
+        RED.actions.add("core:show-about", showAbout);
+        RED.nodes.init();
+        RED.comms.connect();
+        RED.comms.homegear().ready(homegearReady);
+
+        //$("#main-container").show();
+        //$(".header-toolbar").show();
+
+        //loadNodeList();
+    }
+
+    var initialised = false;
+
+    function init(options) {
+        if (initialised) {
+            throw new Error("RED already initialised");
+        }
+        initialised = true;
+        ace.require("ace/ext/language_tools");
+        options = options || {};
+        options.apiRootUrl = options.apiRootUrl || "";
+        if (options.apiRootUrl && !/\/$/.test(options.apiRootUrl)) {
+            options.apiRootUrl = options.apiRootUrl+"/";
+        }
+        RED.i18n.init(options, function() {
+            RED.settings.init(options, loadEditor);
+        })
+    }
+
+    return {
+        init: init
+    }
+})();
 ;/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
@@ -67,7 +742,9 @@ var RED = {};
          emit: emit
      }
  })();
-;/**
+;/* This file was modified by Homegear GmbH */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,11 +762,14 @@ var RED = {};
 
 RED.i18n = (function() {
 
+    var apiRootUrl;
+
     return {
-        init: function(done) {
+        init: function(options, done) {
+            apiRootUrl = options.apiRootUrl||"";
             i18n.init({
                 lng: locale ? locale[0] : null,
-                resGetPath: 'locales/__ns__?lng=__lng__',
+                resGetPath: apiRootUrl+'locales/__ns__?lng=__lng__',
                 dynamicLoad: false,
                 load:'current',
                 ns: {
@@ -98,17 +778,23 @@ RED.i18n = (function() {
                 },
                 fallbackLng: locale ? locale : ['en-US'],
                 fallbackNS: ['node-red', 'editor'],
-                useCookie: false
+                useCookie: false,
+                returnObjectTrees: true
             },function() {
                 done();
             });
             RED["_"] = function() {
-                return i18n.t.apply(null,arguments);
+                var v = i18n.t.apply(null,arguments);
+                if (typeof v === 'string') {
+                    return v;
+                } else {
+                    return arguments[0];
+                }
             }
 
         },
 
-        loadCatalog: function(namespace,done) {
+        loadNodeCatalog: function(namespace,done) {
             i18n.loadNamespace(namespace,done);
         },
 
@@ -122,7 +808,7 @@ RED.i18n = (function() {
                         "Accept":"application/json"
                     },
                     cache: false,
-                    url: 'locales/nodes?lng='+lang,
+                    url: apiRootUrl+'locales/nodes?lng='+lang,
                     success: function(data) {
                         var namespaces = Object.keys(data);
                         namespaces.forEach(function(ns) {
@@ -138,7 +824,9 @@ RED.i18n = (function() {
         }
     }
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -229,18 +917,22 @@ RED.settings = (function () {
         userSettings = data;
     }
 
-    var init = function (done) {
+    var init = function (options, done) {
         var accessTokenMatch = /[?&]access_token=(.*?)(?:$|&)/.exec(window.location.search);
         if (accessTokenMatch) {
             var accessToken = accessTokenMatch[1];
             RED.settings.set("auth-tokens",{access_token: accessToken});
             window.location.search = "";
         }
+        RED.settings.apiRootUrl = options.apiRootUrl;
 
         $.ajaxSetup({
             beforeSend: function(jqXHR,settings) {
                 // Only attach auth header for requests to relative paths
                 if (!/^\s*(https?:|\/|\.)/.test(settings.url)) {
+                    if (options.apiRootUrl) {
+                        settings.url = options.apiRootUrl+settings.url;
+                    }
                     var auth_tokens = RED.settings.get("auth-tokens");
                     if (auth_tokens) {
                         jqXHR.setRequestHeader("Authorization","Bearer "+auth_tokens.access_token);
@@ -647,7 +1339,7 @@ RED.user = (function() {
     }
 
 })();
-;/** This file was modified by Sathya Laufer */
+;/* This file was modified by Homegear GmbH */
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -735,7 +1427,7 @@ RED.comms = (function() {
             errornotification = RED.notify(RED._("notification.error",{message:RED._("notification.errors.lostConnection")}),"error",true);
         });
         homegear.event(homegearEvent);
-        homegear.connect();        
+        homegear.connect();
     }
 
     function subscribe(topic,callback) {
@@ -2192,7 +2884,7 @@ RED.text.format = (function() {
             element.dispatchEvent(event);
             return;
         }
-        
+
         var range = selection.getRangeAt(0);
         var tempRange = range.cloneRange(), startNode, startOffset;
         startNode = range.startContainer;
@@ -2254,7 +2946,7 @@ RED.text.format = (function() {
     }
 
     return {
-        /**
+        /*!
         * Returns the HTML representation of a given structured text
         * @param text - the structured text
         * @param type - could be one of filepath, url, email
@@ -2265,7 +2957,7 @@ RED.text.format = (function() {
         getHtml: function (text, type, args, isRtl, locale) {
             return getHandler(type).format(text, args, isRtl, true, locale);
         },
-        /**
+        /*!
         * Handle Structured text correct display for a given HTML element.
         * @param element - the element  : should be of type div contenteditable=true
         * @param type - could be one of filepath, url, email
@@ -2303,7 +2995,8 @@ RED.state = {
     EXPORT: 6,
     IMPORT: 7,
     IMPORT_DRAGGING: 8,
-    QUICK_JOINING: 9
+    QUICK_JOINING: 9,
+    PANNING: 10
 }
 ;/** This file was modified by Sathya Laufer */
 
@@ -2442,7 +3135,7 @@ RED.nodes = (function() {
             registerNodeType: function(nt,def) {
                 nodeDefinitions[nt] = def;
                 def.type = nt;
-                if (def.category != "subflows") {
+                if (nt.substring(0,8) != "subflow:") {
                     def.set = nodeSets[typeToId[nt]];
                     nodeSets[typeToId[nt]].added = true;
                     nodeSets[typeToId[nt]].enabled = true;
@@ -2483,6 +3176,7 @@ RED.nodes = (function() {
             },
             setIconSets: function(sets) {
                 iconSets = sets;
+                iconSets["font-awesome"] = RED.nodes.fontAwesome.getIconList();
             },
             getIconSets: function() {
                 return iconSets;
@@ -2612,10 +3306,14 @@ RED.nodes = (function() {
         }
     }
 
-    function addWorkspace(ws) {
+    function addWorkspace(ws,targetIndex) {
         workspaces[ws.id] = ws;
         ws._def = RED.nodes.getType('tab');
-        workspacesOrder.push(ws.id);
+        if (targetIndex === undefined) {
+            workspacesOrder.push(ws.id);
+        } else {
+            workspacesOrder.splice(targetIndex,0,ws.id);
+        }
     }
     function getWorkspace(id) {
         return workspaces[id];
@@ -2668,10 +3366,12 @@ RED.nodes = (function() {
         }
         subflows[sf.id] = sf;
         RED.nodes.registerType("subflow:"+sf.id, {
-            defaults:{name:{value:""}},
-            info: sf.info,
+            defaults:{
+                name:{value:""},
+                env:{value:[]}
+            },
             icon: function() { return sf.icon||"subflow.png" },
-            category: "subflows",
+            category: sf.category || "subflows",
             inputs: sf.in.length,
             outputs: sf.out.length,
             color: "#da9",
@@ -2680,6 +3380,16 @@ RED.nodes = (function() {
             paletteLabel: function() { return RED.nodes.subflow(sf.id).name },
             inputLabels: function(i) { return sf.inputLabels?sf.inputLabels[i]:null },
             outputLabels: function(i) { return sf.outputLabels?sf.outputLabels[i]:null },
+            oneditresize: function(size) {
+                var rows = $("#dialog-form>div:not(.node-input-env-container-row)");
+                var height = size.height;
+                for (var i=0; i<rows.size(); i++) {
+                    height -= $(rows[i]).outerHeight(true);
+                }
+                var editorRow = $("#dialog-form>div.node-input-env-container-row");
+                height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+                $("#node-input-env-container").editableList('height',height-80);
+            },
             set:{
                 module: "node-red"
             }
@@ -2826,6 +3536,15 @@ RED.nodes = (function() {
                     node.icon = n.icon;
                 }
             }
+            if ((!n._def.defaults || !n._def.defaults.hasOwnProperty("l")) && n.hasOwnProperty('l')) {
+                var isLink = /^link (in|out)$/.test(node.type);
+                if (isLink == n.l) {
+                    node.l = n.l;
+                }
+            }
+        }
+        if (n.info) {
+            node.info = n.info;
         }
         return node;
     }
@@ -2837,8 +3556,10 @@ RED.nodes = (function() {
         node.namespace = n.namespace ? n.namespace : n.type;
         node.name = n.name;
         node.info = n.info;
+        node.category = n.category;
         node.in = [];
         node.out = [];
+        node.env = n.env;
 
         n.in.forEach(function(p) {
             var nIn = {x:p.x,y:p.y,wires:[]};
@@ -2874,6 +3595,18 @@ RED.nodes = (function() {
             if (n.icon !== "node-red/subflow.png") {
                 node.icon = n.icon;
             }
+        }
+        if (n.status) {
+            node.status = {x: n.status.x, y: n.status.y, wires:[]};
+            links.forEach(function(d) {
+                if (d.target === n.status) {
+                    if (d.source.type != "subflow") {
+                        node.status.wires.push({id:d.source.id, port:d.sourcePort})
+                    } else {
+                        node.status.wires.push({id:n.id, port:0})
+                    }
+                }
+            });
         }
 
         return node;
@@ -2957,42 +3690,39 @@ RED.nodes = (function() {
     }
 
     function checkForMatchingSubflow(subflow,subflowNodes) {
+        subflowNodes = subflowNodes || [];
         var i;
         var match = null;
-        try {
-            RED.nodes.eachSubflow(function(sf) {
-                if (sf.name != subflow.name ||
-                    sf.info != subflow.info ||
-                    sf.in.length != subflow.in.length ||
-                    sf.out.length != subflow.out.length) {
-                        return;
-                }
-                var sfNodes = RED.nodes.filterNodes({z:sf.id});
-                if (sfNodes.length != subflowNodes.length) {
+        RED.nodes.eachSubflow(function(sf) {
+            if (sf.name != subflow.name ||
+                sf.info != subflow.info ||
+                sf.in.length != subflow.in.length ||
+                sf.out.length != subflow.out.length) {
                     return;
-                }
+            }
+            var sfNodes = RED.nodes.filterNodes({z:sf.id});
+            if (sfNodes.length != subflowNodes.length) {
+                return;
+            }
 
-                var subflowNodeSet = [subflow].concat(subflowNodes);
-                var sfNodeSet = [sf].concat(sfNodes);
+            var subflowNodeSet = [subflow].concat(subflowNodes);
+            var sfNodeSet = [sf].concat(sfNodes);
 
-                var exportableSubflowNodes = JSON.stringify(subflowNodeSet);
-                var exportableSFNodes = JSON.stringify(createExportableNodeSet(sfNodeSet));
-                var nodeMap = {};
-                for (i=0;i<sfNodes.length;i++) {
-                    exportableSubflowNodes = exportableSubflowNodes.replace(new RegExp("\""+subflowNodes[i].id+"\"","g"),'"'+sfNodes[i].id+'"');
-                }
-                exportableSubflowNodes = exportableSubflowNodes.replace(new RegExp("\""+subflow.id+"\"","g"),'"'+sf.id+'"');
+            var exportableSubflowNodes = JSON.stringify(subflowNodeSet);
+            var exportableSFNodes = JSON.stringify(createExportableNodeSet(sfNodeSet));
+            var nodeMap = {};
+            for (i=0;i<sfNodes.length;i++) {
+                exportableSubflowNodes = exportableSubflowNodes.replace(new RegExp("\""+subflowNodes[i].id+"\"","g"),'"'+sfNodes[i].id+'"');
+            }
+            exportableSubflowNodes = exportableSubflowNodes.replace(new RegExp("\""+subflow.id+"\"","g"),'"'+sf.id+'"');
 
-                if (exportableSubflowNodes !== exportableSFNodes) {
-                    return;
-                }
+            if (exportableSubflowNodes !== exportableSFNodes) {
+                return;
+            }
 
-                match = sf;
-                throw new Error();
-            });
-        } catch(err) {
-            console.log(err.stack);
-        }
+            match = sf;
+            return false;
+        });
         return match;
     }
     function compareNodes(nodeA,nodeB,idMustMatch) {
@@ -3047,6 +3777,20 @@ RED.nodes = (function() {
         if (!$.isArray(newNodes)) {
             newNodes = [newNodes];
         }
+
+        // Scan for any duplicate nodes and remove them. This is a temporary
+        // fix to help resolve corrupted flows caused by 0.20.0 where multiple
+        // copies of the flow would get loaded at the same time.
+        // If the user hit deploy they would have saved those duplicates.
+        var seenIds = {};
+        newNodes = newNodes.filter(function(n) {
+            if (seenIds[n.id]) {
+                return false;
+            }
+            seenIds[n.id] = true;
+            return true;
+        })
+
         var isInitialLoad = false;
         if (!initialLoad) {
             isInitialLoad = true;
@@ -3072,7 +3816,6 @@ RED.nodes = (function() {
         }
         if (!isInitialLoad && unknownTypes.length > 0) {
             var typeList = "<ul><li>"+unknownTypes.join("</li><li>")+"</li></ul>";
-            var type = "type"+(unknownTypes.length > 1?"s":"");
             RED.notify("<p>"+RED._("clipboard.importUnrecognised",{count:unknownTypes.length})+"</p>"+typeList,"error",false,10000);
         }
 
@@ -3159,6 +3902,12 @@ RED.nodes = (function() {
                         output.i = i;
                         output.id = getID();
                     });
+                    if (n.status) {
+                        n.status.type = "subflow";
+                        n.status.direction = "status";
+                        n.status.z = n.id;
+                        n.status.id = getID();
+                    }
                     new_subflows.push(n);
                     addSubflow(n,createNewIds);
                 }
@@ -3220,8 +3969,16 @@ RED.nodes = (function() {
 
                 }
 
-                if (!existingConfigNode || existingConfigNode._def.exclusive) { //} || !compareNodes(existingConfigNode,n,true) || existingConfigNode._def.exclusive || existingConfigNode.z !== n.z) {
-                    configNode = {id:n.id, z:n.z, type:n.type, namespace:n.namespace, users:[], _config:{}};
+                if (!existingConfigNode || existingConfigNode._def.exclusive) { //} || !compareNodes(existingConfigNode,n,true) || existingConfigNode.z !== n.z) {
+                    configNode = {
+                        id:n.id,
+                        z:n.z,
+                        type:n.type,
+                        namespace:n.namespace,
+                        info: n.info,
+                        users:[],
+                        _config:{}
+                    };
                     for (d in def.defaults) {
                         if (def.defaults.hasOwnProperty(d)) {
                             configNode[d] = n[d];
@@ -3256,18 +4013,22 @@ RED.nodes = (function() {
                 def = registry.getNodeType(n.type);
                 if (!def || def.category != "config") {
                     var node = {
-                        x:n.x,
-                        y:n.y,
+                        x:parseFloat(n.x || 0),
+                        y:parseFloat(n.y || 0),
                         z:n.z,
                         type:0,
-                        wires:n.wires,
+                        wires:n.wires||[],
                         inputLabels: n.inputLabels,
                         outputLabels: n.outputLabels,
                         icon: n.icon,
+                        info: n.info,
                         changed:false,
                         fixedInputs:0,
                         _config:{}
                     };
+                    if (n.hasOwnProperty('l')) {
+                        node.l = n.l;
+                    }
                     if (createNewIds) {
                         if (subflow_blacklist[n.z]) {
                             continue;
@@ -3318,6 +4079,7 @@ RED.nodes = (function() {
                         node.name = n.name;
                         node.outputs = subflow.out.length;
                         node.inputs = subflow.in.length;
+                        node.env = n.env;
                     } else {
                         if (!node._def) {
                             if (node.x && node.y) {
@@ -3355,15 +4117,31 @@ RED.nodes = (function() {
                             node.namespace = "unknown";
                         }
                         if (node._def.category != "config") {
-                            node.inputs = n.inputs||node._def.inputs;
-                            node.outputs = n.outputs||node._def.outputs;
-                            // If 'wires' is longer than outputs, clip wires
+                            if (n.hasOwnProperty('inputs')) {
+                                node.inputs = n.inputs;
+                                node._config.inputs = JSON.stringify(n.inputs);
+                            } else {
+                                node.inputs = node._def.inputs;
+                            }
+                            if (n.hasOwnProperty('outputs')) {
+                                node.outputs = n.outputs;
+                                node._config.outputs = JSON.stringify(n.outputs);
+                            } else {
+                                node.outputs = node._def.outputs;
+                            }
                             if (node.hasOwnProperty('wires') && node.wires.length > node.outputs) {
-                                console.log("Warning: node.wires longer than node.outputs - trimming wires:",node.id," wires:",node.wires.length," outputs:",node.outputs);
-                                node.wires = node.wires.slice(0,node.outputs);
+                                if (!node._def.defaults.hasOwnProperty("outputs") || !isNaN(parseInt(n.outputs))) {
+                                    // If 'wires' is longer than outputs, clip wires
+                                    console.log("Warning: node.wires longer than node.outputs - trimming wires:",node.id," wires:",node.wires.length," outputs:",node.outputs);
+                                    node.wires = node.wires.slice(0,node.outputs);
+                                } else {
+                                    // The node declares outputs in its defaults, but has not got a valid value
+                                    // Defer to the length of the wires array
+                                    node.outputs = node.wires.length;
+                                }
                             }
                             for (d in node._def.defaults) {
-                                if (node._def.defaults.hasOwnProperty(d)) {
+                                if (node._def.defaults.hasOwnProperty(d) && d !== 'inputs' && d !== 'outputs') {
                                     node[d] = n[d];
                                     node._config[d] = JSON.stringify(n[d]);
                                 }
@@ -3474,6 +4252,19 @@ RED.nodes = (function() {
                 });
                 delete output.wires;
             });
+            if (n.status) {
+                n.status.wires.forEach(function(wire) {
+                    var link;
+                    if (subflow_map[wire.id] && subflow_map[wire.id].id == n.id) {
+                        link = {source:n.in[wire.port], sourcePort:wire.port,target:n.status};
+                    } else {
+                        link = {source:node_map[wire.id]||subflow_map[wire.id], sourcePort:wire.port,target:n.status};
+                    }
+                    addLink(link);
+                    new_links.push(link);
+                });
+                delete n.status.wires;
+            }
         }
 
         RED.workspaces.refresh();
@@ -3594,21 +4385,23 @@ RED.nodes = (function() {
             RED.events.on("registry:node-type-added",function(type) {
                 var def = registry.getNodeType(type);
                 var replaced = false;
-                var replaceNodes = [];
+                var replaceNodes = {};
                 RED.nodes.eachNode(function(n) {
                     if (n.type === "unknown" && n.name === type) {
-                        replaceNodes.push(n);
+                        replaceNodes[n.id] = n;
                     }
                 });
                 RED.nodes.eachConfig(function(n) {
                     if (n.type === "unknown" && n.name === type) {
-                        replaceNodes.push(n);
+                        replaceNodes[n.id] = n;
                     }
                 });
 
-                if (replaceNodes.length > 0) {
+                var replaceNodeIds = Object.keys(replaceNodes);
+                if (replaceNodeIds.length > 0) {
                     var reimportList = [];
-                    replaceNodes.forEach(function(n) {
+                    replaceNodeIds.forEach(function(id) {
+                        var n = replaceNodes[id];
                         if (configNodes.hasOwnProperty(n.id)) {
                             delete configNodes[n.id];
                         } else {
@@ -3616,6 +4409,18 @@ RED.nodes = (function() {
                         }
                         reimportList.push(convertNode(n));
                     });
+
+                    // Remove any links between nodes that are going to be reimported.
+                    // This prevents a duplicate link from being added.
+                    var removeLinks = [];
+                    RED.nodes.eachLink(function(l) {
+                        if (replaceNodes.hasOwnProperty(l.source.id) && replaceNodes.hasOwnProperty(l.target.id)) {
+                            removeLinks.push(l);
+                        }
+                    });
+                    removeLinks.forEach(removeLink);
+
+
                     RED.view.redraw(true);
                     var result = importNodes(reimportList,false);
                     var newNodeMap = {};
@@ -3670,31 +4475,41 @@ RED.nodes = (function() {
 
         eachNode: function(cb) {
             for (var n=0;n<nodes.length;n++) {
-                cb(nodes[n]);
+                if (cb(nodes[n]) === false) {
+                    break;
+                }
             }
         },
         eachLink: function(cb) {
             for (var l=0;l<links.length;l++) {
-                cb(links[l]);
+                if (cb(links[l]) === false) {
+                    break;
+                }
             }
         },
         eachConfig: function(cb) {
             for (var id in configNodes) {
                 if (configNodes.hasOwnProperty(id)) {
-                    cb(configNodes[id]);
+                    if (cb(configNodes[id]) === false) {
+                        break;
+                    }
                 }
             }
         },
         eachSubflow: function(cb) {
             for (var id in subflows) {
                 if (subflows.hasOwnProperty(id)) {
-                    cb(subflows[id]);
+                    if (cb(subflows[id]) === false) {
+                        break;
+                    }
                 }
             }
         },
         eachWorkspace: function(cb) {
             for (var i=0;i<workspacesOrder.length;i++) {
-                cb(workspaces[workspacesOrder[i]]);
+                if (cb(workspaces[workspacesOrder[i]]) === false) {
+                    break;
+                }
             }
         },
 
@@ -3728,7 +4543,838 @@ RED.nodes = (function() {
         }
     };
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+
+RED.nodes.fontAwesome = (function() {
+
+    var iconMap = {
+        "fa-address-book-o": "\uf2ba",
+        "fa-address-book": "\uf2b9",
+        "fa-address-card-o": "\uf2bc",
+        "fa-address-card": "\uf2bb",
+        "fa-adjust": "\uf042",
+        "fa-align-center": "\uf037",
+        "fa-align-justify": "\uf039",
+        "fa-align-left": "\uf036",
+        "fa-align-right": "\uf038",
+        "fa-ambulance": "\uf0f9",
+        "fa-american-sign-language-interpreting": "\uf2a3",
+        "fa-anchor": "\uf13d",
+        "fa-angle-double-down": "\uf103",
+        "fa-angle-double-left": "\uf100",
+        "fa-angle-double-right": "\uf101",
+        "fa-angle-double-up": "\uf102",
+        "fa-angle-down": "\uf107",
+        "fa-angle-left": "\uf104",
+        "fa-angle-right": "\uf105",
+        "fa-angle-up": "\uf106",
+        "fa-archive": "\uf187",
+        "fa-area-chart": "\uf1fe",
+        "fa-arrow-circle-down": "\uf0ab",
+        "fa-arrow-circle-left": "\uf0a8",
+        "fa-arrow-circle-o-down": "\uf01a",
+        "fa-arrow-circle-o-left": "\uf190",
+        "fa-arrow-circle-o-right": "\uf18e",
+        "fa-arrow-circle-o-up": "\uf01b",
+        "fa-arrow-circle-right": "\uf0a9",
+        "fa-arrow-circle-up": "\uf0aa",
+        "fa-arrow-down": "\uf063",
+        "fa-arrow-left": "\uf060",
+        "fa-arrow-right": "\uf061",
+        "fa-arrow-up": "\uf062",
+        "fa-arrows-alt": "\uf0b2",
+        "fa-arrows-h": "\uf07e",
+        "fa-arrows-v": "\uf07d",
+        "fa-arrows": "\uf047",
+        "fa-asl-interpreting": "\uf2a3",
+        "fa-assistive-listening-systems": "\uf2a2",
+        "fa-asterisk": "\uf069",
+        "fa-at": "\uf1fa",
+        "fa-audio-description": "\uf29e",
+        "fa-automobile": "\uf1b9",
+        "fa-backward": "\uf04a",
+        "fa-balance-scale": "\uf24e",
+        "fa-ban": "\uf05e",
+        "fa-bank": "\uf19c",
+        "fa-bar-chart-o": "\uf080",
+        "fa-bar-chart": "\uf080",
+        "fa-barcode": "\uf02a",
+        "fa-bars": "\uf0c9",
+        "fa-bath": "\uf2cd",
+        "fa-bathtub": "\uf2cd",
+        "fa-battery-0": "\uf244",
+        "fa-battery-1": "\uf243",
+        "fa-battery-2": "\uf242",
+        "fa-battery-3": "\uf241",
+        "fa-battery-4": "\uf240",
+        "fa-battery-empty": "\uf244",
+        "fa-battery-full": "\uf240",
+        "fa-battery-half": "\uf242",
+        "fa-battery-quarter": "\uf243",
+        "fa-battery-three-quarters": "\uf241",
+        "fa-battery": "\uf240",
+        "fa-bed": "\uf236",
+        "fa-beer": "\uf0fc",
+        "fa-bell-o": "\uf0a2",
+        "fa-bell-slash-o": "\uf1f7",
+        "fa-bell-slash": "\uf1f6",
+        "fa-bell": "\uf0f3",
+        "fa-bicycle": "\uf206",
+        "fa-binoculars": "\uf1e5",
+        "fa-birthday-cake": "\uf1fd",
+        "fa-blind": "\uf29d",
+        "fa-bold": "\uf032",
+        "fa-bolt": "\uf0e7",
+        "fa-bomb": "\uf1e2",
+        "fa-book": "\uf02d",
+        "fa-bookmark-o": "\uf097",
+        "fa-bookmark": "\uf02e",
+        "fa-braille": "\uf2a1",
+        "fa-briefcase": "\uf0b1",
+        "fa-bug": "\uf188",
+        "fa-building-o": "\uf0f7",
+        "fa-building": "\uf1ad",
+        "fa-bullhorn": "\uf0a1",
+        "fa-bullseye": "\uf140",
+        "fa-bus": "\uf207",
+        "fa-cab": "\uf1ba",
+        "fa-calculator": "\uf1ec",
+        "fa-calendar-check-o": "\uf274",
+        "fa-calendar-minus-o": "\uf272",
+        "fa-calendar-o": "\uf133",
+        "fa-calendar-plus-o": "\uf271",
+        "fa-calendar-times-o": "\uf273",
+        "fa-calendar": "\uf073",
+        "fa-camera-retro": "\uf083",
+        "fa-camera": "\uf030",
+        "fa-car": "\uf1b9",
+        "fa-caret-down": "\uf0d7",
+        "fa-caret-left": "\uf0d9",
+        "fa-caret-right": "\uf0da",
+        "fa-caret-square-o-down": "\uf150",
+        "fa-caret-square-o-left": "\uf191",
+        "fa-caret-square-o-right": "\uf152",
+        "fa-caret-square-o-up": "\uf151",
+        "fa-caret-up": "\uf0d8",
+        "fa-cart-arrow-down": "\uf218",
+        "fa-cart-plus": "\uf217",
+        "fa-cc": "\uf20a",
+        "fa-certificate": "\uf0a3",
+        "fa-chain-broken": "\uf127",
+        "fa-chain": "\uf0c1",
+        "fa-check-circle-o": "\uf05d",
+        "fa-check-circle": "\uf058",
+        "fa-check-square-o": "\uf046",
+        "fa-check-square": "\uf14a",
+        "fa-check": "\uf00c",
+        "fa-chevron-circle-down": "\uf13a",
+        "fa-chevron-circle-left": "\uf137",
+        "fa-chevron-circle-right": "\uf138",
+        "fa-chevron-circle-up": "\uf139",
+        "fa-chevron-down": "\uf078",
+        "fa-chevron-left": "\uf053",
+        "fa-chevron-right": "\uf054",
+        "fa-chevron-up": "\uf077",
+        "fa-child": "\uf1ae",
+        "fa-circle-o-notch": "\uf1ce",
+        "fa-circle-o": "\uf10c",
+        "fa-circle-thin": "\uf1db",
+        "fa-circle": "\uf111",
+        "fa-clipboard": "\uf0ea",
+        "fa-clock-o": "\uf017",
+        "fa-clone": "\uf24d",
+        "fa-close": "\uf00d",
+        "fa-cloud-download": "\uf0ed",
+        "fa-cloud-upload": "\uf0ee",
+        "fa-cloud": "\uf0c2",
+        "fa-cny": "\uf157",
+        "fa-code-fork": "\uf126",
+        "fa-code": "\uf121",
+        "fa-coffee": "\uf0f4",
+        "fa-cog": "\uf013",
+        "fa-cogs": "\uf085",
+        "fa-columns": "\uf0db",
+        "fa-comment-o": "\uf0e5",
+        "fa-comment": "\uf075",
+        "fa-commenting-o": "\uf27b",
+        "fa-commenting": "\uf27a",
+        "fa-comments-o": "\uf0e6",
+        "fa-comments": "\uf086",
+        "fa-compass": "\uf14e",
+        "fa-compress": "\uf066",
+        "fa-copy": "\uf0c5",
+        "fa-copyright": "\uf1f9",
+        "fa-creative-commons": "\uf25e",
+        "fa-credit-card-alt": "\uf283",
+        "fa-credit-card": "\uf09d",
+        "fa-crop": "\uf125",
+        "fa-crosshairs": "\uf05b",
+        "fa-cube": "\uf1b2",
+        "fa-cubes": "\uf1b3",
+        "fa-cut": "\uf0c4",
+        "fa-cutlery": "\uf0f5",
+        "fa-dashboard": "\uf0e4",
+        "fa-database": "\uf1c0",
+        "fa-deaf": "\uf2a4",
+        "fa-deafness": "\uf2a4",
+        "fa-dedent": "\uf03b",
+        "fa-desktop": "\uf108",
+        "fa-diamond": "\uf219",
+        "fa-dollar": "\uf155",
+        "fa-dot-circle-o": "\uf192",
+        "fa-download": "\uf019",
+        "fa-drivers-license-o": "\uf2c3",
+        "fa-drivers-license": "\uf2c2",
+        "fa-edit": "\uf044",
+        "fa-eject": "\uf052",
+        "fa-ellipsis-h": "\uf141",
+        "fa-ellipsis-v": "\uf142",
+        "fa-envelope-o": "\uf003",
+        "fa-envelope-open-o": "\uf2b7",
+        "fa-envelope-open": "\uf2b6",
+        "fa-envelope-square": "\uf199",
+        "fa-envelope": "\uf0e0",
+        "fa-eraser": "\uf12d",
+        "fa-eur": "\uf153",
+        "fa-euro": "\uf153",
+        "fa-exchange": "\uf0ec",
+        "fa-exclamation-circle": "\uf06a",
+        "fa-exclamation-triangle": "\uf071",
+        "fa-exclamation": "\uf12a",
+        "fa-expand": "\uf065",
+        "fa-external-link-square": "\uf14c",
+        "fa-external-link": "\uf08e",
+        "fa-eye-slash": "\uf070",
+        "fa-eye": "\uf06e",
+        "fa-eyedropper": "\uf1fb",
+        "fa-fast-backward": "\uf049",
+        "fa-fast-forward": "\uf050",
+        "fa-fax": "\uf1ac",
+        "fa-feed": "\uf09e",
+        "fa-female": "\uf182",
+        "fa-fighter-jet": "\uf0fb",
+        "fa-file-archive-o": "\uf1c6",
+        "fa-file-audio-o": "\uf1c7",
+        "fa-file-code-o": "\uf1c9",
+        "fa-file-excel-o": "\uf1c3",
+        "fa-file-image-o": "\uf1c5",
+        "fa-file-movie-o": "\uf1c8",
+        "fa-file-o": "\uf016",
+        "fa-file-pdf-o": "\uf1c1",
+        "fa-file-photo-o": "\uf1c5",
+        "fa-file-picture-o": "\uf1c5",
+        "fa-file-powerpoint-o": "\uf1c4",
+        "fa-file-sound-o": "\uf1c7",
+        "fa-file-text-o": "\uf0f6",
+        "fa-file-text": "\uf15c",
+        "fa-file-video-o": "\uf1c8",
+        "fa-file-word-o": "\uf1c2",
+        "fa-file-zip-o": "\uf1c6",
+        "fa-file": "\uf15b",
+        "fa-files-o": "\uf0c5",
+        "fa-film": "\uf008",
+        "fa-filter": "\uf0b0",
+        "fa-fire-extinguisher": "\uf134",
+        "fa-fire": "\uf06d",
+        "fa-flag-checkered": "\uf11e",
+        "fa-flag-o": "\uf11d",
+        "fa-flag": "\uf024",
+        "fa-flash": "\uf0e7",
+        "fa-flask": "\uf0c3",
+        "fa-floppy-o": "\uf0c7",
+        "fa-folder-o": "\uf114",
+        "fa-folder-open-o": "\uf115",
+        "fa-folder-open": "\uf07c",
+        "fa-folder": "\uf07b",
+        "fa-font": "\uf031",
+        "fa-forward": "\uf04e",
+        "fa-frown-o": "\uf119",
+        "fa-futbol-o": "\uf1e3",
+        "fa-gamepad": "\uf11b",
+        "fa-gavel": "\uf0e3",
+        "fa-gbp": "\uf154",
+        "fa-gear": "\uf013",
+        "fa-gears": "\uf085",
+        "fa-genderless": "\uf22d",
+        "fa-gift": "\uf06b",
+        "fa-glass": "\uf000",
+        "fa-globe": "\uf0ac",
+        "fa-graduation-cap": "\uf19d",
+        "fa-group": "\uf0c0",
+        "fa-h-square": "\uf0fd",
+        "fa-hand-grab-o": "\uf255",
+        "fa-hand-lizard-o": "\uf258",
+        "fa-hand-o-down": "\uf0a7",
+        "fa-hand-o-left": "\uf0a5",
+        "fa-hand-o-right": "\uf0a4",
+        "fa-hand-o-up": "\uf0a6",
+        "fa-hand-paper-o": "\uf256",
+        "fa-hand-peace-o": "\uf25b",
+        "fa-hand-pointer-o": "\uf25a",
+        "fa-hand-rock-o": "\uf255",
+        "fa-hand-scissors-o": "\uf257",
+        "fa-hand-spock-o": "\uf259",
+        "fa-hand-stop-o": "\uf256",
+        "fa-handshake-o": "\uf2b5",
+        "fa-hard-of-hearing": "\uf2a4",
+        "fa-hashtag": "\uf292",
+        "fa-hdd-o": "\uf0a0",
+        "fa-header": "\uf1dc",
+        "fa-headphones": "\uf025",
+        "fa-heart-o": "\uf08a",
+        "fa-heart": "\uf004",
+        "fa-heartbeat": "\uf21e",
+        "fa-history": "\uf1da",
+        "fa-home": "\uf015",
+        "fa-hospital-o": "\uf0f8",
+        "fa-hotel": "\uf236",
+        "fa-hourglass-1": "\uf251",
+        "fa-hourglass-2": "\uf252",
+        "fa-hourglass-3": "\uf253",
+        "fa-hourglass-end": "\uf253",
+        "fa-hourglass-half": "\uf252",
+        "fa-hourglass-o": "\uf250",
+        "fa-hourglass-start": "\uf251",
+        "fa-hourglass": "\uf254",
+        "fa-i-cursor": "\uf246",
+        "fa-id-badge": "\uf2c1",
+        "fa-id-card-o": "\uf2c3",
+        "fa-id-card": "\uf2c2",
+        "fa-ils": "\uf20b",
+        "fa-image": "\uf03e",
+        "fa-inbox": "\uf01c",
+        "fa-indent": "\uf03c",
+        "fa-industry": "\uf275",
+        "fa-info-circle": "\uf05a",
+        "fa-info": "\uf129",
+        "fa-inr": "\uf156",
+        "fa-institution": "\uf19c",
+        "fa-intersex": "\uf224",
+        "fa-italic": "\uf033",
+        "fa-jpy": "\uf157",
+        "fa-key": "\uf084",
+        "fa-keyboard-o": "\uf11c",
+        "fa-krw": "\uf159",
+        "fa-language": "\uf1ab",
+        "fa-laptop": "\uf109",
+        "fa-leaf": "\uf06c",
+        "fa-legal": "\uf0e3",
+        "fa-lemon-o": "\uf094",
+        "fa-level-down": "\uf149",
+        "fa-level-up": "\uf148",
+        "fa-life-bouy": "\uf1cd",
+        "fa-life-buoy": "\uf1cd",
+        "fa-life-ring": "\uf1cd",
+        "fa-life-saver": "\uf1cd",
+        "fa-lightbulb-o": "\uf0eb",
+        "fa-line-chart": "\uf201",
+        "fa-link": "\uf0c1",
+        "fa-list-alt": "\uf022",
+        "fa-list-ol": "\uf0cb",
+        "fa-list-ul": "\uf0ca",
+        "fa-list": "\uf03a",
+        "fa-location-arrow": "\uf124",
+        "fa-lock": "\uf023",
+        "fa-long-arrow-down": "\uf175",
+        "fa-long-arrow-left": "\uf177",
+        "fa-long-arrow-right": "\uf178",
+        "fa-long-arrow-up": "\uf176",
+        "fa-low-vision": "\uf2a8",
+        "fa-magic": "\uf0d0",
+        "fa-magnet": "\uf076",
+        "fa-mail-forward": "\uf064",
+        "fa-mail-reply-all": "\uf122",
+        "fa-mail-reply": "\uf112",
+        "fa-male": "\uf183",
+        "fa-map-marker": "\uf041",
+        "fa-map-o": "\uf278",
+        "fa-map-pin": "\uf276",
+        "fa-map-signs": "\uf277",
+        "fa-map": "\uf279",
+        "fa-mars-double": "\uf227",
+        "fa-mars-stroke-h": "\uf22b",
+        "fa-mars-stroke-v": "\uf22a",
+        "fa-mars-stroke": "\uf229",
+        "fa-mars": "\uf222",
+        "fa-medkit": "\uf0fa",
+        "fa-meh-o": "\uf11a",
+        "fa-mercury": "\uf223",
+        "fa-microchip": "\uf2db",
+        "fa-microphone-slash": "\uf131",
+        "fa-microphone": "\uf130",
+        "fa-minus-circle": "\uf056",
+        "fa-minus-square-o": "\uf147",
+        "fa-minus-square": "\uf146",
+        "fa-minus": "\uf068",
+        "fa-mobile-phone": "\uf10b",
+        "fa-mobile": "\uf10b",
+        "fa-money": "\uf0d6",
+        "fa-moon-o": "\uf186",
+        "fa-mortar-board": "\uf19d",
+        "fa-motorcycle": "\uf21c",
+        "fa-mouse-pointer": "\uf245",
+        "fa-music": "\uf001",
+        "fa-navicon": "\uf0c9",
+        "fa-neuter": "\uf22c",
+        "fa-newspaper-o": "\uf1ea",
+        "fa-object-group": "\uf247",
+        "fa-object-ungroup": "\uf248",
+        "fa-outdent": "\uf03b",
+        "fa-paint-brush": "\uf1fc",
+        "fa-paper-plane-o": "\uf1d9",
+        "fa-paper-plane": "\uf1d8",
+        "fa-paperclip": "\uf0c6",
+        "fa-paragraph": "\uf1dd",
+        "fa-paste": "\uf0ea",
+        "fa-pause-circle-o": "\uf28c",
+        "fa-pause-circle": "\uf28b",
+        "fa-pause": "\uf04c",
+        "fa-paw": "\uf1b0",
+        "fa-pencil-square-o": "\uf044",
+        "fa-pencil-square": "\uf14b",
+        "fa-pencil": "\uf040",
+        "fa-percent": "\uf295",
+        "fa-phone-square": "\uf098",
+        "fa-phone": "\uf095",
+        "fa-photo": "\uf03e",
+        "fa-picture-o": "\uf03e",
+        "fa-pie-chart": "\uf200",
+        "fa-plane": "\uf072",
+        "fa-play-circle-o": "\uf01d",
+        "fa-play-circle": "\uf144",
+        "fa-play": "\uf04b",
+        "fa-plug": "\uf1e6",
+        "fa-plus-circle": "\uf055",
+        "fa-plus-square-o": "\uf196",
+        "fa-plus-square": "\uf0fe",
+        "fa-plus": "\uf067",
+        "fa-podcast": "\uf2ce",
+        "fa-power-off": "\uf011",
+        "fa-print": "\uf02f",
+        "fa-puzzle-piece": "\uf12e",
+        "fa-qrcode": "\uf029",
+        "fa-question-circle-o": "\uf29c",
+        "fa-question-circle": "\uf059",
+        "fa-question": "\uf128",
+        "fa-quote-left": "\uf10d",
+        "fa-quote-right": "\uf10e",
+        "fa-random": "\uf074",
+        "fa-recycle": "\uf1b8",
+        "fa-refresh": "\uf021",
+        "fa-registered": "\uf25d",
+        "fa-remove": "\uf00d",
+        "fa-reorder": "\uf0c9",
+        "fa-repeat": "\uf01e",
+        "fa-reply-all": "\uf122",
+        "fa-reply": "\uf112",
+        "fa-retweet": "\uf079",
+        "fa-rmb": "\uf157",
+        "fa-road": "\uf018",
+        "fa-rocket": "\uf135",
+        "fa-rotate-left": "\uf0e2",
+        "fa-rotate-right": "\uf01e",
+        "fa-rouble": "\uf158",
+        "fa-rss-square": "\uf143",
+        "fa-rss": "\uf09e",
+        "fa-rub": "\uf158",
+        "fa-ruble": "\uf158",
+        "fa-rupee": "\uf156",
+        "fa-s15": "\uf2cd",
+        "fa-save": "\uf0c7",
+        "fa-scissors": "\uf0c4",
+        "fa-search-minus": "\uf010",
+        "fa-search-plus": "\uf00e",
+        "fa-search": "\uf002",
+        "fa-send-o": "\uf1d9",
+        "fa-send": "\uf1d8",
+        "fa-server": "\uf233",
+        "fa-share-square-o": "\uf045",
+        "fa-share-square": "\uf14d",
+        "fa-share": "\uf064",
+        "fa-shekel": "\uf20b",
+        "fa-sheqel": "\uf20b",
+        "fa-shield": "\uf132",
+        "fa-ship": "\uf21a",
+        "fa-shopping-bag": "\uf290",
+        "fa-shopping-basket": "\uf291",
+        "fa-shopping-cart": "\uf07a",
+        "fa-shower": "\uf2cc",
+        "fa-sign-in": "\uf090",
+        "fa-sign-language": "\uf2a7",
+        "fa-sign-out": "\uf08b",
+        "fa-signal": "\uf012",
+        "fa-signing": "\uf2a7",
+        "fa-sitemap": "\uf0e8",
+        "fa-sliders": "\uf1de",
+        "fa-smile-o": "\uf118",
+        "fa-snowflake-o": "\uf2dc",
+        "fa-soccer-ball-o": "\uf1e3",
+        "fa-sort-alpha-asc": "\uf15d",
+        "fa-sort-alpha-desc": "\uf15e",
+        "fa-sort-amount-asc": "\uf160",
+        "fa-sort-amount-desc": "\uf161",
+        "fa-sort-asc": "\uf0de",
+        "fa-sort-desc": "\uf0dd",
+        "fa-sort-down": "\uf0dd",
+        "fa-sort-numeric-asc": "\uf162",
+        "fa-sort-numeric-desc": "\uf163",
+        "fa-sort-up": "\uf0de",
+        "fa-sort": "\uf0dc",
+        "fa-space-shuttle": "\uf197",
+        "fa-spinner": "\uf110",
+        "fa-spoon": "\uf1b1",
+        "fa-square-o": "\uf096",
+        "fa-square": "\uf0c8",
+        "fa-star-half-empty": "\uf123",
+        "fa-star-half-full": "\uf123",
+        "fa-star-half-o": "\uf123",
+        "fa-star-half": "\uf089",
+        "fa-star-o": "\uf006",
+        "fa-star": "\uf005",
+        "fa-step-backward": "\uf048",
+        "fa-step-forward": "\uf051",
+        "fa-stethoscope": "\uf0f1",
+        "fa-sticky-note-o": "\uf24a",
+        "fa-sticky-note": "\uf249",
+        "fa-stop-circle-o": "\uf28e",
+        "fa-stop-circle": "\uf28d",
+        "fa-stop": "\uf04d",
+        "fa-street-view": "\uf21d",
+        "fa-strikethrough": "\uf0cc",
+        "fa-subscript": "\uf12c",
+        "fa-subway": "\uf239",
+        "fa-suitcase": "\uf0f2",
+        "fa-sun-o": "\uf185",
+        "fa-superscript": "\uf12b",
+        "fa-support": "\uf1cd",
+        "fa-table": "\uf0ce",
+        "fa-tablet": "\uf10a",
+        "fa-tachometer": "\uf0e4",
+        "fa-tag": "\uf02b",
+        "fa-tags": "\uf02c",
+        "fa-tasks": "\uf0ae",
+        "fa-taxi": "\uf1ba",
+        "fa-television": "\uf26c",
+        "fa-terminal": "\uf120",
+        "fa-text-height": "\uf034",
+        "fa-text-width": "\uf035",
+        "fa-th-large": "\uf009",
+        "fa-th-list": "\uf00b",
+        "fa-th": "\uf00a",
+        "fa-thermometer-0": "\uf2cb",
+        "fa-thermometer-1": "\uf2ca",
+        "fa-thermometer-2": "\uf2c9",
+        "fa-thermometer-3": "\uf2c8",
+        "fa-thermometer-4": "\uf2c7",
+        "fa-thermometer-empty": "\uf2cb",
+        "fa-thermometer-full": "\uf2c7",
+        "fa-thermometer-half": "\uf2c9",
+        "fa-thermometer-quarter": "\uf2ca",
+        "fa-thermometer-three-quarters": "\uf2c8",
+        "fa-thermometer": "\uf2c7",
+        "fa-thumb-tack": "\uf08d",
+        "fa-thumbs-down": "\uf165",
+        "fa-thumbs-o-down": "\uf088",
+        "fa-thumbs-o-up": "\uf087",
+        "fa-thumbs-up": "\uf164",
+        "fa-ticket": "\uf145",
+        "fa-times-circle-o": "\uf05c",
+        "fa-times-circle": "\uf057",
+        "fa-times-rectangle-o": "\uf2d4",
+        "fa-times-rectangle": "\uf2d3",
+        "fa-times": "\uf00d",
+        "fa-tint": "\uf043",
+        "fa-toggle-down": "\uf150",
+        "fa-toggle-left": "\uf191",
+        "fa-toggle-off": "\uf204",
+        "fa-toggle-on": "\uf205",
+        "fa-toggle-right": "\uf152",
+        "fa-toggle-up": "\uf151",
+        "fa-trademark": "\uf25c",
+        "fa-train": "\uf238",
+        "fa-transgender-alt": "\uf225",
+        "fa-transgender": "\uf224",
+        "fa-trash-o": "\uf014",
+        "fa-trash": "\uf1f8",
+        "fa-tree": "\uf1bb",
+        "fa-trophy": "\uf091",
+        "fa-truck": "\uf0d1",
+        "fa-try": "\uf195",
+        "fa-tty": "\uf1e4",
+        "fa-turkish-lira": "\uf195",
+        "fa-tv": "\uf26c",
+        "fa-umbrella": "\uf0e9",
+        "fa-underline": "\uf0cd",
+        "fa-undo": "\uf0e2",
+        "fa-universal-access": "\uf29a",
+        "fa-university": "\uf19c",
+        "fa-unlink": "\uf127",
+        "fa-unlock-alt": "\uf13e",
+        "fa-unlock": "\uf09c",
+        "fa-unsorted": "\uf0dc",
+        "fa-upload": "\uf093",
+        "fa-usd": "\uf155",
+        "fa-user-circle-o": "\uf2be",
+        "fa-user-circle": "\uf2bd",
+        "fa-user-md": "\uf0f0",
+        "fa-user-o": "\uf2c0",
+        "fa-user-plus": "\uf234",
+        "fa-user-secret": "\uf21b",
+        "fa-user-times": "\uf235",
+        "fa-user": "\uf007",
+        "fa-users": "\uf0c0",
+        "fa-vcard-o": "\uf2bc",
+        "fa-vcard": "\uf2bb",
+        "fa-venus-double": "\uf226",
+        "fa-venus-mars": "\uf228",
+        "fa-venus": "\uf221",
+        "fa-video-camera": "\uf03d",
+        "fa-volume-control-phone": "\uf2a0",
+        "fa-volume-down": "\uf027",
+        "fa-volume-off": "\uf026",
+        "fa-volume-up": "\uf028",
+        "fa-warning": "\uf071",
+        "fa-wheelchair-alt": "\uf29b",
+        "fa-wheelchair": "\uf193",
+        "fa-wifi": "\uf1eb",
+        "fa-window-close-o": "\uf2d4",
+        "fa-window-close": "\uf2d3",
+        "fa-window-maximize": "\uf2d0",
+        "fa-window-minimize": "\uf2d1",
+        "fa-window-restore": "\uf2d2",
+        "fa-won": "\uf159",
+        "fa-wrench": "\uf0ad",
+        "fa-yen": "\uf157"
+    };
+
+    var brandIconMap = {
+        "fa-500px": "\uf26e",
+        "fa-adn": "\uf170",
+        "fa-amazon": "\uf270",
+        "fa-android": "\uf17b",
+        "fa-angellist": "\uf209",
+        "fa-apple": "\uf179",
+        "fa-bandcamp": "\uf2d5",
+        "fa-behance-square": "\uf1b5",
+        "fa-behance": "\uf1b4",
+        "fa-bitbucket-square": "\uf172",
+        "fa-bitbucket": "\uf171",
+        "fa-bitcoin": "\uf15a",
+        "fa-black-tie": "\uf27e",
+        "fa-bluetooth-b": "\uf294",
+        "fa-bluetooth": "\uf293",
+        "fa-btc": "\uf15a",
+        "fa-buysellads": "\uf20d",
+        "fa-cc-amex": "\uf1f3",
+        "fa-cc-diners-club": "\uf24c",
+        "fa-cc-discover": "\uf1f2",
+        "fa-cc-jcb": "\uf24b",
+        "fa-cc-mastercard": "\uf1f1",
+        "fa-cc-paypal": "\uf1f4",
+        "fa-cc-stripe": "\uf1f5",
+        "fa-cc-visa": "\uf1f0",
+        "fa-chrome": "\uf268",
+        "fa-codepen": "\uf1cb",
+        "fa-codiepie": "\uf284",
+        "fa-connectdevelop": "\uf20e",
+        "fa-contao": "\uf26d",
+        "fa-css3": "\uf13c",
+        "fa-dashcube": "\uf210",
+        "fa-delicious": "\uf1a5",
+        "fa-deviantart": "\uf1bd",
+        "fa-digg": "\uf1a6",
+        "fa-dribbble": "\uf17d",
+        "fa-dropbox": "\uf16b",
+        "fa-drupal": "\uf1a9",
+        "fa-edge": "\uf282",
+        "fa-eercast": "\uf2da",
+        "fa-empire": "\uf1d1",
+        "fa-envira": "\uf299",
+        "fa-etsy": "\uf2d7",
+        "fa-expeditedssl": "\uf23e",
+        "fa-fa": "\uf2b4",
+        "fa-facebook-f": "\uf09a",
+        "fa-facebook-official": "\uf230",
+        "fa-facebook-square": "\uf082",
+        "fa-facebook": "\uf09a",
+        "fa-firefox": "\uf269",
+        "fa-first-order": "\uf2b0",
+        "fa-flickr": "\uf16e",
+        "fa-font-awesome": "\uf2b4",
+        "fa-fonticons": "\uf280",
+        "fa-fort-awesome": "\uf286",
+        "fa-forumbee": "\uf211",
+        "fa-foursquare": "\uf180",
+        "fa-free-code-camp": "\uf2c5",
+        "fa-ge": "\uf1d1",
+        "fa-get-pocket": "\uf265",
+        "fa-gg-circle": "\uf261",
+        "fa-gg": "\uf260",
+        "fa-git-square": "\uf1d2",
+        "fa-git": "\uf1d3",
+        "fa-github-alt": "\uf113",
+        "fa-github-square": "\uf092",
+        "fa-github": "\uf09b",
+        "fa-gitlab": "\uf296",
+        "fa-gittip": "\uf184",
+        "fa-glide-g": "\uf2a6",
+        "fa-glide": "\uf2a5",
+        "fa-google-plus-circle": "\uf2b3",
+        "fa-google-plus-official": "\uf2b3",
+        "fa-google-plus-square": "\uf0d4",
+        "fa-google-plus": "\uf0d5",
+        "fa-google-wallet": "\uf1ee",
+        "fa-google": "\uf1a0",
+        "fa-gratipay": "\uf184",
+        "fa-grav": "\uf2d6",
+        "fa-hacker-news": "\uf1d4",
+        "fa-houzz": "\uf27c",
+        "fa-html5": "\uf13b",
+        "fa-imdb": "\uf2d8",
+        "fa-instagram": "\uf16d",
+        "fa-internet-explorer": "\uf26b",
+        "fa-ioxhost": "\uf208",
+        "fa-joomla": "\uf1aa",
+        "fa-jsfiddle": "\uf1cc",
+        "fa-lastfm-square": "\uf203",
+        "fa-lastfm": "\uf202",
+        "fa-leanpub": "\uf212",
+        "fa-linkedin-square": "\uf08c",
+        "fa-linkedin": "\uf0e1",
+        "fa-linode": "\uf2b8",
+        "fa-linux": "\uf17c",
+        "fa-maxcdn": "\uf136",
+        "fa-meanpath": "\uf20c",
+        "fa-medium": "\uf23a",
+        "fa-meetup": "\uf2e0",
+        "fa-mixcloud": "\uf289",
+        "fa-modx": "\uf285",
+        "fa-odnoklassniki-square": "\uf264",
+        "fa-odnoklassniki": "\uf263",
+        "fa-opencart": "\uf23d",
+        "fa-openid": "\uf19b",
+        "fa-opera": "\uf26a",
+        "fa-optin-monster": "\uf23c",
+        "fa-pagelines": "\uf18c",
+        "fa-paypal": "\uf1ed",
+        "fa-pied-piper-alt": "\uf1a8",
+        "fa-pied-piper-pp": "\uf1a7",
+        "fa-pied-piper": "\uf2ae",
+        "fa-pinterest-p": "\uf231",
+        "fa-pinterest-square": "\uf0d3",
+        "fa-pinterest": "\uf0d2",
+        "fa-product-hunt": "\uf288",
+        "fa-qq": "\uf1d6",
+        "fa-quora": "\uf2c4",
+        "fa-ra": "\uf1d0",
+        "fa-ravelry": "\uf2d9",
+        "fa-rebel": "\uf1d0",
+        "fa-reddit-alien": "\uf281",
+        "fa-reddit-square": "\uf1a2",
+        "fa-reddit": "\uf1a1",
+        "fa-renren": "\uf18b",
+        "fa-resistance": "\uf1d0",
+        "fa-safari": "\uf267",
+        "fa-scribd": "\uf28a",
+        "fa-sellsy": "\uf213",
+        "fa-share-alt-square": "\uf1e1",
+        "fa-share-alt": "\uf1e0",
+        "fa-shirtsinbulk": "\uf214",
+        "fa-simplybuilt": "\uf215",
+        "fa-skyatlas": "\uf216",
+        "fa-skype": "\uf17e",
+        "fa-slack": "\uf198",
+        "fa-slideshare": "\uf1e7",
+        "fa-snapchat-ghost": "\uf2ac",
+        "fa-snapchat-square": "\uf2ad",
+        "fa-snapchat": "\uf2ab",
+        "fa-soundcloud": "\uf1be",
+        "fa-spotify": "\uf1bc",
+        "fa-stack-exchange": "\uf18d",
+        "fa-stack-overflow": "\uf16c",
+        "fa-steam-square": "\uf1b7",
+        "fa-steam": "\uf1b6",
+        "fa-stumbleupon-circle": "\uf1a3",
+        "fa-stumbleupon": "\uf1a4",
+        "fa-superpowers": "\uf2dd",
+        "fa-telegram": "\uf2c6",
+        "fa-tencent-weibo": "\uf1d5",
+        "fa-themeisle": "\uf2b2",
+        "fa-trello": "\uf181",
+        "fa-tripadvisor": "\uf262",
+        "fa-tumblr-square": "\uf174",
+        "fa-tumblr": "\uf173",
+        "fa-twitch": "\uf1e8",
+        "fa-twitter-square": "\uf081",
+        "fa-twitter": "\uf099",
+        "fa-usb": "\uf287",
+        "fa-viacoin": "\uf237",
+        "fa-viadeo-square": "\uf2aa",
+        "fa-viadeo": "\uf2a9",
+        "fa-vimeo-square": "\uf194",
+        "fa-vimeo": "\uf27d",
+        "fa-vine": "\uf1ca",
+        "fa-vk": "\uf189",
+        "fa-wechat": "\uf1d7",
+        "fa-weibo": "\uf18a",
+        "fa-weixin": "\uf1d7",
+        "fa-whatsapp": "\uf232",
+        "fa-wikipedia-w": "\uf266",
+        "fa-windows": "\uf17a",
+        "fa-wordpress": "\uf19a",
+        "fa-wpbeginner": "\uf297",
+        "fa-wpexplorer": "\uf2de",
+        "fa-wpforms": "\uf298",
+        "fa-xing-square": "\uf169",
+        "fa-xing": "\uf168",
+        "fa-y-combinator-square": "\uf1d4",
+        "fa-y-combinator": "\uf23b",
+        "fa-yahoo": "\uf19e",
+        "fa-yc-square": "\uf1d4",
+        "fa-yc": "\uf23b",
+        "fa-yelp": "\uf1e9",
+        "fa-yoast": "\uf2b1",
+        "fa-youtube-play": "\uf16a",
+        "fa-youtube-square": "\uf166",
+        "fa-youtube": "\uf167",
+    };
+
+    var iconList = [];
+    var isUsed = {};
+    Object.keys(iconMap).forEach(function(icon) {
+        var unicode = iconMap[icon];
+        // skip icons with a same unicode
+        if (isUsed[unicode] !== true) {
+            iconList.push(icon);
+            isUsed[unicode] = true;
+        }
+    });
+    isUsed = undefined;
+
+    return {
+        getIconUnicode: function(name) {
+            return iconMap[name] || brandIconMap[name];
+        },
+        getIconList: function() {
+            return iconList;
+        },
+    }
+})();
+;/* This file was modified by Homegear GmbH */
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -3823,12 +5469,15 @@ RED.history = (function() {
             } else if (ev.t == "delete") {
                 if (ev.workspaces) {
                     for (i=0;i<ev.workspaces.length;i++) {
-                        RED.nodes.addWorkspace(ev.workspaces[i]);
-                        RED.workspaces.add(ev.workspaces[i]);
+                        RED.nodes.addWorkspace(ev.workspaces[i],ev.workspaces[i]._index);
+                        RED.workspaces.add(ev.workspaces[i],undefined,ev.workspaces[i]._index);
+                        delete ev.workspaces[i]._index;
                     }
                 }
-                if (ev.subflow && ev.subflow.subflow) {
-                    RED.nodes.addSubflow(ev.subflow.subflow);
+                if (ev.subflows) {
+                    for (i=0;i<ev.subflows.length;i++) {
+                        RED.nodes.addSubflow(ev.subflows[i]);
+                    }
                 }
                 if (ev.subflowInputs && ev.subflowInputs.length > 0) {
                     subflow = RED.nodes.subflow(ev.subflowInputs[0].z);
@@ -3854,14 +5503,20 @@ RED.history = (function() {
                         });
                     }
                 }
-                if (ev.subflow && ev.subflow.hasOwnProperty('instances')) {
-                    ev.subflow.instances.forEach(function(n) {
-                        var node = RED.nodes.node(n.id);
-                        if (node) {
-                            node.changed = n.changed;
-                            node.dirty = true;
-                        }
-                    });
+                if (ev.subflow) {
+                    if (ev.subflow.hasOwnProperty('instances')) {
+                        ev.subflow.instances.forEach(function(n) {
+                            var node = RED.nodes.node(n.id);
+                            if (node) {
+                                node.changed = n.changed;
+                                node.dirty = true;
+                            }
+                        });
+                    }
+                    if (ev.subflow.hasOwnProperty('status')) {
+                        subflow = RED.nodes.subflow(ev.subflow.id);
+                        subflow.status = ev.subflow.status;
+                    }
                 }
                 if (subflow) {
                     RED.nodes.filterNodes({type:"subflow:"+subflow.id}).forEach(function(n) {
@@ -3964,6 +5619,11 @@ RED.history = (function() {
                             }
                         });
                     }
+                    if (ev.subflow.hasOwnProperty('status')) {
+                        if (ev.subflow.status) {
+                            delete ev.node.status;
+                        }
+                    }
                     RED.editor.validateNode(ev.node);
                     RED.nodes.filterNodes({type:"subflow:"+ev.node.id}).forEach(function(n) {
                         n.inputs = ev.node.in.length;
@@ -3994,6 +5654,8 @@ RED.history = (function() {
             } else if (ev.t == "createSubflow") {
                 if (ev.nodes) {
                     RED.nodes.filterNodes({z:ev.subflow.subflow.id}).forEach(function(n) {
+                        n.x += ev.subflow.offsetX;
+                        n.y += ev.subflow.offsetY;
                         n.z = ev.activeWorkspace;
                         n.dirty = true;
                     });
@@ -4020,6 +5682,7 @@ RED.history = (function() {
                     RED.workspaces.order(ev.order);
                 }
             }
+
             Object.keys(modifiedTabs).forEach(function(id) {
                 var subflow = RED.nodes.subflow(id);
                 if (subflow) {
@@ -4028,10 +5691,12 @@ RED.history = (function() {
             });
 
             RED.nodes.dirty(ev.dirty);
+            RED.view.select(null);
             RED.view.redraw(true);
             RED.palette.refresh();
             RED.workspaces.refresh();
             RED.sidebar.config.refresh();
+            RED.subflow.refresh();
         }
 
     }
@@ -4065,7 +5730,9 @@ RED.history = (function() {
     }
 
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4084,12 +5751,14 @@ RED.validators = {
     number: function(blankAllowed){return function(v) { return (blankAllowed&&(v===''||v===undefined)) || (v!=='' && !isNaN(v));}},
     regex: function(re){return function(v) { return re.test(v);}},
     typedInput: function(ptypeName,isConfig) { return function(v) {
-        var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName);
+       var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName);
         if(!ptype) return true;
         return ptype.typedInput('validate');
     }}
 };
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4125,6 +5794,10 @@ RED.utils = (function() {
                 result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').text('buffer['+value.length+']');
             } else if (value.hasOwnProperty('type') && value.type === 'array' && value.hasOwnProperty('data')) {
                 result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').text('array['+value.length+']');
+            } else if (value.hasOwnProperty('type') && value.type === 'function') {
+                result = $('<span class="debug-message-object-value debug-message-type-meta"></span>').text('function');
+            } else if (value.hasOwnProperty('type') && value.type === 'number') {
+                result = $('<span class="debug-message-object-value debug-message-type-number"></span>').text(value.data);
             } else {
                 result = $('<span class="debug-message-object-value debug-message-type-meta">object</span>');
             }
@@ -4136,6 +5809,8 @@ RED.utils = (function() {
                 subvalue = sanitize(value);
             }
             result = $('<span class="debug-message-object-value debug-message-type-string"></span>').html('"'+formatString(subvalue)+'"');
+        } else if (typeof value === 'number') {
+            result = $('<span class="debug-message-object-value debug-message-type-number"></span>').text(""+value);
         } else {
             result = $('<span class="debug-message-object-value debug-message-type-other"></span>').text(""+value);
         }
@@ -4198,7 +5873,7 @@ RED.utils = (function() {
     var pinnedPaths = {};
     var formattedPaths = {};
 
-    function addMessageControls(obj,sourceId,key,msg,rootPath,strippedKey) {
+    function addMessageControls(obj,sourceId,key,msg,rootPath,strippedKey,extraTools) {
         if (!pinnedPaths.hasOwnProperty(sourceId)) {
             pinnedPaths[sourceId] = {}
         }
@@ -4216,10 +5891,10 @@ RED.utils = (function() {
             e.stopPropagation();
             RED.clipboard.copyText(msg,copyPayload,"clipboard.copyMessageValue");
         })
-        if (strippedKey !== '') {
+        if (strippedKey !== undefined && strippedKey !== '') {
             var isPinned = pinnedPaths[sourceId].hasOwnProperty(strippedKey);
 
-            var pinPath = $('<button class="editor-button editor-button-small debug-message-tools-pin"><i class="fa fa-map-pin"></i></button>').appendTo(tools).click(function(e) {                
+            var pinPath = $('<button class="editor-button editor-button-small debug-message-tools-pin"><i class="fa fa-map-pin"></i></button>').appendTo(tools).click(function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 if (pinnedPaths[sourceId].hasOwnProperty(strippedKey)) {
@@ -4234,6 +5909,10 @@ RED.utils = (function() {
                 }
             }).toggleClass("selected",isPinned);
             obj.toggleClass("debug-message-row-pinned",isPinned);
+        }
+        if (extraTools) {
+            extraTools.addClass("debug-message-tools-other");
+            extraTools.appendTo(tools);
         }
     }
     function checkExpanded(strippedKey,expandPaths,minRange,maxRange) {
@@ -4273,6 +5952,14 @@ RED.utils = (function() {
                     format = 'hex'
                 }
             } else if (format === 'dateMS' || format == 'dateS') {
+                if ((obj.toString().length===13) && (obj<=2147483647000)) {
+                    format = 'dateML';
+                } else if ((obj.toString().length===10) && (obj<=2147483647)) {
+                    format = 'dateL';
+                } else {
+                    format = 'hex'
+                }
+            } else if (format === 'dateML' || format == 'dateL') {
                 format = 'hex';
             } else {
                 format = 'dec';
@@ -4291,6 +5978,12 @@ RED.utils = (function() {
             element.text((new Date(obj)).toISOString());
         } else if (format === 'dateS') {
             element.text((new Date(obj*1000)).toISOString());
+        } else if (format === 'dateML') {
+            var dd = new Date(obj);
+            element.text(dd.toLocaleString() + "  [UTC" + ( dd.getTimezoneOffset()/-60 <=0?"":"+" ) + dd.getTimezoneOffset()/-60 +"]");
+        } else if (format === 'dateL') {
+            var ddl = new Date(obj*1000);
+            element.text(ddl.toLocaleString() + "  [UTC" + ( ddl.getTimezoneOffset()/-60 <=0?"":"+" ) + ddl.getTimezoneOffset()/-60 +"]");
         } else if (format === 'hex') {
             element.text("0x"+(obj).toString(16));
         }
@@ -4328,6 +6021,7 @@ RED.utils = (function() {
         var expandPaths = options.expandPaths;
         var ontoggle = options.ontoggle;
         var exposeApi = options.exposeApi;
+        var tools = options.tools;
 
         var subElements = {};
         var i;
@@ -4352,7 +6046,7 @@ RED.utils = (function() {
         }
         header = $('<span class="debug-message-row"></span>').appendTo(element);
         if (sourceId) {
-            addMessageControls(header,sourceId,path,obj,rootPath,strippedKey);
+            addMessageControls(header,sourceId,path,obj,rootPath,strippedKey,tools);
         }
         if (!key) {
             element.addClass("debug-message-top-level");
@@ -4388,13 +6082,18 @@ RED.utils = (function() {
 
         var isArray = Array.isArray(obj);
         var isArrayObject = false;
-        if (obj && typeof obj === 'object' && obj.hasOwnProperty('type') && obj.hasOwnProperty('data') && ((obj.__encoded__ && obj.type === 'array') || obj.type === 'Buffer')) {
+        if (obj && typeof obj === 'object' && obj.hasOwnProperty('type') && obj.hasOwnProperty('data') && ((obj.__enc__ && obj.type === 'array') || obj.type === 'Buffer')) {
             isArray = true;
             isArrayObject = true;
         }
-
         if (obj === null || obj === undefined) {
             $('<span class="debug-message-type-null">'+obj+'</span>').appendTo(entryObj);
+        } else if (obj.__enc__ && obj.type === 'number') {
+            e = $('<span class="debug-message-type-number debug-message-object-header"></span>').text(obj.data).appendTo(entryObj);
+        } else if (typeHint === "function" || (obj.__enc__ && obj.type === 'function')) {
+            e = $('<span class="debug-message-type-meta debug-message-object-header"></span>').text("function").appendTo(entryObj);
+        } else if (typeHint === "internal" || (obj.__enc__ && obj.type === 'internal')) {
+            e = $('<span class="debug-message-type-meta debug-message-object-header"></span>').text("[internal]").appendTo(entryObj);
         } else if (typeof obj === 'string') {
             if (/[\t\n\r]/.test(obj)) {
                 element.addClass('collapsed');
@@ -4439,7 +6138,7 @@ RED.utils = (function() {
                 if (originalLength === undefined) {
                     originalLength = data.length;
                 }
-                if (data.__encoded__) {
+                if (data.__enc__) {
                     data = data.data;
                 }
                 type = obj.type.toLowerCase();
@@ -4791,7 +6490,11 @@ RED.utils = (function() {
     function separateIconPath(icon) {
         var result = {module: "", file: ""};
         if (icon) {
-            var index = icon.indexOf('/');
+            var index = icon.indexOf('icons/');
+            if (index !== -1) {
+                icon = icon.substring(index+6);
+            }
+            index = icon.indexOf('/');
             if (index !== -1) {
                 result.module = icon.slice(0, index);
                 result.file = icon.slice(index + 1);
@@ -4836,25 +6539,40 @@ RED.utils = (function() {
 
     function getNodeIcon(def,node) {
         if (def.category === 'config') {
-            return "icons/node-red/cog.png"
+            return RED.settings.apiRootUrl+"icons/node-red/cog.png"
         } else if (node && node.type === 'tab') {
-            return "icons/node-red/subflow.png"
+            return RED.settings.apiRootUrl+"icons/node-red/subflow.png"
         } else if (node && node.type === 'unknown') {
-            return "icons/node-red/alert.png"
+            return RED.settings.apiRootUrl+"icons/node-red/alert.png"
         } else if (node && node.icon) {
             var iconPath = separateIconPath(node.icon);
             if (isIconExists(iconPath)) {
-                return "icons/" + node.icon;
+                if (iconPath.module === "font-awesome") {
+                    return node.icon;
+                } else {
+                    return RED.settings.apiRootUrl+"icons/" + node.icon;
+                }
             }
         }
 
         var iconPath = getDefaultNodeIcon(def, node);
-        if (def.category === 'subflows') {
-            if (!isIconExists(iconPath)) {
-                return "icons/node-red/subflow.png";
+        if (isIconExists(iconPath)) {
+            if (iconPath.module === "font-awesome") {
+                return iconPath.module+"/"+iconPath.file;
+            } else {
+                return RED.settings.apiRootUrl+"icons/"+iconPath.module+"/"+iconPath.file;
+            }
+        } else {
+            // This could be a non-core node trying to use a core icon.
+            iconPath.module = 'node-red';
+            if (isIconExists(iconPath)) {
+                return RED.settings.apiRootUrl+"icons/"+iconPath.module+"/"+iconPath.file;
+            } else if (def.category === 'subflows') {
+                return RED.settings.apiRootUrl+"icons/node-red/subflow.png";
+            } else {
+                return RED.settings.apiRootUrl+"icons/node-red/arrow-in.png";
             }
         }
-        return "icons/"+iconPath.module+"/"+iconPath.file;
     }
 
     function getNodeLabel(node,defaultLabel) {
@@ -4874,12 +6592,126 @@ RED.utils = (function() {
         return RED.text.bidi.enforceTextDirectionWithUCC(l);
     }
 
+    var nodeColorCache = {};
+    function getNodeColor(type, def) {
+        var result = def.color;
+        var paletteTheme = RED.settings.theme('palette.theme') || [];
+        if (paletteTheme.length > 0) {
+            if (!nodeColorCache.hasOwnProperty(type)) {
+                nodeColorCache[type] = def.color;
+                var l = paletteTheme.length;
+                for (var i = 0; i < l; i++ ){
+                    var themeRule = paletteTheme[i];
+                    if (themeRule.hasOwnProperty('category')) {
+                        if (!themeRule.hasOwnProperty('_category')) {
+                            themeRule._category = new RegExp(themeRule.category);
+                        }
+                        if (!themeRule._category.test(def.category)) {
+                            continue;
+                        }
+                    }
+                    if (themeRule.hasOwnProperty('type')) {
+                        if (!themeRule.hasOwnProperty('_type')) {
+                            themeRule._type = new RegExp(themeRule.type);
+                        }
+                        if (!themeRule._type.test(type)) {
+                            continue;
+                        }
+                    }
+                    nodeColorCache[type] = themeRule.color || def.color;
+                    break;
+                }
+            }
+            result = nodeColorCache[type];
+        }
+        if (result) {
+            return result;
+        } else {
+            return "#ddd";
+        }
+    }
+
     function addSpinnerOverlay(container,contain) {
         var spinner = $('<div class="projects-dialog-spinner "><img src="red/images/spin.svg"/></div>').appendTo(container);
         if (contain) {
             spinner.addClass('projects-dialog-spinner-contain');
         }
         return spinner;
+    }
+
+    function decodeObject(payload,format) {
+        if ((format === 'number') && (payload === "NaN")) {
+            payload = Number.NaN;
+        } else if ((format === 'number') && (payload === "Infinity")) {
+            payload = Infinity;
+        } else if ((format === 'number') && (payload === "-Infinity")) {
+            payload = -Infinity;
+        } else if (format === 'Object' || /^array/.test(format) || format === 'boolean' || format === 'number' ) {
+            payload = JSON.parse(payload);
+        } else if (/error/i.test(format)) {
+            payload = JSON.parse(payload);
+            payload = (payload.name?payload.name+": ":"")+payload.message;
+        } else if (format === 'null') {
+            payload = null;
+        } else if (format === 'undefined') {
+            payload = undefined;
+        } else if (/^buffer/.test(format)) {
+            var buffer = payload;
+            payload = [];
+            for (var c = 0; c < buffer.length; c += 2) {
+                payload.push(parseInt(buffer.substr(c, 2), 16));
+            }
+        }
+        return payload;
+    }
+
+    function parseContextKey(key) {
+        var parts = {};
+        var m = /^#:\((\S+?)\)::(.*)$/.exec(key);
+        if (m) {
+            parts.store = m[1];
+            parts.key = m[2];
+        } else {
+            parts.key = key;
+            if (RED.settings.context) {
+                parts.store = RED.settings.context.default;
+            }
+        }
+        return parts;
+    }
+
+     /**
+      * Create or update an icon element and append it to iconContainer.
+      * @param iconUrl - Url of icon.
+      * @param iconContainer - Icon container element with palette_icon_container class.
+      * @param isLarge - Whether the icon size is large.
+      */
+    function createIconElement(iconUrl, iconContainer, isLarge) {
+        // Removes the previous icon when icon was changed.
+        var iconElement = iconContainer.find(".palette_icon");
+        if (iconElement.length !== 0) {
+            iconElement.remove();
+        }
+        var faIconElement = iconContainer.find("i");
+        if (faIconElement.length !== 0) {
+            faIconElement.remove();
+        }
+
+        // Show either icon image or font-awesome icon
+        var iconPath = separateIconPath(iconUrl);
+        if (iconPath.module === "font-awesome") {
+            var fontAwesomeUnicode = RED.nodes.fontAwesome.getIconUnicode(iconPath.file);
+            if (fontAwesomeUnicode) {
+                var faIconElement = $('<i/>').appendTo(iconContainer);
+                var faLarge = isLarge ? "fa-lg " : "";
+                faIconElement.addClass("palette_icon_fa fa fa-fw " + faLarge + iconPath.file);
+                return;
+            }
+            // If the specified name is not defined in font-awesome, show arrow-in icon.
+            iconUrl = RED.settings.apiRootUrl+"icons/node-red/arrow-in.png"
+        }
+        var imageIconElement = $('<div/>',{class:"palette_icon"}).appendTo(iconContainer);
+        imageIconElement.css("backgroundImage", "url("+iconUrl+")");
     }
 
     return {
@@ -4891,10 +6723,17 @@ RED.utils = (function() {
         getDefaultNodeIcon: getDefaultNodeIcon,
         getNodeIcon: getNodeIcon,
         getNodeLabel: getNodeLabel,
-        addSpinnerOverlay: addSpinnerOverlay
+        getNodeColor: getNodeColor,
+        addSpinnerOverlay: addSpinnerOverlay,
+        decodeObject: decodeObject,
+        parseContextKey: parseContextKey,
+        createIconElement: createIconElement,
+        sanitize: sanitize
     }
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5224,8 +7063,200 @@ RED.utils = (function() {
         },
         length: function() {
             return this.element.children().length;
+        },
+        show: function(item) {
+            var items = this.element.children().filter(function(f) {
+                return item === $(this).find(".red-ui-editableList-item-content").data('data');
+            });
+            if (items.length > 0) {
+                this.uiContainer.scrollTop(this.uiContainer.scrollTop()+items.position().top)
+            }
         }
     });
+})(jQuery);
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+(function($) {
+
+/**
+ * options:
+ *   - data : array - initial items to display in tree
+ *
+ * methods:
+ *   - data(items) - clears existing items and replaces with new data
+ *
+ * events:
+ *   - treelistselect : function(event, item) {}
+ *
+ *
+ * data:
+ * [
+ *     {
+ *         label: 'Local', // label for the item
+ *         icon: 'fa fa-rocket', // (optional) icon for the item
+ *         selected: true/false, // (optional) if present, display checkbox accordingly
+ *         children: [] | function(done) // (optional) an array of child items, or a function
+ *                                       // that will call the `done` callback with an array
+ *                                       // of child items
+ *     }
+ * ]
+ *
+ *
+ *
+ * var treeList = $("<div>").css({width: "100%", height: "100%"}).treeList({data:[...]})
+ * treeList.on('treelistselect', function(e,item) { console.log(item)})
+ * treeList.treeList('data',[ ... ] )
+ *
+ */
+
+    $.widget( "nodered.treeList", {
+        _create: function() {
+            var that = this;
+
+            this.element.addClass('red-ui-treeList');
+            var wrapper = $('<div>',{class:'red-ui-treeList-container'}).appendTo(this.element);
+
+            this._data = [];
+
+            this._topList = $('<ol>').css({
+                position:'absolute',
+                top: 0,
+                left:0,
+                right:0,
+                bottom:0
+            }).appendTo(wrapper).editableList({
+                addButton: false,
+                scrollOnAdd: false,
+                height: '100%',
+                addItem: function(container,i,item) {
+                    that._addSubtree(container,item,0);
+                }
+            });
+            if (this.options.data) {
+                this.data(this.options.data);
+            }
+        },
+        _addChildren: function(container,children,depth) {
+            var that = this;
+            var subtree = $('<ol>').appendTo(container).editableList({
+                addButton: false,
+                scrollOnAdd: false,
+                height: 'auto',
+                addItem: function(container,i,item) {
+                    that._addSubtree(container,item,depth+1);
+                }
+            });
+            for (var i=0;i<children.length;i++) {
+                subtree.editableList('addItem',children[i])
+            }
+        },
+        _addSubtree: function(container, item, depth) {
+            var that = this;
+            var labelNodeType = "<label>";
+            if (item.children && item.hasOwnProperty('selected')) {
+                labelNodeType = "<div>";
+            }
+            var label = $(labelNodeType,{tabindex:"0",class:"red-ui-treeList-label"}).appendTo(container);
+            if (item.class) {
+                label.addClass(item.class);
+            }
+            label.css({
+                paddingLeft: (depth*15)+'px'
+            })
+            label.on('mouseover',function(e) { that._trigger('itemmouseover',e,item); })
+            label.on('mouseout',function(e) { that._trigger('itemmouseout',e,item); })
+
+            if (item.children) {
+                $('<span class="red-ui-treeList-icon"><i class="fa fa-angle-right" /></span>').appendTo(label);
+                // $('<span class="red-ui-treeList-icon"><i class="fa fa-folder-o" /></span>').appendTo(label);
+                label.click(function(e) {
+                    if (!container.hasClass("built") && typeof item.children === 'function') {
+                        container.addClass('built');
+                        var childrenAdded = false;
+                        var spinner;
+                        item.children(function(children) {
+                            childrenAdded = true;
+                            that._addChildren(container,children,depth);
+                            if (spinner) {
+                                spinner.remove();
+                            }
+                        });
+                        if (!childrenAdded) {
+                            spinner = $('<div class="red-ui-treeList-spinner">').css({
+                                "background-position": (35+depth*15)+'px 50%'
+                            }).appendTo(container);
+                        }
+
+                    }
+                    container.toggleClass("expanded");
+                })
+            } else {
+                $('<span class="red-ui-treeList-icon"></span>').appendTo(label);
+            }
+            if (item.hasOwnProperty('selected')) {
+                var selectWrapper = $('<span class="red-ui-treeList-icon"></span>').appendTo(label);
+                var cb = $('<input type="checkbox">').prop('checked',item.selected).appendTo(selectWrapper);
+                cb.on('click', function(e) {
+                    e.stopPropagation();
+                });
+                cb.on('change', function(e) {
+                    item.selected = this.checked;
+                    that._trigger("select",e,item);
+                })
+            } else if (!item.children) {
+                label.click(function(e) {
+                    that._trigger("select",e,item)
+                })
+            }
+            if (item.icon) {
+                $('<span class="red-ui-treeList-icon"><i class="'+item.icon+'" /></span>').appendTo(label);
+            }
+            $('<span class="red-ui-treeList-label-text"></span>').text(item.label).appendTo(label);
+            if (item.children) {
+                if (Array.isArray(item.children)) {
+                    that._addChildren(container,item.children,depth);
+                }
+                if (item.expanded) {
+                    label.click();
+                }
+            }
+        },
+        empty: function() {
+            this._topList.editableList('empty');
+        },
+        data: function(items) {
+            if (items !== undefined) {
+                this._data = items;
+                this._topList.editableList('empty');
+                for (var i=0; i<items.length;i++) {
+                    this._topList.editableList('addItem',items[i]);
+                }
+            } else {
+                return this._data;
+            }
+        },
+        show: function(id) {
+            for (var i=0;i<this._data.length;i++) {
+                if (this._data[i].id === id) {
+                    this._topList.editableList('show',this._data[i]);
+                }
+            }
+        }
+    });
+
 })(jQuery);
 ;/**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -5358,7 +7389,9 @@ RED.utils = (function() {
     })
 
 })(jQuery);
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5512,13 +7545,14 @@ RED.menu = (function() {
 
     }
     function createMenu(options) {
+        var topMenu = $("<ul/>",{class:"dropdown-menu pull-right"});
 
-        var menuParent = $("#"+options.id);
-
-        var topMenu = $("<ul/>",{id:options.id+"-submenu", class:"dropdown-menu pull-right"});
-
-        if (menuParent.length === 1) {
-            topMenu.insertAfter(menuParent);
+        if (options.id) {
+            topMenu.attr({id:options.id+"-submenu"});
+            var menuParent = $("#"+options.id);
+            if (menuParent.length === 1) {
+                topMenu.insertAfter(menuParent);
+            }
         }
 
         var lastAddedSeparator = false;
@@ -5652,63 +7686,102 @@ RED.panels = (function() {
         if (children.length !== 2) {
             throw new Error("Container must have exactly two children");
         }
-
+        var vertical = (!options.dir || options.dir === "vertical");
         container.addClass("red-ui-panels");
+        if (!vertical) {
+            container.addClass("red-ui-panels-horizontal");
+        }
         var separator = $('<div class="red-ui-panels-separator"></div>').insertAfter(children[0]);
         var startPosition;
-        var panelHeights = [];
-        var modifiedHeights = false;
-        var panelRatio;
-
+        var panelSizes = [];
+        var modifiedSizes = false;
+        var panelRatio = 0.5;
         separator.draggable({
-                axis: "y",
+                axis: vertical?"y":"x",
                 containment: container,
                 scroll: false,
                 start:function(event,ui) {
-                    var height = container.height();
-                    startPosition = ui.position.top;
-                    panelHeights = [$(children[0]).height(),$(children[1]).height()];
+                    startPosition = vertical?ui.position.top:ui.position.left;
+
+                    panelSizes = [
+                        vertical?$(children[0]).height():$(children[0]).width(),
+                        vertical?$(children[1]).height():$(children[1]).width()
+                    ];
                 },
                 drag: function(event,ui) {
-                    var height = container.height();
-                    var delta = ui.position.top-startPosition;
-                    var newHeights = [panelHeights[0]+delta,panelHeights[1]-delta];
-                    $(children[0]).height(newHeights[0]);
-                    $(children[1]).height(newHeights[1]);
-                    if (options.resize) {
-                        options.resize(newHeights[0],newHeights[1]);
+                    var size = vertical?container.height():container.width();
+                    var delta = (vertical?ui.position.top:ui.position.left)-startPosition;
+                    var newSizes = [panelSizes[0]+delta,panelSizes[1]-delta];
+                    if (vertical) {
+                        $(children[0]).height(newSizes[0]);
+                        $(children[1]).height(newSizes[1]);
+                        ui.position.top -= delta;
+                    } else {
+                        $(children[0]).width(newSizes[0]);
+                        $(children[1]).width(newSizes[1]);
+                        ui.position.left -= delta;
                     }
-                    ui.position.top -= delta;
-                    panelRatio = newHeights[0]/height;
+                    if (options.resize) {
+                        options.resize(newSizes[0],newSizes[1]);
+                    }
+                    panelRatio = newSizes[0]/(size-8);
                 },
                 stop:function(event,ui) {
-                    modifiedHeights = true;
+                    modifiedSizes = true;
                 }
         });
 
-        return {
-            resize: function(height) {
-                var panelHeights = [$(children[0]).height(),$(children[1]).height()];
-                container.height(height);
-                if (modifiedHeights) {
-                    var topPanelHeight = panelRatio*height;
-                    var bottomPanelHeight = height - topPanelHeight - 48;
-                    panelHeights = [topPanelHeight,bottomPanelHeight];
-                    $(children[0]).height(panelHeights[0]);
-                    $(children[1]).height(panelHeights[1]);
+        var panel = {
+            ratio: function(ratio) {
+                panelRatio = ratio;
+                modifiedSizes = true;
+                if (ratio === 0 || ratio === 1) {
+                    separator.hide();
+                } else {
+                    separator.show();
+                }
+                if (vertical) {
+                    panel.resize(container.height());
+                } else {
+                    panel.resize(container.width());
+                }
+            },
+            resize: function(size) {
+                var panelSizes;
+                if (vertical) {
+                    panelSizes = [$(children[0]).height(),$(children[1]).height()];
+                    container.height(size);
+                } else {
+                    panelSizes = [$(children[0]).width(),$(children[1]).width()];
+                    container.width(size);
+                }
+                if (modifiedSizes) {
+                    var topPanelSize = panelRatio*(size-8);
+                    var bottomPanelSize = size - topPanelSize - 8;
+                    panelSizes = [topPanelSize,bottomPanelSize];
+                    if (vertical) {
+                        $(children[0]).outerHeight(panelSizes[0]);
+                        $(children[1]).outerHeight(panelSizes[1]);
+                    } else {
+                        $(children[0]).outerWidth(panelSizes[0]);
+                        $(children[1]).outerWidth(panelSizes[1]);
+                    }
                 }
                 if (options.resize) {
-                    options.resize(panelHeights[0],panelHeights[1]);
+                    options.resize(panelSizes[0],panelSizes[1]);
                 }
             }
         }
+        return panel;
     }
 
     return {
         create: createPanel
     }
 })();
-;/**
+;/** This file was modified by Homegear GmbH */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5728,13 +7801,19 @@ RED.popover = (function() {
     var deltaSizes = {
         "default": {
             top: 10,
+            topTop: 30,
             leftRight: 17,
-            leftLeft: 25
+            leftLeft: 25,
+            leftBottom: 8,
+            leftTop: 11
         },
         "small": {
-            top: 5,
-            leftRight: 17,
-            leftLeft: 16
+            top: 6,
+            topTop: 20,
+            leftRight: 8,
+            leftLeft: 26,
+            leftBottom: 8,
+            leftTop: 9
         }
     }
     var popoverCallbackInterval = null;
@@ -5743,7 +7822,7 @@ RED.popover = (function() {
         var direction = options.direction || "right";
         var trigger = options.trigger;
         var content = options.content;
-        var delay = options.delay;
+        var delay = options.delay ||  { show: 750, hide: 50 };
         var autoClose = options.autoClose;
         var width = options.width||"auto";
         var size = options.size||"default";
@@ -5765,32 +7844,78 @@ RED.popover = (function() {
             if (active) {
                 if(popoverCallbackInterval) clearInterval(popoverCallbackInterval);
                 $('.red-ui-popover').remove();
-                div = $('<div class="red-ui-popover red-ui-popover-'+direction+'"></div>').appendTo("body");
+                div = $('<div class="red-ui-popover"></div>');
                 if (size !== "default") {
                     div.addClass("red-ui-popover-size-"+size);
                 }
                 if (typeof content === 'function') {
-                    content.call(res).appendTo(div);
+                    var result = content.call(res);
+                    if (result === null) {
+                        return;
+                    }
+                    if (typeof result === 'string') {
+                        div.text(result);
+                    } else {
+                        div.append(result);
+                    }
                 } else {
                     div.html(content);
                 }
                 if (width !== "auto") {
                     div.width(width);
                 }
-
+                div.appendTo("body");
 
                 var targetPos = target.offset();
                 targetPos.top += offsetY;
                 targetPos.left += offsetX;
-                var targetWidth = target.width();
-                var targetHeight = target.height();
+                var targetWidth = target.outerWidth();
+                var targetHeight = target.outerHeight();
                 var divHeight = div.height();
                 var divWidth = div.width();
-                if (direction === 'right') {
-                    div.css({top: targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top,left:targetPos.left+targetWidth+deltaSizes[size].leftRight});
-                } else if (direction === 'left') {
-                    div.css({top: targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top,left:targetPos.left-deltaSizes[size].leftLeft-divWidth});
+
+                var viewportTop = $(window).scrollTop();
+                var viewportLeft = $(window).scrollLeft();
+                var viewportBottom = viewportTop + $(window).height();
+                var viewportRight = viewportLeft + $(window).width();
+                var top = 0;
+                var left = 0;
+                var d = direction;
+                if (d === 'right') {
+                    top = targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top;
+                    left = targetPos.left+targetWidth+deltaSizes[size].leftRight;
+                } else if (d === 'left') {
+                    top = targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top;
+                    left = targetPos.left-deltaSizes[size].leftLeft-divWidth;
+                } else if (d === 'bottom') {
+                    top = targetPos.top+targetHeight+deltaSizes[size].top;
+                    left = targetPos.left+targetWidth/2-divWidth/2 - deltaSizes[size].leftBottom;
+                    if (left < 0) {
+                        d = "right";
+                        top = targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top;
+                        left = targetPos.left+targetWidth+deltaSizes[size].leftRight;
+                    } else if (left+divWidth > viewportRight) {
+                        d = "left";
+                        top = targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top;
+                        left = targetPos.left-deltaSizes[size].leftLeft-divWidth;
+                        if (top+divHeight+targetHeight/2 + 5 > viewportBottom) {
+                            top -= (top+divHeight+targetHeight/2 - viewportBottom + 5)
+                        }
+                    } else if (top+divHeight > viewportBottom) {
+                        d = 'top';
+                        top = targetPos.top-deltaSizes[size].topTop-divHeight;
+                        left = targetPos.left+targetWidth/2-divWidth/2 - deltaSizes[size].leftTop;
+                    }
+                } else if (d === 'top') {
+                    top = targetPos.top-deltaSizes[size].topTop-divHeight;
+                    left = targetPos.left+targetWidth/2-divWidth/2 - deltaSizes[size].leftTop;
+                    if (top < 0) {
+                        d = 'bottom';
+                        top = targetPos.top+targetHeight+deltaSizes[size].top;
+                        left = targetPos.left+targetWidth/2-divWidth/2 - deltaSizes[size].leftBottom;
+                    }
                 }
+                div.addClass('red-ui-popover-'+d).css({top: top, left: left});
 
                 if (instant) {
                     div.show();
@@ -5836,19 +7961,18 @@ RED.popover = (function() {
                 }
             }
         }
-        var closePopup = function(fadeOut) {
+        var closePopup = function(instant) {
+            $(document).off('mousedown.modal-popover-close');
             if (!active) {
                 if(popoverCallbackInterval) clearInterval(popoverCallbackInterval);
                 if (div) {
-                    if(fadeOut) {
-                        if (instant) {
+                    if (instant) {
+                        div.remove();
+                    } else {
+                        div.fadeOut("fast",function() {
                             $(this).remove();
-                        } else {
-                            div.fadeOut("fast",function() {
-                                $(this).remove();
-                            });
-                        }
-                    } else div.remove();
+                        });
+                    }
                     div = null;
                 }
             }
@@ -5862,12 +7986,14 @@ RED.popover = (function() {
                 active = true;
                 timer = setTimeout(openPopup,delay.show);
             });
-            target.on('mouseleave', function(e) {
+            target.on('mouseleave disabled', function(e) {
                 if (timer) {
                     clearTimeout(timer);
                 }
-                active = false;
-                if(!divHover) timer = setTimeout(closePopup,delay.hide);
+                if (active) {
+                    active = false;
+                    if(!divHover) timer = setTimeout(closePopup,delay.hide);
+                }
             });
         } else if (trigger === 'click') {
             target.click(function(e) {
@@ -5878,6 +8004,29 @@ RED.popover = (function() {
                     closePopup();
                 } else {
                     openPopup();
+                }
+            });
+            if (autoClose) {
+                target.on('mouseleave disabled', function(e) {
+                    if (timer) {
+                        clearTimeout(timer);
+                    }
+                    if (active) {
+                        active = false;
+                        setTimeout(closePopup,autoClose);
+                    }
+                });
+            }
+
+        } else if (trigger === 'modal') {
+            $(document).on('mousedown.modal-popover-close', function (event) {
+                var target = event.target;
+                while (target.nodeName !== 'BODY' && target !== div[0]) {
+                    target = target.parentElement;
+                }
+                if (target.nodeName === 'BODY') {
+                    active = false;
+                    closePopup();
                 }
             });
         } else if (autoClose) {
@@ -5907,7 +8056,28 @@ RED.popover = (function() {
     }
 
     return {
-        create: createPopover
+        create: createPopover,
+        tooltip: function(target,content, action) {
+            var label = content;
+            if (action) {
+                label = function() {
+                    var label = content;
+                    var shortcut = RED.keyboard.getShortcut(action);
+                    if (shortcut && shortcut.key) {
+                        label = $('<span>'+content+' <span class="red-ui-popover-key">'+RED.keyboard.formatKey(shortcut.key, true)+'</span></span>');
+                    }
+                    return label;
+                }
+            }
+            return RED.popover.create({
+                target:target,
+                trigger: "hover",
+                size: "small",
+                direction: "bottom",
+                content: label,
+                delay: { show: 750, hide: 50 }
+            });
+        }
     }
 
 })();
@@ -5927,6 +8097,19 @@ RED.popover = (function() {
  * limitations under the License.
  **/
 (function($) {
+
+/**
+ * options:
+ *   - minimumLength : the minimum length of text before firing a change event
+ *   - delay : delay, in ms, after a keystroke before firing change event
+ *
+ * methods:
+ *   - value([val]) - gets the current value, or, if `val` is provided, sets the value
+ *   - count - sets or clears a sub-label on the input. This can be used to provide
+ *             a feedback on the number of matches, or number of available entries to search
+ *   - change - trigger a change event
+ *
+ */
 
     $.widget( "nodered.searchBox", {
         _create: function() {
@@ -6029,10 +8212,15 @@ RED.popover = (function() {
 
 
 RED.tabs = (function() {
+
+    var defaultTabIcon = "fa fa-lemon-o";
+
     function createTabs(options) {
         var tabs = {};
+        var pinnedTabsCount = 0;
         var currentTabWidth;
         var currentActiveTabWidth = 0;
+        var collapsibleMenu;
 
         var ul = options.element || $("#"+options.id);
         var wrapper = ul.wrap( "<div>" ).parent();
@@ -6041,13 +8229,60 @@ RED.tabs = (function() {
         if (options.vertical) {
             wrapper.addClass("red-ui-tabs-vertical");
         }
-        if (options.addButton && typeof options.addButton === 'function') {
+        if (options.addButton) {
             wrapper.addClass("red-ui-tabs-add");
-            var addButton = $('<div class="red-ui-tab-button"><a href="#"><i class="fa fa-plus"></i></a></div>').appendTo(wrapper);
+            var addButton = $('<div class="red-ui-tab-button red-ui-tabs-add"><a href="#"><i class="fa fa-plus"></i></a></div>').appendTo(wrapper);
             addButton.find('a').click(function(evt) {
                 evt.preventDefault();
-                options.addButton();
+                if (typeof options.addButton === 'function') {
+                    options.addButton();
+                } else if (typeof options.addButton === 'string') {
+                    RED.actions.invoke(options.addButton);
+                }
             })
+            if (typeof options.addButton === 'string') {
+                var l = options.addButton;
+                if (options.addButtonCaption) {
+                    l = options.addButtonCaption
+                }
+                RED.popover.tooltip(addButton,l,options.addButton);
+            }
+            ul.on("dblclick", function(evt) {
+                var existingTabs = ul.children();
+                var clickX = evt.clientX;
+                var targetIndex = 0;
+                existingTabs.each(function(index) {
+                    var pos = $(this).offset();
+                    if (pos.left > clickX) {
+                        return false;
+                    }
+                    targetIndex = index+1;
+                })
+                if (typeof options.addButton === 'function') {
+                    options.addButton({index:targetIndex});
+                } else if (typeof options.addButton === 'string') {
+                    RED.actions.invoke(options.addButton,{index:targetIndex});
+                }
+            });
+        }
+        if (options.searchButton) {
+            wrapper.addClass("red-ui-tabs-search");
+            var searchButton = $('<div class="red-ui-tab-button red-ui-tabs-search"><a href="#"><i class="fa fa-list-ul"></i></a></div>').appendTo(wrapper);
+            searchButton.find('a').click(function(evt) {
+                evt.preventDefault();
+                if (typeof options.searchButton === 'function') {
+                    options.searchButton()
+                } else if (typeof options.searchButton === 'string') {
+                    RED.actions.invoke(options.searchButton);
+                }
+            })
+            if (typeof options.searchButton === 'string') {
+                var l = options.searchButton;
+                if (options.searchButtonCaption) {
+                    l = options.searchButtonCaption
+                }
+                RED.popover.tooltip(searchButton,l,options.searchButton);
+            }
 
         }
         var scrollLeft;
@@ -6062,6 +8297,65 @@ RED.tabs = (function() {
             scrollRight = $('<div class="red-ui-tab-button red-ui-tab-scroll red-ui-tab-scroll-right"><a href="#" style="display:none;"><i class="fa fa-caret-right"></i></a></div>').appendTo(wrapper).find("a");
             scrollRight.on('mousedown',function(evt) { scrollEventHandler(evt,'+=150') }).on('click',function(evt){ evt.preventDefault();});
         }
+
+        if (options.collapsible) {
+            // var dropDown = $('<div>',{class:"red-ui-tabs-select"}).appendTo(wrapper);
+            // ul.hide();
+            wrapper.addClass("red-ui-tabs-collapsible");
+
+            var collapsedButtonsRow = $('<div class="red-ui-tab-link-buttons"></div>').appendTo(wrapper);
+
+            if (options.menu !== false) {
+                var selectButton = $('<a href="#"><i class="fa fa-caret-down"></i></a>').appendTo(collapsedButtonsRow);
+                selectButton.addClass("red-ui-tab-link-button-menu")
+                selectButton.click(function(evt) {
+                    evt.stopPropagation();
+                    evt.preventDefault();
+                    if (!collapsibleMenu) {
+                        var pinnedOptions = [];
+                        var options = [];
+                        ul.children().each(function(i,el) {
+                            var id = $(el).data('tabId');
+                            var opt = {
+                                id:"red-ui-tabs-menu-option-"+id,
+                                icon: tabs[id].iconClass || defaultTabIcon,
+                                label: tabs[id].name,
+                                onselect: function() {
+                                    activateTab(id);
+                                }
+                            };
+                            if (tabs[id].pinned) {
+                                pinnedOptions.push(opt);
+                            } else {
+                                options.push(opt);
+                            }
+                        });
+                        options = pinnedOptions.concat(options);
+                        collapsibleMenu = RED.menu.init({id:"debug-message-option-menu",options: options});
+                        collapsibleMenu.css({
+                            position: "absolute"
+                        })
+                        collapsibleMenu.appendTo("body");
+                    }
+                    var elementPos = selectButton.offset();
+                    collapsibleMenu.css({
+                        top: (elementPos.top+selectButton.height()-2)+"px",
+                        left: (elementPos.left - collapsibleMenu.width() + selectButton.width())+"px"
+                    })
+                    if (collapsibleMenu.is(":visible")) {
+                        $(document).off("click.tabmenu");
+                    } else {
+                        $(document).on("click.tabmenu", function(evt) {
+                            $(document).off("click.tabmenu");
+                            collapsibleMenu.hide();
+                        });
+                    }
+                    collapsibleMenu.toggle();
+                })
+            }
+
+        }
+
         function scrollEventHandler(evt,dir) {
             evt.preventDefault();
             if ($(this).hasClass('disabled')) {
@@ -6087,11 +8381,86 @@ RED.tabs = (function() {
         ul.children().first().addClass("active");
         ul.children().addClass("red-ui-tab");
 
-        function onTabClick() {
-            if (options.onclick) {
-                options.onclick(tabs[$(this).attr('href').slice(1)]);
+        function getSelection() {
+            var selection = ul.find("li.red-ui-tab.selected");
+            var selectedTabs = [];
+            selection.each(function() {
+                selectedTabs.push(tabs[$(this).find('a').attr('href').slice(1)])
+            })
+            return selectedTabs;
+        }
+
+        function selectionChanged() {
+            options.onselect(getSelection());
+        }
+
+        function onTabClick(evt) {
+            evt.preventDefault();
+            var currentTab = ul.find("li.red-ui-tab.active");
+            var thisTab = $(this).parent();
+            var fireSelectionChanged = false;
+            if (options.onselect) {
+                if (evt.metaKey) {
+                    if (thisTab.hasClass("selected")) {
+                        thisTab.removeClass("selected");
+                        if (thisTab[0] !== currentTab[0]) {
+                            // Deselect background tab
+                            // - don't switch to it
+                            selectionChanged();
+                            return;
+                        } else {
+                            // Deselect current tab
+                            // - if nothing remains selected, do nothing
+                            // - otherwise switch to first selected tab
+                            var selection = ul.find("li.red-ui-tab.selected");
+                            if (selection.length === 0) {
+                                selectionChanged();
+                                return;
+                            }
+                            thisTab = selection.first();
+                        }
+                    } else {
+                        if (!currentTab.hasClass("selected")) {
+                            var currentTabObj = tabs[currentTab.find('a').attr('href').slice(1)];
+                            // Auto select current tab
+                            currentTab.addClass("selected");
+                        }
+                        thisTab.addClass("selected");
+                    }
+                    fireSelectionChanged = true;
+                } else if (evt.shiftKey) {
+                    if (currentTab[0] !== thisTab[0]) {
+                        var firstTab,lastTab;
+                        if (currentTab.index() < thisTab.index()) {
+                            firstTab = currentTab;
+                            lastTab = thisTab;
+                        } else {
+                            firstTab = thisTab;
+                            lastTab = currentTab;
+                        }
+                        ul.find("li.red-ui-tab").removeClass("selected");
+                        firstTab.addClass("selected");
+                        lastTab.addClass("selected");
+                        firstTab.nextUntil(lastTab).addClass("selected");
+                    }
+                    fireSelectionChanged = true;
+                } else {
+                    var selection = ul.find("li.red-ui-tab.selected");
+                    if (selection.length > 0) {
+                        selection.removeClass("selected");
+                        fireSelectionChanged = true;
+                    }
+                }
             }
-            activateTab($(this));
+
+            var thisTabA = thisTab.find("a");
+            if (options.onclick) {
+                options.onclick(tabs[thisTabA.attr('href').slice(1)]);
+            }
+            activateTab(thisTabA);
+            if (fireSelectionChanged) {
+                selectionChanged();
+            }
             return false;
         }
 
@@ -6112,7 +8481,12 @@ RED.tabs = (function() {
                 }
             }
         }
-        function onTabDblClick() {
+        function onTabDblClick(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            if (evt.metaKey || evt.shiftKey) {
+                return;
+            }
             if (options.ondblclick) {
                 options.ondblclick(tabs[$(this).attr('href').slice(1)]);
             }
@@ -6130,6 +8504,9 @@ RED.tabs = (function() {
                 ul.children().removeClass("active");
                 ul.children().css({"transition": "width 100ms"});
                 link.parent().addClass("active");
+                var parentId = link.parent().attr('id');
+                wrapper.find(".red-ui-tab-link-button").removeClass("active selected");
+                $("#"+parentId+"-link-button").addClass("active selected");
                 if (options.scrollable) {
                     var pos = link.parent().position().left;
                     if (pos-21 < 0) {
@@ -6167,41 +8544,70 @@ RED.tabs = (function() {
             var tabs = ul.find("li.red-ui-tab");
             var width = wrapper.width();
             var tabCount = tabs.size();
-            var tabWidth = (width-12-(tabCount*6))/tabCount;
-            currentTabWidth = (100*tabWidth/width)+"%";
-            currentActiveTabWidth = currentTabWidth+"%";
-            if (options.scrollable) {
-                tabWidth = Math.max(tabWidth,140);
-                currentTabWidth = tabWidth+"px";
-                currentActiveTabWidth = 0;
-                var listWidth = Math.max(wrapper.width(),12+(tabWidth+6)*tabCount);
-                ul.width(listWidth);
-                updateScroll();
-            } else if (options.hasOwnProperty("minimumActiveTabWidth")) {
-                if (tabWidth < options.minimumActiveTabWidth) {
-                    tabCount -= 1;
-                    tabWidth = (width-12-options.minimumActiveTabWidth-(tabCount*6))/tabCount;
-                    currentTabWidth = (100*tabWidth/width)+"%";
-                    currentActiveTabWidth = options.minimumActiveTabWidth+"px";
+            var tabWidth;
+
+            if (options.collapsible) {
+                tabWidth = width - collapsedButtonsRow.width()-10;
+                if (tabWidth < 198) {
+                    var delta = 198 - tabWidth;
+                    var b = collapsedButtonsRow.find("a:last").prev();
+                    while (b.is(":not(:visible)")) {
+                        b = b.prev();
+                    }
+                    if (!b.hasClass("red-ui-tab-link-button-pinned")) {
+                        b.hide();
+                    }
+                    tabWidth = width - collapsedButtonsRow.width()-10;
                 } else {
-                    currentActiveTabWidth = 0;
+                    var space = width - 198 - collapsedButtonsRow.width();
+                    if (space > 40) {
+                        collapsedButtonsRow.find("a:not(:visible):first").show();
+                        tabWidth = width - collapsedButtonsRow.width()-10;
+                    }
                 }
-            }
-            tabs.css({width:currentTabWidth});
-            if (tabWidth < 50) {
-                ul.find(".red-ui-tab-close").hide();
-                ul.find(".red-ui-tab-icon").hide();
-                ul.find(".red-ui-tab-label").css({paddingLeft:Math.min(12,Math.max(0,tabWidth-38))+"px"})
+                tabs.css({width:tabWidth});
+
             } else {
-                ul.find(".red-ui-tab-close").show();
-                ul.find(".red-ui-tab-icon").show();
-                ul.find(".red-ui-tab-label").css({paddingLeft:""})
-            }
-            if (currentActiveTabWidth !== 0) {
-                ul.find("li.red-ui-tab.active").css({"width":options.minimumActiveTabWidth});
-                ul.find("li.red-ui-tab.active .red-ui-tab-close").show();
-                ul.find("li.red-ui-tab.active .red-ui-tab-icon").show();
-                ul.find("li.red-ui-tab.active .red-ui-tab-label").css({paddingLeft:""})
+                var tabWidth = (width-12-(tabCount*6))/tabCount;
+                currentTabWidth = (100*tabWidth/width)+"%";
+                currentActiveTabWidth = currentTabWidth+"%";
+                if (options.scrollable) {
+                    tabWidth = Math.max(tabWidth,140);
+                    currentTabWidth = tabWidth+"px";
+                    currentActiveTabWidth = 0;
+                    var listWidth = Math.max(wrapper.width(),12+(tabWidth+6)*tabCount);
+                    ul.width(listWidth);
+                    updateScroll();
+                } else if (options.hasOwnProperty("minimumActiveTabWidth")) {
+                    if (tabWidth < options.minimumActiveTabWidth) {
+                        tabCount -= 1;
+                        tabWidth = (width-12-options.minimumActiveTabWidth-(tabCount*6))/tabCount;
+                        currentTabWidth = (100*tabWidth/width)+"%";
+                        currentActiveTabWidth = options.minimumActiveTabWidth+"px";
+                    } else {
+                        currentActiveTabWidth = 0;
+                    }
+                }
+                // if (options.collapsible) {
+                //     console.log(currentTabWidth);
+                // }
+
+                tabs.css({width:currentTabWidth});
+                if (tabWidth < 50) {
+                    // ul.find(".red-ui-tab-close").hide();
+                    ul.find(".red-ui-tab-icon").hide();
+                    ul.find(".red-ui-tab-label").css({paddingLeft:Math.min(12,Math.max(0,tabWidth-38))+"px"})
+                } else {
+                    // ul.find(".red-ui-tab-close").show();
+                    ul.find(".red-ui-tab-icon").show();
+                    ul.find(".red-ui-tab-label").css({paddingLeft:""})
+                }
+                if (currentActiveTabWidth !== 0) {
+                    ul.find("li.red-ui-tab.active").css({"width":options.minimumActiveTabWidth});
+                    // ul.find("li.red-ui-tab.active .red-ui-tab-close").show();
+                    ul.find("li.red-ui-tab.active .red-ui-tab-icon").show();
+                    ul.find("li.red-ui-tab.active .red-ui-tab-label").css({paddingLeft:""})
+                }
             }
 
         }
@@ -6213,6 +8619,13 @@ RED.tabs = (function() {
 
 
         function removeTab(id) {
+            if (options.onselect) {
+                var selection = ul.find("li.red-ui-tab.selected");
+                if (selection.length > 0) {
+                    selection.removeClass("selected");
+                    selectionChanged();
+                }
+            }
             var li = ul.find("a[href='#"+id+"']").parent();
             if (li.hasClass("active")) {
                 var tab = li.prev();
@@ -6222,38 +8635,105 @@ RED.tabs = (function() {
                 activateTab(tab.find("a"));
             }
             li.remove();
+            if (tabs[id].pinned) {
+                pinnedTabsCount--;
+            }
             if (options.onremove) {
                 options.onremove(tabs[id]);
             }
             delete tabs[id];
             updateTabWidths();
+            collapsibleMenu = null;
         }
 
         return {
-            addTab: function(tab) {
+            addTab: function(tab,targetIndex) {
+                if (options.onselect) {
+                    var selection = ul.find("li.red-ui-tab.selected");
+                    if (selection.length > 0) {
+                        selection.removeClass("selected");
+                        selectionChanged();
+                    }
+                }
                 tabs[tab.id] = tab;
-                var li = $("<li/>",{class:"red-ui-tab"}).appendTo(ul);
+                var li = $("<li/>",{class:"red-ui-tab"});
+                if (ul.children().length === 0) {
+                    targetIndex = undefined;
+                }
+                if (targetIndex === 0) {
+                    li.prependTo(ul);
+                } else if (targetIndex > 0) {
+                    li.insertAfter(ul.find("li:nth-child("+(targetIndex)+")"));
+                } else {
+                    li.appendTo(ul);
+                }
                 li.attr('id',"red-ui-tab-"+(tab.id.replace(".","-")));
                 li.data("tabId",tab.id);
+
+                if (options.maximumTabWidth) {
+                    li.css("maxWidth",options.maximumTabWidth+"px");
+                }
                 var link = $("<a/>",{href:"#"+tab.id, class:"red-ui-tab-label"}).appendTo(li);
                 if (tab.icon) {
                     $('<img src="'+tab.icon+'" class="red-ui-tab-icon"/>').appendTo(link);
+                } else if (tab.iconClass) {
+                    $('<i>',{class:"red-ui-tab-icon "+tab.iconClass}).appendTo(link);
                 }
                 var span = $('<span/>',{class:"bidiAware"}).text(tab.label).appendTo(link);
                 span.attr('dir', RED.text.bidi.resolveBaseTextDir(tab.label));
+                if (options.collapsible) {
+                    li.addClass("red-ui-tab-pinned");
+                    var pinnedLink = $('<a href="#'+tab.id+'" class="red-ui-tab-link-button"></a>');
+                    if (tab.pinned) {
+                        if (pinnedTabsCount === 0) {
+                            pinnedLink.prependTo(collapsedButtonsRow)
+                        } else {
+                            pinnedLink.insertAfter(collapsedButtonsRow.find("a.red-ui-tab-link-button-pinned:last"));
+                        }
+                    } else {
+                        if (options.menu !== false) {
+                            pinnedLink.insertBefore(collapsedButtonsRow.find("a:last"));
+                        } else {
+                            pinnedLink.appendTo(collapsedButtonsRow);
+                        }
+                    }
 
+                    pinnedLink.attr('id',li.attr('id')+"-link-button");
+                    if (tab.iconClass) {
+                        $('<i>',{class:tab.iconClass}).appendTo(pinnedLink);
+                    } else {
+                        $('<i>',{class:defaultTabIcon}).appendTo(pinnedLink);
+                    }
+                    pinnedLink.click(function(evt) {
+                        evt.preventDefault();
+                        activateTab(tab.id);
+                    });
+                    if (tab.pinned) {
+                        pinnedLink.addClass("red-ui-tab-link-button-pinned");
+                        pinnedTabsCount++;
+                    }
+                    RED.popover.tooltip($(pinnedLink), tab.name, tab.action);
+
+                }
                 link.on("click",onTabClick);
                 link.on("dblclick",onTabDblClick);
+
+
                 if (tab.closeable) {
+                    li.addClass("red-ui-tabs-closeable")
                     var closeLink = $("<a/>",{href:"#",class:"red-ui-tab-close"}).appendTo(li);
                     closeLink.append('<i class="fa fa-times" />');
-
                     closeLink.on("click",function(event) {
                         event.preventDefault();
                         removeTab(tab.id);
                     });
                 }
-                updateTabWidths();
+
+                var badges = $('<span class="red-ui-tabs-badges"></span>').appendTo(li);
+                if (options.onselect) {
+                    $('<i class="red-ui-tabs-badge-changed fa fa-circle"></i>').appendTo(badges);
+                    $('<i class="red-ui-tabs-badge-selected fa fa-check-circle"></i>').appendTo(badges);
+                }
                 if (options.onadd) {
                     options.onadd(tab);
                 }
@@ -6338,6 +8818,10 @@ RED.tabs = (function() {
                         }
                     })
                 }
+                setTimeout(function() {
+                    updateTabWidths();
+                },10);
+                collapsibleMenu = null;
             },
             removeTab: removeTab,
             activateTab: activateTab,
@@ -6357,6 +8841,7 @@ RED.tabs = (function() {
                 tab.find("span.bidiAware").text(label).attr('dir', RED.text.bidi.resolveBaseTextDir(label));
                 updateTabWidths();
             },
+            selection: getSelection,
             order: function(order) {
                 var existingTabOrder = $.makeArray(ul.children().map(function() { return $(this).data('tabId');}));
                 if (existingTabOrder.length !== order.length) {
@@ -6457,6 +8942,14 @@ RED.stack = (function() {
                                     }
                                 }
                                 entry.expand();
+                            } else if (entries.length === 2) {
+                                if (entries[0] === entry) {
+                                    entries[0].collapse();
+                                    entries[1].expand();
+                                } else {
+                                    entries[1].collapse();
+                                    entries[0].expand();
+                                }
                             }
                         } else {
                             entry.toggle();
@@ -6550,7 +9043,9 @@ RED.stack = (function() {
         create: createStack
     }
 })();
-;/**
+;/** This file was modified by Homegear GmbH */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -7114,9 +9609,9 @@ RED.stack = (function() {
     function getAction(name) {
         return actions[name];
     }
-    function invokeAction(name) {
+    function invokeAction(name,args) {
         if (actions.hasOwnProperty(name)) {
-            actions[name]();
+            actions[name](args);
         }
     }
     function listActions() {
@@ -7135,7 +9630,9 @@ RED.stack = (function() {
         list: listActions
     }
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -7204,7 +9701,10 @@ RED.deploy = (function() {
                   options: [
                       {id:"deploymenu-item-full",toggle:"deploy-type",icon:"red/images/deploy-full.png",label:RED._("deploy.full"),sublabel:RED._("deploy.fullDesc"),selected: true, onselect:function(s) { if(s){changeDeploymentType("full")}}},
                       {id:"deploymenu-item-flow",toggle:"deploy-type",icon:"red/images/deploy-flows.png",label:RED._("deploy.modifiedFlows"),sublabel:RED._("deploy.modifiedFlowsDesc"), onselect:function(s) {if(s){changeDeploymentType("flows")}}},
-                      {id:"deploymenu-item-node",toggle:"deploy-type",icon:"red/images/deploy-nodes.png",label:RED._("deploy.modifiedNodes"),sublabel:RED._("deploy.modifiedNodesDesc"),onselect:function(s) { if(s){changeDeploymentType("nodes")}}}
+                      {id:"deploymenu-item-node",toggle:"deploy-type",icon:"red/images/deploy-nodes.png",label:RED._("deploy.modifiedNodes"),sublabel:RED._("deploy.modifiedNodesDesc"),onselect:function(s) { if(s){changeDeploymentType("nodes")}}},
+                      null,
+                      {id:"deploymenu-item-reload", icon:"red/images/deploy-reload.png",label:RED._("deploy.restartFlows"),sublabel:RED._("deploy.restartFlowsDesc"),onselect:"core:restart-flows"},
+
                   ]
               });*/
         } else if (type == "simple") {
@@ -7233,6 +9733,7 @@ RED.deploy = (function() {
         });
 
         RED.actions.add("core:deploy-flows",save);
+        RED.actions.add("core:restart-flows",restart);
 
 
         RED.events.on('nodes:change',function(state) {
@@ -7394,6 +9895,58 @@ RED.deploy = (function() {
         }
         return list;
     }
+    function sanitize(html) {
+        return html.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    }
+    function restart() {
+        var startTime = Date.now();
+        $(".deploy-button-content").css('opacity',0);
+        $(".deploy-button-spinner").show();
+        var deployWasEnabled = !$("#btn-deploy").hasClass("disabled");
+        $("#btn-deploy").addClass("disabled");
+        deployInflight = true;
+        $("#header-shade").show();
+        $("#editor-shade").show();
+        $("#palette-shade").show();
+        $("#sidebar-shade").show();
+
+        $.ajax({
+            url:"flows",
+            type: "POST",
+            headers: {
+                "Node-RED-Deployment-Type":"reload"
+            }
+        }).done(function(data,textStatus,xhr) {
+            if (deployWasEnabled) {
+                $("#btn-deploy").removeClass("disabled");
+            }
+            RED.notify('<p>'+RED._("deploy.successfulRestart")+'</p>',"success");
+        }).fail(function(xhr,textStatus,err) {
+            if (deployWasEnabled) {
+                $("#btn-deploy").removeClass("disabled");
+            }
+            if (xhr.status === 401) {
+                RED.notify(RED._("deploy.deployFailed",{message:RED._("user.notAuthorized")}),"error");
+            } else if (xhr.status === 409) {
+                resolveConflict(nns, true);
+            } else if (xhr.responseText) {
+                RED.notify(RED._("deploy.deployFailed",{message:xhr.responseText}),"error");
+            } else {
+                RED.notify(RED._("deploy.deployFailed",{message:RED._("deploy.errors.noResponse")}),"error");
+            }
+        }).always(function() {
+            deployInflight = false;
+            var delta = Math.max(0,300-(Date.now()-startTime));
+            setTimeout(function() {
+                $(".deploy-button-content").css('opacity',1);
+                $(".deploy-button-spinner").hide();
+                $("#header-shade").hide();
+                $("#editor-shade").hide();
+                $("#palette-shade").hide();
+                $("#sidebar-shade").hide();
+            },delta);
+        });
+    }
     function save(skipValidation,force) {
         if (!$("#btn-deploy").hasClass("disabled")) {
             if (!RED.user.hasPermission("flows.write")) {
@@ -7423,7 +9976,7 @@ RED.deploy = (function() {
 
                 var unusedConfigNodes = [];
                 RED.nodes.eachConfig(function(node) {
-                    if (node.users.length === 0 && (node._def.hasUsers !== false)) {
+                    if ((node._def.hasUsers !== false) && (node.users.length === 0)) {
                         unusedConfigNodes.push(getNodeInfo(node));
                         hasUnusedConfig = true;
                     }
@@ -7436,7 +9989,7 @@ RED.deploy = (function() {
                 if (hasUnknown && !ignoreDeployWarnings.unknown) {
                     showWarning = true;
                     notificationMessage = "<p>"+RED._('deploy.confirm.unknown')+"</p>"+
-                        '<ul class="node-dialog-configm-deploy-list"><li>'+cropList(unknownNodes).join("</li><li>")+"</li></ul><p>"+
+                        '<ul class="node-dialog-configm-deploy-list"><li>'+cropList(unknownNodes).map(function(n) { return sanitize(n) }).join("</li><li>")+"</li></ul><p>"+
                         RED._('deploy.confirm.confirm')+
                         "</p>";
 
@@ -7456,7 +10009,7 @@ RED.deploy = (function() {
                     invalidNodes.sort(sortNodeInfo);
 
                     notificationMessage = "<p>"+RED._('deploy.confirm.improperlyConfigured')+"</p>"+
-                        '<ul class="node-dialog-configm-deploy-list"><li>'+cropList(invalidNodes.map(function(A) { return (A.tab?"["+A.tab+"] ":"")+A.label+" ("+A.type+")"})).join("</li><li>")+"</li></ul><p>"+
+                        '<ul class="node-dialog-configm-deploy-list"><li>'+cropList(invalidNodes.map(function(A) { return sanitize( (A.tab?"["+A.tab+"] ":"")+A.label+" ("+A.type+")")})).join("</li><li>")+"</li></ul><p>"+
                         RED._('deploy.confirm.confirm')+
                         "</p>";
                     notificationButtons= [
@@ -8081,7 +10634,7 @@ RED.deploy = (function() {
     }
     function createNodeIcon(node,def) {
         var nodeDiv = $("<div>",{class:"node-diff-node-entry-node"});
-        var colour = def.color;
+        var colour = RED.utils.getNodeColor(node.type,def);
         var icon_url = RED.utils.getNodeIcon(def,node);
         if (node.type === 'tab') {
             colour = "#C0DEED";
@@ -8089,7 +10642,7 @@ RED.deploy = (function() {
         nodeDiv.css('backgroundColor',colour);
 
         var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
-        $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
+        RED.utils.createIconElement(icon_url, iconContainer, false);
 
         return nodeDiv;
     }
@@ -8278,7 +10831,6 @@ RED.deploy = (function() {
                 diff: remoteDiff
             }
         }
-        createNodePropertiesTable(def,node,localNode,remoteNode).appendTo(div);
 
         var selectState = "";
 
@@ -8298,6 +10850,10 @@ RED.deploy = (function() {
         createNodeConflictRadioBoxes(node,div,localNodeDiv,remoteNodeDiv,false,!conflicted,selectState,CurrentDiff);
         row.click(function(evt) {
             $(this).parent().toggleClass('collapsed');
+
+            if($(this).siblings('.node-diff-node-entry-properties').length === 0) {
+                createNodePropertiesTable(def,node,localNode,remoteNode).appendTo(div);
+            }
         });
 
         return div;
@@ -8472,7 +11028,6 @@ RED.deploy = (function() {
                 }
             }
         }
-
         var properties = Object.keys(node).filter(function(p) { return p!='inputLabels'&&p!='outputLabels'&&p!='z'&&p!='wires'&&p!=='x'&&p!=='y'&&p!=='id'&&p!=='type'&&(!def.defaults||!def.defaults.hasOwnProperty(p))});
         if (def.defaults) {
             properties = properties.concat(Object.keys(def.defaults));
@@ -8480,6 +11035,13 @@ RED.deploy = (function() {
         if (node.type !== 'tab') {
             properties = properties.concat(['inputLabels','outputLabels']);
         }
+        if ( ((localNode && localNode.hasOwnProperty('icon')) || (remoteNode && remoteNode.hasOwnProperty('icon'))) &&
+            properties.indexOf('icon') === -1
+        ) {
+            properties.unshift('icon');
+        }
+
+
         properties.forEach(function(d) {
             localChanged = false;
             remoteChanged = false;
@@ -8740,19 +11302,19 @@ RED.deploy = (function() {
             }
         });
 
-        return {
+        var diff = {
             currentConfig: currentConfig,
             newConfig: newConfig,
             added: added,
             deleted: deleted,
             changed: changed,
             moved: moved
-        }
+        };
+        return diff;
     }
     function resolveDiffs(localDiff,remoteDiff) {
         var conflicted = {};
         var resolutions = {};
-
         var diff = {
             localDiff: localDiff,
             remoteDiff: remoteDiff,
@@ -8824,7 +11386,7 @@ RED.deploy = (function() {
         // currentDiff = diff;
 
         var trayOptions = {
-            title: options.title||"Review Changes", //TODO: nls
+            title: options.title||RED._("diff.reviewChanges"),
             width: Infinity,
             overlay: true,
             buttons: [
@@ -8930,7 +11492,7 @@ RED.deploy = (function() {
                         if (node) {
                             nodeChangedStates[id] = node.changed;
                         }
-                        localChangedStates[id] = true;
+                        localChangedStates[id] = 1;
                         newConfig.push(remoteDiff.newConfig.all[id]);
                     }
                 } else {
@@ -8945,7 +11507,7 @@ RED.deploy = (function() {
                     nodeChangedStates[id] = node.changed;
                 }
                 if (!localDiff.added.hasOwnProperty(id)) {
-                    localChangedStates[id] = true;
+                    localChangedStates[id] = 2;
                     newConfig.push(remoteDiff.newConfig.all[id]);
                 }
             }
@@ -8958,24 +11520,42 @@ RED.deploy = (function() {
     }
 
     function mergeDiff(diff) {
+        //console.log(diff);
         var appliedDiff = applyDiff(diff);
 
         var newConfig = appliedDiff.config;
         var nodeChangedStates = appliedDiff.nodeChangedStates;
         var localChangedStates = appliedDiff.localChangedStates;
 
+        var isDirty = RED.nodes.dirty();
+
         var historyEvent = {
             t:"replace",
             config: RED.nodes.createCompleteNodeSet(),
             changed: nodeChangedStates,
-            dirty: RED.nodes.dirty(),
+            dirty: isDirty,
             rev: RED.nodes.version()
         }
 
         RED.history.push(historyEvent);
 
+        var originalFlow = RED.nodes.originalFlow();
+        // originalFlow is what the editor things it loaded
+        //  - add any newly added nodes from remote diff as they are now part of the record
+        for (var id in diff.remoteDiff.added) {
+            if (diff.remoteDiff.added.hasOwnProperty(id)) {
+                if (diff.remoteDiff.newConfig.all.hasOwnProperty(id)) {
+                    originalFlow.push(JSON.parse(JSON.stringify(diff.remoteDiff.newConfig.all[id])));
+                }
+            }
+        }
+
         RED.nodes.clear();
         var imported = RED.nodes.import(newConfig);
+
+        // Restore the original flow so subsequent merge resolutions can properly
+        // identify new-vs-old
+        RED.nodes.originalFlow(originalFlow);
         imported[0].forEach(function(n) {
             if (nodeChangedStates[n.id] || localChangedStates[n.id]) {
                 n.changed = true;
@@ -8984,11 +11564,16 @@ RED.deploy = (function() {
 
         RED.nodes.version(diff.remoteDiff.rev);
 
+        if (isDirty) {
+            RED.nodes.dirty(true);
+        }
+
         RED.view.redraw(true);
         RED.palette.refresh();
         RED.workspaces.refresh();
         RED.sidebar.config.refresh();
     }
+
     function showTestFlowDiff(index) {
         if (index === 1) {
             var localFlow = RED.nodes.createCompleteNodeSet();
@@ -9007,7 +11592,7 @@ RED.deploy = (function() {
 
     function showTextDiff(textA,textB) {
         var trayOptions = {
-            title: "Compare Changes", //TODO: nls
+            title: RED._("diff.compareChanges"),
             width: Infinity,
             overlay: true,
             buttons: [
@@ -9338,7 +11923,7 @@ RED.deploy = (function() {
                         try {
                             commonFlow = JSON.parse(commonVersion.content||"[]");
                         } catch(err) {
-                            console.log("Common Version doesn't contain valid JSON:",commonVersionUrl);
+                            console.log(RED._("diff.commonVersionError"),commonVersionUrl);
                             console.log(err);
                             return;
                         }
@@ -9346,7 +11931,7 @@ RED.deploy = (function() {
                     try {
                         oldFlow = JSON.parse(oldVersion.content||"[]");
                     } catch(err) {
-                        console.log("Old Version doesn't contain valid JSON:",oldVersionUrl);
+                        console.log(RED._("diff.oldVersionError"),oldVersionUrl);
                         console.log(err);
                         return;
                     }
@@ -9356,7 +11941,7 @@ RED.deploy = (function() {
                     try {
                         newFlow = JSON.parse(newVersion.content||"[]");
                     } catch(err) {
-                        console.log("New Version doesn't contain valid JSON:",newFlow);
+                        console.log(RED._("diff.newVersionError"),newFlow);
                         console.log(err);
                         return;
                     }
@@ -9388,11 +11973,11 @@ RED.deploy = (function() {
             if (isBinary) {
                 var diffBinaryRow = $('<tr class="node-text-diff-header">').appendTo(codeBody);
                 var binaryContent = $('<td colspan="3"></td>').appendTo(diffBinaryRow);
-                $('<span></span>').text("Cannot show binary file contents").appendTo(binaryContent);
+                $('<span></span>').text(RED._("diff.noBinaryFileShowed")).appendTo(binaryContent);
 
             } else {
                 if (commitOptions.unmerged) {
-                    conflictHeader = $('<span style="float: right;"><span>'+resolvedConflicts+'</span> of <span>'+unresolvedConflicts+'</span> conflicts resolved</span>').appendTo(content);
+                    conflictHeader = $('<span style="float: right;">'+RED._("diff.conflictHeader",{resolved:resolvedConflicts, unresolved:unresolvedConflicts})+'</span>').appendTo(content);
                 }
                 hunks.forEach(function(hunk) {
                     var diffRow = $('<tr class="node-text-diff-header">').appendTo(codeBody);
@@ -9505,7 +12090,7 @@ RED.deploy = (function() {
                                         diffRow.remove();
                                         addedRows.find(".linetext").addClass('added');
                                         conflictHeader.empty();
-                                        $('<span><span>'+resolvedConflicts+'</span> of <span>'+unresolvedConflicts+'</span> conflicts resolved</span>').appendTo(conflictHeader);
+                                        $('<span>'+RED._("diff.conflictHeader",{resolved:resolvedConflicts, unresolved:unresolvedConflicts})+'</span>').appendTo(conflictHeader);
 
                                         conflictResolutions[file.file] = conflictResolutions[file.file] || {};
                                         conflictResolutions[file.file][hunk.localChangeStart] = {
@@ -9537,7 +12122,7 @@ RED.deploy = (function() {
     function showCommitDiff(options) {
         var commit = parseCommitDiff(options.commit);
         var trayOptions = {
-            title: "View Commit Changes", //TODO: nls
+            title: RED._("diff.viewCommitDiff"),
             width: Infinity,
             overlay: true,
             buttons: [
@@ -9599,7 +12184,7 @@ RED.deploy = (function() {
         }
 
         var trayOptions = {
-            title: title||"Compare Changes", //TODO: nls
+            title: title|| RED._("diff.compareChanges"),
             width: Infinity,
             overlay: true,
             buttons: [
@@ -9632,7 +12217,7 @@ RED.deploy = (function() {
             trayOptions.buttons.push(
                 {
                     id: "node-diff-view-resolve-diff",
-                    text: "Save conflict resolution",
+                    text: RED._("diff.saveConflict"),
                     class: "primary disabled",
                     click: function() {
                         if (!$("#node-diff-view-resolve-diff").hasClass('disabled')) {
@@ -9803,7 +12388,7 @@ RED.keyboard = (function() {
 
     var handlers = {};
     var partialState;
-
+RED.h = handlers;
     var keyMap = {
         "left":37,
         "up":38,
@@ -9945,6 +12530,19 @@ RED.keyboard = (function() {
         return [keycode,modifiers];
     }
 
+    function matchHandlerToEvent(evt,handler) {
+        var target = evt.target;
+        var depth = 0;
+        while (target.nodeName !== 'BODY' && target.id !== handler.scope) {
+            target = target.parentElement;
+            depth++;
+        }
+        if (target.nodeName === 'BODY' && handler.scope !== "*") {
+            depth = -1;
+        }
+        return depth;
+    }
+
     function resolveKeyEvent(evt) {
         var slot = partialState||handlers;
         if (evt.ctrlKey || evt.metaKey) {
@@ -9959,7 +12557,7 @@ RED.keyboard = (function() {
         var keyCode = firefoxKeyCodeMap[evt.keyCode] || evt.keyCode;
         if (slot && slot[keyCode]) {
             var handler = slot[keyCode];
-            if (!handler.scope) {
+            if (!handler.handlers) {
                 if (partialState) {
                     partialState = null;
                     return resolveKeyEvent(evt);
@@ -9970,14 +12568,19 @@ RED.keyboard = (function() {
                 } else {
                     return null;
                 }
-            } else if (handler.scope && handler.scope !== "*") {
-                var target = evt.target;
-                while (target.nodeName !== 'BODY' && target.id !== handler.scope) {
-                    target = target.parentElement;
+            } else {
+                var depth = Infinity;
+                var matchedHandler;
+                var i = 0;
+                var l = handler.handlers.length;
+                for (i=0;i<l;i++) {
+                    var d = matchHandlerToEvent(evt,handler.handlers[i]);
+                    if (d > -1 && d < depth) {
+                        depth = d;
+                        matchedHandler = handler.handlers[i];
+                    }
                 }
-                if (target.nodeName === 'BODY') {
-                    handler = null;
-                }
+                handler = matchedHandler;
             }
             partialState = null;
             return handler;
@@ -10049,6 +12652,8 @@ RED.keyboard = (function() {
             slot = slot[key];
             //slot[key] = {scope: scope, ondown:cbdown};
         }
+        slot.handlers = slot.handlers || [];
+        slot.handlers.push({scope:scope,ondown:cbdown})
         slot.scope = scope;
         slot.ondown = cbdown;
     }
@@ -10099,11 +12704,13 @@ RED.keyboard = (function() {
         }
         delete slot.scope;
         delete slot.ondown;
+        // TODO: this wipes everything! Need to have something to identify handler
+        delete slot.handlers;
     }
 
     var cmdCtrlKey = '<span class="help-key">'+(isMac?'&#8984;':'Ctrl')+'</span>';
 
-    function formatKey(key) {
+    function formatKey(key,plain) {
         var formattedKey = isMac?key.replace(/ctrl-?/,"&#8984;"):key;
         formattedKey = isMac?formattedKey.replace(/alt-?/,"&#8997;"):key;
         formattedKey = formattedKey.replace(/shift-?/,"&#8679;")
@@ -10111,6 +12718,9 @@ RED.keyboard = (function() {
         formattedKey = formattedKey.replace(/up/,"&#x2191;")
         formattedKey = formattedKey.replace(/right/,"&#x2192;")
         formattedKey = formattedKey.replace(/down/,"&#x2193;")
+        if (plain) {
+            return formattedKey;
+        }
         return '<span class="help-key-block"><span class="help-key">'+formattedKey.split(" ").join('</span> <span class="help-key">')+'</span></span>';
     }
 
@@ -10335,7 +12945,9 @@ RED.keyboard = (function() {
     }
 
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -10357,9 +12969,9 @@ RED.workspaces = (function() {
     var activeWorkspace = 0;
     var workspaceIndex = 0;
 
-    function addWorkspace(ws,skipHistoryEntry) {
+    function addWorkspace(ws,skipHistoryEntry,targetIndex) {
         if (ws) {
-            workspace_tabs.addTab(ws);
+            workspace_tabs.addTab(ws,targetIndex);
             workspace_tabs.resize();
         } else {
             var tabId = RED.nodes.id();
@@ -10368,8 +12980,8 @@ RED.workspaces = (function() {
             } while ($("#workspace-tabs a[title='"+RED._('workspace.defaultName',{number:workspaceIndex})+"']").size() !== 0);
 
             ws = {type:"tab",id:tabId,disabled: false,info:"",label:RED._('workspace.defaultName',{number:workspaceIndex})};
-            RED.nodes.addWorkspace(ws);
-            workspace_tabs.addTab(ws);
+            RED.nodes.addWorkspace(ws,targetIndex);
+            workspace_tabs.addTab(ws,targetIndex);
             workspace_tabs.activateTab(tabId);
             if (!skipHistoryEntry) {
                 RED.history.push({t:'add',workspaces:[ws],dirty:RED.nodes.dirty()});
@@ -10383,6 +12995,8 @@ RED.workspaces = (function() {
         if (workspaceTabCount === 1) {
             return;
         }
+        var workspaceOrder = RED.nodes.getWorkspaceOrder();
+        ws._index = workspaceOrder.indexOf(ws.id);
         removeWorkspace(ws);
         var historyEvent = RED.nodes.removeWorkspace(ws.id);
         historyEvent.t = 'delete';
@@ -10393,7 +13007,7 @@ RED.workspaces = (function() {
         RED.sidebar.config.refresh();
     }
 
-    function showRenameWorkspaceDialog(id) {
+    function showEditWorkspaceDialog(id) {
         var workspace = RED.nodes.workspace(id);
         RED.view.state(RED.state.EDITING);
         var tabflowEditor;
@@ -10442,8 +13056,8 @@ RED.workspaces = (function() {
                             changed = true;
                             workspace.info = info;
                         }
-                        $("#red-ui-tab-"+(workspace.id.replace(".","-"))).toggleClass('workspace-disabled',workspace.disabled);
-                        // $("#workspace").toggleClass("workspace-disabled",workspace.disabled);
+                        $("#red-ui-tab-"+(workspace.id.replace(".","-"))).toggleClass('workspace-disabled',!!workspace.disabled);
+                        $("#workspace").toggleClass("workspace-disabled",!!workspace.disabled);
 
                         if (changed) {
                             var historyEvent = {
@@ -10460,6 +13074,14 @@ RED.workspaces = (function() {
                             if (!selection.nodes && !selection.links) {
                                 RED.sidebar.info.refresh(workspace);
                             }
+                            if (changes.hasOwnProperty('disabled')) {
+                                RED.nodes.eachNode(function(n) {
+                                    if (n.z === workspace.id) {
+                                        n.dirty = true;
+                                    }
+                                });
+                                RED.view.redraw();
+                            }
                         }
                         RED.tray.close();
                     }
@@ -10473,7 +13095,6 @@ RED.workspaces = (function() {
                     height -= $(rows[i]).outerHeight(true);
                 }
                 height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
-                height -= 28;
                 $(".node-text-editor").css("height",height+"px");
                 tabflowEditor.resize();
             },
@@ -10487,13 +13108,13 @@ RED.workspaces = (function() {
 
                 $('<div class="form-row">'+
                     '<label for="node-input-disabled-btn" data-i18n="editor:workspace.status"></label>'+
-                    '<button id="node-input-disabled-btn" class="editor-button"><i class="fa fa-toggle-on"></i> <span id="node-input-disabled-label"></span></button> '+
+                    '<button type="button" id="node-input-disabled-btn" class="editor-button"><i class="fa fa-toggle-on"></i> <span id="node-input-disabled-label"></span></button> '+
                     '<input type="checkbox" id="node-input-disabled" style="display: none;"/>'+
                 '</div>').appendTo(dialogForm);
 
-                $('<div class="form-row node-text-editor-row">'+
+                var row = $('<div class="form-row node-text-editor-row">'+
                     '<label for="node-input-info" data-i18n="editor:workspace.info" style="width:300px;"></label>'+
-                    '<div style="height:250px;" class="node-text-editor" id="node-input-info"></div>'+
+                    '<div style="min-height:250px;" class="node-text-editor" id="node-input-info"></div>'+
                 '</div>').appendTo(dialogForm);
                 tabflowEditor = RED.editor.createEditor({
                     id: 'node-input-info',
@@ -10501,7 +13122,22 @@ RED.workspaces = (function() {
                     value: ""
                 });
 
-                $('<div class="form-tips" data-i18n="editor:workspace.tip"></div>').appendTo(dialogForm);
+                $('#node-info-input-info-expand').click(function(e) {
+                    e.preventDefault();
+                    var value = tabflowEditor.getValue();
+                    RED.editor.editMarkdown({
+                        value: value,
+                        width: "Infinity",
+                        cursor: tabflowEditor.getCursorPosition(),
+                        complete: function(v,cursor) {
+                            tabflowEditor.setValue(v, -1);
+                            tabflowEditor.gotoLine(cursor.row+1,cursor.column,false);
+                            setTimeout(function() {
+                                tabflowEditor.focus();
+                            },300);
+                        }
+                    })
+                });
 
                 dialogForm.find('#node-input-disabled-btn').on("click",function(e) {
                     var i = $(this).find("i");
@@ -10562,9 +13198,9 @@ RED.workspaces = (function() {
                 }
                 activeWorkspace = tab.id;
                 event.workspace = activeWorkspace;
-                // $("#workspace").toggleClass("workspace-disabled",tab.disabled);
                 RED.events.emit("workspace:change",event);
                 window.location.hash = 'flow/'+tab.id;
+                $("#workspace").toggleClass("workspace-disabled",!!tab.disabled);
                 RED.sidebar.config.refresh();
                 RED.view.focus();
             },
@@ -10573,7 +13209,7 @@ RED.workspaces = (function() {
             },
             ondblclick: function(tab) {
                 if (tab.type != "subflow") {
-                    showRenameWorkspaceDialog(tab.id);
+                    showEditWorkspaceDialog(tab.id);
                 } else {
                     RED.editor.editSubflow(RED.nodes.subflow(tab.id));
                 }
@@ -10605,11 +13241,27 @@ RED.workspaces = (function() {
                 RED.nodes.dirty(true);
                 setWorkspaceOrder(newOrder);
             },
+            onselect: function(selectedTabs) {
+                RED.view.select(false)
+                if (selectedTabs.length === 0) {
+                    $("#chart svg").css({"pointer-events":"auto",filter:"none"})
+                    $("#workspace-toolbar").css({"pointer-events":"auto",filter:"none"})
+                    $("#palette-container").css({"pointer-events":"auto",filter:"none"})
+                    $(".sidebar-shade").hide();
+                } else {
+                    RED.view.select(false)
+                    $("#chart svg").css({"pointer-events":"none",filter:"opacity(60%)"})
+                    $("#workspace-toolbar").css({"pointer-events":"none",filter:"opacity(60%)"})
+                    $("#palette-container").css({"pointer-events":"none",filter:"opacity(60%)"})
+                    $(".sidebar-shade").show();
+                }
+            },
             minimumActiveTabWidth: 150,
             scrollable: true,
-            addButton: function() {
-                addWorkspace();
-            }
+            addButton: "core:add-flow",
+            addButtonCaption: RED._("workspace.addFlow"),
+            searchButton: "core:list-flows",
+            searchButtonCaption: RED._("workspace.listFlows")
         });
         workspaceTabCount = 0;
     }
@@ -10639,15 +13291,19 @@ RED.workspaces = (function() {
             workspace_tabs.resize();
         });
 
-        RED.actions.add("core:add-flow",addWorkspace);
+        RED.actions.add("core:add-flow",function(opts) { addWorkspace(undefined,undefined,opts?opts.index:undefined)});
         RED.actions.add("core:edit-flow",editWorkspace);
         RED.actions.add("core:remove-flow",removeWorkspace);
+
+        RED.actions.add("core:list-flows",function() {
+            RED.actions.invoke("core:search","type:tab ");
+        })
 
         hideWorkspace();
     }
 
     function editWorkspace(id) {
-        showRenameWorkspaceDialog(id||activeWorkspace);
+        showEditWorkspaceDialog(id||activeWorkspace);
     }
 
     function removeWorkspace(ws) {
@@ -10657,9 +13313,9 @@ RED.workspaces = (function() {
             if (workspace_tabs.contains(ws.id)) {
                 workspace_tabs.removeTab(ws.id);
             }
-        }
-        if (ws.id === activeWorkspace) {
-            activeWorkspace = 0;
+            if (ws.id === activeWorkspace) {
+                activeWorkspace = 0;
+            }
         }
     }
 
@@ -10684,6 +13340,9 @@ RED.workspaces = (function() {
         },
         active: function() {
             return activeWorkspace
+        },
+        selection: function() {
+            return workspace_tabs.selection();
         },
         show: function(id) {
             if (!workspace_tabs.contains(id)) {
@@ -10759,6 +13418,7 @@ RED.view = (function() {
     var activeNodes = [];
     var activeLinks = [];
     var activeFlowLinks = [];
+    var activeLinkNodes = {};
 
     var selected_link = null,
         mousedown_link = null,
@@ -10771,11 +13431,16 @@ RED.view = (function() {
         mouse_mode = 0,
         moving_set = [],
         lasso = null,
+        ghostNode = null,
         showStatus = false,
         lastClickNode = null,
         dblClickPrimed = null,
         clickTime = 0,
-        clickElapsed = 0;
+        clickElapsed = 0,
+        scroll_position = [],
+        quickAddActive = false,
+        quickAddLink = null,
+        showAllLinkPorts = -1;
 
     var clipboard = "";
 
@@ -10789,6 +13454,8 @@ RED.view = (function() {
 
     var PORT_TYPE_INPUT = 1;
     var PORT_TYPE_OUTPUT = 0;
+
+    var chart = $("#chart");
 
     var outer = d3.select("#chart")
         .append("svg:svg")
@@ -10811,6 +13478,16 @@ RED.view = (function() {
         .on("mousemove", canvasMouseMove)
         .on("mousedown", canvasMouseDown)
         .on("mouseup", canvasMouseUp)
+        .on("mouseenter", function() {
+            if (lasso) {
+                if (d3.event.buttons !== 1) {
+                    lasso.remove();
+                    lasso = null;
+                }
+            } else if (mouse_mode === RED.state.PANNING && d3.event.buttons !== 4) {
+                resetMouseVars();
+            }
+        })
         .on("touchend", function() {
             clearTimeout(touchStartTime);
             touchStartTime = null;
@@ -10965,19 +13642,41 @@ RED.view = (function() {
                     "stroke-width" : "1px"
                 });
     }
-
+    var linkLayer = vis.append("g");
     var dragGroup = vis.append("g");
+    var nodeLayer = vis.append("g");
     var drag_lines = [];
 
     function showDragLines(nodes) {
+        showAllLinkPorts = -1;
         for (var i=0;i<nodes.length;i++) {
             var node = nodes[i];
             node.el = dragGroup.append("svg:path").attr("class", "drag_line");
+            if ((node.node.type === "link-out" && node.portType === PORT_TYPE_OUTPUT) ||
+                (node.node.type === "link-in" && node.portType === PORT_TYPE_INPUT)) {
+                node.el.attr("class","link_link drag_line");
+                node.virtualLink = true;
+                showAllLinkPorts = (node.portType === PORT_TYPE_OUTPUT)?PORT_TYPE_INPUT:PORT_TYPE_OUTPUT;
+            }
             drag_lines.push(node);
         }
-
+        if (showAllLinkPorts !== -1) {
+            activeNodes.forEach(function(n) {
+                if (n.type === "link-in" || n.type === "link-out") {
+                    n.dirty = true;
+                }
+            })
+        }
     }
     function hideDragLines() {
+        if (showAllLinkPorts !== -1) {
+            activeNodes.forEach(function(n) {
+                if (n.type === "link-in" || n.type === "link-out") {
+                    n.dirty = true;
+                }
+            })
+        }
+        showAllLinkPorts = -1;
         while(drag_lines.length) {
             var line = drag_lines.pop();
             if (line.el) {
@@ -11000,7 +13699,6 @@ RED.view = (function() {
     function init() {
 
         RED.events.on("workspace:change",function(event) {
-            var chart = $("#chart");
             if (event.old !== 0) {
                 workspaceScrollPositions[event.old] = {
                     left:chart.scrollLeft(),
@@ -11028,7 +13726,9 @@ RED.view = (function() {
                 mouse_position[0] += scrollDeltaLeft;
                 mouse_position[1] += scrollDeltaTop;
             }
-            clearSelection();
+            if (RED.workspaces.selection().length === 0) {
+                clearSelection();
+            }
             RED.nodes.eachNode(function(n) {
                 n.dirty = true;
             });
@@ -11037,9 +13737,14 @@ RED.view = (function() {
             redraw();
         });
 
+        RED.view.navigator.init();
+
         $("#btn-zoom-out").click(function() {zoomOut();});
+        RED.popover.tooltip($("#btn-zoom-out"),RED._('actions.zoom-out'),'core:zoom-out');
         $("#btn-zoom-zero").click(function() {zoomZero();});
+        RED.popover.tooltip($("#btn-zoom-zero"),RED._('actions.zoom-reset'),'core:zoom-reset');
         $("#btn-zoom-in").click(function() {zoomIn();});
+        RED.popover.tooltip($("#btn-zoom-in"),RED._('actions.zoom-in'),'core:zoom-in');
         $("#chart").on("DOMMouseScroll mousewheel", function (evt) {
             if ( evt.altKey ) {
                 evt.preventDefault();
@@ -11062,6 +13767,11 @@ RED.view = (function() {
                 }
                 var historyEvent = result.historyEvent;
                 var nn = result.node;
+
+                var showLabel = RED.utils.getMessageProperty(RED.settings.get('editor'),"view.view-node-show-label");
+                if (showLabel !== undefined && !/^link (in|out)$/.test(nn._def.type) && !nn._def.defaults.hasOwnProperty("l")) {
+                    nn.l = showLabel;
+                }
 
                 var helperOffset = d3.touches(ui.helper.get(0))[0]||d3.mouse(ui.helper.get(0));
                 var mousePos = d3.touches(this)[0]||d3.mouse(this);
@@ -11157,14 +13867,83 @@ RED.view = (function() {
             }
         });
 
-        RED.actions.add("core:move-selection-up", function() { moveSelection(0,-1);});
-        RED.actions.add("core:step-selection-up", function() { moveSelection(0,-20);});
-        RED.actions.add("core:move-selection-right", function() { moveSelection(1,0);});
-        RED.actions.add("core:step-selection-right", function() { moveSelection(20,0);});
-        RED.actions.add("core:move-selection-down", function() { moveSelection(0,1);});
-        RED.actions.add("core:step-selection-down", function() { moveSelection(0,20);});
-        RED.actions.add("core:move-selection-left", function() { moveSelection(-1,0);});
-        RED.actions.add("core:step-selection-left", function() { moveSelection(-20,0);});
+        RED.view.tools.init();
+    }
+
+    function generateLinkPath(origX,origY, destX, destY, sc) {
+        var dy = destY-origY;
+        var dx = destX-origX;
+        var delta = Math.sqrt(dy*dy+dx*dx);
+        var scale = lineCurveScale;
+        var scaleY = 0;
+        if (dx*sc > 0) {
+            if (delta < node_width) {
+                scale = 0.75-0.75*((node_width-delta)/node_width);
+                // scale += 2*(Math.min(5*node_width,Math.abs(dx))/(5*node_width));
+                // if (Math.abs(dy) < 3*node_height) {
+                //     scaleY = ((dy>0)?0.5:-0.5)*(((3*node_height)-Math.abs(dy))/(3*node_height))*(Math.min(node_width,Math.abs(dx))/(node_width)) ;
+                // }
+            }
+        } else {
+            scale = 0.4-0.2*(Math.max(0,(node_width-Math.min(Math.abs(dx),Math.abs(dy)))/node_width));
+        }
+        if (dx*sc > 0) {
+            return "M "+origX+" "+origY+
+                " C "+(origX+sc*(node_width*scale))+" "+(origY+scaleY*node_height)+" "+
+                (destX-sc*(scale)*node_width)+" "+(destY-scaleY*node_height)+" "+
+                destX+" "+destY
+        } else {
+
+            var midX = Math.floor(destX-dx/2);
+            var midY = Math.floor(destY-dy/2);
+            //
+            if (dy === 0) {
+                midY = destY + node_height;
+            }
+            var cp_height = node_height/2;
+            var y1 = (destY + midY)/2
+            var topX =origX + sc*node_width*scale;
+            var topY = dy>0?Math.min(y1 - dy/2 , origY+cp_height):Math.max(y1 - dy/2 , origY-cp_height);
+            var bottomX = destX - sc*node_width*scale;
+            var bottomY = dy>0?Math.max(y1, destY-cp_height):Math.min(y1, destY+cp_height);
+            var x1 = (origX+topX)/2;
+            var scy = dy>0?1:-1;
+            var cp = [
+                // Orig -> Top
+                [x1,origY],
+                [topX,dy>0?Math.max(origY, topY-cp_height):Math.min(origY, topY+cp_height)],
+                // Top -> Mid
+                // [Mirror previous cp]
+                [x1,dy>0?Math.min(midY, topY+cp_height):Math.max(midY, topY-cp_height)],
+                // Mid -> Bottom
+                // [Mirror previous cp]
+                [bottomX,dy>0?Math.max(midY, bottomY-cp_height):Math.min(midY, bottomY+cp_height)],
+                // Bottom -> Dest
+                // [Mirror previous cp]
+                [(destX+bottomX)/2,destY]
+            ];
+            if (cp[2][1] === topY+scy*cp_height) {
+                if (Math.abs(dy) < cp_height*10) {
+                    cp[1][1] = topY-scy*cp_height/2;
+                    cp[3][1] = bottomY-scy*cp_height/2;
+                }
+                cp[2][0] = topX;
+            }
+            return "M "+origX+" "+origY+
+                " C "+
+                   cp[0][0]+" "+cp[0][1]+" "+
+                   cp[1][0]+" "+cp[1][1]+" "+
+                   topX+" "+topY+
+                " S "+
+                   cp[2][0]+" "+cp[2][1]+" "+
+                   midX+" "+midY+
+               " S "+
+                  cp[3][0]+" "+cp[3][1]+" "+
+                  bottomX+" "+bottomY+
+                " S "+
+                    cp[4][0]+" "+cp[4][1]+" "+
+                    destX+" "+destY
+        }
     }
 
 
@@ -11246,6 +14025,13 @@ RED.view = (function() {
     function canvasMouseDown() {
         var point;
 
+        if (d3.event.button === 1) {
+            // Middle Click pan
+            mouse_mode = RED.state.PANNING;
+            mouse_position = [d3.event.pageX,d3.event.pageY]
+            scroll_position = [chart.scrollLeft(),chart.scrollTop()];
+            return;
+        }
         if (!mousedown_node && !mousedown_link) {
             selected_link = null;
             updateSelection();
@@ -11259,6 +14045,16 @@ RED.view = (function() {
         if (mouse_mode === 0 || mouse_mode === RED.state.QUICK_JOINING) {
             if (d3.event.metaKey || d3.event.ctrlKey) {
                 point = d3.mouse(this);
+                var ox = point[0];
+                var oy = point[1];
+
+                if (RED.settings.get("editor").view['view-snap-grid']) {
+                    // vis.append("circle").attr("cx",point[0]).attr("cy",point[1]).attr("r","2").attr('fill','red')
+                    point[0] = Math.round(point[0] / gridSize) * gridSize;
+                    point[1] = Math.round(point[1] / gridSize) * gridSize;
+                    // vis.append("circle").attr("cx",point[0]).attr("cy",point[1]).attr("r","2").attr('fill','blue')
+                }
+
                 d3.event.stopPropagation();
                 var mainPos = $("#main-container").position();
 
@@ -11266,63 +14062,204 @@ RED.view = (function() {
                     mouse_mode = RED.state.QUICK_JOINING;
                     $(window).on('keyup',disableQuickJoinEventHandler);
                 }
+                quickAddActive = true;
+
+                if (ghostNode) {
+                    ghostNode.remove();
+                }
+                ghostNode = vis.append("g").attr('transform','translate('+(point[0] - node_width/2)+','+(point[1] - node_height/2)+')');
+                ghostNode.append("rect")
+                    .attr("class","node_placeholder")
+                    .attr("rx", 5)
+                    .attr("ry", 5)
+                    .attr("width",node_width)
+                    .attr("height",node_height)
+                    .attr("fill","none")
+                // var ghostLink = ghostNode.append("svg:path")
+                //     .attr("class","link_link")
+                //     .attr("d","M 0 "+(node_height/2)+" H "+(gridSize * -2))
+                //     .attr("opacity",0);
+
+                var filter = undefined;
+                if (drag_lines.length > 0) {
+                    if (drag_lines[0].virtualLink) {
+                        filter = {type:drag_lines[0].node.type === 'link-in'?'link-out':'link-in'}
+                    } else if (drag_lines[0].portType === PORT_TYPE_OUTPUT) {
+                        filter = {input:true}
+                    } else {
+                        filter = {output:true}
+                    }
+
+                    quickAddLink = {
+                        node: drag_lines[0].node,
+                        port: drag_lines[0].port,
+                        portType: drag_lines[0].portType,
+                    }
+                    if (drag_lines[0].virtualLink) {
+                        quickAddLink.virtualLink = true;
+                    }
+                    hideDragLines();
+                }
+                var rebuildQuickAddLink = function() {
+                    if (!quickAddLink) {
+                        return;
+                    }
+                    if (!quickAddLink.el) {
+                        quickAddLink.el = dragGroup.append("svg:path").attr("class", "drag_line");
+                    }
+                    var numOutputs = (quickAddLink.portType === PORT_TYPE_OUTPUT)?(quickAddLink.node.outputs || 1):1;
+                    var sourcePort = quickAddLink.port;
+                    var portY = -((numOutputs-1)/2)*13 +13*sourcePort;
+                    var sc = (quickAddLink.portType === PORT_TYPE_OUTPUT)?1:-1;
+                    quickAddLink.el.attr("d",generateLinkPath(quickAddLink.node.x+sc*quickAddLink.node.w/2,quickAddLink.node.y+portY,point[0]-sc*node_width/2,point[1],sc));
+                }
+                if (quickAddLink) {
+                    rebuildQuickAddLink();
+                }
+
+
+                var lastAddedX;
+                var lastAddedWidth;
 
                 RED.typeSearch.show({
-                    x:d3.event.clientX-mainPos.left-node_width/2,
-                    y:d3.event.clientY-mainPos.top-node_height/2,
+                    x:d3.event.clientX-mainPos.left-node_width/2 - (ox-point[0]),
+                    y:d3.event.clientY-mainPos.top+ node_height/2 + 5 - (oy-point[1]),
+                    filter: filter,
                     cancel: function() {
+                        if (quickAddLink) {
+                            if (quickAddLink.el) {
+                                quickAddLink.el.remove();
+                            }
+                            quickAddLink = null;
+                        }
+                        quickAddActive = false;
+                        if (ghostNode) {
+                            ghostNode.remove();
+                        }
                         resetMouseVars();
+                        updateSelection();
+                        hideDragLines();
+                        redraw();
                     },
-                    add: function(type) {
+                    add: function(type,keepAdding) {
                         var result = addNode(type);
                         if (!result) {
                             return;
                         }
+                        if (keepAdding) {
+                            mouse_mode = RED.state.QUICK_JOINING;
+                        }
+
                         var nn = result.node;
                         var historyEvent = result.historyEvent;
                         nn.x = point[0];
                         nn.y = point[1];
-                        if (mouse_mode === RED.state.QUICK_JOINING) {
-                            if (drag_lines.length > 0) {
-                                var drag_line = drag_lines[0];
-                                var src = null,dst,src_port;
+                        var showLabel = RED.utils.getMessageProperty(RED.settings.get('editor'),"view.view-node-show-label");
+                        if (showLabel !== undefined && !/^link (in|out)$/.test(nn._def.type) && !nn._def.defaults.hasOwnProperty("l")) {
+                            nn.l = showLabel;
+                        }
+                        if (quickAddLink) {
+                            var drag_line = quickAddLink;
+                            var src = null,dst,src_port;
+                            if (drag_line.portType === PORT_TYPE_OUTPUT && (nn.inputs > 0 || drag_line.virtualLink) ) {
+                                src = drag_line.node;
+                                src_port = drag_line.port;
+                                dst = nn;
+                            } else if (drag_line.portType === PORT_TYPE_INPUT && (nn.outputs > 0 || drag_line.virtualLink)) {
+                                src = nn;
+                                dst = drag_line.node;
+                                src_port = 0;
+                            }
 
-                                if (drag_line.portType === PORT_TYPE_OUTPUT && nn.inputs > 0) {
-                                    src = drag_line.node;
-                                    src_port = drag_line.port;
-                                    dst = nn;
-                                } else if (drag_line.portType === PORT_TYPE_INPUT && nn.outputs > 0) {
-                                    src = nn;
-                                    dst = drag_line.node;
-                                    src_port = 0;
-                                }
-                                if (src !== null) {
+                            if (src !== null) {
+                                // Joining link nodes via virual wires. Need to update
+                                // the src and dst links property
+                                if (drag_line.virtualLink) {
+                                    historyEvent = {
+                                        t:'multi',
+                                        events: [historyEvent]
+                                    }
+                                    var oldSrcLinks = $.extend(true,{},{v:src.links}).v
+                                    var oldDstLinks = $.extend(true,{},{v:dst.links}).v
+                                    src.links.push(dst.id);
+                                    dst.links.push(src.id);
+                                    src.dirty = true;
+                                    dst.dirty = true;
+
+                                    historyEvent.events.push({
+                                        t:'edit',
+                                        node: src,
+                                        dirty: RED.nodes.dirty(),
+                                        changed: src.changed,
+                                        changes: {
+                                            links:oldSrcLinks
+                                        }
+                                    });
+                                    historyEvent.events.push({
+                                        t:'edit',
+                                        node: dst,
+                                        dirty: RED.nodes.dirty(),
+                                        changed: dst.changed,
+                                        changes: {
+                                            links:oldDstLinks
+                                        }
+                                    });
+                                    src.changed = true;
+                                    dst.changed = true;
+                                } else {
                                     var link = {source: src, sourcePort:src_port, target: dst};
                                     RED.nodes.addLink(link);
                                     historyEvent.links = [link];
-                                    hideDragLines();
-                                    if (drag_line.portType === PORT_TYPE_OUTPUT && nn.outputs > 0) {
+                                }
+                                if (!keepAdding) {
+                                    quickAddLink.el.remove();
+                                    quickAddLink = null;
+                                    if (mouse_mode === RED.state.QUICK_JOINING) {
+                                        if (drag_line.portType === PORT_TYPE_OUTPUT && nn.outputs > 0) {
+                                            showDragLines([{node:nn,port:0,portType:PORT_TYPE_OUTPUT}]);
+                                        } else if (!quickAddLink && drag_line.portType === PORT_TYPE_INPUT && nn.inputs > 0) {
+                                            showDragLines([{node:nn,port:0,portType:PORT_TYPE_INPUT}]);
+                                        } else {
+                                            resetMouseVars();
+                                        }
+                                    }
+                                } else {
+                                    quickAddLink.node = nn;
+                                    quickAddLink.port = 0;
+                                }
+                            } else {
+                                hideDragLines();
+                                resetMouseVars();
+                            }
+                        } else {
+                            if (!keepAdding) {
+                                if (mouse_mode === RED.state.QUICK_JOINING) {
+                                    if (nn.outputs > 0) {
                                         showDragLines([{node:nn,port:0,portType:PORT_TYPE_OUTPUT}]);
-                                    } else if (drag_line.portType === PORT_TYPE_INPUT && nn.inputs > 0) {
+                                    } else if (nn.inputs > 0) {
                                         showDragLines([{node:nn,port:0,portType:PORT_TYPE_INPUT}]);
                                     } else {
                                         resetMouseVars();
                                     }
-                                } else {
-                                    hideDragLines();
-                                    resetMouseVars();
                                 }
                             } else {
                                 if (nn.outputs > 0) {
-                                    showDragLines([{node:nn,port:0,portType:PORT_TYPE_OUTPUT}]);
+                                    quickAddLink = {
+                                        node: nn,
+                                        port: 0,
+                                        portType: PORT_TYPE_OUTPUT
+                                    }
                                 } else if (nn.inputs > 0) {
-                                    showDragLines([{node:nn,port:0,portType:PORT_TYPE_INPUT}]);
+                                    quickAddLink = {
+                                        node: nn,
+                                        port: 0,
+                                        portType: PORT_TYPE_INPUT
+                                    }
                                 } else {
                                     resetMouseVars();
                                 }
                             }
                         }
-
 
                         RED.history.push(historyEvent);
                         RED.nodes.add(nn);
@@ -11335,6 +14272,37 @@ RED.view = (function() {
                         updateActiveNodes();
                         updateSelection();
                         redraw();
+                        // At this point the newly added node will have a real width,
+                        // so check if the position needs nudging
+                        if (lastAddedX !== undefined) {
+                            var lastNodeRHEdge = lastAddedX + lastAddedWidth/2;
+                            var thisNodeLHEdge = nn.x - nn.w/2;
+                            var gap = thisNodeLHEdge - lastNodeRHEdge;
+                            if (gap != gridSize *2) {
+                                nn.x = nn.x + gridSize * 2 - gap;
+                                nn.dirty = true;
+                                nn.x = Math.ceil(nn.x / gridSize) * gridSize;
+                                redraw();
+                            }
+                        }
+                        if (keepAdding) {
+                            if (lastAddedX === undefined) {
+                                // ghostLink.attr("opacity",1);
+                                setTimeout(function() {
+                                    RED.typeSearch.refresh({filter:{input:true}});
+                                },100);
+                            }
+
+                            lastAddedX = nn.x;
+                            lastAddedWidth = nn.w;
+
+                            point[0] = nn.x + nn.w/2 + node_width/2 + gridSize * 2;
+                            ghostNode.attr('transform','translate('+(point[0] - node_width/2)+','+(point[1] - node_height/2)+')');
+                            rebuildQuickAddLink();
+                        } else {
+                            quickAddActive = false;
+                            ghostNode.remove();
+                        }
                     }
                 });
 
@@ -11364,7 +14332,6 @@ RED.view = (function() {
     function canvasMouseMove() {
         var i;
         var node;
-        mouse_position = d3.touches(this)[0]||d3.mouse(this);
         // Prevent touch scrolling...
         //if (d3.touches(this)[0]) {
         //    d3.event.preventDefault();
@@ -11374,6 +14341,21 @@ RED.view = (function() {
         //var point = d3.mouse(this);
         //if (point[0]-container.scrollLeft < 30 && container.scrollLeft > 0) { container.scrollLeft -= 15; }
         //console.log(d3.mouse(this),container.offsetWidth,container.offsetHeight,container.scrollLeft,container.scrollTop);
+
+        if (mouse_mode === RED.state.PANNING) {
+
+            var pos = [d3.event.pageX,d3.event.pageY];
+            var deltaPos = [
+                mouse_position[0]-pos[0],
+                mouse_position[1]-pos[1]
+            ];
+
+            chart.scrollLeft(scroll_position[0]+deltaPos[0])
+            chart.scrollTop(scroll_position[1]+deltaPos[1])
+            return
+        }
+
+        mouse_position = d3.touches(this)[0]||d3.mouse(this);
 
         if (lasso) {
             var ox = parseInt(lasso.attr("ox"));
@@ -11461,7 +14443,7 @@ RED.view = (function() {
                         redraw();
                         mouse_mode = RED.state.JOINING;
                     }
-                } else if (mousedown_node) {
+                } else if (mousedown_node && !quickAddLink) {
                     showDragLines([{node:mousedown_node,port:mousedown_port_index,portType:mousedown_port_type}]);
                 }
                 selected_link = null;
@@ -11478,29 +14460,7 @@ RED.view = (function() {
                 var portY = -((numOutputs-1)/2)*18 +18*sourcePort;
 
                 var sc = (drag_line.portType === PORT_TYPE_OUTPUT)?1:-1;
-
-                var dy = mousePos[1]-(drag_line.node.y+portY);
-                var dx = mousePos[0]-(drag_line.node.x+sc*drag_line.node.w/2);
-                var delta = Math.sqrt(dy*dy+dx*dx);
-                var scale = lineCurveScale;
-                var scaleY = 0;
-
-                if (delta < node_width) {
-                    scale = 0.75-0.75*((node_width-delta)/node_width);
-                }
-                if (dx*sc < 0) {
-                    scale += 2*(Math.min(5*node_width,Math.abs(dx))/(5*node_width));
-                    if (Math.abs(dy) < 3*node_height) {
-                        scaleY = ((dy>0)?0.5:-0.5)*(((3*node_height)-Math.abs(dy))/(3*node_height))*(Math.min(node_width,Math.abs(dx))/(node_width)) ;
-                    }
-                }
-
-                drag_line.el.attr("d",
-                    "M "+(drag_line.node.x+sc*drag_line.node.w/2)+" "+(drag_line.node.y+portY)+
-                    " C "+(drag_line.node.x+sc*(drag_line.node.w/2+node_width*scale))+" "+(drag_line.node.y+portY+scaleY*node_height)+" "+
-                    (mousePos[0]-sc*(scale)*node_width)+" "+(mousePos[1]-scaleY*node_height)+" "+
-                    mousePos[0]+" "+mousePos[1]
-                    );
+                drag_line.el.attr("d",generateLinkPath(drag_line.node.x+sc*drag_line.node.w/2,drag_line.node.y+portY,mousePos[0],mousePos[1],sc));
             }
             d3.event.preventDefault();
         } else if (mouse_mode == RED.state.MOVING) {
@@ -11632,6 +14592,10 @@ RED.view = (function() {
     function canvasMouseUp() {
         var i;
         var historyEvent;
+        if (mouse_mode === RED.state.PANNING) {
+            resetMouseVars();
+            return
+        }
         if (mouse_mode === RED.state.QUICK_JOINING) {
             return;
         }
@@ -11682,11 +14646,18 @@ RED.view = (function() {
                         moving_set.push({n:n});
                     }
                 });
+                if (activeSubflow.status) {
+                    activeSubflow.status.selected = (activeSubflow.status.x > x && activeSubflow.status.x < x2 && activeSubflow.status.y > y && activeSubflow.status.y < y2);
+                    if (activeSubflow.status.selected) {
+                        activeSubflow.status.dirty = true;
+                        moving_set.push({n:activeSubflow.status});
+                    }
+                }
             }
             updateSelection();
             lasso.remove();
             lasso = null;
-        } else if (mouse_mode == RED.state.DEFAULT && mousedown_link == null && !d3.event.ctrlKey&& !d3.event.metaKey ) {
+        } else if (mouse_mode == RED.state.DEFAULT && mousedown_link == null && !d3.event.ctrlKey && !d3.event.metaKey ) {
             clearSelection();
             updateSelection();
         }
@@ -11748,17 +14719,20 @@ RED.view = (function() {
     function zoomIn() {
         if (scaleFactor < 2) {
             scaleFactor += 0.1;
+            RED.view.navigator.resize();
             redraw();
         }
     }
     function zoomOut() {
         if (scaleFactor > 0.3) {
             scaleFactor -= 0.1;
+            RED.view.navigator.resize();
             redraw();
         }
     }
     function zoomZero() {
         scaleFactor = 1;
+        RED.view.navigator.resize();
         redraw();
     }
 
@@ -11787,6 +14761,13 @@ RED.view = (function() {
                     moving_set.push({n:n});
                 }
             });
+            if (activeSubflow.status) {
+                if (!activeSubflow.status.selected) {
+                    activeSubflow.status.selected = true;
+                    activeSubflow.status.dirty = true;
+                    moving_set.push({n:activeSubflow.status});
+                }
+            }
         }
 
         selected_link = null;
@@ -11808,76 +14789,99 @@ RED.view = (function() {
     function updateSelection() {
         var selection = {};
 
-        if (moving_set.length > 0) {
-            selection.nodes = moving_set.map(function(n) { return n.n;});
-        }
-        if (selected_link != null) {
-            selection.link = selected_link;
-        }
-        var activeWorkspace = RED.workspaces.active();
-        activeLinks = RED.nodes.filterLinks({
-            source:{z:activeWorkspace},
-            target:{z:activeWorkspace}
-        });
-        var tabOrder = RED.nodes.getWorkspaceOrder();
-        var currentLinks = activeLinks;
-        var addedLinkLinks = {};
-        activeFlowLinks = [];
-        for (var i=0;i<moving_set.length;i++) {
-            if (moving_set[i].n.type === "link-out" || moving_set[i].n.type === "link-in") {
-                var linkNode = moving_set[i].n;
-                var offFlowLinks = {};
-                linkNode.links.forEach(function(id) {
-                    var target = RED.nodes.node(id);
-                    if (target) {
-                        if (linkNode.type === "link-out") {
-                            if (target.z === linkNode.z) {
-                                if (!addedLinkLinks[linkNode.id+":"+target.id]) {
-                                    activeLinks.push({
-                                        source:linkNode,
-                                        sourcePort:0,
-                                        target: target,
-                                        link: true
-                                    });
-                                    addedLinkLinks[linkNode.id+":"+target.id] = true;
+        var workspaceSelection = RED.workspaces.selection();
+        if (workspaceSelection.length === 0) {
+            if (moving_set.length > 0) {
+                selection.nodes = moving_set.map(function(n) { return n.n;});
+            }
+            if (selected_link != null) {
+                selection.link = selected_link;
+            }
+            var activeWorkspace = RED.workspaces.active();
+            activeLinks = RED.nodes.filterLinks({
+                source:{z:activeWorkspace},
+                target:{z:activeWorkspace}
+            });
+            var tabOrder = RED.nodes.getWorkspaceOrder();
+            var currentLinks = activeLinks;
+            var addedLinkLinks = {};
+            activeFlowLinks = [];
+            var activeLinkNodeIds = Object.keys(activeLinkNodes);
+            activeLinkNodeIds.forEach(function(n) {
+                activeLinkNodes[n].dirty = true;
+            })
+            activeLinkNodes = {};
+            for (var i=0;i<moving_set.length;i++) {
+                if (moving_set[i].n.type === "link-out" || moving_set[i].n.type === "link-in") {
+                    var linkNode = moving_set[i].n;
+                    activeLinkNodes[linkNode.id] = linkNode;
+                    var offFlowLinks = {};
+                    linkNode.links.forEach(function(id) {
+                        var target = RED.nodes.node(id);
+                        if (target) {
+                            if (linkNode.type === "link-out") {
+                                if (target.z === linkNode.z) {
+                                    if (!addedLinkLinks[linkNode.id+":"+target.id]) {
+                                        activeLinks.push({
+                                            source:linkNode,
+                                            sourcePort:0,
+                                            target: target,
+                                            link: true
+                                        });
+                                        addedLinkLinks[linkNode.id+":"+target.id] = true;
+                                        activeLinkNodes[target.id] = target;
+                                        target.dirty = true;
+
+                                    }
+                                } else {
+                                    offFlowLinks[target.z] = offFlowLinks[target.z]||[];
+                                    offFlowLinks[target.z].push(target);
                                 }
                             } else {
-                                offFlowLinks[target.z] = offFlowLinks[target.z]||[];
-                                offFlowLinks[target.z].push(target);
-                            }
-                        } else {
-                            if (target.z === linkNode.z) {
-                                if (!addedLinkLinks[target.id+":"+linkNode.id]) {
-                                    activeLinks.push({
-                                        source:target,
-                                        sourcePort:0,
-                                        target: linkNode,
-                                        link: true
-                                    });
-                                    addedLinkLinks[target.id+":"+linkNode.id] = true;
+                                if (target.z === linkNode.z) {
+                                    if (!addedLinkLinks[target.id+":"+linkNode.id]) {
+                                        activeLinks.push({
+                                            source:target,
+                                            sourcePort:0,
+                                            target: linkNode,
+                                            link: true
+                                        });
+                                        addedLinkLinks[target.id+":"+linkNode.id] = true;
+                                        activeLinkNodes[target.id] = target;
+                                        target.dirty = true;
+                                    }
+                                } else {
+                                    offFlowLinks[target.z] = offFlowLinks[target.z]||[];
+                                    offFlowLinks[target.z].push(target);
                                 }
-                            } else {
-                                offFlowLinks[target.z] = offFlowLinks[target.z]||[];
-                                offFlowLinks[target.z].push(target);
                             }
                         }
-                    }
-                });
-                var offFlows = Object.keys(offFlowLinks);
-                // offFlows.sort(function(A,B) {
-                //     return tabOrder.indexOf(A) - tabOrder.indexOf(B);
-                // });
-                if (offFlows.length > 0) {
-                    activeFlowLinks.push({
-                        refresh: Math.floor(Math.random()*10000),
-                        node: linkNode,
-                        links: offFlowLinks//offFlows.map(function(i) { return {id:i,links:offFlowLinks[i]};})
                     });
+                    var offFlows = Object.keys(offFlowLinks);
+                    // offFlows.sort(function(A,B) {
+                    //     return tabOrder.indexOf(A) - tabOrder.indexOf(B);
+                    // });
+                    if (offFlows.length > 0) {
+                        activeFlowLinks.push({
+                            refresh: Math.floor(Math.random()*10000),
+                            node: linkNode,
+                            links: offFlowLinks//offFlows.map(function(i) { return {id:i,links:offFlowLinks[i]};})
+                        });
+                    }
                 }
             }
+            if (activeFlowLinks.length === 0 && selected_link !== null && selected_link.link) {
+                activeLinks.push(selected_link);
+                activeLinkNodes[selected_link.source.id] = selected_link.source;
+                selected_link.source.dirty = true;
+                activeLinkNodes[selected_link.target.id] = selected_link.target;
+                selected_link.target.dirty = true;
+            }
+        } else {
+            selection.flows = workspaceSelection;
         }
         var selectionJSON = activeWorkspace+":"+JSON.stringify(selection,function(key,value) {
-            if (key === 'nodes') {
+            if (key === 'nodes' || key === 'flows') {
                 return value.map(function(n) { return n.id })
             } else if (key === 'link') {
                 return value.source.id+":"+value.sourcePort+":"+value.target.id;
@@ -11890,59 +14894,6 @@ RED.view = (function() {
         }
     }
 
-    function endKeyboardMove() {
-        endMoveSet = false;
-        if (moving_set.length > 0) {
-            var ns = [];
-            for (var i=0;i<moving_set.length;i++) {
-                ns.push({n:moving_set[i].n,ox:moving_set[i].ox,oy:moving_set[i].oy,moved:moving_set[i].n.moved});
-                moving_set[i].n.moved = true;
-                moving_set[i].n.dirty = true;
-                delete moving_set[i].ox;
-                delete moving_set[i].oy;
-            }
-            redraw();
-            RED.history.push({t:"move",nodes:ns,dirty:RED.nodes.dirty()});
-            RED.nodes.dirty(true);
-        }
-    }
-    var endMoveSet = false;
-    function moveSelection(dx,dy) {
-        if (moving_set.length > 0) {
-            if (!endMoveSet) {
-                $(document).one('keyup',endKeyboardMove);
-                endMoveSet = true;
-            }
-            var minX = 0;
-            var minY = 0;
-            var node;
-
-            for (var i=0;i<moving_set.length;i++) {
-                node = moving_set[i];
-                node.n.moved = true;
-                node.n.dirty = true;
-                if (node.ox == null && node.oy == null) {
-                    node.ox = node.n.x;
-                    node.oy = node.n.y;
-                }
-                node.n.x += dx;
-                node.n.y += dy;
-                node.n.dirty = true;
-                minX = Math.min(node.n.x-node.n.w/2-5,minX);
-                minY = Math.min(node.n.y-node.n.h/2-5,minY);
-            }
-
-            if (minX !== 0 || minY !== 0) {
-                for (var n = 0; n<moving_set.length; n++) {
-                    node = moving_set[n];
-                    node.n.x -= minX;
-                    node.n.y -= minY;
-                }
-            }
-
-            redraw();
-        }
-    }
     function editSelection() {
         if (moving_set.length > 0) {
             var node = moving_set[0].n;
@@ -11954,12 +14905,55 @@ RED.view = (function() {
         }
     }
     function deleteSelection() {
-        if (moving_set.length > 0 || selected_link != null) {
+        if (portLabelHover) {
+            portLabelHover.remove();
+            portLabelHover = null;
+        }
+        var workspaceSelection = RED.workspaces.selection();
+        if (workspaceSelection.length > 0) {
+            var workspaceCount = 0;
+            workspaceSelection.forEach(function(ws) { if (ws.type === 'tab') workspaceCount++ });
+            if (workspaceCount === RED.workspaces.count()) {
+                // Cannot delete all workspaces
+                return;
+            }
+            var historyEvent = {
+                t: 'delete',
+                dirty: RED.nodes.dirty(),
+                nodes: [],
+                links: [],
+                workspaces: [],
+                subflows: []
+            }
+            var workspaceOrder = RED.nodes.getWorkspaceOrder().slice(0);
+
+            for (var i=0;i<workspaceSelection.length;i++) {
+                var ws = workspaceSelection[i];
+                ws._index = workspaceOrder.indexOf(ws.id);
+                RED.workspaces.remove(ws);
+                var subEvent;
+                if (ws.type === 'tab') {
+                    historyEvent.workspaces.push(ws);
+                    subEvent = RED.nodes.removeWorkspace(ws.id);
+                } else {
+                    subEvent = RED.subflow.removeSubflow(ws.id);
+                    historyEvent.subflows = historyEvent.subflows.concat(subEvent.subflows);
+                }
+                historyEvent.nodes = historyEvent.nodes.concat(subEvent.nodes);
+                historyEvent.links = historyEvent.links.concat(subEvent.links);
+            }
+            RED.history.push(historyEvent);
+            RED.nodes.dirty(true);
+            updateActiveNodes();
+            updateSelection();
+            redraw();
+        } else if (moving_set.length > 0 || selected_link != null) {
             var result;
             var removedNodes = [];
             var removedLinks = [];
             var removedSubflowOutputs = [];
             var removedSubflowInputs = [];
+            var removedSubflowStatus = undefined;
             var subflowInstances = [];
 
             var startDirty = RED.nodes.dirty();
@@ -11981,6 +14975,8 @@ RED.view = (function() {
                             removedSubflowOutputs.push(node);
                         } else if (node.direction === "in") {
                             removedSubflowInputs.push(node);
+                        } else if (node.direction === "status") {
+                            removedSubflowStatus = node;
                         }
                         node.dirty = true;
                     }
@@ -11998,31 +14994,83 @@ RED.view = (function() {
                         removedLinks = removedLinks.concat(result.links);
                     }
                 }
+                if (removedSubflowStatus) {
+                    result = RED.subflow.removeStatus();
+                    if (result) {
+                        removedLinks = removedLinks.concat(result.links);
+                    }
+                }
+
                 var instances = RED.subflow.refresh(true);
                 if (instances) {
                     subflowInstances = instances.instances;
                 }
                 moving_set = [];
-                if (removedNodes.length > 0 || removedSubflowOutputs.length > 0 || removedSubflowInputs.length > 0) {
+                if (removedNodes.length > 0 || removedSubflowOutputs.length > 0 || removedSubflowInputs.length > 0 || removedSubflowStatus) {
                     RED.nodes.dirty(true);
                 }
             }
-            if (selected_link) {
-                RED.nodes.removeLink(selected_link);
-                removedLinks.push(selected_link);
+            var historyEvent;
+
+            if (selected_link && selected_link.link) {
+                var sourceId = selected_link.source.id;
+                var targetId = selected_link.target.id;
+                var sourceIdIndex = selected_link.target.links.indexOf(sourceId);
+                var targetIdIndex = selected_link.source.links.indexOf(targetId);
+
+                historyEvent = {
+                    t:"multi",
+                    events: [
+                        {
+                            t: "edit",
+                            node: selected_link.source,
+                            changed: selected_link.source.changed,
+                            changes: {
+                                links: $.extend(true,{},{v:selected_link.source.links}).v
+                            }
+                        },
+                        {
+                            t: "edit",
+                            node: selected_link.target,
+                            changed: selected_link.target.changed,
+                            changes: {
+                                links: $.extend(true,{},{v:selected_link.target.links}).v
+                            }
+                        }
+
+                    ],
+                    dirty:RED.nodes.dirty()
+                }
+
+                selected_link.source.changed = true;
+                selected_link.target.changed = true;
+                selected_link.target.links.splice(sourceIdIndex,1);
+                selected_link.source.links.splice(targetIdIndex,1);
+                selected_link.source.dirty = true;
+                selected_link.target.dirty = true;
+
+            } else {
+                if (selected_link) {
+                    RED.nodes.removeLink(selected_link);
+                    removedLinks.push(selected_link);
+                }
                 RED.nodes.dirty(true);
+                historyEvent = {
+                    t:"delete",
+                    nodes:removedNodes,
+                    links:removedLinks,
+                    subflowOutputs:removedSubflowOutputs,
+                    subflowInputs:removedSubflowInputs,
+                    subflow: {
+                        id: activeSubflow?activeSubflow.id:undefined,
+                        instances: subflowInstances
+                    },
+                    dirty:startDirty
+                };
+                if (removedSubflowStatus) {
+                    historyEvent.subflow.status = removedSubflowStatus;
+                }
             }
-            var historyEvent = {
-                t:"delete",
-                nodes:removedNodes,
-                links:removedLinks,
-                subflowOutputs:removedSubflowOutputs,
-                subflowInputs:removedSubflowInputs,
-                subflow: {
-                    instances: subflowInstances
-                },
-                dirty:startDirty
-            };
             RED.history.push(historyEvent);
 
             selected_link = null;
@@ -12033,10 +15081,24 @@ RED.view = (function() {
     }
 
     function copySelection() {
-        if (moving_set.length > 0) {
+        var nodes = [];
+        var selection = RED.workspaces.selection();
+        if (selection.length > 0) {
+            nodes = [];
+            selection.forEach(function(n) {
+                if (n.type === 'tab') {
+                    nodes.push(n);
+                    nodes = nodes.concat(RED.nodes.filterNodes({z:n.id}));
+                }
+            });
+        } else if (moving_set.length > 0) {
+            nodes = moving_set.map(function(n) { return n.n });
+        }
+
+        if (nodes.length > 0) {
             var nns = [];
-            for (var n=0;n<moving_set.length;n++) {
-                var node = moving_set[n].n;
+            for (var n=0;n<nodes.length;n++) {
+                var node = nodes[n];
                 // The only time a node.type == subflow can be selected is the
                 // input/output "proxy" nodes. They cannot be copied.
                 if (node.type != "subflow") {
@@ -12055,7 +15117,7 @@ RED.view = (function() {
                 }
             }
             clipboard = JSON.stringify(nns);
-            RED.notify(RED._("clipboard.nodeCopied",{count:nns.length}));
+            RED.notify(RED._("clipboard.nodeCopied",{count:nns.length}),{id:"clipboard"});
         }
     }
 
@@ -12106,6 +15168,10 @@ RED.view = (function() {
         //console.log(d,portType,portIndex);
         // disable zoom
         //vis.call(d3.behavior.zoom().on("zoom"), null);
+        if (d3.event.button === 1) {
+            return;
+        }
+
         mousedown_node = d;
         mousedown_port_type = portType;
         mousedown_port_index = portIndex || 0;
@@ -12125,7 +15191,16 @@ RED.view = (function() {
     function portMouseUp(d,portType,portIndex) {
         var i;
         if (mouse_mode === RED.state.QUICK_JOINING && drag_lines.length > 0) {
-            if (drag_lines[0].node===d) {
+            if (drag_lines[0].node === d) {
+                // Cannot quick-join to self
+                return
+            }
+            if (drag_lines[0].virtualLink &&
+                (
+                    (drag_lines[0].node.type === 'link-in' && d.type !== 'link-out') ||
+                    (drag_lines[0].node.type === 'link-out' && d.type !== 'link-in')
+                )
+            ) {
                 return
             }
         }
@@ -12149,12 +15224,17 @@ RED.view = (function() {
             }
             var addedLinks = [];
             var removedLinks = [];
+            var modifiedNodes = []; // joining link nodes
+
+            var select_link = null;
 
             for (i=0;i<drag_lines.length;i++) {
                 if (drag_lines[i].link) {
                     removedLinks.push(drag_lines[i].link)
                 }
             }
+            var linkEditEvents = [];
+
             for (i=0;i<drag_lines.length;i++) {
                 if (portType != drag_lines[i].portType && mouseup_node !== drag_lines[i].node) {
                     var drag_line = drag_lines[i];
@@ -12164,27 +15244,89 @@ RED.view = (function() {
                         src_port = drag_line.port;
                         dst = mouseup_node;
                         dst_port = portIndex;
-                    } else if (drag_line.portType == PORT_TYPE_INPUT) {
+                    } else if (drag_line.portType === PORT_TYPE_INPUT) {
                         src = mouseup_node;
                         src_port = portIndex;
                         dst = drag_line.node;
                         dst_port = drag_line.port;
                     }
-                    var existingLink = RED.nodes.filterLinks({source:src,target:dst,sourcePort:src_port,targetPort:dst_port}).length !== 0;
-                    if (!existingLink) {
-                        var link = {source: src, sourcePort: src_port, target: dst, targetPort: dst_port};                        
-                        RED.nodes.addLink(link);
-                        addedLinks.push(link);
+                    var link = {source: src, sourcePort: src_port, target: dst, targetPort: dst_port};
+                    if (drag_line.virtualLink) {
+                        if (/^link-(in|out)$/.test(src.type) && /^link-(in|out)$/.test(dst.type)) {
+                            if (src.links.indexOf(dst.id) === -1 && dst.links.indexOf(src.id) === -1) {
+                                var oldSrcLinks = $.extend(true,{},{v:src.links}).v
+                                var oldDstLinks = $.extend(true,{},{v:dst.links}).v
+                                src.links.push(dst.id);
+                                dst.links.push(src.id);
+                                src.dirty = true;
+                                dst.dirty = true;
+                                modifiedNodes.push(src);
+                                modifiedNodes.push(dst);
+
+                                link.link = true;
+                                activeLinks.push(link);
+                                activeLinkNodes[src.id] = src;
+                                activeLinkNodes[dst.id] = dst;
+                                select_link = link;
+
+                                linkEditEvents.push({
+                                    t:'edit',
+                                    node: src,
+                                    dirty: RED.nodes.dirty(),
+                                    changed: src.changed,
+                                    changes: {
+                                        links:oldSrcLinks
+                                    }
+                                });
+                                linkEditEvents.push({
+                                    t:'edit',
+                                    node: dst,
+                                    dirty: RED.nodes.dirty(),
+                                    changed: dst.changed,
+                                    changes: {
+                                        links:oldDstLinks
+                                    }
+                                });
+                                src.changed = true;
+                                dst.changed = true;
+                            }
+                        }
+                    } else {
+                        // This is not a virtualLink - which means it started
+                        // on a regular node port. Need to ensure the this isn't
+                        // connecting to a link node virual port.
+                        if (!(
+                            (d.type === "link-out" && portType === PORT_TYPE_OUTPUT) ||
+                            (d.type === "link-in" && portType === PORT_TYPE_INPUT)
+                        )) {
+                            var existingLink = RED.nodes.filterLinks({source:src,target:dst,sourcePort:src_port,targetPort:dst_port}).length !== 0;
+                            if (!existingLink) {
+                                RED.nodes.addLink(link);
+                                addedLinks.push(link);
+                            }
+                        }
                     }
                 }
             }
-            if (addedLinks.length > 0 || removedLinks.length > 0) {
-                var historyEvent = {
-                    t:"add",
-                    links:addedLinks,
-                    removedLinks: removedLinks,
-                    dirty:RED.nodes.dirty()
-                };
+            if (addedLinks.length > 0 || removedLinks.length > 0 || modifiedNodes.length > 0) {
+                // console.log(addedLinks);
+                // console.log(removedLinks);
+                // console.log(modifiedNodes);
+                var historyEvent;
+                if (modifiedNodes.length > 0) {
+                    historyEvent = {
+                        t:"multi",
+                        events: linkEditEvents,
+                        dirty:RED.nodes.dirty()
+                    };
+                } else {
+                    historyEvent = {
+                        t:"add",
+                        links:addedLinks,
+                        removedLinks: removedLinks,
+                        dirty:RED.nodes.dirty()
+                    };
+                }
                 if (activeSubflow) {
                     var subflowRefresh = RED.subflow.refresh(true);
                     if (subflowRefresh) {
@@ -12200,7 +15342,7 @@ RED.view = (function() {
                 RED.nodes.dirty(true);
             }
             if (mouse_mode === RED.state.QUICK_JOINING) {
-                if (addedLinks.length > 0) {
+                if (addedLinks.length > 0 || modifiedNodes.length > 0) {
                     hideDragLines();
                     if (portType === PORT_TYPE_INPUT && d.outputs > 0) {
                         showDragLines([{node:d,port:0,portType:PORT_TYPE_OUTPUT}]);
@@ -12209,6 +15351,11 @@ RED.view = (function() {
                     } else {
                         resetMouseVars();
                     }
+                    selected_link = select_link;
+                    mousedown_link = select_link;
+                    if (select_link) {
+                        updateSelection();
+                    }
                 }
                 redraw();
                 return;
@@ -12216,7 +15363,11 @@ RED.view = (function() {
 
             resetMouseVars();
             hideDragLines();
-            selected_link = null;
+            selected_link = select_link;
+            mousedown_link = select_link;
+            if (select_link) {
+                updateSelection();
+            }
             redraw();
         }
     }
@@ -12266,11 +15417,70 @@ RED.view = (function() {
         }
         return result;*/
     }
+    function showTooltip(x,y,content,direction) {
+        var tooltip = vis.append("g")
+            .attr("transform","translate("+x+","+y+")")
+            .attr("class","port_tooltip");
+
+        var lines = content.split("\n");
+        var labelWidth = 0;
+        var labelHeight = 4;
+        var labelHeights = [];
+        lines.forEach(function(l) {
+            var labelDimensions = calculateTextDimensions(l, "port_tooltip_label", 8,0);
+            labelWidth = Math.max(labelWidth,labelDimensions[0]);
+            labelHeights.push(0.8*labelDimensions[1]);
+            labelHeight += 0.8*labelDimensions[1];
+        });
+        var labelWidth1 = (labelWidth/2)-5-2;
+        var labelWidth2 = labelWidth - 4;
+
+        var labelHeight1 = (labelHeight/2)-5-2;
+        var labelHeight2 = labelHeight - 4;
+        var path;
+        var lx;
+        var ly = -labelHeight/2-2;
+        var anchor;
+        if (direction === "left") {
+            path = "M0 0 l -5 -5 v -"+(labelHeight1)+" q 0 -2 -2 -2 h -"+labelWidth+" q -2 0 -2 2 v "+(labelHeight2)+" q 0 2 2 2 h "+labelWidth+" q 2 0 2 -2 v -"+(labelHeight1)+" l 5 -5";
+            lx = -10;
+            anchor = "end";
+        } else if (direction === "right") {
+            path = "M0 0 l 5 -5 v -"+(labelHeight1)+" q 0 -2 2 -2 h "+labelWidth+" q 2 0 2 2 v "+(labelHeight2)+" q 0 2 -2 2 h -"+labelWidth+" q -2 0 -2 -2 v -"+(labelHeight1)+" l -5 -5"
+            lx = 10;
+            anchor = "start";
+        } else if (direction === "top") {
+            path = "M0 0 l 5 -5 h "+(labelWidth1)+" q 2 0 2 -2 v -"+labelHeight+" q 0 -2 -2 -2 h -"+(labelWidth2)+" q -2 0 -2 2 v "+labelHeight+" q 0 2 2 2 h "+(labelWidth1)+" l 5 5"
+            lx = labelWidth/2 - 4;
+            ly = -labelHeight-labelHeight / 2 + 2;
+            anchor = "end";
+        }
+        tooltip.append("path").attr("d",path);
+        lines.forEach(function(l,i) {
+            ly += labelHeights[i];
+            tooltip.append("svg:text").attr("class","port_tooltip_label")
+                .attr("x", lx)
+                .attr("y", ly)
+                .attr("text-anchor",anchor)
+                .text(l)
+        });
+        return tooltip;
+    }
 
     function portMouseOver(port,d,portType,portIndex) {
         var active = (mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== portType));
         /*clearTimeout(portLabelHoverTimeout);
-        var active = (mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== portType));
+        var active = (mouse_mode!=RED.state.JOINING && mouse_mode != RED.state.QUICK_JOINING) || // Not currently joining - all ports active
+                     (
+                         drag_lines.length > 0 && // Currently joining
+                         drag_lines[0].portType !== portType && // INPUT->OUTPUT OUTPUT->INPUT
+                         (
+                             !drag_lines[0].virtualLink || // Not a link wire
+                             (drag_lines[0].node.type === 'link-in' && d.type === 'link-out') ||
+                             (drag_lines[0].node.type === 'link-out' && d.type === 'link-in')
+                         )
+                     )
+
         if (active && ((portType === PORT_TYPE_INPUT && ((d._def && d._def.inputLabels)||d.inputLabels)) || (portType === PORT_TYPE_OUTPUT && ((d._def && d._def.outputLabels)||d.outputLabels)))) {
             portLabelHoverTimeout = setTimeout(function() {
                 var tooltip = getPortLabel(d,portType,portIndex);
@@ -12279,37 +15489,12 @@ RED.view = (function() {
                 }
                 var pos = getElementPosition(port.node());
                 portLabelHoverTimeout = null;
-                portLabelHover = vis.append("g")
-                    .attr("transform","translate("+(pos[0]+(portType===PORT_TYPE_INPUT?-2:12))+","+(pos[1]+5)+")")
-                    .attr("class","port_tooltip");
-                var lines = tooltip.split("\n");
-                var labelWidth = 0;
-                var labelHeight = 4;
-                var labelHeights = [];
-                lines.forEach(function(l) {
-                    var labelDimensions = calculateTextDimensions(l, "port_tooltip_label", 8,0);
-                    labelWidth = Math.max(labelWidth,labelDimensions[0]);
-                    labelHeights.push(0.8*labelDimensions[1]);
-                    labelHeight += 0.8*labelDimensions[1];
-                });
-
-                var labelHeight1 = (labelHeight/2)-5-2;
-                var labelHeight2 = labelHeight - 4;
-                portLabelHover.append("path").attr("d",
-                    portType===PORT_TYPE_INPUT?
-                        "M0 0 l -5 -5 v -"+(labelHeight1)+" q 0 -2 -2 -2 h -"+labelWidth+" q -2 0 -2 2 v "+(labelHeight2)+" q 0 2 2 2 h "+labelWidth+" q 2 0 2 -2 v -"+(labelHeight1)+" l 5 -5"
-                        :
-                        "M0 0 l 5 -5 v -"+(labelHeight1)+" q 0 -2 2 -2 h "+labelWidth+" q 2 0 2 2 v "+(labelHeight2)+" q 0 2 -2 2 h -"+labelWidth+" q -2 0 -2 -2 v -"+(labelHeight1)+" l -5 -5"
-                    );
-                var y = -labelHeight/2-2;
-                lines.forEach(function(l,i) {
-                    //y += labelHeights[i];
-                    portLabelHover.append("svg:text").attr("class","port_tooltip_label")
-                        .attr("x", portType===PORT_TYPE_INPUT?-10:10)
-                        .attr("y", y)
-                        .attr("text-anchor",portType===PORT_TYPE_INPUT?"end":"start")
-                        .text(l)
-                });
+                portLabelHover = showTooltip(
+                    (pos[0]+(portType===PORT_TYPE_INPUT?-2:12)),
+                    (pos[1]+5),
+                    tooltip,
+                    portType===PORT_TYPE_INPUT?"left":"right"
+                );
             },500);
         }*/
         port.classed("port_hovered",active);
@@ -12336,10 +15521,31 @@ RED.view = (function() {
             return;
         }
         var direction = d._def? (d.inputs > 0 ? 1: 0) : (d.direction == "in" ? 0: 1)
+        var wasJoining = false;
+        if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
+            wasJoining = true;
+            if (drag_lines.length > 0) {
+                if (drag_lines[0].virtualLink) {
+                    if (d.type === 'link-in') {
+                        direction = 1;
+                    } else if (d.type === 'link-out') {
+                        direction = 0;
+                    }
+                }
+            }
+        }
+
+        //portMouseUp(d, direction, 0);
+        if (wasJoining) {
+            d3.selectAll(".port_hovered").classed("port_hovered",false);
+        }
     }
 
     function nodeMouseDown(d) {
         focusView();
+        if (d3.event.button === 1) {
+            return;
+        }
         //var touch0 = d3.event;
         //var pos = [touch0.pageX,touch0.pageY];
         //RED.touch.radialMenu.show(d3.select(this),pos);
@@ -12385,7 +15591,9 @@ RED.view = (function() {
         clickElapsed = now-clickTime;
         clickTime = now;
 
-        dblClickPrimed = (lastClickNode == mousedown_node);
+        dblClickPrimed = (lastClickNode == mousedown_node &&
+            d3.event.button === 0 &&
+            !d3.event.shiftKey && !d3.event.metaKey && !d3.event.altKey && !d3.event.ctrlKey);
         lastClickNode = mousedown_node;
 
         var i;
@@ -12440,18 +15648,25 @@ RED.view = (function() {
 
     function isButtonEnabled(d) {
         var buttonEnabled = true;
-        if (d._def.button.hasOwnProperty('enabled')) {
-            if (typeof d._def.button.enabled === "function") {
-                buttonEnabled = d._def.button.enabled.call(d);
-            } else {
-                buttonEnabled = d._def.button.enabled;
+        var ws = RED.nodes.workspace(RED.workspaces.active());
+        if (ws && !ws.disabled) {
+            if (d._def.button.hasOwnProperty('enabled')) {
+                if (typeof d._def.button.enabled === "function") {
+                    buttonEnabled = d._def.button.enabled.call(d);
+                } else {
+                    buttonEnabled = d._def.button.enabled;
+                }
             }
+        } else {
+            buttonEnabled = false;
         }
         return buttonEnabled;
     }
 
     function nodeButtonClicked(d) {
-        if (!activeSubflow) {
+        var activeWorkspace = RED.workspaces.active();
+        var ws = RED.nodes.workspace(activeWorkspace);
+        if (ws && !ws.disabled) {
             if (d._def.button.toggle) {
                 d[d._def.button.toggle] = !d[d._def.button.toggle];
                 d.dirty = true;
@@ -12467,7 +15682,11 @@ RED.view = (function() {
                 redraw();
             }
         } else {
-            RED.notify(RED._("notification.warning", {message:RED._("notification.warnings.nodeActionDisabled")}),"warning");
+            if (activeSubflow) {
+                RED.notify(RED._("notification.warning", {message:RED._("notification.warnings.nodeActionDisabledSubflow")}),"warning");
+            } else {
+                RED.notify(RED._("notification.warning", {message:RED._("notification.warnings.nodeActionDisabled")}),"warning");
+            }
         }
         d3.event.preventDefault();
     }
@@ -12487,17 +15706,64 @@ RED.view = (function() {
         resetMouseVars();
     }
 
+    function createIconAttributes(iconUrl, icon_group, d) {
+        var fontAwesomeUnicode = null;
+        if (iconUrl.indexOf("font-awesome/") === 0) {
+            var iconName = iconUrl.substr(13);
+            var fontAwesomeUnicode = RED.nodes.fontAwesome.getIconUnicode(iconName);
+            if (!fontAwesomeUnicode) {
+                var iconPath = RED.utils.getDefaultNodeIcon(d._def, d);
+                iconUrl = RED.settings.apiRootUrl+"icons/"+iconPath.module+"/"+iconPath.file;
+            }
+        }
+        if (fontAwesomeUnicode) {
+            // Since Node-RED workspace uses SVG, i tag cannot be used for font-awesome icon.
+            // On SVG, use text tag as an alternative.
+            icon_group.append("text")
+                .attr("xlink:href",iconUrl)
+                .attr("class","fa-lg")
+                .attr("x",15)
+                .attr("stroke","none")
+                .attr("fill","#ffffff")
+                .attr("text-anchor","middle")
+                .attr("font-family", "FontAwesome")
+                .text(fontAwesomeUnicode);
+        } else {
+            var icon = icon_group.append("image")
+                .attr("xlink:href",iconUrl)
+                .attr("class","node_icon")
+                .attr("x",0)
+                .attr("width","30")
+                .attr("height","30");
+
+            var img = new Image();
+            img.src = iconUrl;
+            img.onload = function() {
+                icon.attr("width",Math.min(img.width,30));
+                icon.attr("height",Math.min(img.height,30));
+                icon.attr("x",15-Math.min(img.width,30)/2);
+                icon.attr("xlink:href",iconUrl);
+                icon.style("display",null);
+                //if ("right" == d._def.align) {
+                //    icon.attr("x",function(d){return d.w-img.width-1-(d.outputs>0?5:0);});
+                //    icon_shade.attr("x",function(d){return d.w-30});
+                //    icon_shade_border.attr("d",function(d){return "M "+(d.w-30)+" 1 l 0 "+(d.h-2);});
+                //}
+            }
+        }
+    }
+
     function redraw() {
         vis.attr("transform","scale("+scaleFactor+")");
         outer.attr("width", space_width*scaleFactor).attr("height", space_height*scaleFactor);
 
         // Don't bother redrawing nodes if we're drawing links
-        if (mouse_mode != RED.state.JOINING) {
+        if (showAllLinkPorts !== -1 || mouse_mode != RED.state.JOINING) {
 
             var dirtyNodes = {};
 
             if (activeSubflow) {
-                var subflowOutputs = vis.selectAll(".subflowoutput").data(activeSubflow.out,function(d,i){ return d.id;});
+                var subflowOutputs = nodeLayer.selectAll(".subflowoutput").data(activeSubflow.out,function(d,i){ return d.id;});
                 subflowOutputs.exit().remove();
                 var outGroup = subflowOutputs.enter().insert("svg:g").attr("class","node subflowoutput").attr("transform",function(d) { return "translate("+(d.x-20)+","+(d.y-20)+")"});
                 outGroup.each(function(d,i) {
@@ -12540,7 +15806,7 @@ RED.view = (function() {
                 outGroup.append("svg:text").attr("class","port_label").attr("x",20).attr("y",8).style("font-size","10px").text("output");
                 outGroup.append("svg:text").attr("class","port_label port_index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
 
-                var subflowInputs = vis.selectAll(".subflowinput").data(activeSubflow.in,function(d,i){ return d.id;});
+                var subflowInputs = nodeLayer.selectAll(".subflowinput").data(activeSubflow.in,function(d,i){ return d.id;});
                 subflowInputs.exit().remove();
                 var inGroup = subflowInputs.enter().insert("svg:g").attr("class","node subflowinput").attr("transform",function(d) { return "translate("+(d.x-20)+","+(d.y-20)+")"});
                 inGroup.each(function(d,i) {
@@ -12582,6 +15848,49 @@ RED.view = (function() {
                 inGroup.append("svg:text").attr("class","port_label").attr("x",20).attr("y",8).style("font-size","10px").text("input");
                 inGroup.append("svg:text").attr("class","port_label port_index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
 
+                var subflowStatus = nodeLayer.selectAll(".subflowstatus").data(activeSubflow.status?[activeSubflow.status]:[],function(d,i){ return d.id;});
+                subflowStatus.exit().remove();
+
+                var statusGroup = subflowStatus.enter().insert("svg:g").attr("class","node subflowstatus").attr("transform",function(d) { return "translate("+(d.x-20)+","+(d.y-20)+")"});
+                statusGroup.each(function(d,i) {
+                    d.w=40;
+                    d.h=40;
+                });
+                statusGroup.append("rect").attr("class","subflowport").attr("rx",8).attr("ry",8).attr("width",40).attr("height",40)
+                    // TODO: This is exactly the same set of handlers used for regular nodes - DRY
+                    .on("mouseup",nodeMouseUp)
+                    .on("mousedown",nodeMouseDown)
+                    .on("touchstart",function(d) {
+                            var obj = d3.select(this);
+                            var touch0 = d3.event.touches.item(0);
+                            var pos = [touch0.pageX,touch0.pageY];
+                            startTouchCenter = [touch0.pageX,touch0.pageY];
+                            startTouchDistance = 0;
+                            touchStartTime = setTimeout(function() {
+                                    showTouchMenu(obj,pos);
+                            },touchLongPressTimeout);
+                            nodeMouseDown.call(this,d)
+                    })
+                    .on("touchend", function(d) {
+                            clearTimeout(touchStartTime);
+                            touchStartTime = null;
+                            if  (RED.touch.radialMenu.active()) {
+                                d3.event.stopPropagation();
+                                return;
+                            }
+                            nodeMouseUp.call(this,d);
+                    });
+
+                statusGroup.append("g").attr('transform','translate(-5,15)').append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
+                    .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);} )
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);} )
+                    .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);})
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);} )
+                    .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_INPUT,0);})
+                    .on("mouseout",function(d){portMouseOut(d3.select(this),d,PORT_TYPE_INPUT,0);});
+
+                statusGroup.append("svg:text").attr("class","port_label").attr("x",22).attr("y",20).style("font-size","10px").text("status");
+
                 subflowOutputs.each(function(d,i) {
                     if (d.dirty) {
                         var output = d3.select(this);
@@ -12603,12 +15912,26 @@ RED.view = (function() {
                         d.dirty = false;
                     }
                 });
+                subflowStatus.each(function(d,i) {
+                    if (d.dirty) {
+                        var output = d3.select(this);
+                        output.selectAll(".subflowport").classed("node_selected",function(d) { return d.selected; })
+                        output.selectAll(".subflowport").classed("node_working",function(d) { return d.working; })
+                        output.selectAll(".port_index").text(function(d){ return d.i+1});
+                        output.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
+                        dirtyNodes[d.id] = d;
+                        d.dirty = false;
+                    }
+                });
+
+
             } else {
-                vis.selectAll(".subflowoutput").remove();
-                vis.selectAll(".subflowinput").remove();
+                nodeLayer.selectAll(".subflowoutput").remove();
+                nodeLayer.selectAll(".subflowinput").remove();
+                nodeLayer.selectAll(".subflowstatus").remove();
             }
 
-            var node = vis.selectAll(".nodegroup").data(activeNodes,function(d){return d.id});
+            var node = nodeLayer.selectAll(".nodegroup").data(activeNodes,function(d){return d.id});
             node.exit().remove();
 
             var nodeEnter = node.enter().insert("svg:g")
@@ -12618,13 +15941,14 @@ RED.view = (function() {
 
             nodeEnter.each(function(d,i) {
                     var node = d3.select(this);
-                    var isLink = d.type === "link-in" || d.type === "link-out";
+                    var isLink = (d.type === "link-in" || d.type === "link-out")
+                    var hideLabel = d.hasOwnProperty('l')?!d.l : isLink;
                     node.attr("id",d.id);
                     var l = RED.utils.getNodeLabel(d);
-                    if (isLink) {
+                    if (hideLabel) {
                         d.w = node_height;
                     } else {
-                        d.w = Math.max(node_width,20*(Math.ceil((calculateTextWidth(l, "node_label", 50)+(d._def.inputs>0?7:0))/20)) );
+                        d.w = Math.max(node_width,gridSize*(Math.ceil((calculateTextWidth(l, "node_label", 50)+(d._def.inputs>0?7:0))/gridSize)) );
                     }
                     d.h = Math.max(Math.max(node_height,(d.outputs||0) * 20),(d.inputs||0) * 20);
 
@@ -12656,7 +15980,7 @@ RED.view = (function() {
                             .attr("ry",4)
                             .attr("width",16)
                             .attr("height",node_height-12)
-                            .attr("fill",function(d) { return d._def.color;})
+                            .attr("fill",function(d) { return RED.utils.getNodeColor(d.type,d._def); /*d._def.color;*/})
                             .attr("cursor","pointer")
                             .on("mousedown",function(d) {if (!lasso && isButtonEnabled(d)) {focusView();d3.select(this).attr("fill-opacity",0.2);d3.event.preventDefault(); d3.event.stopPropagation();}})
                             .on("mouseup",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);d3.event.preventDefault();d3.event.stopPropagation();}})
@@ -12677,7 +16001,7 @@ RED.view = (function() {
                         .classed("node_unknown",function(d) { return d.type == "unknown"; })
                         .attr("rx", 5)
                         .attr("ry", 5)
-                        .attr("fill",function(d) { return d._def.color;})
+                        .attr("fill",function(d) { return RED.utils.getNodeColor(d.type,d._def); /*d._def.color;*/})
                         .on("mouseup",nodeMouseUp)
                         .on("mousedown",nodeMouseDown)
                         .on("touchstart",function(d) {
@@ -12702,13 +16026,70 @@ RED.view = (function() {
                         })
                         .on("mouseover",function(d) {
                             if (mouse_mode === 0) {
-                                var node = d3.select(this);
-                                node.classed("node_hovered",true);
+                                var nodeBody = d3.select(this);
+                                nodeBody.classed("node_hovered",true);
+                                clearTimeout(portLabelHoverTimeout);
+                                if (d.hasOwnProperty('l')?!d.l : (d.type === "link-in" || d.type === "link-out")) {
+                                    portLabelHoverTimeout = setTimeout(function() {
+                                        var tooltip;
+                                        if (d._def.label) {
+                                            tooltip = d._def.label;
+                                            try {
+                                                tooltip = (typeof tooltip === "function" ? tooltip.call(d) : tooltip)||"";
+                                            } catch(err) {
+                                                console.log("Definition error: "+d.type+".label",err);
+                                                tooltip = d.type;
+                                            }
+                                        }
+                                        if (tooltip !== "") {
+                                            var pos = getElementPosition(node.node());
+                                            portLabelHoverTimeout = null;
+                                            portLabelHover = showTooltip(
+                                                (pos[0] + d.w/2),
+                                                (pos[1]-1),
+                                                tooltip,
+                                                "top"
+                                            );
+                                        }
+                                    },500);
+                                }
+                            } else if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
+                                if (drag_lines.length > 0) {
+                                    var selectClass;
+                                    var portType;
+                                    if ((drag_lines[0].virtualLink && drag_lines[0].portType === PORT_TYPE_INPUT) || drag_lines[0].portType === PORT_TYPE_OUTPUT) {
+                                        selectClass = ".port_input .port";
+                                        portType = PORT_TYPE_INPUT;
+                                    } else {
+                                        selectClass = ".port_output .port";
+                                        portType = PORT_TYPE_OUTPUT;
+                                    }
+                                    portMouseOver(d3.select(this.parentNode).selectAll(selectClass),d,portType,0);
+                                }
                             }
                         })
                         .on("mouseout",function(d) {
-                            var node = d3.select(this);
-                            node.classed("node_hovered",false);
+                            var nodeBody = d3.select(this);
+                            nodeBody.classed("node_hovered",false);
+                            clearTimeout(portLabelHoverTimeout);
+                            if (portLabelHover) {
+                                portLabelHover.remove();
+                                portLabelHover = null;
+                            }
+                            if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
+                                if (drag_lines.length > 0) {
+                                    var selectClass;
+                                    var portType;
+                                    if ((drag_lines[0].virtualLink && drag_lines[0].portType === PORT_TYPE_INPUT) || drag_lines[0].portType === PORT_TYPE_OUTPUT) {
+                                        selectClass = ".port_input .port";
+                                        portType = PORT_TYPE_INPUT;
+                                    } else {
+                                        selectClass = ".port_output .port";
+                                        portType = PORT_TYPE_OUTPUT;
+                                    }
+                                    portMouseOut(d3.select(this.parentNode).selectAll(selectClass),d,portType,0);
+                                }
+                            }
                         });
 
                    //node.append("rect").attr("class", "node-gradient-top").attr("rx", 6).attr("ry", 6).attr("height",30).attr("stroke","none").attr("fill","url(#gradient-top)").style("pointer-events","none");
@@ -12729,12 +16110,7 @@ RED.view = (function() {
                             .attr("fill-opacity","0.05")
                             .attr("height",function(d){return Math.min(50,d.h-4);});
 
-                        var icon = icon_group.append("image")
-                            .attr("xlink:href",icon_url)
-                            .attr("class","node_icon")
-                            .attr("x",0)
-                            .attr("width","30")
-                            .attr("height","30");
+                        createIconAttributes(icon_url, icon_group, d);
 
                         var icon_shade_border = icon_group.append("path")
                             .attr("d",function(d) { return "M 30 1 l 0 "+(d.h-2)})
@@ -12760,43 +16136,35 @@ RED.view = (function() {
                         //    icon_shade.attr("width",35); //icon.attr("x",5);
                         //}
 
-                        var img = new Image();
-                        img.src = icon_url;
-                        img.onload = function() {
-                            icon.attr("width",Math.min(img.width,30));
-                            icon.attr("height",Math.min(img.height,30));
-                            icon.attr("x",15-Math.min(img.width,30)/2);
-                            //if ("right" == d._def.align) {
-                            //    icon.attr("x",function(d){return d.w-img.width-1-(d.outputs>0?5:0);});
-                            //    icon_shade.attr("x",function(d){return d.w-30});
-                            //    icon_shade_border.attr("d",function(d){return "M "+(d.w-30)+" 1 l 0 "+(d.h-2);});
-                            //}
-                        }
-
                         //icon.style("pointer-events","none");
                         icon_group.style("pointer-events","none");
                     }
-                    if (!isLink) {
-                        var text = node.append("svg:text").attr("class","node_label").attr("x", 38).attr("dy", ".40em").attr("text-anchor","start");
-                        if (d._def.align) {
-                            text.attr("class","node_label node_label_"+d._def.align);
-                            if (d._def.align === "right") {
-                                text.attr("text-anchor","end");
-                            }
+                    var text = node.append("svg:text")
+                                  .attr("class","node_label")
+                                  .attr("x", 38)
+                                  .attr("dy", ".40em")
+                                  .attr("text-anchor","start")
+                                  .classed("hidden",hideLabel);
+
+                    if (d._def.align) {
+                        text.attr("class","node_label node_label_"+d._def.align);
+                        if (d._def.align === "right") {
+                            text.attr("text-anchor","end");
                         }
-
-                        var statusTop = node.append("svg:text").attr("class","node_status_label_top").attr("x",7).attr("y",-3);
-
-                        var statusBottom = node.append("svg:g").attr("class","node_status_group_bottom").style("display","none");
-
-                        var statusBottomRect = statusBottom.append("rect").attr("class","node_status_bottom")
-                                            .attr("x",6).attr("y",1).attr("width",9).attr("height",9)
-                                            .attr("rx",2).attr("ry",2).attr("stroke-width","3");
-
-                        var statusBottomLabel = statusBottom.append("svg:text")
-                            .attr("class","node_status_label_bottom")
-                            .attr("x",20).attr("y",9);
                     }
+
+                    var statusTop = node.append("svg:text").attr("class","node_status_label_top").attr("x",7).attr("y",-3);
+                    
+                    var statusBottom = node.append("svg:g").attr("class","node_status_group_bottom").style("display","none");
+
+                    var statusBottomRect = statusBottom.append("rect").attr("class","node_status_bottom")
+                        .attr("x",6).attr("y",1).attr("width",9).attr("height",9)
+                        .attr("rx",2).attr("ry",2).attr("stroke-width","3");
+
+                    var statusBottomLabel = statusBottom.append("svg:text")
+                        .attr("class","node_status_label_bottom")
+                        .attr("x",20).attr("y",9);
+
                     //node.append("circle").attr({"class":"centerDot","cx":0,"cy":0,"r":5});
 
                     //node.append("path").attr("class","node_error").attr("d","M 3,-3 l 10,0 l -5,-8 z");
@@ -12809,24 +16177,31 @@ RED.view = (function() {
 
             node.each(function(d,i) {
                     if (d.dirty) {
-                        var isLink = d.type === "link-in" || d.type === "link-out";
+                        var isLink = (d.type === "link-in" || d.type === "link-out")
+                        var hideLabel = d.hasOwnProperty('l')?!d.l : isLink;
                         dirtyNodes[d.id] = d;
                         //if (d.x < -50) deleteSelection();  // Delete nodes if dragged back to palette
-                        if (!isLink && d.resize) {
+                        if (d.resize) {
                             var l = RED.utils.getNodeLabel(d);
                             var ow = d.w;
-                            d.w = Math.max(node_width,gridSize*(Math.ceil((calculateTextWidth(l, "node_label", 50)+(d._def.inputs>0?7:0))/gridSize)) );
+                            if (hideLabel) {
+                                d.w = node_height;
+                            } else {
+                                d.w = Math.max(node_width,gridSize*(Math.ceil((calculateTextWidth(l, "node_label", 50)+(d._def.inputs>0?7:0))/gridSize)) );
+                            }
+                            // d.w = Math.max(node_width,20*(Math.ceil((calculateTextWidth(l, "node_label", 50)+(d._def.inputs>0?7:0))/20)) );
                             d.h = Math.max(Math.max(node_height,(d.outputs||0) * 20),(d.inputs||0) * 20);
                             d.x += (d.w-ow)/2;
                             d.resize = false;
                         }
                         var thisNode = d3.select(this);
+                        thisNode.classed("node_subflow",function(d) { return activeSubflow != null; })
+
                         //thisNode.selectAll(".centerDot").attr({"cx":function(d) { return d.w/2;},"cy":function(d){return d.h/2}});
                         thisNode.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
-
                         if (mouse_mode != RED.state.MOVING_ACTIVE) {
                             if(!d.hasOwnProperty("fixedInputs")) d.fixedInputs = 0;
-                            
+
                             thisNode.selectAll(".node")
                                 .attr("width",function(d){return d.w})
                                 .attr("height",function(d){return d.h})
@@ -12837,6 +16212,15 @@ RED.view = (function() {
                             //thisNode.selectAll(".node-gradient-top").attr("width",function(d){return d.w});
                             //thisNode.selectAll(".node-gradient-bottom").attr("width",function(d){return d.w}).attr("y",function(d){return d.h-30});
 
+                            if ((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) {
+                                thisNode.selectAll(".node_icon_group").classed("node_icon_group_right", true);
+                                thisNode.selectAll(".node_label").classed("node_label_right", true).attr("text-anchor", "end");
+                            } else {
+                                thisNode.selectAll(".node_icon_group").classed("node_icon_group_right", false);
+                                thisNode.selectAll(".node_label").classed("node_label_right", false).attr("text-anchor", "start");
+                            }
+                            thisNode.selectAll(".node_icon_group").attr("transform", function (d) { return "translate(0, 0)"; });
+                            thisNode.selectAll(".node_label").attr("x", function (d) { return 38; });
                             thisNode.selectAll(".node_icon_group_right").attr("transform", function(d){return "translate("+(d.w-30)+",0)"});
                             thisNode.selectAll(".node_label_right").attr("x", function(d){return d.w-38});
                             //thisNode.selectAll(".node_icon_right").attr("x",function(d){return d.w-d3.select(this).attr("width")-1-(d.outputs>0?5:0);});
@@ -13071,20 +16455,47 @@ RED.view = (function() {
                             }
 
                             var numOutputs = d.outputs;
+
+                            if (isLink && d.type === "link-out") {
+                                if (showAllLinkPorts===PORT_TYPE_OUTPUT || activeLinkNodes[d.id]) {
+                                    d.outputPorts = [0];
+                                    numOutputs = 1;
+                                } else {
+                                    d.outputPorts = [];
+                                    numOutputs = 0;
+                                }
+                            }
+
                             y = (d.h/2)-((numOutputs-1)/2)*18;
                             d.outputPorts = d.outputPorts || d3.range(numOutputs);
                             d._outputPorts = thisNode.selectAll(".port_output").data(d.outputPorts);
                             var output_group = d._outputPorts.enter().append("g").attr("class","port_output");
+                            var output_group_ports;
 
-                            output_group.append("rect").attr("class","port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
-                                .on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
+                            if (d.type === "link-out") {
+                                output_group_ports = output_group.append("circle")
+                                    .attr("cx",11).attr("cy",5)
+                                    .attr("r",5)
+                                    .attr("class","port link_port")
+                                // output_group_ports = output_group.append("path")
+                                //     .attr("d","M 6 -1 h 3 a 6 6 0 1 1 0 12 h -3")
+                                //     .attr("class","port link_port")
+                            } else {
+                                output_group_ports = output_group.append("rect")
+                                    .attr("class","port")
+                                    .attr("rx",3).attr("ry",3)
+                                    .attr("width",10)
+                                    .attr("height",10)
+                            }
+
+                            output_group_ports.on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
                                 .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
                                 .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
                                 .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
                                 .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})())
                                 .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})());
 
-                            output_group.each(function(i){
+                            output_group_ports.each(function(i){
                                 if(d._def && d._def.outputInfo && i < d._def.outputInfo.length) {
                                     var outputInfo = d._def.outputInfo[i];
                                     var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
@@ -13118,6 +16529,7 @@ RED.view = (function() {
                                 var x = d.w - 5;
                                 d._outputPorts.each(function(d,i) {
                                         var port = d3.select(this);
+                                        //port.attr("y",(y+13*i)-5).attr("x",x);
                                         port.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
                                 });
                             }
@@ -13175,24 +16587,27 @@ RED.view = (function() {
                                     }
                                     return "node_label"+
                                     (d._def.align?" node_label_"+d._def.align:"")+s;
-                            });
-
+                            }).classed("hidden",hideLabel);
                             if (d._def.icon) {
-                                icon = thisNode.select(".node_icon");
-                                var current_url = icon.attr("xlink:href");
+                                var icon = thisNode.select(".node_icon");
+                                var faIcon = thisNode.select(".fa-lg");
+                                var current_url;
+                                if (!icon.empty()) {
+                                    current_url = icon.attr("xlink:href");
+                                } else {
+                                    current_url = faIcon.attr("xlink:href");
+                                }
                                 var new_url = RED.utils.getNodeIcon(d._def,d);
                                 if (new_url !== current_url) {
-                                    icon.attr("xlink:href",new_url);
-                                    var img = new Image();
-                                    img.src = new_url;
-                                    img.onload = function() {
-                                        icon.attr("width",Math.min(img.width,30));
-                                        icon.attr("height",Math.min(img.height,30));
-                                        icon.attr("x",15-Math.min(img.width,30)/2);
+                                    if (!icon.empty()) {
+                                        icon.remove();
+                                    } else {
+                                        faIcon.remove();
                                     }
+                                    var iconGroup = thisNode.select(".node_icon_group");
+                                    createIconAttributes(new_url, iconGroup, d);
                                 }
                             }
-
 
                             thisNode.selectAll(".node_tools").attr("x",function(d){return d.w-35;}).attr("y",function(d){return d.h-20;});
 
@@ -13209,36 +16624,48 @@ RED.view = (function() {
                                 .classed("hidden",function(d) { return d.fixedInputs == 0; });
 
                             /*thisNode.selectAll(".port_input").each(function(d,i) {
-                                    var port = d3.select(this);
-                                    port.attr("transform",function(d){return "translate(-5,"+((d.h/2)-5)+")";})
+                                var port = d3.select(this);
+                                port.attr("transform",function(d){return "translate(-5,"+((d.h/2)-5)+")";})
                             });*/
 
                             thisNode.selectAll(".node_icon").attr("y",function(d){return (d.h-d3.select(this).attr("height"))/2;});
                             thisNode.selectAll(".node_icon_shade").attr("height",function(d){return d.h;});
-                            thisNode.selectAll(".node_icon_shade_border").attr("d",function(d){ return "M "+(("right" == d._def.align) ?0:30)+" 1 l 0 "+(d.h-2)});
+                            thisNode.selectAll(".node_icon_shade_border").attr("d", function (d) {
+                                return "M " + (((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) ? 0 : 30) + " 1 l 0 " + (d.h - 2);
+                            });
+                            thisNode.selectAll(".fa-lg").attr("y",function(d){return (d.h+13)/2;});
 
                             thisNode.selectAll(".node_button").attr("opacity",function(d) {
-                                return (activeSubflow||!isButtonEnabled(d))?0.4:1
+                                return (!isButtonEnabled(d))?0.4:1
                             });
                             thisNode.selectAll(".node_button_button").attr("cursor",function(d) {
-                                return (activeSubflow||!isButtonEnabled(d))?"":"pointer";
+                                return (!isButtonEnabled(d))?"":"pointer";
                             });
-                            thisNode.selectAll(".node_right_button").attr("transform",function(d){
-                                    var x = d.w-6;
-                                    if (d._def.button.toggle && !d[d._def.button.toggle]) {
-                                        x = x - 8;
-                                    }
-                                    return "translate("+x+",2)";
+                            thisNode.selectAll(".node_button").attr("transform",function(d){
+                                var x = d._def.align == "right"?d.w-6:-25;
+                                if (d._def.button.toggle && !d[d._def.button.toggle]) {
+                                    x = x - (d._def.align == "right"?8:-8);
+                                }
+                                return "translate("+x+",2)";
                             });
-                            thisNode.selectAll(".node_right_button rect").attr("fill-opacity",function(d){
-                                    if (d._def.button.toggle) {
-                                        return d[d._def.button.toggle]?1:0.2;
-                                    }
-                                    return 1;
+                            thisNode.selectAll(".node_button rect").attr("fill-opacity",function(d){
+                                if (d._def.button.toggle) {
+                                    return d[d._def.button.toggle]?1:0.2;
+                                }
+                                return 1;
                             });
 
+                            if (d._def.button && (typeof d._def.button.visible === "function")) { // is defined and a function...
+                                if (d._def.button.visible.call(d) === false) {
+                                    thisNode.selectAll(".node_button").style("display","none");
+                                }
+                                else {
+                                    thisNode.selectAll(".node_button").style("display","inherit");
+                                }
+                            }
+
                             //thisNode.selectAll(".node_right_button").attr("transform",function(d){return "translate("+(d.w - d._def.button.width.call(d))+","+0+")";}).attr("fill",function(d) {
-                            //         return typeof d._def.button.color  === "function" ? d._def.button.color.call(d):(d._def.button.color != null ? d._def.button.color : d._def.color)
+                            //    return typeof d._def.button.color  === "function" ? d._def.button.color.call(d):(d._def.button.color != null ? d._def.button.color : d._def.color)
                             //});
 
                             thisNode.selectAll(".node_badge_group").attr("transform",function(d){return "translate("+(d.w-40)+","+(d.h+3)+")";});
@@ -13304,10 +16731,9 @@ RED.view = (function() {
                     }
             });
 
-            var link = vis.selectAll(".link").data(
+            var link = linkLayer.selectAll(".link").data(
                 activeLinks,
                 function(d) {
-                    var bla = d.target.id;
                     return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.targetPort+":"+d.target.i;
                 }
             );
@@ -13317,6 +16743,7 @@ RED.view = (function() {
                 var l = d3.select(this);
                 d.added = true;
                 l.append("svg:path").attr("class","link_background link_path")
+                   .classed("link_link", function(d) { return d.link })
                    .on("mousedown",function(d) {
                         mousedown_link = d;
                         clearSelection();
@@ -13350,10 +16777,13 @@ RED.view = (function() {
             });
 
             link.exit().remove();
-            var links = vis.selectAll(".link_path");
+            var links = linkLayer.selectAll(".link_path");
             links.each(function(d) {
                 var link = d3.select(this);
                 if (d.added || d===selected_link || d.selected || dirtyNodes[d.source.id] || dirtyNodes[d.target.id]) {
+                    if (/link_line/.test(link.attr('class'))) {
+                        link.classed("link_subflow", function(d) { return !d.link && activeSubflow });
+                    }
                     link.attr("d",function(d){
                         var numOutputs = d.source.outputs || 1;
                         var numInputs = d.target.inputs || 1;
@@ -13370,31 +16800,20 @@ RED.view = (function() {
                         var y1 = -((numOutputs-1)/2)*18 +18*sourcePort;
                         var y2 = -((numInputs-1)/2)*18 +18*targetPort;
 
-                        var dy = d.target.y-(d.source.y+y1);
-                        var dx = (d.target.x-d.target.w/2)-(d.source.x+d.source.w/2);
-                        var delta = Math.sqrt(dy*dy+dx*dx);
-                        var scale = lineCurveScale;
-                        var scaleY = 0;
-                        if (delta < node_width) {
-                            scale = 0.75-0.75*((node_width-delta)/node_width);
-                        }
-
-                        if (dx < 0) {
-                            scale += 2*(Math.min(5*node_width,Math.abs(dx))/(5*node_width));
-                            if (Math.abs(dy) < 3*node_height) {
-                                scaleY = ((dy>0)?0.5:-0.5)*(((3*node_height)-Math.abs(dy))/(3*node_height))*(Math.min(node_width,Math.abs(dx))/(node_width)) ;
-                            }
-                        }
-
                         d.x1 = d.source.x+d.source.w/2;
                         d.y1 = d.source.y+y1;
                         d.x2 = d.target.x-d.target.w/2;
                         d.y2 = d.target.y+y2;
 
-                        return "M "+d.x1+" "+d.y1+
-                            " C "+(d.x1+scale*node_width)+" "+(d.y1+scaleY*node_height)+" "+
-                            (d.x2-scale*node_width)+" "+(d.y2-scaleY*node_height)+" "+
-                            d.x2+" "+d.y2;
+                        // return "M "+d.x1+" "+d.y1+
+                        //     " C "+(d.x1+scale*node_width)+" "+(d.y1+scaleY*node_height)+" "+
+                        //     (d.x2-scale*node_width)+" "+(d.y2-scaleY*node_height)+" "+
+                        //     d.x2+" "+d.y2;
+                        var path = generateLinkPath(d.x1,d.y1,d.x2,d.y2,1);
+                        if (/NaN/.test(path)) {
+                            return ""
+                        }
+                        return path;
                     });
                 }
             })
@@ -13405,7 +16824,7 @@ RED.view = (function() {
                 delete d.added;
                 return d.target.type == "unknown" || d.source.type == "unknown"
             });
-            var offLinks = vis.selectAll(".link_flow_link_g").data(
+            var offLinks = linkLayer.selectAll(".link_flow_link_g").data(
                 activeFlowLinks,
                 function(d) {
                     return d.node.id+":"+d.refresh
@@ -13436,10 +16855,13 @@ RED.view = (function() {
                 var y = -(flows.length-1)*h/2;
                 var linkGroups = g.selectAll(".link_group").data(flows);
                 var enterLinkGroups = linkGroups.enter().append("g").attr("class","link_group")
-                        .on('mouseover', function() { d3.select(this).classed('link_group_active',true)})
-                        .on('mouseout', function() { d3.select(this).classed('link_group_active',false)})
+                        .on('mouseover', function() { if (mouse_mode !== 0) { return } d3.select(this).classed('link_group_active',true)})
+                        .on('mouseout', function() {if (mouse_mode !== 0) { return } d3.select(this).classed('link_group_active',false)})
                         .on('mousedown', function() { d3.event.preventDefault(); d3.event.stopPropagation(); })
                         .on('mouseup', function(f) {
+                            if (mouse_mode !== 0) {
+                                return
+                            }
                             d3.event.stopPropagation();
                             var targets = d.links[f];
                             RED.workspaces.show(f);
@@ -13511,7 +16933,7 @@ RED.view = (function() {
                 linkGroups.exit().remove();
             });
             offLinks.exit().remove();
-            offLinks = vis.selectAll(".link_flow_link_g");
+            offLinks = linkLayer.selectAll(".link_flow_link_g");
             offLinks.each(function(d) {
                 var s = 1;
                 if (d.node.type === "link-in") {
@@ -13524,14 +16946,14 @@ RED.view = (function() {
 
         } else {
             // JOINING - unselect any selected links
-            vis.selectAll(".link_selected").data(
+            linkLayer.selectAll(".link_selected").data(
                 activeLinks,
                 function(d) {
                     return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.targetPort+":"+d.target.i;
                 }
             ).classed("link_selected", false);
         }
-
+        RED.view.navigator.refresh();
         if (d3.event) {
             d3.event.preventDefault();
         }
@@ -13577,7 +16999,7 @@ RED.view = (function() {
                     RED.workspaces.show(new_default_workspace.id);
                 }
                 var new_ms = new_nodes.filter(function(n) { return n.hasOwnProperty("x") && n.hasOwnProperty("y") && n.z == RED.workspaces.active() }).map(function(n) { return {n:n};});
-                var new_node_ids = new_nodes.map(function(n){ return n.id; });
+                var new_node_ids = new_nodes.map(function(n){ n.changed = true; return n.id; });
 
                 // TODO: pick a more sensible root node
                 if (new_ms.length > 0) {
@@ -13666,6 +17088,34 @@ RED.view = (function() {
 
                 updateActiveNodes();
                 redraw();
+
+                var counts = [];
+                var newNodeCount = 0;
+                var newConfigNodeCount = 0;
+                new_nodes.forEach(function(n) {
+                    if (n.hasOwnProperty("x") && n.hasOwnProperty("y")) {
+                        newNodeCount++;
+                    } else {
+                        newConfigNodeCount++;
+                    }
+                })
+                if (new_workspaces.length > 0) {
+                    counts.push(RED._("clipboard.flow",{count:new_workspaces.length}));
+                }
+                if (newNodeCount > 0) {
+                    counts.push(RED._("clipboard.node",{count:newNodeCount}));
+                }
+                if (newConfigNodeCount > 0) {
+                    counts.push(RED._("clipboard.configNode",{count:newNodeCount}));
+                }
+                if (new_subflows.length > 0) {
+                    counts.push(RED._("clipboard.subflow",{count:new_subflows.length}));
+                }
+                if (counts.length > 0) {
+                    var countList = "<ul><li>"+counts.join("</li><li>")+"</li></ul>";
+                    RED.notify("<p>"+RED._("clipboard.nodesImported")+"</p>"+countList,{id:"clipboard"});
+                }
+
             }
         } catch(error) {
             if (error.code != "NODE_RED") {
@@ -13805,9 +17255,317 @@ RED.view = (function() {
                 gridSize = Math.max(5,v);
                 updateGrid();
             }
+        },
+        getActiveNodes: function() {
+            return activeNodes;
         }
-
     };
+})();
+;/**
+ * Copyright 2016 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+
+
+ RED.view.navigator = (function() {
+
+     var nav_scale = 25;
+     var nav_width = 5000/nav_scale;
+     var nav_height = 5000/nav_scale;
+
+     var navContainer;
+     var navBox;
+     var navBorder;
+     var navVis;
+     var scrollPos;
+     var scaleFactor;
+     var chartSize;
+     var dimensions;
+     var isDragging;
+     var isShowing = false;
+
+     function refreshNodes() {
+         if (!isShowing) {
+             return;
+         }
+         var navNode = navVis.selectAll(".navnode").data(RED.view.getActiveNodes(),function(d){return d.id});
+         navNode.exit().remove();
+         navNode.enter().insert("rect")
+             .attr('class','navnode')
+             .attr("pointer-events", "none");
+         navNode.each(function(d) {
+             d3.select(this).attr("x",function(d) { return (d.x-d.w/2)/nav_scale })
+             .attr("y",function(d) { return (d.y-d.h/2)/nav_scale })
+             .attr("width",function(d) { return Math.max(9,d.w/nav_scale) })
+             .attr("height",function(d) { return Math.max(3,d.h/nav_scale) })
+             .attr("fill",function(d) { return RED.utils.getNodeColor(d.type,d._def);})
+         });
+     }
+     function onScroll() {
+         if (!isDragging) {
+             resizeNavBorder();
+         }
+     }
+     function resizeNavBorder() {
+         if (navBorder) {
+             scaleFactor = RED.view.scale();
+             chartSize = [ $("#chart").width(), $("#chart").height()];
+             scrollPos = [$("#chart").scrollLeft(),$("#chart").scrollTop()];
+             navBorder.attr('x',scrollPos[0]/nav_scale)
+                      .attr('y',scrollPos[1]/nav_scale)
+                      .attr('width',chartSize[0]/nav_scale/scaleFactor)
+                      .attr('height',chartSize[1]/nav_scale/scaleFactor)
+         }
+     }
+     function toggle() {
+         if (!isShowing) {
+             isShowing = true;
+             $("#btn-navigate").addClass("selected");
+             resizeNavBorder();
+             refreshNodes();
+             $("#chart").on("scroll",onScroll);
+             navContainer.fadeIn(200);
+         } else {
+             isShowing = false;
+             navContainer.fadeOut(100);
+             $("#chart").off("scroll",onScroll);
+             $("#btn-navigate").removeClass("selected");
+         }
+     }
+
+     return {
+         init: function() {
+
+             $(window).resize(resizeNavBorder);
+             RED.events.on("sidebar:resize",resizeNavBorder);
+             RED.actions.add("core:toggle-navigator",toggle);
+             var hideTimeout;
+
+             navContainer = $('<div>').css({
+                 "position":"absolute",
+                 "bottom":$("#workspace-footer").height(),
+                 "right":0,
+                 zIndex: 1
+             }).appendTo("#workspace").hide();
+
+             navBox = d3.select(navContainer[0])
+                 .append("svg:svg")
+                 .attr("width", nav_width)
+                 .attr("height", nav_height)
+                 .attr("pointer-events", "all")
+                 .style({
+                     position: "absolute",
+                     bottom: 0,
+                     right:0,
+                     zIndex: 101,
+                     "border-left": "1px solid #ccc",
+                     "border-top": "1px solid #ccc",
+                     background: "rgba(245,245,245,0.8)",
+                     "box-shadow": "-1px 0 3px rgba(0,0,0,0.1)"
+                 });
+
+             navBox.append("rect").attr("x",0).attr("y",0).attr("width",nav_width).attr("height",nav_height).style({
+                 fill:"none",
+                 stroke:"none",
+                 pointerEvents:"all"
+             }).on("mousedown", function() {
+                 // Update these in case they have changed
+                 scaleFactor = RED.view.scale();
+                 chartSize = [ $("#chart").width(), $("#chart").height()];
+                 dimensions = [chartSize[0]/nav_scale/scaleFactor, chartSize[1]/nav_scale/scaleFactor];
+                 var newX = Math.max(0,Math.min(d3.event.offsetX+dimensions[0]/2,nav_width)-dimensions[0]);
+                 var newY = Math.max(0,Math.min(d3.event.offsetY+dimensions[1]/2,nav_height)-dimensions[1]);
+                 navBorder.attr('x',newX).attr('y',newY);
+                 isDragging = true;
+                 $("#chart").scrollLeft(newX*nav_scale*scaleFactor);
+                 $("#chart").scrollTop(newY*nav_scale*scaleFactor);
+             }).on("mousemove", function() {
+                 if (!isDragging) { return }
+                 if (d3.event.buttons === 0) {
+                     isDragging = false;
+                     return;
+                 }
+                 var newX = Math.max(0,Math.min(d3.event.offsetX+dimensions[0]/2,nav_width)-dimensions[0]);
+                 var newY = Math.max(0,Math.min(d3.event.offsetY+dimensions[1]/2,nav_height)-dimensions[1]);
+                 navBorder.attr('x',newX).attr('y',newY);
+                 $("#chart").scrollLeft(newX*nav_scale*scaleFactor);
+                 $("#chart").scrollTop(newY*nav_scale*scaleFactor);
+             }).on("mouseup", function() {
+                 isDragging = false;
+             })
+
+             navBorder = navBox.append("rect")
+                 .attr("stroke-dasharray","5,5")
+                 .attr("pointer-events", "none")
+                 .style({
+                     stroke: "#999",
+                     strokeWidth: 1,
+                     fill: "white",
+                 });
+
+             navVis = navBox.append("svg:g")
+
+
+            $("#btn-navigate").click(function(evt) {
+                evt.preventDefault();
+                toggle();
+            })
+            RED.popover.tooltip($("#btn-navigate"),RED._('actions.toggle-navigator'),'core:toggle-navigator');
+        },
+        refresh: refreshNodes,
+        resize: resizeNavBorder,
+        toggle: toggle
+    }
+
+
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+
+RED.view.tools = (function() {
+
+
+    function alignToGrid() {
+        var selection = RED.view.selection();
+        if (selection.nodes) {
+            var changedNodes = [];
+            selection.nodes.forEach(function(n) {
+                var x = n.w/2 + Math.round((n.x-n.w/2)/RED.view.gridSize())*RED.view.gridSize();
+                var y = Math.round(n.y/RED.view.gridSize())*RED.view.gridSize();
+                if (n.x !== x || n.y !== y) {
+                    changedNodes.push({
+                        n:n,
+                        ox: n.x,
+                        oy: n.y,
+                        moved: n.moved
+                    });
+                    n.x = x;
+                    n.y = y;
+                    n.dirty = true;
+                    n.moved = true;
+                }
+            });
+            if (changedNodes.length > 0) {
+                RED.history.push({t:"move",nodes:changedNodes,dirty:RED.nodes.dirty()});
+                RED.nodes.dirty(true);
+                RED.view.redraw(true);
+            }
+        }
+    }
+
+    var moving_set = null;
+    var endMoveSet = false;
+    function endKeyboardMove() {
+        endMoveSet = false;
+        if (moving_set.length > 0) {
+            var ns = [];
+            for (var i=0;i<moving_set.length;i++) {
+                ns.push({n:moving_set[i].n,ox:moving_set[i].ox,oy:moving_set[i].oy,moved:moving_set[i].moved});
+                moving_set[i].n.moved = true;
+                moving_set[i].n.dirty = true;
+                delete moving_set[i].ox;
+                delete moving_set[i].oy;
+            }
+            RED.view.redraw();
+            RED.history.push({t:"move",nodes:ns,dirty:RED.nodes.dirty()});
+            RED.nodes.dirty(true);
+            moving_set = null;
+        }
+    }
+
+    function moveSelection(dx,dy) {
+        if (moving_set === null) {
+            var selection = RED.view.selection();
+            if (selection.nodes) {
+                moving_set = selection.nodes.map(function(n) { return {n:n}});
+            }
+        }
+        if (moving_set && moving_set.length > 0) {
+            if (!endMoveSet) {
+                $(document).one('keyup',endKeyboardMove);
+                endMoveSet = true;
+            }
+            var minX = 0;
+            var minY = 0;
+            var node;
+
+            for (var i=0;i<moving_set.length;i++) {
+                node = moving_set[i];
+                if (node.ox == null && node.oy == null) {
+                    node.ox = node.n.x;
+                    node.oy = node.n.y;
+                    node.moved = node.n.moved;
+                }
+                node.n.moved = true;
+                node.n.dirty = true;
+                node.n.x += dx;
+                node.n.y += dy;
+                node.n.dirty = true;
+                minX = Math.min(node.n.x-node.n.w/2-5,minX);
+                minY = Math.min(node.n.y-node.n.h/2-5,minY);
+            }
+
+            if (minX !== 0 || minY !== 0) {
+                for (var n = 0; n<moving_set.length; n++) {
+                    node = moving_set[n];
+                    node.n.x -= minX;
+                    node.n.y -= minY;
+                }
+            }
+            RED.view.redraw();
+        }
+    }
+
+    return {
+        init: function() {
+            RED.actions.add("core:align-selection-to-grid", alignToGrid);
+
+            RED.actions.add("core:move-selection-up", function() { moveSelection(0,-1);});
+            RED.actions.add("core:move-selection-right", function() { moveSelection(1,0);});
+            RED.actions.add("core:move-selection-down", function() { moveSelection(0,1);});
+            RED.actions.add("core:move-selection-left", function() { moveSelection(-1,0);});
+
+            RED.actions.add("core:step-selection-up", function() { moveSelection(0,-RED.view.gridSize());});
+            RED.actions.add("core:step-selection-right", function() { moveSelection(RED.view.gridSize(),0);});
+            RED.actions.add("core:step-selection-down", function() { moveSelection(0,RED.view.gridSize());});
+            RED.actions.add("core:step-selection-left", function() { moveSelection(-RED.view.gridSize(),0);});
+        },
+        /**
+         * Aligns all selected nodes to the current grid
+         */
+        alignSelectionToGrid: alignToGrid,
+        /**
+         * Moves all of the selected nodes by the specified amount
+         * @param  {Number} dx
+         * @param  {Number} dy
+         */
+        moveSelection: moveSelection
+    }
+
 })();
 ;/**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -13846,7 +17604,8 @@ RED.sidebar = (function() {
                 tab.onremove.call(tab);
             }
         },
-        minimumActiveTabWidth: 70
+        // minimumActiveTabWidth: 70,
+        collapsible: true
         // scrollable: true
     });
 
@@ -13869,6 +17628,8 @@ RED.sidebar = (function() {
         } else if (typeof title === "object") {
             options = title;
         }
+
+        delete options.closeable;
 
         options.wrapper = $('<div>',{style:"height:100%"}).appendTo("#sidebar-content")
         options.wrapper.append(options.content);
@@ -13893,6 +17654,8 @@ RED.sidebar = (function() {
             group: "sidebar-tabs"
         });
 
+        options.iconClass = options.iconClass || "fa fa-square-o"
+
         knownTabs[options.id] = options;
 
         if (options.visible !== false) {
@@ -13911,6 +17674,8 @@ RED.sidebar = (function() {
     }
 
     var sidebarSeparator =  {};
+    sidebarSeparator.dragging = false;
+
     $("#sidebar-separator").draggable({
             axis: "x",
             start:function(event,ui) {
@@ -13920,6 +17685,7 @@ RED.sidebar = (function() {
                 sidebarSeparator.start = ui.position.left;
                 sidebarSeparator.chartWidth = $("#workspace").width();
                 sidebarSeparator.chartRight = winWidth-$("#workspace").width()-$("#workspace").offset().left-2;
+                sidebarSeparator.dragging = true;
 
                 if (!RED.menu.isSelected("menu-item-sidebar")) {
                     sidebarSeparator.opening = true;
@@ -13972,6 +17738,7 @@ RED.sidebar = (function() {
                 RED.events.emit("sidebar:resize");
             },
             stop:function(event,ui) {
+                sidebarSeparator.dragging = false;
                 if (sidebarSeparator.closing) {
                     $("#sidebar").removeClass("closing");
                     RED.menu.setSelected("menu-item-sidebar",false);
@@ -13985,6 +17752,27 @@ RED.sidebar = (function() {
                 $("#sidebar-separator").css("right",($("#sidebar").width()+2)+"px");
                 RED.events.emit("sidebar:resize");
             }
+    });
+
+    var sidebarControls = $('<div class="sidebar-control-right"><i class="fa fa-chevron-right"</div>').appendTo($("#sidebar-separator"));
+    sidebarControls.click(function() {
+        sidebarControls.hide();
+        RED.menu.toggleSelected("menu-item-sidebar");
+    })
+    $("#sidebar-separator").on("mouseenter", function() {
+        if (!sidebarSeparator.dragging) {
+            if (RED.menu.isSelected("menu-item-sidebar")) {
+                sidebarControls.find("i").addClass("fa-chevron-right").removeClass("fa-chevron-left");
+            } else {
+                sidebarControls.find("i").removeClass("fa-chevron-right").addClass("fa-chevron-left");
+            }
+            sidebarControls.toggle("slide", { direction: "right" }, 200);
+        }
+    })
+    $("#sidebar-separator").on("mouseleave", function() {
+        if (!sidebarSeparator.dragging) {
+            sidebarControls.hide();
+        }
     });
 
     function toggleSidebar(state) {
@@ -14021,9 +17809,11 @@ RED.sidebar = (function() {
                 toggleSidebar(state);
             }
         });
+        RED.popover.tooltip($("#sidebar-separator").find(".sidebar-control-right"),RED._("keyboard.toggleSidebar"),"core:toggle-sidebar");
         showSidebar();
         RED.sidebar.info.init();
         RED.sidebar.config.init();
+        RED.sidebar.context.init();
         // hide info bar at start if screen rather narrow...
         if ($(window).width() < 600) { RED.menu.setSelected("menu-item-sidebar",false); }
     }
@@ -14038,7 +17828,9 @@ RED.sidebar = (function() {
     }
 
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14060,8 +17852,19 @@ RED.palette = (function() {
     var coreCategories = ['subflows', 'input', 'output', 'function', 'social', 'mobile', 'storage', 'analysis', 'advanced'];
 
     var categoryContainers = {};
+    var sidebarControls;
 
-    function createCategoryContainer(category, label) {
+    function createCategory(originalCategory,rootCategory,category,ns) {
+        if ($("#palette-base-category-"+rootCategory).length === 0) {
+            createCategoryContainer(originalCategory,rootCategory, ns+":palette.label."+rootCategory);
+        }
+        $("#palette-container-"+rootCategory).show();
+        if ($("#palette-"+category).length === 0) {
+            $("#palette-base-category-"+rootCategory).append('<div id="palette-'+category+'"></div>');
+        }
+    }
+    function createCategoryContainer(originalCategory,category, labelId) {
+        var label = RED._(labelId, {defaultValue:category});
         label = (label || category).replace(/_/g, " ");
         var catDiv = $('<div id="palette-container-'+category+'" class="palette-category palette-close hide">'+
             '<div id="palette-header-'+category+'" class="palette-header"><i class="expanded fa fa-angle-down"></i><span>'+label+'</span></div>'+
@@ -14071,7 +17874,8 @@ RED.palette = (function() {
             '<div id="palette-'+category+'-function"></div>'+
             '</div>'+
             '</div>').appendTo("#palette-container");
-
+        catDiv.data('category',originalCategory);
+        catDiv.data('label',label);
         categoryContainers[category] = {
             container: catDiv,
             close: function() {
@@ -14100,11 +17904,13 @@ RED.palette = (function() {
         });
     }
 
-    function setLabel(type, el, label, info, namespace) {
+    function setLabel(type, el,label, info, namespace) {
         var nodeWidth = 82;
         var nodeHeight = 25;
         var lineHeight = 20;
         var portHeight = 10;
+
+        label = RED.utils.sanitize(label);
 
         var words = label.split(/[ -]/);
 
@@ -14138,11 +17944,19 @@ RED.palette = (function() {
         var popOverContent;
         try {
             var l = "<p><b>"+RED.text.bidi.enforceTextDirectionWithUCC(label)+"</b></p>";
-            if (label != type) {
-                l = "<p><b>"+RED.text.bidi.enforceTextDirectionWithUCC(label)+"</b><br/><i>"+type+"</i></p>";
-            }
             var helpContent = i18n.t(namespace + "/" + type + ".hni:" + type + ".paletteHelp");
             popOverContent = $(l+(info?info:helpContent||"<p>"+RED._("palette.noInfo")+"</p>").trim());
+
+            var typeInfo = RED.nodes.getType(type);
+
+            /*if (typeInfo) {
+                var metaData = "";
+                if (typeInfo && !/^subflow:/.test(type)) {
+                    metaData = typeInfo.set.module+" : ";
+                }
+                metaData += type;
+                $('<p>',{style:"font-size: 0.8em"}).text(metaData).appendTo(popOverContent);
+            }*/
         } catch(err) {
             // Malformed HTML may cause errors. TODO: need to understand what can break
             // NON-NLS: internal debug
@@ -14155,9 +17969,9 @@ RED.palette = (function() {
     }
 
     function setIcon(element,sf) {
-        var iconElement = element.find(".palette_icon");
-        var icon_url = RED.utils.getNodeIcon(sf._def,sf);
-        iconElement.attr("style", "background-image: url("+icon_url+")");
+        var icon_url = RED.utils.getNodeIcon(sf._def);
+        var iconContainer = element.find(".palette_icon_container");
+        RED.utils.createIconElement(icon_url, iconContainer, true);
     }
 
     function escapeNodeType(nt) {
@@ -14171,6 +17985,7 @@ RED.palette = (function() {
         }
         if (exclusion.indexOf(def.category)===-1) {
 
+            var originalCategory = def.category;
             var category = def.category.replace(/ /g,"_");
             var rootCategory = category.split("-")[0];
 
@@ -14188,18 +18003,23 @@ RED.palette = (function() {
                 }
             }
 
-            $('<div/>',{class:"palette_label"+(def.align=="right"?" palette_label_right":"")}).appendTo(d);
+            $('<div/>', {
+                class: "palette_label"
+                     + (((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " palette_label_right" : "")
+            }).appendTo(d);
 
             d.className="palette_node";
 
-
             if (def.icon) {
                 var icon_url = RED.utils.getNodeIcon(def);
-                var iconContainer = $('<div/>',{class:"palette_icon_container"+(def.align=="right"?" palette_icon_container_right":"")}).appendTo(d);
-                $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
+                var iconContainer = $('<div/>', {
+                    class: "palette_icon_container"
+                         + (((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " palette_icon_container_right" : "")
+                }).appendTo(d);
+                RED.utils.createIconElement(icon_url, iconContainer, true);
             }
 
-            d.style.backgroundColor = def.color;
+            d.style.backgroundColor = RED.utils.getNodeColor(nt,def);
 
             if (def.outputs > 0) {
                 var portOut = document.createElement("div");
@@ -14213,21 +18033,12 @@ RED.palette = (function() {
                 d.appendChild(portIn);
             }
 
-            if ($("#palette-base-category-"+rootCategory).length === 0) {
-                if(coreCategories.indexOf(rootCategory) !== -1){
-                    createCategoryContainer(rootCategory, RED._("node-red:palette.label."+rootCategory, {defaultValue:rootCategory}));
-                } else {
-                    var ns = def.set.id;
-                    createCategoryContainer(rootCategory, RED._(ns+":palette.label."+rootCategory, {defaultValue:rootCategory}));
-                }
-            }
-            $("#palette-container-"+rootCategory).show();
-
-            if ($("#palette-"+category).length === 0) {
-                $("#palette-base-category-"+rootCategory).append('<div id="palette-'+category+'"></div>');
-            }
+            createCategory(def.category,rootCategory,category,(coreCategories.indexOf(rootCategory) !== -1)?"node-red":def.set.id);
 
             $("#palette-"+category).append(d);
+
+            $(d).data('category',rootCategory);
+
             d.onmousedown = function(e) { e.preventDefault(); };
 
             var popover = RED.popover.create({
@@ -14269,8 +18080,8 @@ RED.palette = (function() {
             $(d).draggable({
                 helper: 'clone',
                 appendTo: 'body',
-                revert: true,
-                revertDuration: 50,
+                revert: 'invalid',
+                revertDuration: 300,
                 containment:'#main-container',
                 start: function() {
                     paletteWidth = $("#palette").width();
@@ -14279,11 +18090,7 @@ RED.palette = (function() {
                 },
                 stop: function() { d3.select('.link_splice').classed('link_splice',false); if (spliceTimer) { clearTimeout(spliceTimer); spliceTimer = null;}},
                 drag: function(e,ui) {
-
-                    // TODO: this is the margin-left of palette node. Hard coding
-                    // it here makes me sad
-                    //console.log(ui.helper.position());
-                    ui.position.left += 17.5;
+                    ui.originalPosition.left = $('#' + e.target.id).offset().left;
 
                     if (def.inputs > 0 && def.outputs > 0) {
                         mouseX = ui.position.left-paletteWidth+(ui.helper.width()/2) - chartOffset.left + chart.scrollLeft();
@@ -14311,7 +18118,8 @@ RED.palette = (function() {
                                 }
 
                                 for (var i=0;i<nodes.length;i++) {
-                                    if (d3.select(nodes[i]).classed('link_background')) {
+                                    var node = d3.select(nodes[i]);
+                                    if (node.classed('link_background') && !node.classed('link_link')) {
                                         var length = nodes[i].getTotalLength();
                                         for (var j=0;j<length;j+=10) {
                                             var p = nodes[i].getPointAtLength(j);
@@ -14347,7 +18155,7 @@ RED.palette = (function() {
             });
 
             var nodeInfo = null;
-            if (def.category == "subflows") {
+            if (nt.indexOf("subflow:") === 0) {
                 $(d).dblclick(function(e) {
                     RED.workspaces.show(nt.substring(8));
                     e.preventDefault();
@@ -14356,9 +18164,9 @@ RED.palette = (function() {
             }
             setLabel(nt,$(d),label,nodeInfo, def.namespace ? def.namespace : nt);
 
-            var categoryNode = $("#palette-container-"+category);
+            var categoryNode = $("#palette-container-"+rootCategory);
             if (categoryNode.find(".palette_node").length === 1) {
-                categoryContainers[category].close();
+                categoryContainers[rootCategory].close();
             }
 
         }
@@ -14404,6 +18212,17 @@ RED.palette = (function() {
             var portInput = paletteNode.find(".palette_port_input");
             var portOutput = paletteNode.find(".palette_port_output");
 
+            var paletteLabel = paletteNode.find(".palette_label");
+            paletteLabel.attr("class","palette_label"
+                 + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " palette_label_right" : "")
+             );
+
+            var paletteIconContainer = paletteNode.find(".palette_icon_container");
+            paletteIconContainer.attr("class","palette_icon_container"
+                  + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " palette_icon_container_right" : "")
+              );
+
+
             if (portInput.length === 0 && sf.in.length > 0) {
                 var portIn = document.createElement("div");
                 portIn.className = "palette_port palette_port_input";
@@ -14421,6 +18240,31 @@ RED.palette = (function() {
             }
             setLabel(sf.type+":"+sf.id,paletteNode,sf.name,marked(sf.info||""),sf.type+":"+sf.id);
             setIcon(paletteNode,sf);
+
+            var currentCategory = paletteNode.data('category');
+            var newCategory = (sf.category||"subflows");
+            if (currentCategory !== newCategory) {
+                var category = newCategory.replace(/ /g,"_");
+                createCategory(newCategory,category,category,"node-red");
+
+                var currentCategoryNode = paletteNode.closest(".palette-category");
+                var newCategoryNode = $("#palette-"+category);
+                newCategoryNode.append(paletteNode);
+                if (newCategoryNode.find(".palette_node").length === 1) {
+                    categoryContainers[category].open();
+                }
+
+                paletteNode.data('category',newCategory);
+                if (currentCategoryNode.find(".palette_node").length === 0) {
+                    if (currentCategoryNode.find("i").hasClass("expanded")) {
+                        currentCategoryNode.find(".palette-content").slideToggle();
+                        currentCategoryNode.find("i").toggleClass("expanded");
+                    }
+                }
+
+
+
+            }
         });
     }
 
@@ -14470,7 +18314,6 @@ RED.palette = (function() {
             }
         });
         RED.events.on('registry:node-set-disabled', function(nodeSet) {
-            console.log(nodeSet);
             for (var j=0;j<nodeSet.types.length;j++) {
                 hideNodeType(nodeSet.types[j]);
                 var def = RED.nodes.getType(nodeSet.types[j]);
@@ -14500,6 +18343,22 @@ RED.palette = (function() {
             }
         })
 
+        sidebarControls = $('<div class="sidebar-control-left"><i class="fa fa-chevron-left"</div>').appendTo($("#palette"));
+        RED.popover.tooltip(sidebarControls,RED._("keyboard.togglePalette"),"core:toggle-palette");
+
+        sidebarControls.click(function() {
+            RED.menu.toggleSelected("menu-item-palette");
+        })
+        $("#palette").on("mouseenter", function() {
+            sidebarControls.toggle("slide", { direction: "left" }, 200);
+        })
+        $("#palette").on("mouseleave", function() {
+            sidebarControls.hide();
+        })
+
+
+
+
         var categoryList = coreCategories;
         if (RED.settings.paletteCategories) {
             categoryList = RED.settings.paletteCategories;
@@ -14510,7 +18369,7 @@ RED.palette = (function() {
             categoryList = coreCategories
         }
         categoryList.forEach(function(category){
-            createCategoryContainer(category, RED._("palette.label."+category,{defaultValue:category}));
+            createCategoryContainer(category, category, "palette.label."+category);
         });
 
         $("#palette-collapse-all").on("click", function(e) {
@@ -14521,6 +18380,8 @@ RED.palette = (function() {
                 }
             }
         });
+        RED.popover.tooltip($("#palette-collapse-all"),RED._('palette.actions.collapse-all'));
+
         $("#palette-expand-all").on("click", function(e) {
             e.preventDefault();
             for (var cat in categoryContainers) {
@@ -14529,18 +18390,49 @@ RED.palette = (function() {
                 }
             }
         });
+        RED.popover.tooltip($("#palette-expand-all"),RED._('palette.actions.expand-all'));
+
+        RED.actions.add("core:toggle-palette", function(state) {
+            if (state === undefined) {
+                RED.menu.toggleSelected("menu-item-palette");
+            } else {
+                togglePalette(state);
+            }
+        });
+    }
+    function togglePalette(state) {
+        if (!state) {
+            $("#main-container").addClass("palette-closed");
+            sidebarControls.hide();
+            sidebarControls.find("i").addClass("fa-chevron-right").removeClass("fa-chevron-left");
+        } else {
+            $("#main-container").removeClass("palette-closed");
+            sidebarControls.find("i").removeClass("fa-chevron-right").addClass("fa-chevron-left");
+        }
+        setTimeout(function() { $(window).resize(); } ,200);
     }
 
+
+    function getCategories() {
+        var categories = [];
+        $("#palette-container .palette-category").each(function(i,d) {
+            categories.push({id:$(d).data('category'),label:$(d).data('label')});
+        })
+        return categories;
+    }
     return {
         init: init,
         add:addNodeType,
         remove:removeNodeType,
         hide:hideNodeType,
         show:showNodeType,
-        refresh:refreshNodeTypes
+        refresh:refreshNodeTypes,
+        getCategories: getCategories
     };
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14570,8 +18462,9 @@ RED.sidebar.info = (function() {
 
     var content;
     var sections;
-    var nodeSection;
+    var propertiesSection;
     var infoSection;
+    var helpSection;
     var tipBox;
 
     var expandedSections = {
@@ -14591,18 +18484,25 @@ RED.sidebar.info = (function() {
             container: stackContainer
         }).hide();
 
-        nodeSection = sections.add({
+        propertiesSection = sections.add({
             title: RED._("sidebar.info.info"),
             collapsible: true
         });
-        nodeSection.expand();
+        propertiesSection.expand();
+
         infoSection = sections.add({
-            title: RED._("sidebar.info.nodeHelp"),
+            title: RED._("sidebar.info.desc"),
             collapsible: true
         });
         infoSection.expand();
         infoSection.content.css("padding","6px");
-        infoSection.container.css("border-bottom","none");
+
+        helpSection = sections.add({
+            title: RED._("sidebar.info.nodeHelp"),
+            collapsible: true
+        });
+        helpSection.expand();
+        helpSection.content.css("padding","6px");
 
         var tipContainer = $('<div class="node-info-tips"></div>').appendTo(content);
         tipBox = $('<div class="node-info-tip"></div>').appendTo(tipContainer);
@@ -14625,7 +18525,10 @@ RED.sidebar.info = (function() {
             id: "info",
             label: RED._("sidebar.info.label"),
             name: RED._("sidebar.info.name"),
+            iconClass: "fa fa-info",
+            action:"core:show-info-tab",
             content: content,
+            pinned: true,
             enableOnEdit: true
         });
         if (tips.enabled()) {
@@ -14656,13 +18559,15 @@ RED.sidebar.info = (function() {
             return;
         }
         sections.show();
-        $(nodeSection.content).empty();
+        $(propertiesSection.content).empty();
         $(infoSection.content).empty();
+        $(helpSection.content).empty();
 
         var propRow;
 
-        var table = $('<table class="node-info"></table>').appendTo(nodeSection.content);
+        var table = $('<table class="node-info"></table>').appendTo(propertiesSection.content);
         var tableBody = $('<tbody>').appendTo(table);
+
         var subflowNode;
         var subflowUserCount;
 
@@ -14671,21 +18576,57 @@ RED.sidebar.info = (function() {
             propRow = $('<tr class="node-info-node-row"><td>Project</td><td></td></tr>').appendTo(tableBody);
             $(propRow.children()[1]).text(activeProject.name||"");
             $('<tr class="node-info-property-expand blank"><td colspan="2"></td></tr>').appendTo(tableBody);
-            $('<button class="editor-button editor-button-small" style="position:absolute;right:2px;"><i class="fa fa-ellipsis-h"></i></button>')
+            var editProjectButton = $('<button class="editor-button editor-button-small" style="position:absolute;right:2px;"><i class="fa fa-ellipsis-h"></i></button>')
                 .appendTo(propRow.children()[1])
                 .click(function(evt) {
                     evt.preventDefault();
                     RED.projects.editProject();
                 });
+            RED.popover.tooltip(editProjectButton,RED._('sidebar.project.showProjectSettings'));
         }
+        propertiesSection.container.show();
         infoSection.container.show();
+        helpSection.container.show();
         if (node === null) {
             return;
         } else if (Array.isArray(node)) {
+            // Multiple things selected
+            // - hide help and info sections
+
+            var types = {
+                nodes:0,
+                flows:0,
+                subflows:0
+            }
+            node.forEach(function(n) {
+                if (n.type === 'tab') {
+                    types.flows++;
+                    types.nodes += RED.nodes.filterNodes({z:n.id}).length;
+                } else if (n.type === 'subflow') {
+                    types.subflows++;
+                } else {
+                    types.nodes++;
+                }
+            });
+            helpSection.container.hide();
             infoSection.container.hide();
+            // - show the count of selected nodes
             propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.selection")+"</td><td></td></tr>").appendTo(tableBody);
-            $(propRow.children()[1]).text(RED._("sidebar.info.nodes",{count:node.length}))
+
+            var counts = $('<div>').appendTo($(propRow.children()[1]));
+            if (types.flows > 0) {
+                $('<div>').text(RED._("clipboard.flow",{count:types.flows})).appendTo(counts);
+            }
+            if (types.subflows > 0) {
+                $('<div>').text(RED._("clipboard.subflow",{count:types.subflows})).appendTo(counts);
+            }
+            if (types.nodes > 0) {
+                $('<div>').text(RED._("clipboard.node",{count:types.nodes})).appendTo(counts);
+            }
         } else {
+            // A single 'thing' selected.
+
+            // Check to see if this is a subflow or subflow instance
             var m = /^subflow(:(.+))?$/.exec(node.type);
             if (m) {
                 if (m[2]) {
@@ -14703,6 +18644,7 @@ RED.sidebar.info = (function() {
                 });
             }
             if (node.type === "tab" || node.type === "subflow") {
+                // If nothing is selected, but we're on a flow or subflow tab.
                 propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info."+(node.type==='tab'?'flow':'subflow'))+'</td><td></td></tr>').appendTo(tableBody);
                 RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
                 propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.tabName")+"</td><td></td></tr>").appendTo(tableBody);
@@ -14712,24 +18654,41 @@ RED.sidebar.info = (function() {
                     $(propRow.children()[1]).text((!!!node.disabled)?RED._("sidebar.info.enabled"):RED._("sidebar.info.disabled"))
                 }
             } else {
+                // An actual node is selected in the editor - build up its properties table
                 propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.node")+"</td><td></td></tr>").appendTo(tableBody);
                 RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
-
-                if (node.type !== "subflow" && node.name) {
+                if (node.type !== "subflow" && node.type !== "unknown" && node.name) {
                     propRow = $('<tr class="node-info-node-row"><td>'+RED._("common.label.name")+'</td><td></td></tr>').appendTo(tableBody);
                     $('<span class="bidiAware" dir="'+RED.text.bidi.resolveBaseTextDir(node.name)+'"></span>').text(node.name).appendTo(propRow.children()[1]);
                 }
                 if (!m) {
                     propRow = $('<tr class="node-info-node-row"><td>'+RED._("sidebar.info.type")+"</td><td></td></tr>").appendTo(tableBody);
-                    $(propRow.children()[1]).text(node.type);
+                    $(propRow.children()[1]).text((node.type === "unknown")?node._orig.type:node.type);
+                    if (node.type === "unknown") {
+                        $('<span style="float: right; font-size: 0.8em"><i class="fa fa-warning"></i></span>').prependTo($(propRow.children()[1]))
+                    }
                 }
+                var count = 0;
+                if (!m && node.type != "subflow") {
+                    var defaults;
+                    if (node.type === 'unknown') {
+                        defaults = {};
+                        Object.keys(node._orig).forEach(function(k) {
+                            if (k !== 'type') {
+                                defaults[k] = {};
+                            }
+                        })
+                    } else if (node._def) {
+                        defaults = node._def.defaults;
+                        propRow = $('<tr class="node-info-property-row'+(expandedSections.property?"":" hide")+'"><td>'+RED._("sidebar.info.module")+"</td><td></td></tr>").appendTo(tableBody);
+                        $(propRow.children()[1]).text(RED.nodes.getType(node.type).set.module);
+                        count++;
+                    }
+                    $('<tr class="node-info-property-expand node-info-property-row blank'+(expandedSections.property?"":" hide")+'"><td colspan="2"></td></tr>').appendTo(tableBody);
 
-                if (!m && node.type != "subflow" && node.type != "comment") {
-                    if (node._def) {
-                        var count = 0;
-                        var defaults = node._def.defaults;
+                    if (defaults) {
                         for (var n in defaults) {
-                            if (n != "name" && defaults.hasOwnProperty(n)) {
+                            if (n != "name" && n != "info" && defaults.hasOwnProperty(n)) {
                                 var val = node[n];
                                 var type = typeof val;
                                 count++;
@@ -14744,7 +18703,7 @@ RED.sidebar.info = (function() {
 
                                         var div = $('<span>',{class:""}).appendTo(container);
                                         var nodeDiv = $('<div>',{class:"palette_node palette_node_small"}).appendTo(div);
-                                        var colour = configNode._def.color;
+                                        var colour = RED.utils.getNodeColor(configNode.type,configNode._def);
                                         var icon_url = RED.utils.getNodeIcon(configNode._def);
                                         nodeDiv.css({'backgroundColor':colour, "cursor":"pointer"});
                                         var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
@@ -14761,49 +18720,53 @@ RED.sidebar.info = (function() {
                                 }
                             }
                         }
-                        if (count > 0) {
-                            $('<tr class="node-info-property-expand blank"><td colspan="2"><a href="#" class=" node-info-property-header'+(expandedSections.property?" expanded":"")+'"><span class="node-info-property-show-more">'+RED._("sidebar.info.showMore")+'</span><span class="node-info-property-show-less">'+RED._("sidebar.info.showLess")+'</span> <i class="fa fa-caret-down"></i></a></td></tr>').appendTo(tableBody);
-                        }
+                    }
+                    if (count > 0) {
+                        $('<tr class="node-info-property-expand blank"><td colspan="2"><a href="#" class=" node-info-property-header'+(expandedSections.property?" expanded":"")+'"><span class="node-info-property-show-more">'+RED._("sidebar.info.showMore")+'</span><span class="node-info-property-show-less">'+RED._("sidebar.info.showLess")+'</span> <i class="fa fa-caret-down"></i></a></td></tr>').appendTo(tableBody);
                     }
                 }
                 if (node.type !== 'tab') {
                     if (m) {
                         $('<tr class="blank"><th colspan="2">'+RED._("sidebar.info.subflow")+'</th></tr>').appendTo(tableBody);
-                        $('<tr class="node-info-subflow-row"><td>'+RED._("common.label.name")+'</td><td><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(subflowNode.name)+'">'+subflowNode.name+'</span></td></tr>').appendTo(tableBody);
+                        $('<tr class="node-info-subflow-row"><td>'+RED._("common.label.name")+'</td><td><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(subflowNode.name)+'">'+RED.utils.sanitize(subflowNode.name)+'</span></td></tr>').appendTo(tableBody);
                     }
                 }
             }
             if (m) {
+                propRow = $('<tr class="node-info-node-row"><td>'+RED._("subflow.category")+'</td><td></td></tr>').appendTo(tableBody);
+                var category = subflowNode.category||"subflows";
+                $(propRow.children()[1]).text(RED._("palette.label."+category,{defaultValue:category}))
                 $('<tr class="node-info-subflow-row"><td>'+RED._("sidebar.info.instances")+"</td><td>"+subflowUserCount+'</td></tr>').appendTo(tableBody);
             }
 
-            var infoText = "";
-            if (!subflowNode && node.type !== "comment" && node.type !== "tab") {
-                infoSection.title.html(RED._("sidebar.info.nodeHelp"));
-                //Original: var helpText = $("script[data-help-name='"+node.type+"']").html()||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>');
-                //Parsed in red/runtime/nodes/registry/loader.js, reads data from hni file and is therefore unusable, because our help is in the locale file.
-                var helpText = i18n.t((node._def.namespace ? node._def.namespace : node.type) + "/" + node.type + ".hni:" + node.type + ".help")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>');
-                infoText = helpText;
-            } else if (node.type === "tab") {
-                infoSection.title.text(RED._("sidebar.info.flowDesc"));
-                infoText = marked(node.info||"")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>');
+            var helpText = "";
+            if (node.type === "tab" || node.type === "subflow") {
+                $(helpSection.container).hide();
+            } else {
+                $(helpSection.container).show();
+                if (subflowNode && node.type !== "subflow") {
+                    // Selected a subflow instance node.
+                    // - The subflow template info goes into help
+                    helpText = (marked(subflowNode.info||"")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>'));
+                } else {
+                    helpText = i18n.t((node._def.namespace ? node._def.namespace : node.type) + "/" + node.type + ".hni:" + node.type + ".help")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>');
+                }
+                setInfoText(helpText, helpSection.content);
             }
 
-            if (subflowNode) {
-                infoText = infoText + (marked(subflowNode.info||"")||('<span class="node-info-none">'+RED._("sidebar.info.none")+'</span>'));
-                infoSection.title.text(RED._("sidebar.info.subflowDesc"));
-            } else if (node._def && node._def.info) {
-                infoSection.title.text(RED._("sidebar.info.nodeHelp"));
+            var infoText = "";
+
+            if (node._def && node._def.info) {
                 var info = node._def.info;
                 var textInfo = (typeof info === "function" ? info.call(node) : info);
-                // TODO: help
                 infoText = infoText + marked(textInfo);
             }
-            if (infoText) {
-                setInfoText(infoText);
+            if (node.info) {
+                infoText = infoText + marked(node.info || "")
             }
+            setInfoText(infoText, infoSection.content);
 
-
+            $(".sidebar-node-info-stack").scrollTop(0);
             $(".node-info-property-header").click(function(e) {
                 e.preventDefault();
                 expandedSections["property"] = !expandedSections["property"];
@@ -14811,9 +18774,23 @@ RED.sidebar.info = (function() {
                 $(".node-info-property-row").toggle(expandedSections["property"]);
             });
         }
+
+
+        // $('<tr class="blank"><th colspan="2"></th></tr>').appendTo(tableBody);
+        // propRow = $('<tr class="node-info-node-row"><td>Actions</td><td></td></tr>').appendTo(tableBody);
+        // var actionBar = $(propRow.children()[1]);
+        //
+        // // var actionBar = $('<div>',{style:"background: #fefefe; padding: 3px;"}).appendTo(propertiesSection.content);
+        // $('<button type="button" class="editor-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
+        // $('<button type="button" class="editor-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
+        // $('<button type="button" class="editor-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
+        // $('<button type="button" class="editor-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
+
+
+
     }
-    function setInfoText(infoText) {
-        var info = addTargetToExternalLinks($('<div class="node-help"><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(infoText)+'">'+infoText+'</span></div>')).appendTo(infoSection.content);
+    function setInfoText(infoText,target) {
+        var info = addTargetToExternalLinks($('<div class="node-help"><span class="bidiAware" dir=\"'+RED.text.bidi.resolveBaseTextDir(infoText)+'">'+infoText+'</span></div>')).appendTo(target);
         info.find(".bidiAware").contents().filter(function() { return this.nodeType === 3 && this.textContent.trim() !== "" }).wrap( "<span></span>" );
         var foldingHeader = "H3";
         info.find(foldingHeader).wrapInner('<a class="node-info-header expanded" href="#"></a>')
@@ -14917,11 +18894,12 @@ RED.sidebar.info = (function() {
     function set(html,title) {
         // tips.stop();
         // sections.show();
-        // nodeSection.container.hide();
-        infoSection.title.text(title||"");
         refresh(null);
-        $(infoSection.content).empty();
-        setInfoText(html);
+        propertiesSection.container.hide();
+        helpSection.container.hide();
+        infoSection.container.show();
+        //helpSection.title.text(title||RED._("sidebar.info.info"));
+        setInfoText(html,infoSection.content);
         $(".sidebar-node-info-stack").scrollTop(0);
     }
 
@@ -14940,6 +18918,8 @@ RED.sidebar.info = (function() {
             } else {
                 refresh(selection.nodes);
             }
+        } else if (selection.flows || selection.subflows) {
+            refresh(selection.flows);
         } else {
             var activeWS = RED.workspaces.active();
 
@@ -14989,11 +18969,13 @@ RED.sidebar.config = (function() {
 
     var content = document.createElement("div");
     content.className = "sidebar-node-config";
+    content.id = "sidebar-node-config";
+    content.tabIndex = 0;
 
-    $('<div class="button-group sidebar-header">'+
+    $('<div class="sidebar-header"><span class="button-group">'+
       '<a class="sidebar-header-button-toggle selected" id="workspace-config-node-filter-all" href="#"><span data-i18n="sidebar.config.filterAll"></span></a>'+
       '<a class="sidebar-header-button-toggle" id="workspace-config-node-filter-unused" href="#"><span data-i18n="sidebar.config.filterUnused"></span></a> '+
-      '</div>'
+      '</span></div>'
     ).appendTo(content);
 
 
@@ -15109,14 +19091,32 @@ RED.sidebar.config = (function() {
                 }
 
                 var entry = $('<li class="palette_node config_node palette_node_id_'+node.id.replace(/\./g,"-")+'"></li>').appendTo(list);
+                entry.data('node',node.id);
                 $('<div class="palette_label"></div>').text(label).appendTo(entry);
                 if (node._def.hasUsers !== false) {
-                    var iconContainer = $('<div/>',{class:"palette_icon_container  palette_icon_container_right"}).text(node.users.length).appendTo(entry);
+                    var iconContainer = $('<div/>',{class:"palette_icon_container palette_icon_container_right"}).appendTo(entry);
+                    if (node.users.length === 0) {
+                        iconContainer.text(0);
+                    } else {
+                        $('<a href="#"/>').click(function(e) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            RED.search.show(node.id);
+                        }).text(node.users.length).appendTo(iconContainer);
+                    }
+                    RED.popover.tooltip(iconContainer,RED._('editor.nodesUse',{count:node.users.length}));
                     if (node.users.length === 0) {
                         entry.addClass("config_node_unused");
                     }
                 }
                 entry.on('click',function(e) {
+                    RED.view.select(false);
+                    if (e.metaKey) {
+                        $(this).toggleClass("selected");
+                    } else {
+                        $(content).find(".palette_node").removeClass("selected");
+                        $(this).addClass("selected");
+                    }
                     RED.sidebar.info.refresh(node);
                 });
                 entry.on('dblclick',function(e) {
@@ -15132,7 +19132,6 @@ RED.sidebar.config = (function() {
                     });
                     RED.view.redraw();
                 });
-
                 entry.on('mouseout',function(e) {
                     RED.nodes.eachNode(function(node) {
                         if(node.highlighted) {
@@ -15192,11 +19191,64 @@ RED.sidebar.config = (function() {
             name: RED._("sidebar.config.name"),
             content: content,
             toolbar: toolbar,
-            closeable: true,
-            visible: false,
+            iconClass: "fa fa-cog",
+            action: "core:show-config-tab",
             onchange: function() { refreshConfigNodeList(); }
         });
-        RED.actions.add("core:show-config-tab",function() {RED.sidebar.show('config')});
+        RED.actions.add("core:show-config-tab", function() {RED.sidebar.show('config')});
+        RED.actions.add("core:select-all-config-nodes", function() {
+            $(content).find(".palette_node").addClass("selected");
+        })
+        RED.actions.add("core:delete-config-selection", function() {
+            var selectedNodes = [];
+            $(content).find(".palette_node.selected").each(function() {
+                selectedNodes.push($(this).data('node'));
+            });
+            if (selectedNodes.length > 0) {
+                var historyEvent = {
+                    t:'delete',
+                    nodes:[],
+                    changes: {},
+                    dirty: RED.nodes.dirty()
+                }
+                selectedNodes.forEach(function(id) {
+                    var node = RED.nodes.node(id);
+                    try {
+                        if (node._def.oneditdelete) {
+                            node._def.oneditdelete.call(node);
+                        }
+                    } catch(err) {
+                        console.log("oneditdelete",node.id,node.type,err.toString());
+                    }
+                    historyEvent.nodes.push(node);
+                    for (var i=0;i<node.users.length;i++) {
+                        var user = node.users[i];
+                        historyEvent.changes[user.id] = {
+                            changed: user.changed,
+                            valid: user.valid
+                        };
+                        for (var d in user._def.defaults) {
+                            if (user._def.defaults.hasOwnProperty(d) && user[d] == id) {
+                                historyEvent.changes[user.id][d] = id
+                                user[d] = "";
+                                user.changed = true;
+                                user.dirty = true;
+                            }
+                        }
+                        RED.editor.validateNode(user);
+                    }
+                    RED.nodes.remove(id);
+                })
+                RED.nodes.dirty(true);
+                RED.view.redraw(true);
+                RED.history.push(historyEvent);
+            }
+        });
+
+
+        RED.events.on("view:selection-changed",function() {
+            $(content).find(".palette_node").removeClass("selected");
+        });
 
         $("#workspace-config-node-collapse-all").on("click", function(e) {
             e.preventDefault();
@@ -15234,7 +19286,8 @@ RED.sidebar.config = (function() {
                 refreshConfigNodeList();
             }
         });
-
+        RED.popover.tooltip($('#workspace-config-node-filter-all'),"Show all config nodes");
+        RED.popover.tooltip($('#workspace-config-node-filter-unused'),"Show all unused config nodes");
 
     }
     function show(id) {
@@ -15299,6 +19352,355 @@ RED.sidebar.config = (function() {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+RED.sidebar.context = (function() {
+
+    var content;
+    var sections;
+
+    var localCache = {};
+
+
+    var nodeSection;
+    // var subflowSection;
+    var flowSection;
+    var globalSection;
+
+    var currentNode;
+    var currentFlow;
+
+    function init() {
+
+        content = $("<div>").css({"position":"relative","height":"100%"});
+        content.className = "sidebar-context"
+        // var toolbar = $('<div class="sidebar-header">'+
+        //     '</div>').appendTo(content);
+
+        var footerToolbar = $('<div>'+
+            // '<span class="button-group"><a class="sidebar-footer-button" href="#" data-i18n="[title]node-red:debug.sidebar.openWindow"><i class="fa fa-desktop"></i></a></span> ' +
+            '</div>');
+
+
+
+        var stackContainer = $("<div>",{class:"sidebar-context-stack"}).appendTo(content);
+        sections = RED.stack.create({
+            container: stackContainer
+        });
+
+        nodeSection = sections.add({
+            title: RED._("sidebar.context.node"),
+            collapsible: true,
+            // onexpand: function() {
+            //     updateNode(currentNode,true);
+            // }
+        });
+        nodeSection.expand();
+        nodeSection.content.css({height:"100%"});
+        nodeSection.timestamp = $('<div class="sidebar-context-updated">&nbsp;</div>').appendTo(nodeSection.content);
+        var table = $('<table class="node-info"></table>').appendTo(nodeSection.content);
+        nodeSection.table = $('<tbody>').appendTo(table);
+        var bg = $('<div style="float: right"></div>').appendTo(nodeSection.header);
+        $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
+            .appendTo(bg)
+            .click(function(evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                updateNode(currentNode, true);
+            })
+
+        // subflowSection  = sections.add({
+        //     title: "Subflow",
+        //     collapsible: true
+        // });
+        // subflowSection.expand();
+        // subflowSection.content.css({height:"100%"});
+        // bg = $('<div style="float: right"></div>').appendTo(subflowSection.header);
+        // $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
+        //     .appendTo(bg)
+        //     .click(function(evt) {
+        //         evt.stopPropagation();
+        //         evt.preventDefault();
+        //     })
+        //
+        // subflowSection.container.hide();
+
+        flowSection = sections.add({
+            title: RED._("sidebar.context.flow"),
+            collapsible: true
+        });
+        flowSection.expand();
+        flowSection.content.css({height:"100%"});
+        flowSection.timestamp = $('<div class="sidebar-context-updated">&nbsp;</div>').appendTo(flowSection.content);
+        var table = $('<table class="node-info"></table>').appendTo(flowSection.content);
+        flowSection.table = $('<tbody>').appendTo(table);
+        bg = $('<div style="float: right"></div>').appendTo(flowSection.header);
+        $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
+            .appendTo(bg)
+            .click(function(evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                updateFlow(currentFlow);
+            })
+
+        globalSection = sections.add({
+            title: RED._("sidebar.context.global"),
+            collapsible: true
+        });
+        globalSection.expand();
+        globalSection.content.css({height:"100%"});
+        globalSection.timestamp = $('<div class="sidebar-context-updated">&nbsp;</div>').appendTo(globalSection.content);
+        var table = $('<table class="node-info"></table>').appendTo(globalSection.content);
+        globalSection.table = $('<tbody>').appendTo(table);
+
+        bg = $('<div style="float: right"></div>').appendTo(globalSection.header);
+        $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
+            .appendTo(bg)
+            .click(function(evt) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                updateEntry(globalSection,"context/global","global");
+            })
+
+
+        RED.actions.add("core:show-context-tab",show);
+
+        RED.sidebar.addTab({
+            id: "context",
+            label: RED._("sidebar.context.label"),
+            name: RED._("sidebar.context.name"),
+            iconClass: "fa fa-database",
+            content: content,
+            toolbar: footerToolbar,
+            // pinned: true,
+            enableOnEdit: true,
+            action: "core:show-context-tab"
+        });
+
+        // var toggleLiveButton = $("#sidebar-context-toggle-live");
+        // toggleLiveButton.click(function(evt) {
+        //     evt.preventDefault();
+        //     if ($(this).hasClass("selected")) {
+        //         $(this).removeClass("selected");
+        //         $(this).find("i").removeClass("fa-pause");
+        //         $(this).find("i").addClass("fa-play");
+        //     } else {
+        //         $(this).addClass("selected");
+        //         $(this).find("i").removeClass("fa-play");
+        //         $(this).find("i").addClass("fa-pause");
+        //     }
+        // });
+        // RED.popover.tooltip(toggleLiveButton, function() {
+        //     if (toggleLiveButton.hasClass("selected")) {
+        //         return "Pause live updates"
+        //     } else {
+        //         return "Start live updates"
+        //     }
+        // });
+
+
+        RED.events.on("view:selection-changed", function(event) {
+            var selectedNode = event.nodes && event.nodes.length === 1 && event.nodes[0];
+            updateNode(selectedNode);
+        })
+
+        RED.events.on("workspace:change", function(event) {
+            updateFlow(RED.nodes.workspace(event.workspace));
+        })
+
+        updateEntry(globalSection,"context/global","global");
+
+    }
+
+    function updateNode(node,force) {
+        currentNode = node;
+        if (force) {
+            if (node) {
+                updateEntry(nodeSection,"context/node/"+node.id,node.id);
+                // if (/^subflow:/.test(node.type)) {
+                //     subflowSection.container.show();
+                //     updateEntry(subflowSection,"context/flow/"+node.id,node.id);
+                // } else {
+                //     subflowSection.container.hide();
+                // }
+            } else {
+                // subflowSection.container.hide();
+                updateEntry(nodeSection)
+            }
+        } else {
+            $(nodeSection.table).empty();
+            if (node) {
+                $('<tr class="node-info-node-row red-ui-search-empty blank" colspan="2"><td data-i18n="sidebar.context.refresh"></td></tr>').appendTo(nodeSection.table).i18n();
+            } else {
+                $('<tr class="node-info-node-row red-ui-search-empty blank" colspan="2"><td data-i18n="sidebar.context.none"></td></tr>').appendTo(nodeSection.table).i18n();
+            }
+            nodeSection.timestamp.html("&nbsp;");
+
+        }
+    }
+    function updateFlow(flow) {
+        currentFlow = flow;
+        if (flow) {
+            updateEntry(flowSection,"context/flow/"+flow.id,flow.id);
+        } else {
+            updateEntry(flowSection)
+        }
+    }
+
+    function refreshEntry(section,baseUrl,id) {
+
+        var contextStores = RED.settings.context.stores;
+        var container = section.table;
+
+        $.getJSON(baseUrl, function(data) {
+            $(container).empty();
+            var sortedData = {};
+            for (var store in data) {
+                if (data.hasOwnProperty(store)) {
+                    for (var key in data[store]) {
+                        if (data[store].hasOwnProperty(key)) {
+                            if (!sortedData.hasOwnProperty(key)) {
+                                sortedData[key] = [];
+                            }
+                            data[store][key].store = store;
+                            sortedData[key].push(data[store][key])
+                        }
+                    }
+                }
+            }
+            var keys = Object.keys(sortedData);
+            keys.sort();
+            var l = keys.length;
+            for (var i = 0; i < l; i++) {
+                sortedData[keys[i]].forEach(function(v) {
+                    var k = keys[i];
+                    var l2 = sortedData[k].length;
+                    var propRow = $('<tr class="node-info-node-row"><td class="sidebar-context-property"></td><td></td></tr>').appendTo(container);
+                    var obj = $(propRow.children()[0]);
+                    obj.text(k);
+                    var tools = $('<span class="button-group"></span>');
+
+                    var refreshItem = $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>').appendTo(tools).click(function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        $.getJSON(baseUrl+"/"+k+"?store="+v.store, function(data) {
+                            if (data.msg !== payload || data.format !== format) {
+                                payload = data.msg;
+                                format = data.format;
+                                tools.detach();
+                                $(propRow.children()[1]).empty();
+                                RED.utils.createObjectElement(RED.utils.decodeObject(payload,format), {
+                                    typeHint: data.format,
+                                    sourceId: id+"."+k,
+                                    tools: tools
+                                }).appendTo(propRow.children()[1]);
+                            }
+                        })
+                    });
+                    var deleteItem = $('<button class="editor-button editor-button-small"><i class="fa fa-trash"></i></button>').appendTo(tools).click(function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var popover = RED.popover.create({
+                            trigger: 'modal',
+                            target: propRow,
+                            direction: "left",
+                            content: function() {
+                                var content = $('<div>');
+                                $('<p data-i18n="sidebar.context.deleteConfirm"></p>').appendTo(content);
+                                var row = $('<p>').appendTo(content);
+                                var bg = $('<span class="button-group"></span>').appendTo(row);
+                                $('<button class="editor-button" data-i18n="common.label.cancel"></button>').appendTo(bg).click(function(e) {
+                                    e.preventDefault();
+                                    popover.close();
+                                });
+                                bg = $('<span class="button-group"></span>').appendTo(row);
+                                $('<button class="editor-button primary" data-i18n="common.label.delete"></button>').appendTo(bg).click(function(e) {
+                                    e.preventDefault();
+                                    popover.close();
+                                    $.ajax({
+                                        url: baseUrl+"/"+k+"?store="+v.store,
+                                        type: "DELETE"
+                                    }).done(function(data,textStatus,xhr) {
+                                        $.getJSON(baseUrl+"/"+k+"?store="+v.store, function(data) {
+                                            if (data.format === 'undefined') {
+                                                propRow.remove();
+                                                if (container.children().length === 0) {
+                                                    $('<tr class="node-info-node-row red-ui-search-empty blank" colspan="2"><td data-i18n="sidebar.context.empty"></td></tr>').appendTo(container).i18n();
+                                                }
+                                            } else {
+                                                payload = data.msg;
+                                                format = data.format;
+                                                tools.detach();
+                                                $(propRow.children()[1]).empty();
+                                                RED.utils.createObjectElement(RED.utils.decodeObject(payload,format), {
+                                                    typeHint: data.format,
+                                                    sourceId: id+"."+k,
+                                                    tools: tools
+                                                }).appendTo(propRow.children()[1]);
+                                            }
+                                        });
+                                    }).fail(function(xhr,textStatus,err) {
+
+                                    })
+                                });
+                                return content.i18n();
+                            }
+                        });
+                        popover.open();
+
+                    });
+                    var payload = v.msg;
+                    var format = v.format;
+                    RED.utils.createObjectElement(RED.utils.decodeObject(payload,format), {
+                        typeHint: v.format,
+                        sourceId: id+"."+k,
+                        tools: tools
+                    }).appendTo(propRow.children()[1]);
+                    if (contextStores.length > 1) {
+                        $("<span>",{class:"sidebar-context-property-storename"}).text(v.store).appendTo($(propRow.children()[0]))
+                    }
+                });
+            }
+            if (l === 0) {
+                $('<tr class="node-info-node-row red-ui-search-empty blank" colspan="2"><td data-i18n="sidebar.context.empty"></td></tr>').appendTo(container).i18n();
+            }
+            $(section.timestamp).text(new Date().toLocaleString());
+        });
+    }
+    function updateEntry(section,baseUrl,id) {
+        var container = section.table;
+        if (id) {
+            refreshEntry(section,baseUrl,id);
+        } else {
+            $(container).empty();
+            $('<tr class="node-info-node-row red-ui-search-empty blank" colspan="2"><td data-i18n="sidebar.context.none"></td></tr>').appendTo(container).i18n();
+        }
+    }
+
+
+
+    function show() {
+        RED.sidebar.show("context");
+    }
+    return {
+        init: init
+    }
+})();
+;/** This file was modified by Sathya Laufer */
+
+/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
 RED.palette.editor = (function() {
 
     var disabled = false;
@@ -15344,7 +19746,7 @@ RED.palette.editor = (function() {
         var start = Date.now();
         $.ajax({
             url:"nodes/"+id,
-            type: "POST",
+            type: "PUT",
             data: JSON.stringify({
                 enabled: state
             }),
@@ -15519,7 +19921,7 @@ RED.palette.editor = (function() {
                             if (set.enabled) {
                                 var def = RED.nodes.getType(t);
                                 if (def && def.color) {
-                                    swatch.css({background:def.color});
+                                    swatch.css({background:RED.utils.getNodeColor(t,def)});
                                     swatch.css({border: "1px solid "+getContrastingBorder(swatch.css('backgroundColor'))})
 
                                 } else {
@@ -15533,7 +19935,7 @@ RED.palette.editor = (function() {
                         nodeEntries[module].totalUseCount += inUseCount;
 
                         /*if (inUseCount > 0) {
-                            setElements.enableButton.html(RED._('palette.editor.inuse'));
+                            setElements.enableButton.text(RED._('palette.editor.inuse'));
                             setElements.enableButton.addClass('disabled');
                         } else {
                             setElements.enableButton.removeClass('disabled');
@@ -15557,7 +19959,7 @@ RED.palette.editor = (function() {
                 nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
 
                 if (nodeEntries[module].totalUseCount > 0) {
-                    //nodeEntry.enableButton.html(RED._('palette.editor.inuse'));
+                    //nodeEntry.enableButton.text(RED._('palette.editor.inuse'));
                     //nodeEntry.enableButton.addClass('disabled');
                     nodeEntry.removeButton.hide();
                 } else {
@@ -15566,16 +19968,16 @@ RED.palette.editor = (function() {
                         nodeEntry.removeButton.css('display', 'inline-block');
                     }
                     if (activeTypeCount === 0) {
-                        //nodeEntry.enableButton.html(RED._('palette.editor.enableall'));
+                        //nodeEntry.enableButton.text(RED._('palette.editor.enableall'));
                     } else {
-                        //nodeEntry.enableButton.html(RED._('palette.editor.disableall'));
+                        //nodeEntry.enableButton.text(RED._('palette.editor.disableall'));
                     }
                     nodeEntry.container.toggleClass("disabled",(activeTypeCount === 0));
                 }
             }
             if (moduleInfo.pending_version) {
                 nodeEntry.versionSpan.html(moduleInfo.version+' <i class="fa fa-long-arrow-right"></i> '+moduleInfo.pending_version).appendTo(nodeEntry.metaRow)
-                nodeEntry.updateButton.text(RED._('palette.editor.updated')).addClass('disabled').show();
+                nodeEntry.updateButton.text(RED._('palette.editor.updated')).addClass('disabled').css('display', 'inline-block');
             } else if (loadedIndex.hasOwnProperty(module)) {
                 if (semVerCompare(loadedIndex[module].version,moduleInfo.version) === 1) {
                     nodeEntry.updateButton.show();
@@ -15607,7 +20009,7 @@ RED.palette.editor = (function() {
     var catalogueLoadStart;
     var catalogueLoadErrors = false;
 
-    var activeSort = sortModulesAZ;
+    var activeSort = sortModulesRelevance;
 
     function handleCatalogResponse(err,catalog,index,v) {
         catalogueLoadStatus.push(err||v);
@@ -15618,6 +20020,9 @@ RED.palette.editor = (function() {
                     m.index = [m.id];
                     if (m.keywords) {
                         m.index = m.index.concat(m.keywords);
+                    }
+                    if (m.types) {
+                        m.index = m.index.concat(m.types);
                     }
                     if (m.updated_at) {
                         m.timestamp = new Date(m.updated_at).getTime();
@@ -15653,7 +20058,7 @@ RED.palette.editor = (function() {
             loadedIndex = {};
             packageList.editableList('empty');
 
-            $(".palette-module-shade-status").html(RED._('palette.editor.loading'));
+            $(".palette-module-shade-status").text(RED._('palette.editor.loading'));
             var catalogues = RED.settings.theme('palette.catalogues')||['https://apt.node-blue.com/catalog.json'];
             catalogueLoadStatus = [];
             catalogueLoadErrors = false;
@@ -15698,6 +20103,17 @@ RED.palette.editor = (function() {
         if (filteredList.length > 10) {
             packageList.editableList('addItem',{start:10,more:filteredList.length-10})
         }
+    }
+    function sortModulesRelevance(A,B) {
+        var currentFilter = searchInput.searchBox('value').trim();
+        if (currentFilter === "") {
+            return sortModulesAZ(A,B);
+        }
+        var i = A.info.index.indexOf(currentFilter) - B.info.index.indexOf(currentFilter);
+        if (i === 0) {
+            return sortModulesAZ(A,B);
+        }
+        return i;
     }
     function sortModulesAZ(A,B) {
         return A.info.id.localeCompare(B.info.id);
@@ -15912,8 +20328,7 @@ RED.palette.editor = (function() {
                     if (!entry.local) {
                         removeButton.hide();
                     }
-
-                    //var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').html(RED._('palette.editor.disableall')).appendTo(buttonGroup);
+                    //var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.disableall')).appendTo(buttonGroup);
 
                     var contentRow = $('<div>',{class:"palette-module-content"}).appendTo(container);
                     var shade = $('<div class="palette-module-shade hide"><img src="red/images/spin.svg" class="palette-spinner"/></div>').appendTo(container);
@@ -15955,7 +20370,6 @@ RED.palette.editor = (function() {
                             typeSwatches[t] = $('<span>',{class:"palette-module-type-swatch"}).appendTo(typeDiv);
                             $('<span>',{class:"palette-module-type-node"}).text(t).appendTo(typeDiv);
                         })
-
                         /*var enableButton = $('<a href="#" class="editor-button editor-button-small"></a>').appendTo(buttonGroup);
                         enableButton.click(function(evt) {
                             evt.preventDefault();
@@ -16035,31 +20449,28 @@ RED.palette.editor = (function() {
 
         $('<span>').text(RED._("palette.editor.sort")+' ').appendTo(toolBar);
         var sortGroup = $('<span class="button-group"></span>').appendTo(toolBar);
-        var sortAZ = $('<a href="#" class="sidebar-header-button-toggle selected" data-i18n="palette.editor.sortAZ"></a>').appendTo(sortGroup);
-        var sortRecent = $('<a href="#" class="sidebar-header-button-toggle" data-i18n="palette.editor.sortRecent"></a>').appendTo(sortGroup);
+        var sortRelevance = $('<a href="#" class="palette-editor-install-sort-option sidebar-header-button-toggle selected"><i class="fa fa-sort-amount-desc"></i></a>').appendTo(sortGroup);
+        var sortAZ = $('<a href="#" class="palette-editor-install-sort-option sidebar-header-button-toggle" data-i18n="palette.editor.sortAZ"></a>').appendTo(sortGroup);
+        var sortRecent = $('<a href="#" class="palette-editor-install-sort-option sidebar-header-button-toggle" data-i18n="palette.editor.sortRecent"></a>').appendTo(sortGroup);
 
-        sortAZ.click(function(e) {
-            e.preventDefault();
-            if ($(this).hasClass("selected")) {
-                return;
-            }
-            $(this).addClass("selected");
-            sortRecent.removeClass("selected");
-            activeSort = sortModulesAZ;
-            refreshFilteredItems();
+
+        var sortOpts = [
+            {button: sortRelevance, func: sortModulesRelevance},
+            {button: sortAZ, func: sortModulesAZ},
+            {button: sortRecent, func: sortModulesRecent}
+        ]
+        sortOpts.forEach(function(opt) {
+            opt.button.click(function(e) {
+                e.preventDefault();
+                if ($(this).hasClass("selected")) {
+                    return;
+                }
+                $(".palette-editor-install-sort-option").removeClass("selected");
+                $(this).addClass("selected");
+                activeSort = opt.func;
+                refreshFilteredItems();
+            });
         });
-
-        sortRecent.click(function(e) {
-            e.preventDefault();
-            if ($(this).hasClass("selected")) {
-                return;
-            }
-            $(this).addClass("selected");
-            sortAZ.removeClass("selected");
-            activeSort = sortModulesRecent;
-            refreshFilteredItems();
-        });
-
 
         var refreshSpan = $('<span>').appendTo(toolBar);
         var refreshButton = $('<a href="#" class="sidebar-header-button"><i class="fa fa-refresh"></i></a>').appendTo(refreshSpan);
@@ -16102,10 +20513,23 @@ RED.palette.editor = (function() {
                     $('<a target="_blank" class="palette-module-link"><i class="fa fa-external-link"></i></a>').attr('href',entry.url).appendTo(titleRow);
                     var descRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
                     $('<div>',{class:"palette-module-description"}).text(entry.description).appendTo(descRow);
-
                     var metaRow = $('<div class="palette-module-meta"></div>').appendTo(headerRow);
                     $('<span class="palette-module-version"><i class="fa fa-tag"></i> '+entry.version+'</span>').appendTo(metaRow);
                     $('<span class="palette-module-updated"><i class="fa fa-calendar"></i> '+formatUpdatedAt(entry.updated_at)+'</span>').appendTo(metaRow);
+
+                    var duplicateType = false;
+                    if (entry.types && entry.types.length > 0) {
+
+                        for (var i=0;i<entry.types.length;i++) {
+                            var nodeset = RED.nodes.registry.getNodeSetForType(entry.types[i]);
+                            if (nodeset) {
+                                duplicateType = nodeset.module;
+                                break;
+                            }
+                        }
+                        // $('<div>',{class:"palette-module-meta"}).text(entry.types.join(",")).appendTo(headerRow);
+                    }
+
                     var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
                     var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
                     var installButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.install')).appendTo(buttonGroup);
@@ -16118,6 +20542,16 @@ RED.palette.editor = (function() {
                     if (nodeEntries.hasOwnProperty(entry.id)) {
                         installButton.addClass('disabled');
                         installButton.text(RED._('palette.editor.installed'));
+                    } else if (duplicateType) {
+                        installButton.addClass('disabled');
+                        installButton.text(RED._('palette.editor.conflict'));
+                        RED.popover.create({
+                            target:installButton,
+                            content: RED._('palette.editor.conflictTip',{module:duplicateType}),
+                            trigger:"hover",
+                            direction:"bottom",
+                            delay:{show:750,hide:50}
+                        })
                     }
 
                     object.elements = {
@@ -16151,11 +20585,35 @@ RED.palette.editor = (function() {
                     class: "primary palette-module-install-confirm-button-update",
                     click: function() {
                         var spinner = RED.utils.addSpinnerOverlay(container, true);
+                        var buttonRow = $('<div style="position: relative;bottom: calc(50% + 17px); padding-right: 10px;text-align: right;"></div>').appendTo(spinner);
+                        $('<button class="editor-button"></button>').text(RED._("eventLog.view")).appendTo(buttonRow).click(function(evt) {
+                            evt.preventDefault();
+                            RED.actions.invoke("core:show-event-log");
+                        });
+                        RED.eventLog.startEvent(RED._("palette.editor.confirm.button.install")+" : "+entry.name+" "+version);
                         installNodeModule(entry.name,version,function(xhr) {
                             spinner.remove();
                             if (xhr) {
                                 if (xhr.responseJSON) {
-                                    RED.notify(RED._('palette.editor.errors.updateFailed',{module: entry.name,message:xhr.responseJSON.message}));
+                                    var notification = RED.notify(RED._('palette.editor.errors.updateFailed',{module: entry.name,message:xhr.responseJSON.message}),{
+                                        type: 'error',
+                                        modal: true,
+                                        fixed: true,
+                                        buttons: [
+                                            {
+                                                text: RED._("common.label.close"),
+                                                click: function() {
+                                                    notification.close();
+                                                }
+                                            },{
+                                                text: RED._("eventLog.view"),
+                                                click: function() {
+                                                    notification.close();
+                                                    RED.actions.invoke("core:show-event-log");
+                                                }
+                                            }
+                                        ]
+                                    });
                                 }
                             }
                             done(xhr);
@@ -16186,12 +20644,35 @@ RED.palette.editor = (function() {
                     class: "primary palette-module-install-confirm-button-remove",
                     click: function() {
                         var spinner = RED.utils.addSpinnerOverlay(container, true);
+                        var buttonRow = $('<div style="position: relative;bottom: calc(50% + 17px); padding-right: 10px;text-align: right;"></div>').appendTo(spinner);
+                        $('<button class="editor-button"></button>').text(RED._("eventLog.view")).appendTo(buttonRow).click(function(evt) {
+                            evt.preventDefault();
+                            RED.actions.invoke("core:show-event-log");
+                        });
+                        RED.eventLog.startEvent(RED._("palette.editor.confirm.button.remove")+" : "+entry.name);
                         removeNodeModule(entry.name, function(xhr) {
                             spinner.remove();
                             if (xhr) {
                                 if (xhr.responseJSON) {
-                                    RED.notify(RED._('palette.editor.errors.removeFailed',{module: entry.name,message:xhr.responseJSON.message}));
-                                }
+                                    var notification = RED.notify(RED._('palette.editor.errors.removeFailed',{module: entry.name,message:xhr.responseJSON.message}),{
+                                        type: 'error',
+                                        modal: true,
+                                        fixed: true,
+                                        buttons: [
+                                            {
+                                                text: RED._("common.label.close"),
+                                                click: function() {
+                                                    notification.close();
+                                                }
+                                            },{
+                                                text: RED._("eventLog.view"),
+                                                click: function() {
+                                                    notification.close();
+                                                    RED.actions.invoke("core:show-event-log");
+                                                }
+                                            }
+                                        ]
+                                    });                                }
                             }
                         })
                         notification.close();
@@ -16228,11 +20709,36 @@ RED.palette.editor = (function() {
             class: "primary palette-module-install-confirm-button-install",
             click: function() {
                 var spinner = RED.utils.addSpinnerOverlay(container, true);
+
+                var buttonRow = $('<div style="position: relative;bottom: calc(50% + 17px); padding-right: 10px;text-align: right;"></div>').appendTo(spinner);
+                $('<button class="editor-button"></button>').text(RED._("eventLog.view")).appendTo(buttonRow).click(function(evt) {
+                    evt.preventDefault();
+                    RED.actions.invoke("core:show-event-log");
+                });
+                RED.eventLog.startEvent(RED._("palette.editor.confirm.button.install")+" : "+entry.id+" "+entry.version);
                 installNodeModule(entry.id,entry.version,function(xhr) {
                     spinner.remove();
                      if (xhr) {
                          if (xhr.responseJSON) {
-                             RED.notify(RED._('palette.editor.errors.installFailed',{module: entry.id,message:xhr.responseJSON.message}));
+                             var notification = RED.notify(RED._('palette.editor.errors.installFailed',{module: entry.id,message:xhr.responseJSON.message}),{
+                                 type: 'error',
+                                 modal: true,
+                                 fixed: true,
+                                 buttons: [
+                                     {
+                                         text: RED._("common.label.close"),
+                                         click: function() {
+                                             notification.close();
+                                         }
+                                     },{
+                                         text: RED._("eventLog.view"),
+                                         click: function() {
+                                             notification.close();
+                                             RED.actions.invoke("core:show-event-log");
+                                         }
+                                     }
+                                 ]
+                             });
                          }
                      }
                      done(xhr);
@@ -16270,6 +20776,10 @@ RED.palette.editor = (function() {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+
+/**
+ * @namespace RED.editor
+ */
 RED.editor = (function() {
 
 
@@ -16277,6 +20787,8 @@ RED.editor = (function() {
     var editing_node = null;
     var editing_config_node = null;
     var subflowEditor;
+
+    var customEditTypes = {};
 
     var editTrayWidthCache = {};
 
@@ -16365,17 +20877,6 @@ RED.editor = (function() {
                 }
             }
         }
-        if (node.icon) {
-            var iconPath = RED.utils.separateIconPath(node.icon);
-            if (!iconPath.module) {
-                return isValid;
-            }
-            var iconSets = RED.nodes.getIconSets();
-            var iconFileList = iconSets[iconPath.module];
-            if (!iconFileList || iconFileList.indexOf(iconPath.file) === -1) {
-                isValid = false;
-            }
-        }
         return isValid;
     }
 
@@ -16390,6 +20891,9 @@ RED.editor = (function() {
     function validateNodeProperty(node,definition,property,value) {
         var valid = true;
         if (/^\$\([a-zA-Z_][a-zA-Z0-9_]*\)$/.test(value)) {
+            return true;
+        }
+        if (/^\$\{[a-zA-Z_][a-zA-Z0-9_]*\}$/.test(value)) {
             return true;
         }
         if ("required" in definition[property] && definition[property].required) {
@@ -16425,27 +20929,6 @@ RED.editor = (function() {
                 if (node._def.credentials.hasOwnProperty(prop)) {
                     validateNodeEditorProperty(node,node._def.credentials,prop,prefix);
                 }
-            }
-        }
-        validateIcon(node);
-    }
-
-    function validateIcon(node) {
-        if (node._def.hasOwnProperty("defaults") && !node._def.defaults.hasOwnProperty("icon") && node.icon) {
-            var iconPath = RED.utils.separateIconPath(node.icon);
-            var iconSets = RED.nodes.getIconSets();
-            var iconFileList = iconSets[iconPath.module];
-            var iconModule = $("#node-settings-icon-module");
-            var iconFile = $("#node-settings-icon-file");
-            if (!iconFileList) {
-                iconModule.addClass("input-error");
-                iconFile.removeClass("input-error");
-            } else if (iconFileList.indexOf(iconPath.file) === -1) {
-                iconModule.removeClass("input-error");
-                iconFile.addClass("input-error");
-            } else {
-                iconModule.removeClass("input-error");
-                iconFile.removeClass("input-error");
             }
         }
     }
@@ -16791,13 +21274,14 @@ RED.editor = (function() {
     }
 
     function getEditStackTitle() {
-        var title = '<ul class="editor-tray-breadcrumbs">';
         var label;
         for (var i=editStack.length-1;i<editStack.length;i++) {
             var node = editStack[i];
             label = node.type;
             if (node.type === '_expression') {
                 label = RED._("expressionEditor.title");
+            } else if (node.type === '_js') {
+                label = RED._("jsEditor.title");
             } else if (node.type === '_json') {
                 label = RED._("jsonEditor.title");
             } else if (node.type === '_markdown') {
@@ -16805,33 +21289,174 @@ RED.editor = (function() {
             } else if (node.type === '_buffer') {
                 label = RED._("bufferEditor.title");
             } else if (node.type === 'subflow') {
-                label = RED._("subflow.editSubflow",{name:node.name})
+                label = RED._("subflow.editSubflow",{name:RED.utils.sanitize(node.name)})
             } else if (node.type.indexOf("subflow:")===0) {
                 var subflow = RED.nodes.subflow(node.type.substring(8));
-                label = RED._("subflow.editSubflow",{name:subflow.name})
+                label = RED._("subflow.editSubflowInstance",{name:RED.utils.sanitize(subflow.name)})
             } else {
                 if (typeof node._def.paletteLabel !== "undefined") {
                     try {
-                        label = (typeof node._def.paletteLabel === "function" ? node._def.paletteLabel.call(node._def) : node._def.paletteLabel)||"";
+                        label = RED.utils.sanitize((typeof node._def.paletteLabel === "function" ? node._def.paletteLabel.call(node._def) : node._def.paletteLabel)||"");
                     } catch(err) {
                         console.log("Definition error: "+node.type+".paletteLabel",err);
                     }
                 }
                 if (i === editStack.length-1) {
                     if (RED.nodes.node(node.id)) {
-                        label = RED._("editor.editNode",{type:label});
+                        label = RED._("editor.editNode",{type:RED.utils.sanitize(label)});
                     } else {
-                        label = RED._("editor.addNewConfig",{type:label});
+                        label = RED._("editor.addNewConfig",{type:RED.utils.sanitize(label)});
                     }
                 }
             }
-            title += '<li>'+label+'</li>';
         }
-        title += '</ul>';
         return label;
     }
 
-    function buildEditForm(container,formId,type,ns) {
+    function buildEnvForm(container, node) {
+        var env_container = $('#node-input-env-container');
+        env_container
+            .css({
+                'min-height':'150px',
+                'min-width':'450px'
+            })
+            .editableList({
+                addItem: function(container, i, opt) {
+                    var row = $('<div/>').appendTo(container);
+                    if (opt.parent) {
+                        $('<div/>', {
+                            class:"uneditable-input",
+                            style: "margin-left: 5px; width: calc(40% - 8px)",
+                        }).appendTo(row).text(opt.name);
+                    } else {
+                        $('<input/>', {
+                            class: "node-input-env-name",
+                            type: "text",
+                            style: "margin-left: 5px; width: calc(40% - 8px)",
+                            placeholder: RED._("common.label.name")
+                        }).appendTo(row).val(opt.name);
+                    }
+                    var valueField = $('<input/>',{
+                        class: "node-input-env-value",
+                        type: "text",
+                        style: "margin-left: 5px; width: calc(60% - 8px)"
+                    }).appendTo(row)
+
+                    valueField.typedInput({default:'str',
+                                           types:['str','num','bool','json','bin','env']
+                                          });
+
+                    valueField.typedInput('type', opt.parent?(opt.type||opt.parent.type):opt.type);
+                    valueField.typedInput('value', opt.parent?((opt.value !== undefined)?opt.value:opt.parent.value):opt.value);
+
+                    var actionButton = $('<a/>',{href:"#",class:"red-ui-editableList-item-remove editor-button editor-button-small"}).appendTo(container);
+                    $('<i/>',{class:"fa "+(opt.parent?"fa-reply":"fa-remove")}).appendTo(actionButton);
+                    container.parent().addClass("red-ui-editableList-item-removable");
+                    if (opt.parent) {
+                        if ((opt.value !== undefined) && (opt.value !== opt.parent.value || opt.type !== opt.parent.type)) {
+                            actionButton.show();
+                        } else {
+                            actionButton.hide();
+                        }
+                        var restoreTip = RED.popover.tooltip(actionButton,RED._("subflow.env.restore"));
+                        valueField.change(function(evt) {
+                            var newType = valueField.typedInput('type');
+                            var newValue = valueField.typedInput('value');
+                            if (newType === opt.parent.type && newValue === opt.parent.value) {
+                                actionButton.hide();
+                            } else {
+                                actionButton.show();
+                            }
+                        })
+                        actionButton.click(function(evt) {
+                            evt.preventDefault();
+                            restoreTip.close();
+                            valueField.typedInput('type', opt.parent.type);
+                            valueField.typedInput('value', opt.parent.value);
+                        })
+                    } else {
+                        var removeTip = RED.popover.tooltip(actionButton,RED._("subflow.env.remove"));
+                        actionButton.click(function(evt) {
+                            evt.preventDefault();
+                            removeTip.close();
+                            container.parent().addClass("red-ui-editableList-item-deleting")
+                            container.fadeOut(300, function() {
+                                env_container.editableList('removeItem',opt);
+                            });
+                        });
+                    }
+                },
+                sortable: false,
+                removable: false
+            });
+        var parentEnv = {};
+        var envList = [];
+        if (/^subflow:/.test(node.type)) {
+            var subflowDef = RED.nodes.subflow(node.type.substring(8));
+            if (subflowDef.env) {
+                subflowDef.env.forEach(function(env) {
+                    var item = {
+                        name:env.name,
+                        parent: {
+                            type: env.type,
+                            value: env.value
+                        }
+                    }
+                    envList.push(item);
+                    parentEnv[env.name] = item;
+                })
+            }
+        }
+
+        if (node.env) {
+            for (var i = 0; i < node.env.length; i++) {
+                var env = node.env[i];
+                if (parentEnv.hasOwnProperty(env.name)) {
+                    parentEnv[env.name].type = env.type;
+                    parentEnv[env.name].value = env.value;
+                } else {
+                    envList.push({
+                        name: env.name,
+                        type: env.type,
+                        value: env.value
+                    });
+                }
+            }
+        }
+        envList.forEach(function(env) {
+            env_container.editableList('addItem', env);
+        })
+    }
+
+    function exportEnvList(list) {
+        if (list) {
+            var env = [];
+            list.each(function(i) {
+                var entry = $(this);
+                var item = entry.data('data');
+                var name = item.parent?item.name:entry.find(".node-input-env-name").val();
+                var valueInput = entry.find(".node-input-env-value");
+                var value = valueInput.typedInput("value");
+                var type = valueInput.typedInput("type");
+                if (!item.parent || (item.parent.value !== value || item.parent.type !== type)) {
+                    var item = {
+                        name: name,
+                        type: type,
+                        value: value
+                    };
+                    env.push(item);
+                }
+            });
+            return env;
+        }
+        return null;
+    }
+
+    function isSameEnv(env0, env1) {
+        return (JSON.stringify(env0) === JSON.stringify(env1));
+    }
+
+    function buildEditForm(container,formId,type,ns,node) {
         var dialogForm = $('<form id="'+formId+'" class="form-horizontal" autocomplete="off"></form>').appendTo(container);
         dialogForm.html($("script[data-template-name='"+type+"']").html());
         ns = ns||"node-red";
@@ -16852,6 +21477,11 @@ RED.editor = (function() {
             }
             $(this).attr("data-i18n",keys.join(";"));
         });
+
+        if ((type === "subflow") || (type === "subflow-template")) {
+            buildEnvForm(dialogForm, node);
+        }
+
         // Add dummy fields to prevent 'Enter' submitting the form in some
         // cases, and also prevent browser auto-fill of password
         // Add in reverse order as they are prepended...
@@ -16869,7 +21499,13 @@ RED.editor = (function() {
         var inputsDiv = $("#node-label-form-inputs");
         var outputsDiv = $("#node-label-form-outputs");
 
-        var inputCount = node.inputs || node._def.inputs || 0;
+        var inputCount;
+        if (node.type === 'subflow') {
+            inputCount = node.in.length;
+        } else {
+            inputCount = node.inputs || node._def.inputs || 0;
+        }
+
         var children = inputsDiv.children();
         var childCount = children.length;
         if (childCount === 1 && $(children[0]).hasClass('node-label-form-none')) {
@@ -16888,7 +21524,7 @@ RED.editor = (function() {
             for (i=inputCount;i<childCount;i++) {
                 $(children[i]).remove();
             }
-            if (outputCount === 0) {
+            if (inputCount === 0) {
                 buildLabelRow().appendTo(inputsDiv);
             }
         }
@@ -16898,7 +21534,11 @@ RED.editor = (function() {
         var formOutputs = $("#node-input-outputs").val();
 
         if (formOutputs === undefined) {
-            outputCount = node.outputs || node._def.outputs || 0;
+            if (node.type === 'subflow') {
+                outputCount = node.out.length;
+            } else {
+                inputCount = node.outputs || node._def.outputs || 0;
+            }
         } else if (isNaN(formOutputs)) {
             var outputMap = JSON.parse(formOutputs);
             var keys = Object.keys(outputMap);
@@ -16973,7 +21613,7 @@ RED.editor = (function() {
             var id = "node-label-form-"+type+"-"+index;
             $('<label>',{for:id}).text((index+1)+".").appendTo(result);
             var input = $('<input>',{type:"text",id:id, placeholder: placeHolder}).val(value).appendTo(result);
-            var clear = $('<button class="editor-button editor-button-small"><i class="fa fa-times"></i></button>').appendTo(result);
+            var clear = $('<button type="button" class="editor-button editor-button-small"><i class="fa fa-times"></i></button>').appendTo(result);
             clear.click(function(evt) {
                 evt.preventDefault();
                 input.val("");
@@ -16981,8 +21621,166 @@ RED.editor = (function() {
         }
         return result;
     }
-    function buildLabelForm(container,node) {
+    function showIconPicker(container, node, iconPath, done) {
+        var containerPos = container.offset();
+        var pickerBackground = $('<div>').css({
+            position: "absolute",top:0,bottom:0,left:0,right:0,zIndex:20
+        }).appendTo("body");
+
+        var top = containerPos.top - 30;
+
+        if (top+280 > $( window ).height()) {
+            top = $( window ).height() - 280;
+        }
+        var picker = $('<div class="red-ui-icon-picker">').css({
+            top: top+"px",
+            left: containerPos.left+"px",
+        }).appendTo("body");
+
+        var hide = function() {
+            pickerBackground.remove();
+            picker.remove();
+            RED.keyboard.remove("escape");
+        }
+        RED.keyboard.add("*","escape",function(){hide()});
+        pickerBackground.on("mousedown", hide);
+
+        var searchDiv = $("<div>",{class:"red-ui-search-container"}).appendTo(picker);
+        searchInput = $('<input type="text">').attr("placeholder",RED._("editor.searchIcons")).appendTo(searchDiv).searchBox({
+            delay: 50,
+            change: function() {
+                var searchTerm = $(this).val().trim();
+                if (searchTerm === "") {
+                    iconList.find(".red-ui-icon-list-module").show();
+                    iconList.find(".red-ui-icon-list-icon").show();
+                } else {
+                    iconList.find(".red-ui-icon-list-module").hide();
+                    iconList.find(".red-ui-icon-list-icon").each(function(i,n) {
+                        if ($(n).data('icon').indexOf(searchTerm) === -1) {
+                            $(n).hide();
+                        } else {
+                            $(n).show();
+                        }
+                    });
+                }
+            }
+        });
+
+        var row = $('<div>').appendTo(picker);
+        var iconList = $('<div class="red-ui-icon-list">').appendTo(picker);
+        var metaRow = $('<div class="red-ui-icon-meta"></div>').appendTo(picker);
+        var summary = $('<span>').appendTo(metaRow);
+        var resetButton = $('<button type="button" class="editor-button editor-button-small">'+RED._("editor.useDefault")+'</button>').appendTo(metaRow).click(function(e) {
+            e.preventDefault();
+            hide();
+            done(null);
+        });
+        var iconSets = RED.nodes.getIconSets();
+        Object.keys(iconSets).forEach(function(moduleName) {
+            var icons = iconSets[moduleName];
+            if (icons.length > 0) {
+                // selectIconModule.append($("<option></option>").val(moduleName).text(moduleName));
+                var header = $('<div class="red-ui-icon-list-module"></div>').text(moduleName).appendTo(iconList);
+                $('<i class="fa fa-cube"></i>').prependTo(header);
+                icons.forEach(function(icon) {
+                    var iconDiv = $('<div>',{class:"red-ui-icon-list-icon"}).appendTo(iconList);
+                    var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(iconDiv);
+                    var colour = RED.utils.getNodeColor(node.type, node._def);
+                    var icon_url = RED.settings.apiRootUrl+"icons/"+moduleName+"/"+icon;
+                    iconDiv.data('icon',icon_url);
+                    nodeDiv.css('backgroundColor',colour);
+                    var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
+                    RED.utils.createIconElement(icon_url, iconContainer, true);
+
+                    if (iconPath.module === moduleName && iconPath.file === icon) {
+                        iconDiv.addClass("selected");
+                    }
+                    iconDiv.on("mouseover", function() {
+                        summary.text(icon);
+                    })
+                    iconDiv.on("mouseout", function() {
+                        summary.html("&nbsp;");
+                    })
+                    iconDiv.click(function() {
+                        hide();
+                        done(moduleName+"/"+icon);
+                    })
+                })
+            }
+        });
+        picker.slideDown(100);
+        searchInput.focus();
+    }
+
+    function buildAppearanceForm(container,node) {
         var dialogForm = $('<form class="dialog-form form-horizontal" autocomplete="off"></form>').appendTo(container);
+
+        var i,row;
+
+        $('<div class="form-row">'+
+            '<label for="node-input-show-label-btn" data-i18n="editor.label"></label>'+
+            '<button type="button" id="node-input-show-label-btn" class="editor-button" style="min-width: 80px; text-align: left;" type="button"><i id="node-input-show-label-btn-i" class="fa fa-toggle-on"></i> <span id="node-input-show-label-label"></span></button> '+
+            '<input type="checkbox" id="node-input-show-label" style="display: none;"/>'+
+        '</div>').appendTo(dialogForm);
+
+        var setToggleState = function(state) {
+            var i = $("#node-input-show-label-btn-i");
+            if (!state) {
+                i.addClass('fa-toggle-off');
+                i.removeClass('fa-toggle-on');
+                $("#node-input-show-label").prop("checked",false);
+                $("#node-input-show-label-label").text(RED._("editor.hide"));
+            } else {
+                i.addClass('fa-toggle-on');
+                i.removeClass('fa-toggle-off');
+                $("#node-input-show-label").prop("checked",true);
+                $("#node-input-show-label-label").text(RED._("editor.show"));
+            }
+        }
+        dialogForm.find('#node-input-show-label-btn').on("click",function(e) {
+            e.preventDefault();
+            var i = $("#node-input-show-label-btn-i");
+            setToggleState(i.hasClass('fa-toggle-off'));
+        })
+        if (!node.hasOwnProperty("l")) {
+            // Show label if type not link
+            node.l = !/^link (in|out)$/.test(node._def.type);
+        }
+        setToggleState(node.l);
+
+        // If a node has icon property in defaults, the icon of the node cannot be modified. (e.g, ui_button node in dashboard)
+        if ((!node._def.defaults || !node._def.defaults.hasOwnProperty("icon"))) {
+            var iconRow = $('<div class="form-row"></div>').appendTo(dialogForm);
+            $('<label data-i18n="editor.settingIcon">').appendTo(iconRow);
+
+            var iconButton = $('<button type="button" class="editor-button" id="node-settings-icon-button">').appendTo(iconRow);
+
+            var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(iconButton);
+            var colour = RED.utils.getNodeColor(node.type, node._def);
+            var icon_url = RED.utils.getNodeIcon(node._def,node);
+            nodeDiv.css('backgroundColor',colour);
+            var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
+            RED.utils.createIconElement(icon_url, iconContainer, true);
+
+            iconButton.click(function(e) {
+                e.preventDefault();
+                var iconPath;
+                var icon = $("#node-settings-icon").text()||"";
+                if (icon) {
+                    iconPath = RED.utils.separateIconPath(icon);
+                } else {
+                    iconPath = RED.utils.getDefaultNodeIcon(node._def, node);
+                }
+                showIconPicker(iconRow,node,iconPath,function(newIcon) {
+                    $("#node-settings-icon").text(newIcon||"");
+                    var icon_url = RED.utils.getNodeIcon(node._def,{type:node.type,icon:newIcon});
+                    RED.utils.createIconElement(icon_url, iconContainer, true);
+                });
+            });
+            $('<div id="node-settings-icon">').text(node.icon).appendTo(iconButton);
+        }
+
+        /*$('<div class="form-row"><span data-i18n="editor.portLabels"></span></div>').appendTo(dialogForm);
 
         var inputCount = node.inputs || node._def.inputs || 0;
         var outputCount = node.outputs || node._def.outputs || 0;
@@ -16997,8 +21795,7 @@ RED.editor = (function() {
         var inputPlaceholder = node._def.inputLabels?RED._("editor.defaultLabel"):RED._("editor.noDefaultLabel");
         var outputPlaceholder = node._def.outputLabels?RED._("editor.defaultLabel"):RED._("editor.noDefaultLabel");
 
-        var i,row;
-        $('<div class="form-row"><span data-i18n="editor.labelInputs"></span><div id="node-label-form-inputs"></div></div>').appendTo(dialogForm);
+        $('<div class="form-row"><span style="margin-left: 50px;" data-i18n="editor.labelInputs"></span><div id="node-label-form-inputs"></div></div>').appendTo(dialogForm);
         var inputsDiv = $("#node-label-form-inputs");
         if (inputCount > 0) {
             for (i=0;i<inputCount;i++) {
@@ -17007,7 +21804,7 @@ RED.editor = (function() {
         } else {
             buildLabelRow().appendTo(inputsDiv);
         }
-        $('<div class="form-row"><span data-i18n="editor.labelOutputs"></span><div id="node-label-form-outputs"></div></div>').appendTo(dialogForm);
+        $('<div class="form-row"><span style="margin-left: 50px;" data-i18n="editor.labelOutputs"></span><div id="node-label-form-outputs"></div></div>').appendTo(dialogForm);
         var outputsDiv = $("#node-label-form-outputs");
         if (outputCount > 0) {
             for (i=0;i<outputCount;i++) {
@@ -17015,84 +21812,7 @@ RED.editor = (function() {
             }
         } else {
             buildLabelRow().appendTo(outputsDiv);
-        }
-
-        if ((!node._def.defaults || !node._def.defaults.hasOwnProperty("icon"))) {
-            $('<div class="form-row"><div id="node-settings-icon"></div></div>').appendTo(dialogForm);
-            var iconDiv = $("#node-settings-icon");
-            $('<label data-i18n="editor.settingIcon">').appendTo(iconDiv);
-            var iconForm = $('<div>',{class:"node-label-form-row"});
-            iconForm.appendTo(iconDiv);
-            $('<label>').appendTo(iconForm);
-
-            var selectIconModule = $('<select id="node-settings-icon-module"><option value=""></option></select>').appendTo(iconForm);
-            var iconPath;
-            if (node.icon) {
-                iconPath = RED.utils.separateIconPath(node.icon);
-            } else {
-                iconPath = RED.utils.getDefaultNodeIcon(node._def, node);
-            }
-            var iconSets = RED.nodes.getIconSets();
-            Object.keys(iconSets).forEach(function(moduleName) {
-                selectIconModule.append($("<option></option>").val(moduleName).text(moduleName));
-            });
-            if (iconPath.module && !iconSets[iconPath.module]) {
-                selectIconModule.append($("<option disabled></option>").val(iconPath.module).text(iconPath.module));
-            }
-            selectIconModule.val(iconPath.module);
-            var iconModuleHidden = $('<input type="hidden" id="node-settings-icon-module-hidden"></input>').appendTo(iconForm);
-            iconModuleHidden.val(iconPath.module);
-
-            var selectIconFile = $('<select id="node-settings-icon-file"><option value=""></option></select>').appendTo(iconForm);
-            selectIconModule.change(function() {
-                moduleChange(selectIconModule, selectIconFile, iconModuleHidden, iconFileHidden, iconSets, true);
-            });
-            var iconFileHidden = $('<input type="hidden" id="node-settings-icon-file-hidden"></input>').appendTo(iconForm);
-            iconFileHidden.val(iconPath.file);
-            selectIconFile.change(function() {
-                selectIconFile.removeClass("input-error");
-                var fileName = selectIconFile.val();
-                iconFileHidden.val(fileName);
-            });
-            var clear = $('<button class="editor-button editor-button-small"><i class="fa fa-times"></i></button>').appendTo(iconForm);
-            clear.click(function(evt) {
-                evt.preventDefault();
-                var iconPath = RED.utils.getDefaultNodeIcon(node._def, node);
-                selectIconModule.val(iconPath.module);
-                moduleChange(selectIconModule, selectIconFile, iconModuleHidden, iconFileHidden, iconSets, true);
-                selectIconFile.removeClass("input-error");
-                selectIconFile.val(iconPath.file);
-                iconFileHidden.val(iconPath.file);
-            });
-
-            moduleChange(selectIconModule, selectIconFile, iconModuleHidden, iconFileHidden, iconSets, false);
-            var iconFileList = iconSets[selectIconModule.val()];
-            if (!iconFileList || iconFileList.indexOf(iconPath.file) === -1) {
-                selectIconFile.append($("<option disabled></option>").val(iconPath.file).text(iconPath.file));
-            }
-            selectIconFile.val(iconPath.file);
-        }
-    }
-
-    function moduleChange(selectIconModule, selectIconFile, iconModuleHidden, iconFileHidden, iconSets, updateIconFile) {
-        selectIconFile.children().remove();
-        var moduleName = selectIconModule.val();
-        if (moduleName !== null) {
-            iconModuleHidden.val(moduleName);
-        }
-        var iconFileList = iconSets[moduleName];
-        if (iconFileList) {
-            iconFileList.forEach(function(fileName) {
-                if (updateIconFile) {
-                    updateIconFile = false;
-                    iconFileHidden.val(fileName);
-                }
-                selectIconFile.append($("<option></option>").val(fileName).text(fileName));
-            });
-        }
-        selectIconFile.prop("disabled", !iconFileList);
-        selectIconFile.removeClass("input-error");
-        selectIconModule.removeClass("input-error");
+        }*/
     }
 
     function updateLabels(editing_node, changes, outputMap) {
@@ -17136,10 +21856,29 @@ RED.editor = (function() {
         return changed;
     }
 
+    function buildDescriptionForm(container,node) {
+        var dialogForm = $('<form class="dialog-form form-horizontal" autocomplete="off"></form>').appendTo(container);
+        var toolbarRow = $('<div></div>').appendTo(dialogForm);
+        var row = $('<div class="form-row node-text-editor-row" style="position:relative; padding-top: 4px; height: 100%"></div>').appendTo(dialogForm);
+        $('<div style="height: 100%" class="node-text-editor" id="node-info-input-info-editor" ></div>').appendTo(row);
+        var nodeInfoEditor = RED.editor.createEditor({
+            id: "node-info-input-info-editor",
+            mode: 'ace/mode/markdown',
+            value: ""
+        });
+        if (node.info) {
+            nodeInfoEditor.getSession().setValue(node.info, -1);
+        }
+        return nodeInfoEditor;
+    }
+
     function showEditDialog(node) {
         var editing_node = node;
         var isDefaultIcon;
         var defaultIcon;
+        var nodeInfoEditor;
+        var finishedBuilding = false;
+
         editStack.push(node);
         RED.view.state(RED.state.EDITING);
         var type = node.type;
@@ -17267,6 +22006,13 @@ RED.editor = (function() {
                                     var input = $("#node-input-"+d);
                                     if (input.attr('type') === "checkbox") {
                                         newValue = input.prop('checked');
+                                    } else if (input.prop("nodeName") === "select" && input.attr("multiple") === "multiple") {
+                                        // An empty select-multiple box returns null.
+                                        // Need to treat that as an empty array.
+                                        newValue = input.val();
+                                        if (newValue == null) {
+                                            newValue = [];
+                                        }
                                     } else if ("format" in editing_node._def.defaults[d] && editing_node._def.defaults[d].format !== "" && input[0].nodeName === "DIV") {
                                         newValue = input.text();
                                     } else {
@@ -17393,9 +22139,7 @@ RED.editor = (function() {
                         }
 
                         if (!editing_node._def.defaults || !editing_node._def.defaults.hasOwnProperty("icon")) {
-                            var iconModule = $("#node-settings-icon-module-hidden").val();
-                            var iconFile = $("#node-settings-icon-file-hidden").val();
-                            var icon = (iconModule && iconFile) ? iconModule+"/"+iconFile : "";
+                            var icon = $("#node-settings-icon").text()||""
                             if (!isDefaultIcon) {
                                 if (icon !== editing_node.icon) {
                                     changes.icon = editing_node.icon;
@@ -17403,7 +22147,7 @@ RED.editor = (function() {
                                     changed = true;
                                 }
                             } else {
-                                if (icon !== defaultIcon) {
+                                if (icon !== "" && icon !== defaultIcon) {
                                     changes.icon = editing_node.icon;
                                     editing_node.icon = icon;
                                     changed = true;
@@ -17416,6 +22160,79 @@ RED.editor = (function() {
                                         changed = true;
                                     }
                                 }
+                            }
+                        }
+
+                        if (!$("#node-input-show-label").prop('checked')) {
+                            // Not checked - hide label
+                            if (!/^link (in|out)$/.test(node.type)) {
+                                // Not a link node - default state is true
+                                if (node.l !== false) {
+                                    changes.l = node.l
+                                    changed = true;
+                                }
+                                node.l = false;
+                            } else {
+                                // A link node - default state is false
+                                if (node.hasOwnProperty('l') && node.l) {
+                                    changes.l = node.l
+                                    changed = true;
+                                }
+                                delete node.l;
+                            }
+                        } else {
+                            // Checked - show label
+                            if (!/^link (in|out)$/.test(node.type)) {
+                                // Not a link node - default state is true
+                                if (node.hasOwnProperty('l') && !node.l) {
+                                    changes.l = node.l
+                                    changed = true;
+                                }
+                                delete node.l;
+                            } else {
+                                if (!node.l) {
+                                    changes.l = node.l
+                                    changed = true;
+                                }
+                                node.l = true;
+                            }
+                        }
+                        node.resize = true;
+
+                        var oldInfo = node.info;
+                        if (nodeInfoEditor) {
+                            var newInfo = nodeInfoEditor.getValue();
+                            if (!!oldInfo) {
+                                // Has existing info property
+                                if (newInfo.trim() === "") {
+                                    // New value is blank - remove the property
+                                    changed = true;
+                                    changes.info = oldInfo;
+                                    delete node.info;
+                                } else if (newInfo !== oldInfo) {
+                                    // New value is different
+                                    changed = true;
+                                    changes.info = oldInfo;
+                                    node.info = newInfo;
+                                }
+                            } else {
+                                // No existing info
+                                if (newInfo.trim() !== "") {
+                                    // New value is not blank
+                                    changed = true;
+                                    changes.info = undefined;
+                                    node.info = newInfo;
+                                }
+                            }
+                        }
+
+                        if (type === "subflow") {
+                            var old_env = editing_node.env;
+                            var new_env = exportEnvList($("#node-input-env-container").editableList("items"));
+                            if (!isSameEnv(old_env, new_env)) {
+                                editing_node.env = new_env;
+                                changes.env = editing_node.env;
+                                changed = true;
                             }
                         }
 
@@ -17467,8 +22284,8 @@ RED.editor = (function() {
             ],
             resize: function(dimensions) {
                 editTrayWidthCache[type] = dimensions.width;
-                $(".editor-tray-content").height(dimensions.height - 78);
-                var form = $(".editor-tray-content form").height(dimensions.height - 78 - 40);
+                $(".editor-tray-content").height(dimensions.height - 50);
+                var form = $(".editor-tray-content form").height(dimensions.height - 50 - 40);
                 if (editing_node && editing_node._def.oneditresize) {
                     try {
                         editing_node._def.oneditresize.call(editing_node,{width:form.width(),height:form.height()});
@@ -17482,25 +22299,24 @@ RED.editor = (function() {
                 var trayBody = tray.find('.editor-tray-body');
                 trayBody.parent().css('overflow','hidden');
 
-                var stack = RED.stack.create({
-                    container: trayBody,
-                    singleExpanded: true
-                });
-                var nodeProperties = stack.add({
-                    title: RED._("editor.nodeProperties"),
-                    expanded: true
-                });
-                nodeProperties.content.addClass("editor-tray-content");
+                var editorTabEl = $('<ul></ul>').appendTo(trayBody);
+                var editorContent = $('<div></div>').appendTo(trayBody);
 
-                /*var portLabels = stack.add({
-                    title: RED._("editor.portLabels"),
-                    onexpand: function() {
-                        refreshLabelForm(this.content,node);
-                    }
+                var editorTabs = RED.tabs.create({
+                    element:editorTabEl,
+                    onchange:function(tab) {
+                        editorContent.children().hide();
+                        if (tab.onchange) {
+                            tab.onchange.call(tab);
+                        }
+                        tab.content.show();
+                        if (finishedBuilding) {
+                            RED.tray.resize();
+                        }
+                    },
+                    collapsible: true,
+                    menu: false
                 });
-                portLabels.content.addClass("editor-tray-content");*/
-
-
                 if (editing_node) {
                     RED.sidebar.info.refresh(editing_node);
                 }
@@ -17517,11 +22333,48 @@ RED.editor = (function() {
                 } else {
                     isDefaultIcon = true;
                 }
-                buildEditForm(nodeProperties.content,"dialog-form",type,ns);
-                //buildLabelForm(portLabels.content,node);
+
+                var nodePropertiesTab = {
+                    id: "editor-tab-properties",
+                    label: RED._("editor-tab.properties"),
+                    name: RED._("editor-tab.properties"),
+                    content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-cog"
+                };
+                buildEditForm(nodePropertiesTab.content,"dialog-form",type,ns,node);
+                editorTabs.addTab(nodePropertiesTab);
+
+                if (!node._def.defaults || !node._def.defaults.hasOwnProperty('info'))  {
+                    var descriptionTab = {
+                        id: "editor-tab-description",
+                        label: RED._("editor-tab.description"),
+                        name: RED._("editor-tab.description"),
+                        content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                        iconClass: "fa fa-file-text-o",
+                        onchange: function() {
+                            nodeInfoEditor.focus();
+                        }
+                    };
+                    editorTabs.addTab(descriptionTab);
+                    nodeInfoEditor = buildDescriptionForm(descriptionTab.content,node);
+                }
+
+                var appearanceTab = {
+                    id: "editor-tab-appearance",
+                    label: RED._("editor-tab.appearance"),
+                    name: RED._("editor-tab.appearance"),
+                    content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-object-group",
+                    onchange: function() {
+                        refreshLabelForm(this.content,node);
+                    }
+                };
+                buildAppearanceForm(appearanceTab.content,node);
+                editorTabs.addTab(appearanceTab);
 
                 prepareEditDialog(node,node._def,"node-input", function() {
                     trayBody.i18n();
+                    finishedBuilding = true;
                     done();
                 });
             },
@@ -17533,6 +22386,10 @@ RED.editor = (function() {
                     RED.sidebar.info.refresh(editing_node);
                 }
                 RED.workspaces.refresh();
+                if (nodeInfoEditor) {
+                    nodeInfoEditor.destroy();
+                    nodeInfoEditor = null;
+                }
                 RED.view.redraw(true);
                 editStack.pop();
             },
@@ -17570,6 +22427,8 @@ RED.editor = (function() {
         var adding = (id == "_ADD_");
         var node_def = RED.nodes.getType(type);
         var editing_config_node = RED.nodes.node(id);
+        var nodeInfoEditor;
+        var finishedBuilding = false;
 
         var ns;
         if (node_def.set.module === "node-red") {
@@ -17602,7 +22461,8 @@ RED.editor = (function() {
         RED.view.state(RED.state.EDITING);
         var trayOptions = {
             title: getEditStackTitle(), //(adding?RED._("editor.addNewConfig", {type:type}):RED._("editor.editConfig", {type:type})),
-            resize: function() {
+            resize: function(dimensions) {
+                $(".editor-tray-content").height(dimensions.height - 50);
                 if (editing_config_node && editing_config_node._def.oneditresize) {
                     var form = $("#node-config-dialog-edit-form");
                     try {
@@ -17614,6 +22474,7 @@ RED.editor = (function() {
             },
             open: function(tray, done) {
                 var trayHeader = tray.find(".editor-tray-header");
+                var trayBody = tray.find('.editor-tray-body');
                 var trayFooter = tray.find(".editor-tray-footer");
 
                 if (node_def.hasUsers !== false) {
@@ -17621,7 +22482,49 @@ RED.editor = (function() {
                 }
                 trayFooter.append('<span id="node-config-dialog-scope-container"><span id="node-config-dialog-scope-warning" data-i18n="[title]editor.errors.scopeChange"><i class="fa fa-warning"></i></span><select id="node-config-dialog-scope"></select></span>');
 
-                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),"node-config-dialog-edit-form",type,ns);
+                var editorTabEl = $('<ul></ul>').appendTo(trayBody);
+                var editorContent = $('<div></div>').appendTo(trayBody);
+
+                var editorTabs = RED.tabs.create({
+                    element:editorTabEl,
+                    onchange:function(tab) {
+                        editorContent.children().hide();
+                        if (tab.onchange) {
+                            tab.onchange.call(tab);
+                        }
+                        tab.content.show();
+                        if (finishedBuilding) {
+                            RED.tray.resize();
+                        }
+                    },
+                    collapsible: true
+                });
+
+                var nodePropertiesTab = {
+                    id: "editor-tab-cproperties",
+                    label: RED._("editor-tab.properties"),
+                    name: RED._("editor-tab.properties"),
+                    content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-cog"
+                };
+                editorTabs.addTab(nodePropertiesTab);
+                buildEditForm(nodePropertiesTab.content,"node-config-dialog-edit-form",type,ns);
+
+                if (!node_def.defaults || !node_def.defaults.hasOwnProperty('info'))  {
+                    var descriptionTab = {
+                        id: "editor-tab-description",
+                        label: RED._("editor-tab.description"),
+                        name: RED._("editor-tab.description"),
+                        content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                        iconClass: "fa fa-file-text-o",
+                        onchange: function() {
+                            nodeInfoEditor.focus();
+                        }
+                    };
+                    editorTabs.addTab(descriptionTab);
+                    nodeInfoEditor = buildDescriptionForm(descriptionTab.content,editing_config_node);
+                }
+
 
                 prepareEditDialog(editing_config_node,node_def,"node-config-input", function() {
                     if (editing_config_node._def.exclusive) {
@@ -17645,7 +22548,7 @@ RED.editor = (function() {
                         if (nodeUserFlows[ws.id]) {
                             workspaceLabel = "* "+workspaceLabel;
                         }
-                        tabSelect.append('<option value="'+ws.id+'"'+(ws.id==editing_config_node.z?" selected":"")+'>'+workspaceLabel+'</option>');
+                        $('<option value="'+ws.id+'"'+(ws.id==editing_config_node.z?" selected":"")+'></option>').text(workspaceLabel).appendTo(tabSelect);
                     });
                     tabSelect.append('<option disabled data-i18n="sidebar.config.subflows"></option>');
                     RED.nodes.eachSubflow(function(ws) {
@@ -17653,7 +22556,7 @@ RED.editor = (function() {
                         if (nodeUserFlows[ws.id]) {
                             workspaceLabel = "* "+workspaceLabel;
                         }
-                        tabSelect.append('<option value="'+ws.id+'"'+(ws.id==editing_config_node.z?" selected":"")+'>'+workspaceLabel+'</option>');
+                        $('<option value="'+ws.id+'"'+(ws.id==editing_config_node.z?" selected":"")+'></option>').text(workspaceLabel).appendTo(tabSelect);
                     });
                     if (flowCount > 0) {
                         tabSelect.on('change',function() {
@@ -17669,17 +22572,21 @@ RED.editor = (function() {
                             }
                         });
                     }
-                    tabSelect.i18n();
-
-                    dialogForm.i18n();
                     if (node_def.hasUsers !== false) {
                         $("#node-config-dialog-user-count").find("span").text(RED._("editor.nodesUse", {count:editing_config_node.users.length})).parent().show();
                     }
+                    trayBody.i18n();
+                    trayFooter.i18n();
+                    finishedBuilding = true;
                     done();
                 });
             },
             close: function() {
                 RED.workspaces.refresh();
+                if (nodeInfoEditor) {
+                    nodeInfoEditor.destroy();
+                    nodeInfoEditor = null;
+                }
                 editStack.pop();
             },
             show: function() {
@@ -17770,6 +22677,31 @@ RED.editor = (function() {
                                     }
                                 }
                                 editing_config_node[d] = newValue;
+                            }
+                        }
+                    }
+
+                    if (nodeInfoEditor) {
+                        editing_config_node.info = nodeInfoEditor.getValue();
+
+                        var oldInfo = editing_config_node.info;
+                        if (nodeInfoEditor) {
+                            var newInfo = nodeInfoEditor.getValue();
+                            if (!!oldInfo) {
+                                // Has existing info property
+                                if (newInfo.trim() === "") {
+                                    // New value is blank - remove the property
+                                    delete editing_config_node.info;
+                                } else if (newInfo !== oldInfo) {
+                                    // New value is different
+                                    editing_config_node.info = newInfo;
+                                }
+                            } else {
+                                // No existing info
+                                if (newInfo.trim() !== "") {
+                                    // New value is not blank
+                                    editing_config_node.info = newInfo;
+                                }
                             }
                         }
                     }
@@ -17945,7 +22877,7 @@ RED.editor = (function() {
                 }
 
                 configNodes.forEach(function(cn) {
-                    select.append('<option value="'+cn.id+'"'+(value==cn.id?" selected":"")+'>'+RED.text.bidi.enforceTextDirectionWithUCC(cn.__label__)+'</option>');
+                    $('<option value="'+cn.id+'"'+(value==cn.id?" selected":"")+'></option>').text(RED.text.bidi.enforceTextDirectionWithUCC(cn.__label__)).appendTo(select);
                     delete cn.__label__;
                 });
 
@@ -17960,7 +22892,7 @@ RED.editor = (function() {
         editStack.push(subflow);
         RED.view.state(RED.state.EDITING);
         var subflowEditor;
-
+        var finishedBuilding = false;
         var trayOptions = {
             title: getEditStackTitle(),
             buttons: [
@@ -17999,13 +22931,34 @@ RED.editor = (function() {
                         if (updateLabels(editing_node, changes, null)) {
                             changed = true;
                         }
-                        var iconModule = $("#node-settings-icon-module-hidden").val();
-                        var iconFile = $("#node-settings-icon-file-hidden").val();
-                        var icon = (iconModule && iconFile) ? iconModule+"/"+iconFile : "";
+                        var icon = $("#node-settings-icon").text()||"";
                         if ((editing_node.icon === undefined && icon !== "node-red/subflow.png") ||
                             (editing_node.icon !== undefined && editing_node.icon !== icon)) {
                             changes.icon = editing_node.icon;
                             editing_node.icon = icon;
+                            changed = true;
+                        }
+                        var newCategory = $("#subflow-input-category").val().trim();
+                        if (newCategory === "_custom_") {
+                            newCategory = $("#subflow-input-custom-category").val().trim();
+                            if (newCategory === "") {
+                                newCategory = editing_node.category;
+                            }
+                        }
+                        if (newCategory === 'subflows') {
+                            newCategory = '';
+                        }
+                        if (newCategory != editing_node.category) {
+                            changes['category'] = editing_node.category;
+                            editing_node.category = newCategory;
+                            changed = true;
+                        }
+
+                        var old_env = editing_node.env;
+                        var new_env = exportEnvList($("#node-input-env-container").editableList("items"));
+                        if (!isSameEnv(old_env, new_env)) {
+                            editing_node.env = new_env;
+                            changes.env = editing_node.env;
                             changed = true;
                         }
 
@@ -18047,54 +23000,112 @@ RED.editor = (function() {
                     }
                 }
             ],
-            resize: function(dimensions) {
-                $(".editor-tray-content").height(dimensions.height - 78);
-                var form = $(".editor-tray-content form").height(dimensions.height - 78 - 40);
-
-                var rows = $("#dialog-form>div:not(.node-text-editor-row)");
-                var editorRow = $("#dialog-form>div.node-text-editor-row");
-                var height = $("#dialog-form").height();
-                for (var i=0;i<rows.size();i++) {
+            resize: function(size) {
+                $(".editor-tray-content").height(size.height - 50);
+                // var form = $(".editor-tray-content form").height(size.height - 50 - 40);
+                var rows = $("#dialog-form>div:not(.node-input-env-container-row)");
+                var height = size.height;
+                for (var i=0; i<rows.size(); i++) {
                     height -= $(rows[i]).outerHeight(true);
                 }
-                height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
-                $(".node-text-editor").css("height",height+"px");
-                subflowEditor.resize();
+                var editorRow = $("#dialog-form>div.node-input-env-container-row");
+                height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+                $("#node-input-env-container").editableList('height',height-80);
             },
             open: function(tray) {
                 var trayFooter = tray.find(".editor-tray-footer");
                 var trayBody = tray.find('.editor-tray-body');
                 trayBody.parent().css('overflow','hidden');
 
-                var stack = RED.stack.create({
-                    container: trayBody,
-                    singleExpanded: true
-                });
-                var nodeProperties = stack.add({
-                    title: RED._("editor.nodeProperties"),
-                    expanded: true
-                });
-                nodeProperties.content.addClass("editor-tray-content");
-                /*var portLabels = stack.add({
-                    title: RED._("editor.portLabels")
-                });
-                portLabels.content.addClass("editor-tray-content");*/
-
-
 
                 if (editing_node) {
                     RED.sidebar.info.refresh(editing_node);
                 }
-                var dialogForm = buildEditForm(nodeProperties.content,"dialog-form","subflow-template");
-                subflowEditor = RED.editor.createEditor({
-                    id: 'subflow-input-info-editor',
-                    mode: 'ace/mode/markdown',
-                    value: ""
+
+                var editorTabEl = $('<ul></ul>').appendTo(trayBody);
+                var editorContent = $('<div></div>').appendTo(trayBody);
+
+                var editorTabs = RED.tabs.create({
+                    element:editorTabEl,
+                    onchange:function(tab) {
+                        editorContent.children().hide();
+                        if (tab.onchange) {
+                            tab.onchange.call(tab);
+                        }
+                        tab.content.show();
+                        if (finishedBuilding) {
+                            RED.tray.resize();
+                        }
+                    },
+                    collapsible: true
                 });
+
+                var nodePropertiesTab = {
+                    id: "editor-tab-properties",
+                    label: RED._("editor-tab.properties"),
+                    name: RED._("editor-tab.properties"),
+                    content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-cog"
+                };
+                buildEditForm(nodePropertiesTab.content,"dialog-form","subflow-template", undefined, editing_node);
+                editorTabs.addTab(nodePropertiesTab);
+
+                var descriptionTab = {
+                    id: "editor-tab-description",
+                    label: RED._("editor-tab.description"),
+                    name: RED._("editor-tab.description"),
+                    content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-file-text-o",
+                    onchange: function() {
+                        subflowEditor.focus();
+                    }
+                };
+                editorTabs.addTab(descriptionTab);
+                subflowEditor = buildDescriptionForm(descriptionTab.content,editing_node);
+
+                var appearanceTab = {
+                    id: "editor-tab-appearance",
+                    label: RED._("editor-tab.appearance"),
+                    name: RED._("editor-tab.appearance"),
+                    content: $('<div>', {class:"editor-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-object-group",
+                    onchange: function() {
+                        refreshLabelForm(this.content,editing_node);
+                    }
+                };
+                buildAppearanceForm(appearanceTab.content,editing_node);
+                editorTabs.addTab(appearanceTab);
+
+
+
 
                 $("#subflow-input-name").val(subflow.name);
                 RED.text.bidi.prepareInput($("#subflow-input-name"));
-                subflowEditor.getSession().setValue(subflow.info||"",-1);
+
+                $("#subflow-input-category").empty();
+                var categories = RED.palette.getCategories();
+                categories.sort(function(A,B) {
+                    return A.label.localeCompare(B.label);
+                })
+                categories.forEach(function(cat) {
+                    $("#subflow-input-category").append($("<option></option>").val(cat.id).text(cat.label));
+                })
+                $("#subflow-input-category").append($("<option></option>").attr('disabled',true).text("---"));
+                $("#subflow-input-category").append($("<option></option>").val("_custom_").text(RED._("palette.addCategory")));
+
+
+                $("#subflow-input-category").change(function() {
+                    var val = $(this).val();
+                    if (val === "_custom_") {
+                        $("#subflow-input-category").width(120);
+                        $("#subflow-input-custom-category").show();
+                    } else {
+                        $("#subflow-input-category").width(250);
+                        $("#subflow-input-custom-category").hide();
+                    }
+                })
+
+                $("#subflow-input-category").val(subflow.category||"subflows");
                 var userCount = 0;
                 var subflowType = "subflow:"+editing_node.id;
 
@@ -18105,9 +23116,8 @@ RED.editor = (function() {
                 });
                 $("#subflow-dialog-user-count").text(RED._("subflow.subflowInstances", {count:userCount})).show();
 
-                //buildLabelForm(portLabels.content,subflow);
-                validateIcon(subflow);
                 trayBody.i18n();
+                finishedBuilding = true;
             },
             close: function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
@@ -18116,6 +23126,7 @@ RED.editor = (function() {
                 RED.sidebar.info.refresh(editing_node);
                 RED.workspaces.refresh();
                 subflowEditor.destroy();
+                subflowEditor = null;
                 editStack.pop();
                 editing_node = null;
             },
@@ -18125,473 +23136,181 @@ RED.editor = (function() {
         RED.tray.show(trayOptions);
     }
 
-
-    var expressionTestCache = {};
-
-    function editExpression(options) {
-        var expressionTestCacheId = "_";
-        if (editStack.length > 0) {
-            expressionTestCacheId = editStack[editStack.length-1].id;
-        }
-
-        var value = options.value;
-        var onComplete = options.complete;
-        var type = "_expression"
-        editStack.push({type:type});
-        RED.view.state(RED.state.EDITING);
-        var expressionEditor;
-        var testDataEditor;
-        var testResultEditor
-        var panels;
-
-        var trayOptions = {
-            title: getEditStackTitle(),
-            width: "inherit",
-            buttons: [
-                {
-                    id: "node-dialog-cancel",
-                    text: RED._("common.label.cancel"),
-                    click: function() {
-                        RED.tray.close();
-                    }
-                },
-                {
-                    id: "node-dialog-ok",
-                    text: RED._("common.label.done"),
-                    class: "primary",
-                    click: function() {
-                        $("#node-input-expression-help").text("");
-                        onComplete(expressionEditor.getValue());
-                        RED.tray.close();
-                    }
-                }
-            ],
-            resize: function(dimensions) {
-                if (dimensions) {
-                    editTrayWidthCache[type] = dimensions.width;
-                }
-                var height = $("#dialog-form").height();
-                if (panels) {
-                    panels.resize(height);
-                }
-
-            },
-            open: function(tray) {
-                var trayBody = tray.find('.editor-tray-body');
-                trayBody.addClass("node-input-expression-editor")
-                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),'dialog-form','_expression','editor');
-                var funcSelect = $("#node-input-expression-func");
-                Object.keys(jsonata.functions).forEach(function(f) {
-                    funcSelect.append($("<option></option>").val(f).text(f));
-                })
-                funcSelect.change(function(e) {
-                    var f = $(this).val();
-                    var args = RED._('jsonata:'+f+".args",{defaultValue:''});
-                    var title = "<h5>"+f+"("+args+")</h5>";
-                    var body = marked(RED._('jsonata:'+f+'.desc',{defaultValue:''}));
-                    $("#node-input-expression-help").html(title+"<p>"+body+"</p>");
-
-                })
-                expressionEditor = RED.editor.createEditor({
-                    id: 'node-input-expression',
-                    value: "",
-                    mode:"ace/mode/jsonata",
-                    options: {
-                        enableBasicAutocompletion:true,
-                        enableSnippets:true,
-                        enableLiveAutocompletion: true
-                    }
-                });
-                var currentToken = null;
-                var currentTokenPos = -1;
-                var currentFunctionMarker = null;
-
-                expressionEditor.getSession().setValue(value||"",-1);
-                expressionEditor.on("changeSelection", function() {
-                    var c = expressionEditor.getCursorPosition();
-                    var token = expressionEditor.getSession().getTokenAt(c.row,c.column);
-                    if (token !== currentToken || (token && /paren/.test(token.type) && c.column !== currentTokenPos)) {
-                        currentToken = token;
-                        var r,p;
-                        var scopedFunction = null;
-                        if (token && token.type === 'keyword') {
-                            r = c.row;
-                            scopedFunction = token;
-                        } else {
-                            var depth = 0;
-                            var next = false;
-                            if (token) {
-                                if (token.type === 'paren.rparen') {
-                                    // If this is a block of parens ')))', set
-                                    // depth to offset against the cursor position
-                                    // within the block
-                                    currentTokenPos = c.column;
-                                    depth = c.column - (token.start + token.value.length);
-                                }
-                                r = c.row;
-                                p = token.index;
-                            } else {
-                                r = c.row-1;
-                                p = -1;
-                            }
-                            while ( scopedFunction === null && r > -1) {
-                                var rowTokens = expressionEditor.getSession().getTokens(r);
-                                if (p === -1) {
-                                    p = rowTokens.length-1;
-                                }
-                                while (p > -1) {
-                                    var type = rowTokens[p].type;
-                                    if (next) {
-                                        if (type === 'keyword') {
-                                            scopedFunction = rowTokens[p];
-                                            // console.log("HIT",scopedFunction);
-                                            break;
-                                        }
-                                        next = false;
-                                    }
-                                    if (type === 'paren.lparen') {
-                                        depth-=rowTokens[p].value.length;
-                                    } else if (type === 'paren.rparen') {
-                                        depth+=rowTokens[p].value.length;
-                                    }
-                                    if (depth < 0) {
-                                        next = true;
-                                        depth = 0;
-                                    }
-                                    // console.log(r,p,depth,next,rowTokens[p]);
-                                    p--;
-                                }
-                                if (!scopedFunction) {
-                                    r--;
-                                }
-                            }
-                        }
-                        expressionEditor.session.removeMarker(currentFunctionMarker);
-                        if (scopedFunction) {
-                        //console.log(token,.map(function(t) { return t.type}));
-                            funcSelect.val(scopedFunction.value).change();
-                        }
-                    }
-                });
-
-                dialogForm.i18n();
-                $("#node-input-expression-func-insert").click(function(e) {
-                    e.preventDefault();
-                    var pos = expressionEditor.getCursorPosition();
-                    var f = funcSelect.val();
-                    var snippet = jsonata.getFunctionSnippet(f);
-                    expressionEditor.insertSnippet(snippet);
-                    expressionEditor.focus();
-                });
-                $("#node-input-expression-reformat").click(function(evt) {
-                    evt.preventDefault();
-                    var v = expressionEditor.getValue()||"";
-                    try {
-                        v = jsonata.format(v);
-                    } catch(err) {
-                        // TODO: do an optimistic auto-format
-                    }
-                    expressionEditor.getSession().setValue(v||"",-1);
-                });
-
-                var tabs = RED.tabs.create({
-                    element: $("#node-input-expression-tabs"),
-                    onchange:function(tab) {
-                        $(".node-input-expression-tab-content").hide();
-                        tab.content.show();
-                        trayOptions.resize();
-                    }
-                })
-
-                tabs.addTab({
-                    id: 'expression-help',
-                    label: RED._('expressionEditor.functionReference'),
-                    content: $("#node-input-expression-tab-help")
-                });
-                tabs.addTab({
-                    id: 'expression-tests',
-                    label: RED._('expressionEditor.test'),
-                    content: $("#node-input-expression-tab-test")
-                });
-                testDataEditor = RED.editor.createEditor({
-                    id: 'node-input-expression-test-data',
-                    value: expressionTestCache[expressionTestCacheId] || '{\n    "payload": "hello world"\n}',
-                    mode:"ace/mode/json",
-                    lineNumbers: false
-                });
-                var changeTimer;
-                $(".node-input-expression-legacy").click(function(e) {
-                    e.preventDefault();
-                    RED.sidebar.info.set(RED._("expressionEditor.compatModeDesc"));
-                    RED.sidebar.info.show();
-                })
-                var testExpression = function() {
-                    var value = testDataEditor.getValue();
-                    var parsedData;
-                    var currentExpression = expressionEditor.getValue();
-                    var expr;
-                    var usesContext = false;
-                    var legacyMode = /(^|[^a-zA-Z0-9_'"])msg([^a-zA-Z0-9_'"]|$)/.test(currentExpression);
-                    $(".node-input-expression-legacy").toggle(legacyMode);
-                    try {
-                        expr = jsonata(currentExpression);
-                        expr.assign('flowContext',function(val) {
-                            usesContext = true;
-                            return null;
-                        });
-                        expr.assign('globalContext',function(val) {
-                            usesContext = true;
-                            return null;
-                        });
-                    } catch(err) {
-                        testResultEditor.setValue(RED._("expressionEditor.errors.invalid-expr",{message:err.message}),-1);
-                        return;
-                    }
-                    try {
-                        parsedData = JSON.parse(value);
-                    } catch(err) {
-                        testResultEditor.setValue(RED._("expressionEditor.errors.invalid-msg",{message:err.toString()}))
-                        return;
-                    }
-
-                    try {
-                        var result = expr.evaluate(legacyMode?{msg:parsedData}:parsedData);
-                        if (usesContext) {
-                            testResultEditor.setValue(RED._("expressionEditor.errors.context-unsupported"),-1);
-                            return;
-                        }
-
-                        var formattedResult;
-                        if (result !== undefined) {
-                            formattedResult = JSON.stringify(result,null,4);
-                        } else {
-                            formattedResult = RED._("expressionEditor.noMatch");
-                        }
-                        testResultEditor.setValue(formattedResult,-1);
-                    } catch(err) {
-                        testResultEditor.setValue(RED._("expressionEditor.errors.eval",{message:err.message}),-1);
-                    }
-                }
-
-                testDataEditor.getSession().on('change', function() {
-                    clearTimeout(changeTimer);
-                    changeTimer = setTimeout(testExpression,200);
-                    expressionTestCache[expressionTestCacheId] = testDataEditor.getValue();
-                });
-                expressionEditor.getSession().on('change', function() {
-                    clearTimeout(changeTimer);
-                    changeTimer = setTimeout(testExpression,200);
-                });
-
-                testResultEditor = RED.editor.createEditor({
-                    id: 'node-input-expression-test-result',
-                    value: "",
-                    mode:"ace/mode/json",
-                    lineNumbers: false,
-                    readOnly: true
-                });
-                panels = RED.panels.create({
-                    id:"node-input-expression-panels",
-                    resize: function(p1Height,p2Height) {
-                        var p1 = $("#node-input-expression-panel-expr");
-                        p1Height -= $(p1.children()[0]).outerHeight(true);
-                        var editorRow = $(p1.children()[1]);
-                        p1Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
-                        $("#node-input-expression").css("height",(p1Height-5)+"px");
-                        expressionEditor.resize();
-
-                        var p2 = $("#node-input-expression-panel-info > .form-row > div:first-child");
-                        p2Height -= p2.outerHeight(true) + 20;
-                        $(".node-input-expression-tab-content").height(p2Height);
-                        $("#node-input-expression-test-data").css("height",(p2Height-5)+"px");
-                        testDataEditor.resize();
-                        $("#node-input-expression-test-result").css("height",(p2Height-5)+"px");
-                        testResultEditor.resize();
-                    }
-                });
-
-                $("#node-input-example-reformat").click(function(evt) {
-                    evt.preventDefault();
-                    var v = testDataEditor.getValue()||"";
-                    try {
-                        v = JSON.stringify(JSON.parse(v),null,4);
-                    } catch(err) {
-                        // TODO: do an optimistic auto-format
-                    }
-                    testDataEditor.getSession().setValue(v||"",-1);
-                });
-
-                testExpression();
-            },
-            close: function() {
-                editStack.pop();
-                expressionEditor.destroy();
-                testDataEditor.destroy();
-            },
-            show: function() {}
-        }
-        RED.tray.show(trayOptions);
-    }
-
-
-    function editJSON(options) {
-        var value = options.value;
-        var onComplete = options.complete;
-        var type = "_json"
-        editStack.push({type:type});
-        RED.view.state(RED.state.EDITING);
-        var expressionEditor;
-        var changeTimer;
-
-        var checkValid = function() {
-            var v = expressionEditor.getValue();
-            try {
-                JSON.parse(v);
-                $("#node-dialog-ok").removeClass('disabled');
-                return true;
-            } catch(err) {
-                $("#node-dialog-ok").addClass('disabled');
-                return false;
+    function showTypeEditor(type, options) {
+        if (customEditTypes.hasOwnProperty(type)) {
+            if (editStack.length > 0) {
+                options.parent = editStack[editStack.length-1].id;
             }
+            editStack.push({type:type});
+            options.title = options.title || getEditStackTitle();
+            options.onclose = function() {
+                editStack.pop();
+            }
+            customEditTypes[type].show(options);
+        } else {
+            console.log("Unknown type editor:",type);
         }
-        var trayOptions = {
-            title: options.title || getEditStackTitle(),
-            width: "inherit",
-            buttons: [
-                {
-                    id: "node-dialog-cancel",
-                    text: RED._("common.label.cancel"),
-                    click: function() {
-                        RED.tray.close();
-                    }
-                },
-                {
-                    id: "node-dialog-ok",
-                    text: RED._("common.label.done"),
-                    class: "primary",
-                    click: function() {
-                        if (options.requireValid && !checkValid()) {
-                            return;
+    }
+
+    function createEditor(options) {
+        var el = options.element || $("#"+options.id)[0];
+        var toolbarRow = $("<div>").appendTo(el);
+        el = $("<div>").appendTo(el).addClass("node-text-editor-container")[0];
+        var editor = ace.edit(el);
+        editor.setTheme("ace/theme/tomorrow");
+        var session = editor.getSession();
+        session.on("changeAnnotation", function () {
+            var annotations = session.getAnnotations() || [];
+            var i = annotations.length;
+            var len = annotations.length;
+            while (i--) {
+                if (/doctype first\. Expected/.test(annotations[i].text)) { annotations.splice(i, 1); }
+                else if (/Unexpected End of file\. Expected/.test(annotations[i].text)) { annotations.splice(i, 1); }
+            }
+            if (len > annotations.length) { session.setAnnotations(annotations); }
+        });
+        if (options.mode) {
+            session.setMode(options.mode);
+        }
+        if (options.foldStyle) {
+            session.setFoldStyle(options.foldStyle);
+        } else {
+            session.setFoldStyle('markbeginend');
+        }
+        if (options.options) {
+            editor.setOptions(options.options);
+        } else {
+            editor.setOptions({
+                enableBasicAutocompletion:true,
+                enableSnippets:true,
+                tooltipFollowsMouse: false
+            });
+        }
+        if (options.readOnly) {
+            editor.setOption('readOnly',options.readOnly);
+            editor.container.classList.add("ace_read-only");
+        }
+        if (options.hasOwnProperty('lineNumbers')) {
+            editor.renderer.setOption('showGutter',options.lineNumbers);
+        }
+        editor.$blockScrolling = Infinity;
+        if (options.value) {
+            session.setValue(options.value,-1);
+        }
+        if (options.globals) {
+            setTimeout(function() {
+                if (!!session.$worker) {
+                    session.$worker.send("setOptions", [{globals: options.globals, esversion:6, sub:true, asi:true, maxerr:1000}]);
+                }
+            },100);
+        }
+        if (options.mode === 'ace/mode/markdown') {
+            $(el).addClass("node-text-editor-container-toolbar");
+            editor.toolbar = customEditTypes['_markdown'].buildToolbar(toolbarRow,editor);
+            if (options.expandable !== false) {
+                var expandButton = $('<button type="button" class="editor-button" style="float: right;"><i class="fa fa-expand"></i></button>').appendTo(editor.toolbar);
+
+                expandButton.click(function(e) {
+                    e.preventDefault();
+                    var value = editor.getValue();
+                    RED.editor.editMarkdown({
+                        value: value,
+                        width: "Infinity",
+                        cursor: editor.getCursorPosition(),
+                        complete: function(v,cursor) {
+                            editor.setValue(v, -1);
+                            editor.gotoLine(cursor.row+1,cursor.column,false);
+                            setTimeout(function() {
+                                editor.focus();
+                            },300);
                         }
-                        onComplete(expressionEditor.getValue());
-                        RED.tray.close();
-                    }
-                }
-            ],
-            resize: function(dimensions) {
-                editTrayWidthCache[type] = dimensions.width;
-
-                var rows = $("#dialog-form>div:not(.node-text-editor-row)");
-                var editorRow = $("#dialog-form>div.node-text-editor-row");
-                var height = $("#dialog-form").height();
-                for (var i=0;i<rows.size();i++) {
-                    height -= $(rows[i]).outerHeight(true);
-                }
-                height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
-                $(".node-text-editor").css("height",height+"px");
-                expressionEditor.resize();
-            },
-            open: function(tray) {
-                var trayBody = tray.find('.editor-tray-body');
-                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
-                expressionEditor = RED.editor.createEditor({
-                    id: 'node-input-json',
-                    value: "",
-                    mode:"ace/mode/json"
+                    })
                 });
-                expressionEditor.getSession().setValue(value||"",-1);
-                if (options.requireValid) {
-                    expressionEditor.getSession().on('change', function() {
-                        clearTimeout(changeTimer);
-                        changeTimer = setTimeout(checkValid,200);
-                    });
-                    checkValid();
-                }
-                $("#node-input-json-reformat").click(function(evt) {
-                    evt.preventDefault();
-                    var v = expressionEditor.getValue()||"";
-                    try {
-                        v = JSON.stringify(JSON.parse(v),null,4);
-                    } catch(err) {
-                        // TODO: do an optimistic auto-format
-                    }
-                    expressionEditor.getSession().setValue(v||"",-1);
-                });
-                dialogForm.i18n();
-            },
-            close: function() {
-                editStack.pop();
-                expressionEditor.destroy();
-            },
-            show: function() {}
+            }
+            var helpButton = $('<button type="button" class="node-text-editor-help editor-button editor-button-small"><i class="fa fa-question"></i></button>').appendTo($(el).parent());
+            RED.popover.create({
+                target: helpButton,
+                trigger: 'click',
+                size: "small",
+                direction: "left",
+                content: RED._("markdownEditor.format"),
+                autoClose: 50
+            });
         }
-        RED.tray.show(trayOptions);
+        return editor;
     }
 
-    function editMarkdown(options) {
-        var value = options.value;
-        var onComplete = options.complete;
-        var type = "_markdown"
-        editStack.push({type:type});
-        RED.view.state(RED.state.EDITING);
-        var expressionEditor;
+    return {
+        init: function() {
+            RED.tray.init();
+            RED.actions.add("core:confirm-edit-tray", function() {
+                $("#node-dialog-ok").click();
+                $("#node-config-dialog-ok").click();
+            });
+            RED.actions.add("core:cancel-edit-tray", function() {
+                $("#node-dialog-cancel").click();
+                $("#node-config-dialog-cancel").click();
+            });
+        },
+        edit: showEditDialog,
+        editConfig: showEditConfigNodeDialog,
+        editSubflow: showEditSubflowDialog,
+        editJavaScript: function(options) { showTypeEditor("_js",options) },
+        editExpression: function(options) { showTypeEditor("_expression", options) },
+        editJSON: function(options) { showTypeEditor("_json", options) },
+        editMarkdown: function(options) { showTypeEditor("_markdown", options) },
+        editBuffer: function(options) { showTypeEditor("_buffer", options) },
+        buildEditForm: buildEditForm,
+        validateNode: validateNode,
+        updateNodeProperties: updateNodeProperties, // TODO: only exposed for edit-undo
 
-        var trayOptions = {
-            title: options.title || getEditStackTitle(),
-            width: "inherit",
-            buttons: [
-                {
-                    id: "node-dialog-cancel",
-                    text: RED._("common.label.cancel"),
-                    click: function() {
-                        RED.tray.close();
-                    }
-                },
-                {
-                    id: "node-dialog-ok",
-                    text: RED._("common.label.done"),
-                    class: "primary",
-                    click: function() {
-                        onComplete(expressionEditor.getValue());
-                        RED.tray.close();
-                    }
-                }
-            ],
-            resize: function(dimensions) {
-                editTrayWidthCache[type] = dimensions.width;
+        /**
+         * Show a type editor.
+         * @param {string} type - the type to display
+         * @param {object} options - options for the editor
+         * @function
+         * @memberof RED.editor
+         */
+        showTypeEditor: showTypeEditor,
 
-                var rows = $("#dialog-form>div:not(.node-text-editor-row)");
-                var editorRow = $("#dialog-form>div.node-text-editor-row");
-                var height = $("#dialog-form").height();
-                for (var i=0;i<rows.size();i++) {
-                    height -= $(rows[i]).outerHeight(true);
-                }
-                height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
-                $(".node-text-editor").css("height",height+"px");
-                expressionEditor.resize();
-            },
-            open: function(tray) {
-                var trayBody = tray.find('.editor-tray-body');
-                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
-                expressionEditor = RED.editor.createEditor({
-                    id: 'node-input-markdown',
-                    value: value,
-                    mode:"ace/mode/markdown"
-                });
-                if (options.header) {
-                    options.header.appendTo(tray.find('#node-input-markdown-title'));
-                }
+        /**
+         * Register a type editor.
+         * @param {string} type - the type name
+         * @param {object} options - the editor definition
+         * @function
+         * @memberof RED.editor
+         */
+        registerTypeEditor: function(type, definition) {
+            customEditTypes[type] = definition;
+        },
 
-                dialogForm.i18n();
-            },
-            close: function() {
-                editStack.pop();
-                expressionEditor.destroy();
-            },
-            show: function() {}
-        }
-        RED.tray.show(trayOptions);
+        /**
+         * Create a editor ui component
+         * @param {object} options - the editor options
+         * @function
+         * @memberof RED.editor
+         */
+        createEditor: createEditor
     }
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+(function() {
+
+    var template = '<script type="text/x-red" data-template-name="_buffer"><div id="node-input-buffer-panels"><div id="node-input-buffer-panel-str" class="red-ui-panel"><div class="form-row" style="margin-bottom: 3px; text-align: right;"><span class="node-input-buffer-type"><i class="fa fa-exclamation-circle"></i> <span id="node-input-buffer-type-string" data-i18n="bufferEditor.modeString"></span><span id="node-input-buffer-type-array" data-i18n="bufferEditor.modeArray"></span></span></div><div class="form-row node-text-editor-row"><div class="node-text-editor" id="node-input-buffer-str"></div></div></div><div id="node-input-buffer-panel-bin" class="red-ui-panel"><div class="form-row node-text-editor-row" style="margin-top: 10px"><div class="node-text-editor" id="node-input-buffer-bin"></div></div></div></div></script>';
 
     function stringToUTF8Array(str) {
         var data = [];
@@ -18619,237 +23338,1069 @@ RED.editor = (function() {
         return data;
     }
 
-    function editBuffer(options) {
-        var value = options.value;
-        var onComplete = options.complete;
-        var type = "_buffer"
-        editStack.push({type:type});
-        RED.view.state(RED.state.EDITING);
-        var bufferStringEditor = [];
-        var bufferBinValue;
 
-        var panels;
+    var definition = {
+        show: function(options) {
+            var value = options.value;
+            var onComplete = options.complete;
+            var type = "_buffer"
+            RED.view.state(RED.state.EDITING);
+            var bufferStringEditor = [];
+            var bufferBinValue;
 
-        var trayOptions = {
-            title: getEditStackTitle(),
-            width: "inherit",
-            buttons: [
-                {
-                    id: "node-dialog-cancel",
-                    text: RED._("common.label.cancel"),
-                    click: function() {
-                        RED.tray.close();
+            var panels;
+
+            var trayOptions = {
+                title: options.title,
+                width: "inherit",
+                buttons: [
+                    {
+                        id: "node-dialog-cancel",
+                        text: RED._("common.label.cancel"),
+                        click: function() {
+                            RED.tray.close();
+                        }
+                    },
+                    {
+                        id: "node-dialog-ok",
+                        text: RED._("common.label.done"),
+                        class: "primary",
+                        click: function() {
+                            onComplete(JSON.stringify(bufferBinValue));
+                            RED.tray.close();
+                        }
+                    }
+                ],
+                resize: function(dimensions) {
+                    var height = $("#dialog-form").height();
+                    if (panels) {
+                        panels.resize(height);
                     }
                 },
-                {
-                    id: "node-dialog-ok",
-                    text: RED._("common.label.done"),
-                    class: "primary",
-                    click: function() {
-                        onComplete(JSON.stringify(bufferBinValue));
-                        RED.tray.close();
-                    }
-                }
-            ],
-            resize: function(dimensions) {
-                if (dimensions) {
-                    editTrayWidthCache[type] = dimensions.width;
-                }
-                var height = $("#dialog-form").height();
-                if (panels) {
-                    panels.resize(height);
-                }
-            },
-            open: function(tray) {
-                var trayBody = tray.find('.editor-tray-body');
-                var dialogForm = buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
+                open: function(tray) {
+                    var trayBody = tray.find('.editor-tray-body');
+                    var dialogForm = RED.editor.buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
 
-                bufferStringEditor = RED.editor.createEditor({
-                    id: 'node-input-buffer-str',
-                    value: "",
-                    mode:"ace/mode/text"
-                });
-                bufferStringEditor.getSession().setValue(value||"",-1);
+                    bufferStringEditor = RED.editor.createEditor({
+                        id: 'node-input-buffer-str',
+                        value: "",
+                        mode:"ace/mode/text"
+                    });
+                    bufferStringEditor.getSession().setValue(value||"",-1);
 
-                bufferBinEditor = RED.editor.createEditor({
-                    id: 'node-input-buffer-bin',
-                    value: "",
-                    mode:"ace/mode/text",
-                    readOnly: true
-                });
+                    bufferBinEditor = RED.editor.createEditor({
+                        id: 'node-input-buffer-bin',
+                        value: "",
+                        mode:"ace/mode/text",
+                        readOnly: true
+                    });
 
-                var changeTimer;
-                var buildBuffer = function(data) {
-                    var valid = true;
-                    var isString = typeof data === 'string';
-                    var binBuffer = [];
-                    if (isString) {
-                        bufferBinValue = stringToUTF8Array(data);
-                    } else {
-                        bufferBinValue = data;
-                    }
-                    var i=0,l=bufferBinValue.length;
-                    var c = 0;
-                    for(i=0;i<l;i++) {
-                        var d = parseInt(bufferBinValue[i]);
-                        if (!isString && (isNaN(d) || d < 0 || d > 255)) {
-                            valid = false;
-                            break;
+                    var changeTimer;
+                    var buildBuffer = function(data) {
+                        var valid = true;
+                        var isString = typeof data === 'string';
+                        var binBuffer = [];
+                        if (isString) {
+                            bufferBinValue = stringToUTF8Array(data);
+                        } else {
+                            bufferBinValue = data;
                         }
-                        if (i>0) {
-                            if (i%8 === 0) {
-                                if (i%16 === 0) {
-                                    binBuffer.push("\n");
+                        var i=0,l=bufferBinValue.length;
+                        var c = 0;
+                        for(i=0;i<l;i++) {
+                            var d = parseInt(bufferBinValue[i]);
+                            if (!isString && (isNaN(d) || d < 0 || d > 255)) {
+                                valid = false;
+                                break;
+                            }
+                            if (i>0) {
+                                if (i%8 === 0) {
+                                    if (i%16 === 0) {
+                                        binBuffer.push("\n");
+                                    } else {
+                                        binBuffer.push("  ");
+                                    }
                                 } else {
-                                    binBuffer.push("  ");
+                                    binBuffer.push(" ");
                                 }
-                            } else {
-                                binBuffer.push(" ");
+                            }
+                            binBuffer.push((d<16?"0":"")+d.toString(16).toUpperCase());
+                        }
+                        if (valid) {
+                            $("#node-input-buffer-type-string").toggle(isString);
+                            $("#node-input-buffer-type-array").toggle(!isString);
+                            bufferBinEditor.setValue(binBuffer.join(""),1);
+                        }
+                        return valid;
+                    }
+                    var bufferStringUpdate = function() {
+                        var value = bufferStringEditor.getValue();
+                        var isValidArray = false;
+                        if (/^[\s]*\[[\s\S]*\][\s]*$/.test(value)) {
+                            isValidArray = true;
+                            try {
+                                var data = JSON.parse(value);
+                                isValidArray = buildBuffer(data);
+                            } catch(err) {
+                                isValidArray = false;
                             }
                         }
-                        binBuffer.push((d<16?"0":"")+d.toString(16).toUpperCase());
+                        if (!isValidArray) {
+                            buildBuffer(value);
+                        }
+
                     }
-                    if (valid) {
-                        $("#node-input-buffer-type-string").toggle(isString);
-                        $("#node-input-buffer-type-array").toggle(!isString);
-                        bufferBinEditor.setValue(binBuffer.join(""),1);
+                    bufferStringEditor.getSession().on('change', function() {
+                        clearTimeout(changeTimer);
+                        changeTimer = setTimeout(bufferStringUpdate,200);
+                    });
+
+                    bufferStringUpdate();
+
+                    dialogForm.i18n();
+
+                    panels = RED.panels.create({
+                        id:"node-input-buffer-panels",
+                        resize: function(p1Height,p2Height) {
+                            var p1 = $("#node-input-buffer-panel-str");
+                            p1Height -= $(p1.children()[0]).outerHeight(true);
+                            var editorRow = $(p1.children()[1]);
+                            p1Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+                            $("#node-input-buffer-str").css("height",(p1Height-5)+"px");
+                            bufferStringEditor.resize();
+
+                            var p2 = $("#node-input-buffer-panel-bin");
+                            editorRow = $(p2.children()[0]);
+                            p2Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+                            $("#node-input-buffer-bin").css("height",(p2Height-5)+"px");
+                            bufferBinEditor.resize();
+                        }
+                    });
+
+                    $(".node-input-buffer-type").click(function(e) {
+                        e.preventDefault();
+                        RED.sidebar.info.set(RED._("bufferEditor.modeDesc"));
+                        RED.sidebar.info.show();
+                    })
+
+
+                },
+                close: function() {
+                    if (options.onclose) {
+                        options.onclose();
                     }
-                    return valid;
-                }
-                var bufferStringUpdate = function() {
-                    var value = bufferStringEditor.getValue();
-                    var isValidArray = false;
-                    if (/^[\s]*\[[\s\S]*\][\s]*$/.test(value)) {
-                        isValidArray = true;
-                        try {
-                            var data = JSON.parse(value);
-                            isValidArray = buildBuffer(data);
-                        } catch(err) {
-                            isValidArray = false;
+                    bufferStringEditor.destroy();
+                    bufferBinEditor.destroy();
+                },
+                show: function() {}
+            }
+            RED.tray.show(trayOptions);
+        }
+    }
+    $(template).appendTo(document.body);
+    RED.editor.registerTypeEditor("_buffer", definition);
+
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+(function() {
+
+
+    var template = '<script type="text/x-red" data-template-name="_expression">'+
+    '<div id="node-input-expression-panels">'+
+        '<div id="node-input-expression-panel-expr" class="red-ui-panel">'+
+            '<div class="form-row" style="margin-bottom: 3px; text-align: right;"><span class="node-input-expression-legacy"><i class="fa fa-exclamation-circle"></i> <span data-i18n="expressionEditor.compatMode"></span></span><button id="node-input-expression-reformat" class="editor-button editor-button-small"><span data-i18n="expressionEditor.format"></span></button></div>'+
+            '<div class="form-row node-text-editor-row"><div class="node-text-editor" id="node-input-expression"></div></div>'+
+        '</div>'+
+        '<div id="node-input-expression-panel-info" class="red-ui-panel">'+
+            '<div class="form-row">'+
+                '<ul id="node-input-expression-tabs"></ul>'+
+                '<div id="node-input-expression-tab-help" class="node-input-expression-tab-content hide">'+
+                    '<div>'+
+                        '<select id="node-input-expression-func"></select>'+
+                        '<button id="node-input-expression-func-insert" class="editor-button" data-i18n="expressionEditor.insert"></button>'+
+                    '</div>'+
+                    '<div id="node-input-expression-help"></div>'+
+                '</div>'+
+                '<div id="node-input-expression-tab-test" class="node-input-expression-tab-content hide">'+
+                    '<div>'+
+                        '<span style="display: inline-block; width: calc(50% - 5px);"><span data-i18n="expressionEditor.data"></span><button style="float: right; margin-right: 5px;" id="node-input-example-reformat" class="editor-button editor-button-small"><span data-i18n="jsonEditor.format"></span></button></span>'+
+                        '<span style="display: inline-block; width: calc(50% - 5px);" data-i18n="expressionEditor.result"></span>'+
+                    '</div>'+
+                    '<div style="display: inline-block; width: calc(50% - 5px);" class="node-text-editor" id="node-input-expression-test-data"></div>'+
+                    '<div style="display: inline-block; width: calc(50% - 5px);" class="node-text-editor" id="node-input-expression-test-result"></div>'+
+                '</div>'+
+            '</div>'+
+        '</div>'+
+    '</div>'+
+    '</script>';
+    var expressionTestCache = {};
+
+    var definition = {
+        show: function(options) {
+            var expressionTestCacheId = options.parent||"_";
+            var value = options.value;
+            var onComplete = options.complete;
+            var type = "_expression"
+            RED.view.state(RED.state.EDITING);
+            var expressionEditor;
+            var testDataEditor;
+            var testResultEditor
+            var panels;
+
+            var trayOptions = {
+                title: options.title,
+                width: "inherit",
+                buttons: [
+                    {
+                        id: "node-dialog-cancel",
+                        text: RED._("common.label.cancel"),
+                        click: function() {
+                            RED.tray.close();
+                        }
+                    },
+                    {
+                        id: "node-dialog-ok",
+                        text: RED._("common.label.done"),
+                        class: "primary",
+                        click: function() {
+                            $("#node-input-expression-help").text("");
+                            onComplete(expressionEditor.getValue());
+                            RED.tray.close();
                         }
                     }
-                    if (!isValidArray) {
-                        buildBuffer(value);
+                ],
+                resize: function(dimensions) {
+                    var height = $("#dialog-form").height();
+                    if (panels) {
+                        panels.resize(height);
                     }
 
-                }
-                bufferStringEditor.getSession().on('change', function() {
-                    clearTimeout(changeTimer);
-                    changeTimer = setTimeout(bufferStringUpdate,200);
-                });
+                },
+                open: function(tray) {
+                    var trayBody = tray.find('.editor-tray-body');
+                    trayBody.addClass("node-input-expression-editor")
+                    var dialogForm = RED.editor.buildEditForm(tray.find('.editor-tray-body'),'dialog-form','_expression','editor');
+                    var funcSelect = $("#node-input-expression-func");
+                    Object.keys(jsonata.functions).forEach(function(f) {
+                        funcSelect.append($("<option></option>").val(f).text(f));
+                    })
+                    funcSelect.change(function(e) {
+                        var f = $(this).val();
+                        var args = RED._('jsonata:'+f+".args",{defaultValue:''});
+                        var title = "<h5>"+f+"("+args+")</h5>";
+                        var body = marked(RED._('jsonata:'+f+'.desc',{defaultValue:''}));
+                        $("#node-input-expression-help").html(title+"<p>"+body+"</p>");
 
-                bufferStringUpdate();
+                    })
+                    expressionEditor = RED.editor.createEditor({
+                        id: 'node-input-expression',
+                        value: "",
+                        mode:"ace/mode/jsonata",
+                        options: {
+                            enableBasicAutocompletion:true,
+                            enableSnippets:true,
+                            enableLiveAutocompletion: true
+                        }
+                    });
+                    var currentToken = null;
+                    var currentTokenPos = -1;
+                    var currentFunctionMarker = null;
 
-                dialogForm.i18n();
+                    expressionEditor.getSession().setValue(value||"",-1);
+                    expressionEditor.on("changeSelection", function() {
+                        var c = expressionEditor.getCursorPosition();
+                        var token = expressionEditor.getSession().getTokenAt(c.row,c.column);
+                        if (token !== currentToken || (token && /paren/.test(token.type) && c.column !== currentTokenPos)) {
+                            currentToken = token;
+                            var r,p;
+                            var scopedFunction = null;
+                            if (token && token.type === 'keyword') {
+                                r = c.row;
+                                scopedFunction = token;
+                            } else {
+                                var depth = 0;
+                                var next = false;
+                                if (token) {
+                                    if (token.type === 'paren.rparen') {
+                                        // If this is a block of parens ')))', set
+                                        // depth to offset against the cursor position
+                                        // within the block
+                                        currentTokenPos = c.column;
+                                        depth = c.column - (token.start + token.value.length);
+                                    }
+                                    r = c.row;
+                                    p = token.index;
+                                } else {
+                                    r = c.row-1;
+                                    p = -1;
+                                }
+                                while ( scopedFunction === null && r > -1) {
+                                    var rowTokens = expressionEditor.getSession().getTokens(r);
+                                    if (p === -1) {
+                                        p = rowTokens.length-1;
+                                    }
+                                    while (p > -1) {
+                                        var type = rowTokens[p].type;
+                                        if (next) {
+                                            if (type === 'keyword') {
+                                                scopedFunction = rowTokens[p];
+                                                // console.log("HIT",scopedFunction);
+                                                break;
+                                            }
+                                            next = false;
+                                        }
+                                        if (type === 'paren.lparen') {
+                                            depth-=rowTokens[p].value.length;
+                                        } else if (type === 'paren.rparen') {
+                                            depth+=rowTokens[p].value.length;
+                                        }
+                                        if (depth < 0) {
+                                            next = true;
+                                            depth = 0;
+                                        }
+                                        // console.log(r,p,depth,next,rowTokens[p]);
+                                        p--;
+                                    }
+                                    if (!scopedFunction) {
+                                        r--;
+                                    }
+                                }
+                            }
+                            expressionEditor.session.removeMarker(currentFunctionMarker);
+                            if (scopedFunction) {
+                            //console.log(token,.map(function(t) { return t.type}));
+                                funcSelect.val(scopedFunction.value).change();
+                            }
+                        }
+                    });
 
-                panels = RED.panels.create({
-                    id:"node-input-buffer-panels",
-                    resize: function(p1Height,p2Height) {
-                        var p1 = $("#node-input-buffer-panel-str");
-                        p1Height -= $(p1.children()[0]).outerHeight(true);
-                        var editorRow = $(p1.children()[1]);
-                        p1Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
-                        $("#node-input-buffer-str").css("height",(p1Height-5)+"px");
-                        bufferStringEditor.resize();
+                    dialogForm.i18n();
+                    $("#node-input-expression-func-insert").click(function(e) {
+                        e.preventDefault();
+                        var pos = expressionEditor.getCursorPosition();
+                        var f = funcSelect.val();
+                        var snippet = jsonata.getFunctionSnippet(f);
+                        expressionEditor.insertSnippet(snippet);
+                        expressionEditor.focus();
+                    });
+                    $("#node-input-expression-reformat").click(function(evt) {
+                        evt.preventDefault();
+                        var v = expressionEditor.getValue()||"";
+                        try {
+                            v = jsonata.format(v);
+                        } catch(err) {
+                            // TODO: do an optimistic auto-format
+                        }
+                        expressionEditor.getSession().setValue(v||"",-1);
+                    });
 
-                        var p2 = $("#node-input-buffer-panel-bin");
-                        editorRow = $(p2.children()[0]);
-                        p2Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
-                        $("#node-input-buffer-bin").css("height",(p2Height-5)+"px");
-                        bufferBinEditor.resize();
+                    var tabs = RED.tabs.create({
+                        element: $("#node-input-expression-tabs"),
+                        onchange:function(tab) {
+                            $(".node-input-expression-tab-content").hide();
+                            tab.content.show();
+                            trayOptions.resize();
+                        }
+                    })
+
+                    tabs.addTab({
+                        id: 'expression-help',
+                        label: RED._('expressionEditor.functionReference'),
+                        content: $("#node-input-expression-tab-help")
+                    });
+                    tabs.addTab({
+                        id: 'expression-tests',
+                        label: RED._('expressionEditor.test'),
+                        content: $("#node-input-expression-tab-test")
+                    });
+                    testDataEditor = RED.editor.createEditor({
+                        id: 'node-input-expression-test-data',
+                        value: expressionTestCache[expressionTestCacheId] || '{\n    "payload": "hello world"\n}',
+                        mode:"ace/mode/json",
+                        lineNumbers: false
+                    });
+                    var changeTimer;
+                    $(".node-input-expression-legacy").click(function(e) {
+                        e.preventDefault();
+                        RED.sidebar.info.set(RED._("expressionEditor.compatModeDesc"));
+                        RED.sidebar.info.show();
+                    })
+                    var testExpression = function() {
+                        var value = testDataEditor.getValue();
+                        var parsedData;
+                        var currentExpression = expressionEditor.getValue();
+                        var expr;
+                        var usesContext = false;
+                        var legacyMode = /(^|[^a-zA-Z0-9_'"])msg([^a-zA-Z0-9_'"]|$)/.test(currentExpression);
+                        $(".node-input-expression-legacy").toggle(legacyMode);
+                        try {
+                            expr = jsonata(currentExpression);
+                            expr.assign('flowContext',function(val) {
+                                usesContext = true;
+                                return null;
+                            });
+                            expr.assign('globalContext',function(val) {
+                                usesContext = true;
+                                return null;
+                            });
+                        } catch(err) {
+                            testResultEditor.setValue(RED._("expressionEditor.errors.invalid-expr",{message:err.message}),-1);
+                            return;
+                        }
+                        try {
+                            parsedData = JSON.parse(value);
+                        } catch(err) {
+                            testResultEditor.setValue(RED._("expressionEditor.errors.invalid-msg",{message:err.toString()}))
+                            return;
+                        }
+
+                        try {
+                            var result = expr.evaluate(legacyMode?{msg:parsedData}:parsedData);
+                            if (usesContext) {
+                                testResultEditor.setValue(RED._("expressionEditor.errors.context-unsupported"),-1);
+                                return;
+                            }
+
+                            var formattedResult;
+                            if (result !== undefined) {
+                                formattedResult = JSON.stringify(result,null,4);
+                            } else {
+                                formattedResult = RED._("expressionEditor.noMatch");
+                            }
+                            testResultEditor.setValue(formattedResult,-1);
+                        } catch(err) {
+                            testResultEditor.setValue(RED._("expressionEditor.errors.eval",{message:err.message}),-1);
+                        }
                     }
-                });
 
-                $(".node-input-buffer-type").click(function(e) {
-                    e.preventDefault();
-                    RED.sidebar.info.set(RED._("bufferEditor.modeDesc"));
-                    RED.sidebar.info.show();
-                })
+                    testDataEditor.getSession().on('change', function() {
+                        clearTimeout(changeTimer);
+                        changeTimer = setTimeout(testExpression,200);
+                        expressionTestCache[expressionTestCacheId] = testDataEditor.getValue();
+                    });
+                    expressionEditor.getSession().on('change', function() {
+                        clearTimeout(changeTimer);
+                        changeTimer = setTimeout(testExpression,200);
+                    });
 
+                    testResultEditor = RED.editor.createEditor({
+                        id: 'node-input-expression-test-result',
+                        value: "",
+                        mode:"ace/mode/json",
+                        lineNumbers: false,
+                        readOnly: true
+                    });
+                    panels = RED.panels.create({
+                        id:"node-input-expression-panels",
+                        resize: function(p1Height,p2Height) {
+                            var p1 = $("#node-input-expression-panel-expr");
+                            p1Height -= $(p1.children()[0]).outerHeight(true);
+                            var editorRow = $(p1.children()[1]);
+                            p1Height -= (parseInt(editorRow.css("marginTop"))+parseInt(editorRow.css("marginBottom")));
+                            $("#node-input-expression").css("height",(p1Height-5)+"px");
+                            expressionEditor.resize();
 
-            },
-            close: function() {
-                editStack.pop();
-                bufferStringEditor.destroy();
-                bufferBinEditor.destroy();
-            },
-            show: function() {}
+                            var p2 = $("#node-input-expression-panel-info > .form-row > div:first-child");
+                            p2Height -= p2.outerHeight(true) + 20;
+                            $(".node-input-expression-tab-content").height(p2Height);
+                            $("#node-input-expression-test-data").css("height",(p2Height-5)+"px");
+                            testDataEditor.resize();
+                            $("#node-input-expression-test-result").css("height",(p2Height-5)+"px");
+                            testResultEditor.resize();
+                        }
+                    });
+
+                    $("#node-input-example-reformat").click(function(evt) {
+                        evt.preventDefault();
+                        var v = testDataEditor.getValue()||"";
+                        try {
+                            v = JSON.stringify(JSON.parse(v),null,4);
+                        } catch(err) {
+                            // TODO: do an optimistic auto-format
+                        }
+                        testDataEditor.getSession().setValue(v||"",-1);
+                    });
+
+                    testExpression();
+                },
+                close: function() {
+                    if (options.onclose) {
+                        options.onclose();
+                    }
+                    expressionEditor.destroy();
+                    testDataEditor.destroy();
+                },
+                show: function() {}
+            }
+            RED.tray.show(trayOptions);
         }
-        RED.tray.show(trayOptions);
     }
+    $(template).appendTo(document.body);
+    RED.editor.registerTypeEditor("_expression", definition);
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+(function() {
 
+
+    var template = '<script type="text/x-red" data-template-name="_js"><div class="form-row node-text-editor-row"><div style="height: 200px;min-height: 150px;" class="node-text-editor" id="node-input-js"></div></div></script>';
+
+    var definition = {
+        show: function(options) {
+            var value = options.value;
+            var onComplete = options.complete;
+            var type = "_js"
+            RED.view.state(RED.state.EDITING);
+            var expressionEditor;
+            var changeTimer;
+
+            var trayOptions = {
+                title: options.title,
+                width: options.width||"inherit",
+                buttons: [
+                    {
+                        id: "node-dialog-cancel",
+                        text: RED._("common.label.cancel"),
+                        click: function() {
+                            RED.tray.close();
+                        }
+                    },
+                    {
+                        id: "node-dialog-ok",
+                        text: RED._("common.label.done"),
+                        class: "primary",
+                        click: function() {
+                            onComplete(expressionEditor.getValue(),expressionEditor.getCursorPosition());
+                            RED.tray.close();
+                        }
+                    }
+                ],
+                resize: function(dimensions) {
+                    var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+                    var editorRow = $("#dialog-form>div.node-text-editor-row");
+                    var height = $("#dialog-form").height();
+                    for (var i=0;i<rows.size();i++) {
+                        height -= $(rows[i]).outerHeight(true);
+                    }
+                    $(".node-text-editor").css("height",height+"px");
+                    expressionEditor.resize();
+                },
+                open: function(tray) {
+                    var trayBody = tray.find('.editor-tray-body');
+                    var dialogForm = RED.editor.buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
+                    expressionEditor = RED.editor.createEditor({
+                        id: 'node-input-js',
+                        mode: options.mode || 'ace/mode/javascript',
+                        value: value,
+                        globals: {
+                            msg:true,
+                            context:true,
+                            RED: true,
+                            util: true,
+                            flow: true,
+                            global: true,
+                            console: true,
+                            Buffer: true,
+                            setTimeout: true,
+                            clearTimeout: true,
+                            setInterval: true,
+                            clearInterval: true
+                        }
+                    });
+                    if (options.cursor) {
+                        expressionEditor.gotoLine(options.cursor.row+1,options.cursor.column,false);
+                    }
+                    dialogForm.i18n();
+                },
+                close: function() {
+                    expressionEditor.destroy();
+                    if (options.onclose) {
+                        options.onclose();
+                    }
+                },
+                show: function() {}
+            }
+            RED.tray.show(trayOptions);
+        }
+    }
+    $(template).appendTo(document.body);
+    RED.editor.registerTypeEditor("_js", definition);
+
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+(function() {
+
+
+    var template = '<script type="text/x-red" data-template-name="_json"><div class="form-row" style="margin-bottom: 3px; text-align: right;"><button id="node-input-json-reformat" class="editor-button editor-button-small"><span data-i18n="jsonEditor.format"></span></button></div><div class="form-row node-text-editor-row"><div style="height: 200px;min-height: 150px;" class="node-text-editor" id="node-input-json"></div></div></script>';
+
+    var definition = {
+        show: function(options) {
+            var value = options.value;
+            var onComplete = options.complete;
+            var type = "_json"
+            RED.view.state(RED.state.EDITING);
+            var expressionEditor;
+            var changeTimer;
+
+            var checkValid = function() {
+                var v = expressionEditor.getValue();
+                try {
+                    JSON.parse(v);
+                    $("#node-dialog-ok").removeClass('disabled');
+                    return true;
+                } catch(err) {
+                    $("#node-dialog-ok").addClass('disabled');
+                    return false;
+                }
+            }
+            var trayOptions = {
+                title: options.title,
+                width: "inherit",
+                buttons: [
+                    {
+                        id: "node-dialog-cancel",
+                        text: RED._("common.label.cancel"),
+                        click: function() {
+                            RED.tray.close();
+                        }
+                    },
+                    {
+                        id: "node-dialog-ok",
+                        text: RED._("common.label.done"),
+                        class: "primary",
+                        click: function() {
+                            if (options.requireValid && !checkValid()) {
+                                return;
+                            }
+                            onComplete(expressionEditor.getValue());
+                            RED.tray.close();
+                        }
+                    }
+                ],
+                resize: function(dimensions) {
+                    var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+                    var editorRow = $("#dialog-form>div.node-text-editor-row");
+                    var height = $("#dialog-form").height();
+                    for (var i=0;i<rows.size();i++) {
+                        height -= $(rows[i]).outerHeight(true);
+                    }
+                    height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
+                    $(".node-text-editor").css("height",height+"px");
+                    expressionEditor.resize();
+                },
+                open: function(tray) {
+                    var trayBody = tray.find('.editor-tray-body');
+                    var dialogForm = RED.editor.buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
+                    expressionEditor = RED.editor.createEditor({
+                        id: 'node-input-json',
+                        value: "",
+                        mode:"ace/mode/json"
+                    });
+                    expressionEditor.getSession().setValue(value||"",-1);
+                    if (options.requireValid) {
+                        expressionEditor.getSession().on('change', function() {
+                            clearTimeout(changeTimer);
+                            changeTimer = setTimeout(checkValid,200);
+                        });
+                        checkValid();
+                    }
+                    $("#node-input-json-reformat").click(function(evt) {
+                        evt.preventDefault();
+                        var v = expressionEditor.getValue()||"";
+                        try {
+                            v = JSON.stringify(JSON.parse(v),null,4);
+                        } catch(err) {
+                            // TODO: do an optimistic auto-format
+                        }
+                        expressionEditor.getSession().setValue(v||"",-1);
+                    });
+                    dialogForm.i18n();
+                },
+                close: function() {
+                    expressionEditor.destroy();
+                    if (options.onclose) {
+                        options.onclose();
+                    }
+                },
+                show: function() {}
+            }
+            RED.tray.show(trayOptions);
+        }
+    }
+    $(template).appendTo(document.body);
+    RED.editor.registerTypeEditor("_json", definition);
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+(function() {
+
+    var toolbarTemplate = '<div style="margin-bottom: 5px">'+
+        '<span class="button-group">'+
+        '<button type="button" class="editor-button" data-style="h1" style="font-size:1.1em; font-weight: bold">h1</button>'+
+        '<button type="button" class="editor-button" data-style="h2" style="font-size:1.0em; font-weight: bold">h2</button>'+
+        '<button type="button" class="editor-button" data-style="h3" style="font-size:0.9em; font-weight: bold">h3</button>'+
+        '</span>'+
+        '<span class="button-group">'+
+            '<button type="button" class="editor-button" data-style="b"><i class="fa fa-bold"></i></button>'+
+            '<button type="button" class="editor-button" data-style="i"><i class="fa fa-italic"></i></button>'+
+            '<button type="button" class="editor-button" data-style="code"><i class="fa fa-code"></i></button>'+
+        '</span>'+
+        '<span class="button-group">'+
+            '<button type="button" class="editor-button" data-style="ol"><i class="fa fa-list-ol"></i></button>'+
+            '<button type="button" class="editor-button" data-style="ul"><i class="fa fa-list-ul"></i></button>'+
+            '<button type="button" class="editor-button" data-style="bq"><i class="fa fa-quote-left"></i></button>'+
+            '<button type="button" class="editor-button" data-style="hr"><i class="fa fa-minus"></i></button>'+
+            '<button type="button" class="editor-button" data-style="link"><i class="fa fa-link"></i></button>'+
+        '</span>'
+    '</div>';
+
+    var template = '<script type="text/x-red" data-template-name="_markdown">'+
+        '<div id="node-input-markdown-panels">'+
+        '<div id="node-input-markdown-panel-editor" class="red-ui-panel">'+
+            '<div style="height: 100%; margin: auto; max-width: 1000px;">'+
+                '<div id="node-input-markdown-toolbar"></div>'+
+                '<div class="node-text-editor" style="height: 100%" id="node-input-markdown"></div>'+
+            '</div>'+
+        '</div>'+
+        '<div class="red-ui-panel">'+
+            '<div class="node-input-markdown-panel-preview node-help"></div>'+
+        '</div>'+
+        '</script>';
+
+
+    var panels;
+
+    var definition = {
+        show: function(options) {
+            var value = options.value;
+            var onComplete = options.complete;
+            var type = "_markdown"
+            RED.view.state(RED.state.EDITING);
+            var expressionEditor;
+
+            var trayOptions = {
+                title: options.title,
+                width: options.width||Infinity,
+                buttons: [
+                    {
+                        id: "node-dialog-cancel",
+                        text: RED._("common.label.cancel"),
+                        click: function() {
+                            RED.tray.close();
+                        }
+                    },
+                    {
+                        id: "node-dialog-ok",
+                        text: RED._("common.label.done"),
+                        class: "primary",
+                        click: function() {
+                            onComplete(expressionEditor.getValue(),expressionEditor.getCursorPosition());
+                            RED.tray.close();
+                        }
+                    }
+                ],
+                resize: function(dimensions) {
+                    var width = $("#dialog-form").width();
+                    if (panels) {
+                        panels.resize(width);
+                    }
+
+                },
+                open: function(tray) {
+                    var trayBody = tray.find('.editor-tray-body');
+                    trayBody.addClass("node-input-markdown-editor")
+                    var dialogForm = RED.editor.buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
+                    expressionEditor = RED.editor.createEditor({
+                        id: 'node-input-markdown',
+                        value: value,
+                        mode:"ace/mode/markdown",
+                        expandable: false
+                    });
+                    var changeTimer;
+                    expressionEditor.getSession().on("change", function() {
+                        clearTimeout(changeTimer);
+                        changeTimer = setTimeout(function() {
+                            var currentScrollTop = $(".node-input-markdown-panel-preview").scrollTop();
+                            $(".node-input-markdown-panel-preview").html(marked(expressionEditor.getValue()));
+                            $(".node-input-markdown-panel-preview").scrollTop(currentScrollTop);
+                        },200);
+                    })
+                    if (options.header) {
+                        options.header.appendTo(tray.find('#node-input-markdown-title'));
+                    }
+
+                    if (value) {
+                        $(".node-input-markdown-panel-preview").html(marked(expressionEditor.getValue()));
+                    }
+                    panels = RED.panels.create({
+                        id:"node-input-markdown-panels",
+                        dir: "horizontal",
+                        resize: function(p1Width,p2Width) {
+                            expressionEditor.resize();
+                        }
+                    });
+                    panels.ratio(1);
+
+                    $('<span class="button-group" style="float:right">'+
+                        '<button type="button" id="node-btn-markdown-preview" class="editor-button toggle single"><i class="fa fa-eye"></i></button>'+
+                    '</span>').appendTo(expressionEditor.toolbar);
+
+                    $("#node-btn-markdown-preview").click(function(e) {
+                        e.preventDefault();
+                        if ($(this).hasClass("selected")) {
+                            $(this).removeClass("selected");
+                            panels.ratio(1);
+                        } else {
+                            $(this).addClass("selected");
+                            panels.ratio(0.5);
+                        }
+                    });
+                    RED.popover.tooltip($("#node-btn-markdown-preview"), RED._("markdownEditor.toggle-preview"));
+
+                    if (options.cursor) {
+                        expressionEditor.gotoLine(options.cursor.row+1,options.cursor.column,false);
+                    }
+
+                    dialogForm.i18n();
+                },
+                close: function() {
+                    expressionEditor.destroy();
+                    if (options.onclose) {
+                        options.onclose();
+                    }
+                },
+                show: function() {}
+            }
+            RED.tray.show(trayOptions);
+        },
+
+        buildToolbar: function(container, editor) {
+            var styleActions = {
+                'h1': { newline: true, before:"# ", tooltip:RED._("markdownEditor.heading1")},
+                'h2': { newline: true, before:"## ", tooltip:RED._("markdownEditor.heading2")},
+                'h3': { newline: true, before:"### ", tooltip:RED._("markdownEditor.heading3")},
+                'b': { before:"**", after: "**", tooltip: RED._("markdownEditor.bold")},
+                'i': { before:"_", after: "_", tooltip: RED._("markdownEditor.italic")},
+                'code': { before:"`", after: "`", tooltip: RED._("markdownEditor.code")},
+                'ol': { before:" * ", newline: true, tooltip: RED._("markdownEditor.ordered-list")},
+                'ul': { before:" - ", newline: true, tooltip: RED._("markdownEditor.unordered-list")},
+                'bq': { before:"> ", newline: true, tooltip: RED._("markdownEditor.quote")},
+                'link': { before:"[", after: "]()", tooltip: RED._("markdownEditor.link")},
+                'hr': { before:"\n---\n\n", tooltip: RED._("markdownEditor.horizontal-rule")}
+            }
+            var toolbar = $(toolbarTemplate).appendTo(container);
+            toolbar.find('button[data-style]').each(function(el) {
+                var style = styleActions[$(this).data('style')];
+                $(this).click(function(e) {
+                    e.preventDefault();
+                    var current = editor.getSelectedText();
+                    var range = editor.selection.getRange();
+                    if (style.newline) {
+                        var offset = 0;
+                        var beforeOffset = ((style.before||"").match(/\n/g)||[]).length;
+                        var afterOffset = ((style.after||"").match(/\n/g)||[]).length;
+                        for (var i = range.start.row; i<= range.end.row+offset; i++) {
+                            if (style.before) {
+                                editor.session.insert({row:i, column:0},style.before);
+                                offset += beforeOffset;
+                                i += beforeOffset;
+                            }
+                            if (style.after) {
+                                editor.session.insert({row:i, column:Infinity},style.after);
+                                offset += afterOffset;
+                                i += afterOffset;
+                            }
+                        }
+                    } else {
+                        editor.session.replace(editor.selection.getRange(), (style.before||"")+current+(style.after||""));
+                        if (current === "") {
+                            editor.gotoLine(range.start.row+1,range.start.column+(style.before||"").length,false);
+                        }
+                    }
+                    editor.focus();
+                });
+                if (style.tooltip) {
+                    RED.popover.tooltip($(this),style.tooltip);
+                }
+            })
+            return toolbar;
+        }
+    }
+    $(template).appendTo(document.body);
+    RED.editor.registerTypeEditor("_markdown", definition);
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+RED.eventLog = (function() {
+
+    var template = '<script type="text/x-red" data-template-name="_eventLog"><div class="form-row node-text-editor-row"><div style="height: 100%;min-height: 150px;" class="node-text-editor" id="event-log-editor"></div></div></script>';
+
+    var eventLogEditor;
+    var backlog = [];
+    var shown = false;
+
+    function appendLogLine(line) {
+        backlog.push(line);
+        if (backlog.length > 500) {
+            backlog = backlog.slice(-500);
+        }
+        if (eventLogEditor) {
+            eventLogEditor.getSession().insert({
+                row: eventLogEditor.getSession().getLength(),
+                column: 0
+            }, "\n" + line);
+            eventLogEditor.scrollToLine(eventLogEditor.getSession().getLength());
+        }
+    }
     return {
         init: function() {
-            RED.tray.init();
-            RED.actions.add("core:confirm-edit-tray", function() {
-                $("#node-dialog-ok").click();
-                $("#node-config-dialog-ok").click();
-            });
-            RED.actions.add("core:cancel-edit-tray", function() {
-                $("#node-dialog-cancel").click();
-                $("#node-config-dialog-cancel").click();
-            });
+            $(template).appendTo(document.body);
+            RED.actions.add("core:show-event-log",RED.eventLog.show);
         },
-        edit: showEditDialog,
-        editConfig: showEditConfigNodeDialog,
-        editSubflow: showEditSubflowDialog,
-        editExpression: editExpression,
-        editJSON: editJSON,
-        editMarkdown: editMarkdown,
-        editBuffer: editBuffer,
-        validateNode: validateNode,
-        updateNodeProperties: updateNodeProperties, // TODO: only exposed for edit-undo
+        show: function() {
+            if (shown) {
+                return;
+            }
+            shown = true;
+            var type = "_eventLog"
 
-
-        createEditor: function(options) {
-            var editor = ace.edit(options.id||options.element);
-            editor.setTheme("ace/theme/tomorrow");
-            var session = editor.getSession();
-            session.on("changeAnnotation", function () {
-                var annotations = session.getAnnotations() || [];
-                var i = annotations.length;
-                var len = annotations.length;
-                while (i--) {
-                    if (/doctype first\. Expected/.test(annotations[i].text)) { annotations.splice(i, 1); }
-                    else if (/Unexpected End of file\. Expected/.test(annotations[i].text)) { annotations.splice(i, 1); }
-                }
-                if (len > annotations.length) { session.setAnnotations(annotations); }
-            });
-            if (options.mode) {
-                session.setMode(options.mode);
-            }
-            if (options.foldStyle) {
-                session.setFoldStyle(options.foldStyle);
-            } else {
-                session.setFoldStyle('markbeginend');
-            }
-            if (options.options) {
-                editor.setOptions(options.options);
-            } else {
-                editor.setOptions({
-                    enableBasicAutocompletion:true,
-                    enableSnippets:true
-                });
-            }
-            if (options.readOnly) {
-                editor.setOption('readOnly',options.readOnly);
-                editor.container.classList.add("ace_read-only");
-            }
-            if (options.hasOwnProperty('lineNumbers')) {
-                editor.renderer.setOption('showGutter',options.lineNumbers);
-            }
-            editor.$blockScrolling = Infinity;
-            if (options.value) {
-                session.setValue(options.value,-1);
-            }
-            if (options.globals) {
-                setTimeout(function() {
-                    if (!!session.$worker) {
-                        session.$worker.send("setOptions", [{globals: options.globals, esversion:6, sub:true, asi:true, maxerr:1000}]);
+            var trayOptions = {
+                title: RED._("eventLog.title"),
+                width: Infinity,
+                buttons: [
+                    {
+                        id: "node-dialog-close",
+                        text: RED._("common.label.close"),
+                        click: function() {
+                            RED.tray.close();
+                        }
                     }
-                },100);
+                ],
+                resize: function(dimensions) {
+                    var rows = $("#dialog-form>div:not(.node-text-editor-row)");
+                    var editorRow = $("#dialog-form>div.node-text-editor-row");
+                    var height = $("#dialog-form").height();
+                    for (var i=0;i<rows.size();i++) {
+                        height -= $(rows[i]).outerHeight(true);
+                    }
+                    height -= (parseInt($("#dialog-form").css("marginTop"))+parseInt($("#dialog-form").css("marginBottom")));
+                    $(".node-text-editor").css("height",height+"px");
+                    eventLogEditor.resize();
+                },
+                open: function(tray) {
+                    var trayBody = tray.find('.editor-tray-body');
+                    var dialogForm = RED.editor.buildEditForm(tray.find('.editor-tray-body'),'dialog-form',type,'editor');
+                    eventLogEditor = RED.editor.createEditor({
+                        id: 'event-log-editor',
+                        value: backlog.join("\n"),
+                        lineNumbers: false,
+                        readOnly: true,
+                        options: {
+                            showPrintMargin: false
+                        }
+                    });
+                    setTimeout(function() {
+                        eventLogEditor.scrollToLine(eventLogEditor.getSession().getLength());
+                    },200);
+                    dialogForm.i18n();
+                },
+                close: function() {
+                    eventLogEditor.destroy();
+                    eventLogEditor = null;
+                    shown = false;
+                },
+                show: function() {}
             }
-            return editor;
+            RED.tray.show(trayOptions);
+        },
+        log: function(id,payload) {
+            var ts = (new Date(payload.ts)).toISOString()+" ";
+            if (payload.type) {
+                ts += "["+payload.type+"] "
+            }
+            if (payload.data) {
+                var data = payload.data;
+                if (data.endsWith('\n')) {
+                    data = data.substring(0,data.length-1);
+                }
+                var lines = data.split(/\n/);
+                lines.forEach(function(line) {
+                    appendLogLine(ts+line);
+                })
+            }
+        },
+        startEvent: function(name) {
+            backlog.push("");
+            backlog.push("-----------------------------------------------------------");
+            backlog.push((new Date()).toISOString()+" "+name);
+            backlog.push("");
         }
     }
 })();
@@ -18995,11 +24546,12 @@ RED.tray = (function() {
 
             // tray.body.parent().width(Math.min($("#editor-stack").position().left-8,tray.width));
 
+
+            $("#main-container").scrollLeft(0);
             el.css({
                 right: -(el.width()+10)+"px",
                 transition: "right 0.25s ease"
             });
-            $("#workspace").scrollLeft(0);
             handleWindowResize();
             openingTray = true;
             setTimeout(function() {
@@ -19087,6 +24639,7 @@ RED.tray = (function() {
             }
 
         },
+        resize: handleWindowResize,
         close: function close(done) {
             if (stack.length > 0) {
                 var tray = stack.pop();
@@ -19156,6 +24709,8 @@ RED.clipboard = (function() {
     var exportNodesDialog;
     var importNodesDialog;
     var disabled = false;
+    var popover;
+    var currentPopoverError;
 
     function setupDialogs() {
         dialog = $('<div id="clipboard-dialog" class="hide node-red-dialog"><form class="dialog-form form-horizontal"></form></div>')
@@ -19182,6 +24737,21 @@ RED.clipboard = (function() {
                         }
                     },
                     {
+                        id: "clipboard-dialog-download",
+                        class: "primary",
+                        text: RED._("clipboard.download"),
+                        click: function() {
+                            var element = document.createElement('a');
+                            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent($("#clipboard-export").val()));
+                            element.setAttribute('download', "flows.json");
+                            element.style.display = 'none';
+                            document.body.appendChild(element);
+                            element.click();
+                            document.body.removeChild(element);
+                            $( this ).dialog( "close" );
+                        }
+                    },
+                    {
                         id: "clipboard-dialog-copy",
                         class: "primary",
                         text: RED._("clipboard.export.copy"),
@@ -19189,7 +24759,7 @@ RED.clipboard = (function() {
                             $("#clipboard-export").select();
                             document.execCommand("copy");
                             document.getSelection().removeAllRanges();
-                            RED.notify(RED._("clipboard.nodesExported"));
+                            RED.notify(RED._("clipboard.nodesExported"),{id:"clipboard"});
                             $( this ).dialog( "close" );
                         }
                     },
@@ -19207,6 +24777,10 @@ RED.clipboard = (function() {
                     $(this).parent().find(".ui-dialog-titlebar-close").hide();
                 },
                 close: function(e) {
+                    if (popover) {
+                        popover.close(true);
+                        currentPopoverError = null;
+                    }
                 }
             });
 
@@ -19220,7 +24794,7 @@ RED.clipboard = (function() {
                     '<a id="export-range-flow" class="editor-button toggle" href="#" data-i18n="clipboard.export.current"></a>'+
                     '<a id="export-range-full" class="editor-button toggle" href="#" data-i18n="clipboard.export.all"></a>'+
                 '</span>'+
-                '</div>'+
+            '</div>'+
             '<div class="form-row">'+
                 '<textarea readonly style="resize: none; width: 100%; border-radius: 4px;font-family: monospace; font-size: 12px; background:#f3f3f3; padding-left: 0.5em; box-sizing:border-box;" id="clipboard-export" rows="5"></textarea>'+
             '</div>'+
@@ -19231,10 +24805,13 @@ RED.clipboard = (function() {
                 '</span>'+
             '</div>';
 
-        importNodesDialog = '<div class="form-row">'+
-            '<textarea style="resize: none; width: 100%; border-radius: 0px;font-family: monospace; font-size: 12px; background:#eee; padding-left: 0.5em; box-sizing:border-box;" id="clipboard-import" rows="5" placeholder="'+
-            RED._("clipboard.pasteNodes")+
-            '"></textarea>'+
+        importNodesDialog =
+            '<div class="form-row"><span data-i18n="clipboard.pasteNodes"></span>'+
+                ' <a class="editor-button" id="import-file-upload-btn"><i class="fa fa-upload"></i> <span data-i18n="clipboard.selectFile"></span></a>'+
+                '<input type="file" id="import-file-upload" accept=".json" style="display:none">'+
+            '</div>'+
+            '<div class="form-row">'+
+                '<textarea style="resize: none; width: 100%; border-radius: 0px;font-family: monospace; font-size: 12px; background:#eee; padding-left: 0.5em; box-sizing:border-box;" id="clipboard-import" rows="5"></textarea>'+
             '</div>'+
             '<div class="form-row">'+
             '<label style="width:auto;margin-right: 10px;" data-i18n="clipboard.import.import"></label>'+
@@ -19245,21 +24822,98 @@ RED.clipboard = (function() {
             '</div>';
     }
 
+    var validateImportTimeout;
+
     function validateImport() {
-        var importInput = $("#clipboard-import");
-        var v = importInput.val();
-        v = v.substring(v.indexOf('['),v.lastIndexOf(']')+1);
-        try {
-            JSON.parse(v);
-            importInput.removeClass("input-error");
-            importInput.val(v);
-            $("#clipboard-dialog-ok").button("enable");
-        } catch(err) {
-            if (v !== "") {
-                importInput.addClass("input-error");
-            }
-            $("#clipboard-dialog-ok").button("disable");
+        if (validateImportTimeout) {
+            clearTimeout(validateImportTimeout);
         }
+        validateImportTimeout = setTimeout(function() {
+            var importInput = $("#clipboard-import");
+            var v = importInput.val().trim();
+            if (v === "") {
+                popover.close(true);
+                currentPopoverError = null;
+                importInput.removeClass("input-error");
+                $("#clipboard-dialog-ok").button("disable");
+                return;
+            }
+            try {
+                if (!/^\[[\s\S]*\]$/m.test(v)) {
+                    throw new Error(RED._("clipboard.import.errors.notArray"));
+                }
+                var res = JSON.parse(v);
+                for (var i=0;i<res.length;i++) {
+                    if (typeof res[i] !== "object") {
+                        throw new Error(RED._("clipboard.import.errors.itemNotObject",{index:i}));
+                    }
+                    if (!res[i].hasOwnProperty('id')) {
+                        throw new Error(RED._("clipboard.import.errors.missingId",{index:i}));
+                    }
+                    if (!res[i].hasOwnProperty('type')) {
+                        throw new Error(RED._("clipboard.import.errors.missingType",{index:i}));
+                    }
+                }
+                currentPopoverError = null;
+                popover.close(true);
+                importInput.removeClass("input-error");
+                importInput.val(v);
+                $("#clipboard-dialog-ok").button("enable");
+            } catch(err) {
+                if (v !== "") {
+                    importInput.addClass("input-error");
+                    var errString = err.toString();
+                    if (errString !== currentPopoverError) {
+                        // Display the error as-is.
+                        // Error messages are only in English. Each browser has its
+                        // own set of messages with very little consistency.
+                        // To provide translated messages this code will either need to:
+                        // - reduce everything down to 'unexpected token at position x'
+                        //   which is the least useful, but most consistent message
+                        // - use a custom/library parser that gives consistent messages
+                        //   which can be translated.
+                        var message = $('<div class="clipboard-import-error"></div>').text(errString);
+                        var errorPos;
+                        // Chrome error messages
+                        var m = /at position (\d+)/i.exec(errString);
+                        if (m) {
+                            errorPos = parseInt(m[1]);
+                        } else {
+                            // Firefox error messages
+                            m = /at line (\d+) column (\d+)/i.exec(errString);
+                            if (m) {
+                                var line = parseInt(m[1])-1;
+                                var col = parseInt(m[2])-1;
+                                var lines = v.split("\n");
+                                errorPos = 0;
+                                for (var i=0;i<line;i++) {
+                                    errorPos += lines[i].length+1;
+                                }
+                                errorPos += col;
+                            } else {
+                                // Safari doesn't provide any position information
+                                // IE: tbd
+                            }
+                        }
+
+                        if (errorPos !== undefined) {
+                            v = v.replace(/\n/g,"↵");
+                            var index = parseInt(m[1]);
+                            var parseError = $('<div>').appendTo(message);
+                            var code = $('<pre>').appendTo(parseError);
+                            $('<span>').text(v.substring(errorPos-12,errorPos)).appendTo(code)
+                            $('<span class="error">').text(v.charAt(errorPos)).appendTo(code);
+                            $('<span>').text(v.substring(errorPos+1,errorPos+12)).appendTo(code);
+                        }
+                        popover.close(true).setContent(message).open();
+                        currentPopoverError = errString;
+                    }
+                } else {
+                    currentPopoverError = null;
+                }
+                $("#clipboard-dialog-ok").button("disable");
+            }
+        },100);
     }
 
     function importNodes() {
@@ -19274,6 +24928,7 @@ RED.clipboard = (function() {
         $("#clipboard-dialog-cancel").show();
         $("#clipboard-dialog-close").hide();
         $("#clipboard-dialog-copy").hide();
+        $("#clipboard-dialog-download").hide();
         $("#clipboard-dialog-ok").button("disable");
         $("#clipboard-import").keyup(validateImport);
         $("#clipboard-import").on('paste',function() { setTimeout(validateImport,10)});
@@ -19287,7 +24942,26 @@ RED.clipboard = (function() {
             $(this).addClass('selected');
         });
 
+        $("#import-file-upload").change(function() {
+            var fileReader = new FileReader();
+            fileReader.onload = function () {
+                $("#clipboard-import").val(fileReader.result);
+                validateImport();
+            };
+            fileReader.readAsText($(this).prop('files')[0]);
+        })
+        $("#import-file-upload-btn").click(function(evt) {
+            evt.preventDefault();
+            $("#import-file-upload").click();
+        })
+
         dialog.dialog("option","title",RED._("clipboard.importNodes")).dialog("open");
+        popover = RED.popover.create({
+            target: $("#clipboard-import"),
+            trigger: "manual",
+            direction: "bottom",
+            content: ""
+        });
     }
 
     function exportNodes() {
@@ -19336,9 +25010,18 @@ RED.clipboard = (function() {
             var flow = "";
             var nodes = null;
             if (type === 'export-range-selected') {
-                var selection = RED.view.selection();
+                var selection = RED.workspaces.selection();
+                if (selection.length > 0) {
+                    nodes = [];
+                    selection.forEach(function(n) {
+                        nodes.push(n);
+                        nodes = nodes.concat(RED.nodes.filterNodes({z:n.id}));
+                    });
+                } else {
+                    nodes = RED.view.selection().nodes||[];
+                }
                 // Don't include the subflow meta-port nodes in the exported selection
-                nodes = RED.nodes.createExportableNodeSet(selection.nodes.filter(function(n) { return n.type !== 'subflow'}));
+                nodes = RED.nodes.createExportableNodeSet(nodes.filter(function(n) { return n.type !== 'subflow'}));
             } else if (type === 'export-range-flow') {
                 var activeWorkspace = RED.workspaces.active();
                 nodes = RED.nodes.filterNodes({z:activeWorkspace});
@@ -19368,12 +25051,17 @@ RED.clipboard = (function() {
         $("#clipboard-dialog-cancel").hide();
         $("#clipboard-dialog-copy").hide();
         $("#clipboard-dialog-close").hide();
-        var selection = RED.view.selection();
-        if (selection.nodes) {
+        var selection = RED.workspaces.selection();
+        if (selection.length > 0) {
             $("#export-range-selected").click();
         } else {
-            $("#export-range-selected").addClass('disabled').removeClass('selected');
-            $("#export-range-flow").click();
+            selection = RED.view.selection();
+            if (selection.nodes) {
+                $("#export-range-selected").click();
+            } else {
+                $("#export-range-selected").addClass('disabled').removeClass('selected');
+                $("#export-range-flow").click();
+            }
         }
         if (format === "export-format-full") {
             $("#export-format-full").click();
@@ -19399,6 +25087,8 @@ RED.clipboard = (function() {
             $("#clipboard-dialog-cancel").show();
             $("#clipboard-dialog-copy").show();
         }
+        $("#clipboard-dialog-download").show();
+
     }
 
     function hideDropTarget() {
@@ -19410,9 +25100,20 @@ RED.clipboard = (function() {
         if (typeof value !== "string" ) {
             value = JSON.stringify(value, function(key,value) {
                 if (value !== null && typeof value === 'object') {
-                    if (value.__encoded__ && value.hasOwnProperty('data') && value.hasOwnProperty('length')) {
-                        truncated = value.data.length !== value.length;
-                        return value.data;
+                    if (value.__enc__) {
+                        if (value.hasOwnProperty('data') && value.hasOwnProperty('length')) {
+                            truncated = value.data.length !== value.length;
+                            return value.data;
+                        }
+                        if (value.type === 'function' || value.type === 'internal') {
+                            return undefined
+                        }
+                        if (value.type === 'number') {
+                            // Handle NaN and Infinity - they are not permitted
+                            // in JSON. We can either substitute with a String
+                            // representation or null
+                            return null;
+                        }
                     }
                 }
                 return value;
@@ -19442,18 +25143,6 @@ RED.clipboard = (function() {
             setupDialogs();
 
             $('<input type="text" id="clipboard-hidden">').appendTo("body");
-
-            RED.events.on("view:selection-changed",function(selection) {
-                if (!selection.nodes) {
-                    RED.menu.setDisabled("menu-item-export",true);
-                    RED.menu.setDisabled("menu-item-export-clipboard",true);
-                    RED.menu.setDisabled("menu-item-export-library",true);
-                } else {
-                    RED.menu.setDisabled("menu-item-export",false);
-                    RED.menu.setDisabled("menu-item-export-clipboard",false);
-                    RED.menu.setDisabled("menu-item-export-library",false);
-                }
-            });
 
             RED.actions.add("core:show-export-dialog",exportNodes);
             RED.actions.add("core:show-import-dialog",importNodes);
@@ -19532,6 +25221,12 @@ RED.library = (function() {
     var exportToLibraryDialog;
     var elementPrefix = "node-input-";
 
+
+    var _librarySaveConfirm = '<div id="node-dialog-library-save-confirm" class="hide"><form class="form-horizontal"><div style="text-align: center; padding-top: 30px;" id="node-dialog-library-save-content"></div></form></div>';
+    var _librarySave = '<div id="node-dialog-library-save" class="hide"><form class="form-horizontal"><div class="form-row"><label for="node-dialog-library-save-folder" data-i18n="[append]library.folder"><i class="fa fa-folder-open"></i> </label><input type="text" id="node-dialog-library-save-folder" data-i18n="[placeholder]library.folderPlaceholder"></div><div class="form-row"><label for="node-dialog-library-save-filename" data-i18n="[append]library.filename"><i class="fa fa-file"></i> </label><input type="text" id="node-dialog-library-save-filename" data-i18n="[placeholder]library.filenamePlaceholder"></div></form></div>';
+    var _libraryLookup = '<div id="node-dialog-library-lookup" class="hide"><form class="form-horizontal"><div class="form-row"><ul id="node-dialog-library-breadcrumbs" class="breadcrumb"><li class="active"><a href="#" data-i18n="[append]library.breadcrumb"></a></li></ul></div><div class="form-row"><div style="vertical-align: top; display: inline-block; height: 100%; width: 30%; padding-right: 20px;"><div id="node-select-library" style="border: 1px solid #999; width: 100%; height: 100%; overflow:scroll;"><ul></ul></div></div><div style="vertical-align: top; display: inline-block;width: 65%; height: 100%;"><div style="height: 100%; width: 95%;" class="node-text-editor" id="node-select-library-text" ></div></div></div></form></div>';
+
+
     function loadFlowLibrary() {
         $.getJSON("library/flows",function(data) {
             //console.log(data);
@@ -19552,8 +25247,8 @@ RED.library = (function() {
                             li.className = "dropdown-submenu pull-left";
                             a = document.createElement("a");
                             a.href="#";
-                            var label = i.replace(/^@.*\//,"").replace(/^node-red-contrib-/,"").replace(/^node-red-node-/,"").replace(/-/," ").replace(/_/," ");
-                            a.innerHTML = label;
+                            var label = i.replace(/^@.*\//,"").replace(/^node-red-contrib-/,"").replace(/^node-red-node-/,"").replace(/-/g," ").replace(/_/g," ");
+                            a.innerText = label;
                             li.appendChild(a);
                             li.appendChild(buildMenu(data.d[i],root+(root!==""?"/":"")+i));
                             ul.appendChild(li);
@@ -19566,7 +25261,7 @@ RED.library = (function() {
                             li = document.createElement("li");
                             a = document.createElement("a");
                             a.href="#";
-                            a.innerHTML = data.f[i];
+                            a.innerText = data.f[i];
                             a.flowName = root+(root!==""?"/":"")+data.f[i];
                             a.onclick = function() {
                                 $.get('library/flows/'+this.flowName, function(data) {
@@ -19633,8 +25328,8 @@ RED.library = (function() {
                     li.onclick = (function () {
                         var dirName = v;
                         return function(e) {
-                            var bcli = $('<li class="active"><span class="divider">/</span> <a href="#">'+dirName+'</a></li>');
-                            $("a",bcli).click(function(e) {
+                            var bcli = $('<li class="active"><span class="divider">/</span> </li>');
+                            $('<a href="#"></a>').text(dirName).appendTo(bcli).click(function(e) {
                                 $(this).parent().nextAll().remove();
                                 $.getJSON("library/"+options.url+root+dirName,function(data) {
                                     $("#node-select-library").children().first().replaceWith(buildFileList(root+dirName+"/",data));
@@ -19649,12 +25344,13 @@ RED.library = (function() {
                             });
                         }
                     })();
-                    li.innerHTML = '<i class="fa fa-folder"></i> '+v+"</i>";
+                    $('<i class="fa fa-folder"></i>').appendTo(li);
+                    $('<span>').text(" "+v).appendTo(li);
                     ul.appendChild(li);
                 } else {
                     // file
                     li = buildFileListItem(v);
-                    li.innerHTML = v.name;
+                    li.innerText = v.name;
                     li.onclick = (function() {
                         var item = v;
                         return function(e) {
@@ -19924,16 +25620,17 @@ RED.library = (function() {
     return {
         init: function() {
 
+
+            $(_librarySave).appendTo(document.body);
+            $(_librarySaveConfirm).appendTo(document.body);
+            $(_libraryLookup).appendTo(document.body);
+
             RED.actions.add("core:library-export",exportFlow);
 
             RED.events.on("view:selection-changed",function(selection) {
                 if (!selection.nodes) {
-                    RED.menu.setDisabled("menu-item-export",true);
-                    RED.menu.setDisabled("menu-item-export-clipboard",true);
                     RED.menu.setDisabled("menu-item-export-library",true);
                 } else {
-                    RED.menu.setDisabled("menu-item-export",false);
-                    RED.menu.setDisabled("menu-item-export-clipboard",false);
                     RED.menu.setDisabled("menu-item-export-library",false);
                 }
             });
@@ -19965,7 +25662,10 @@ RED.library = (function() {
                             click: function() {
                                 //TODO: move this to RED.library
                                 var flowName = $("#node-input-library-filename").val();
-                                if (!/^\s*$/.test(flowName)) {
+                                flowName = flowName.trim();
+                                if(flowName === "" || flowName.endsWith("/")) {
+                                    RED.notify(RED._("library.invalidFilename"),"warning");
+                                } else {
                                     $.ajax({
                                         url:'library/flows/'+flowName,
                                         type: "POST",
@@ -20024,6 +25724,10 @@ RED.library = (function() {
 RED.notifications = (function() {
 
     /*
+    If RED.notifications.hide is set to true, all notifications will be hidden.
+    This is to help with UI testing in certain cases and not intended for the
+    end-user.
+
     // Example usage for a modal dialog with buttons
     var myNotification = RED.notify("This is the message to display",{
         modal: true,
@@ -20058,6 +25762,11 @@ RED.notifications = (function() {
             fixed = options.fixed;
             timeout = options.timeout;
             type = options.type;
+        }
+
+        if (options.id && persistentNotifications.hasOwnProperty(options.id)) {
+            persistentNotifications[options.id].update(msg,options);
+            return persistentNotifications[options.id];
         }
 
         if (options.modal) {
@@ -20104,7 +25813,7 @@ RED.notifications = (function() {
         if (options.buttons) {
             var buttonSet = $('<div style="margin-top: 20px;" class="ui-dialog-buttonset"></div>').appendTo(n)
             options.buttons.forEach(function(buttonDef) {
-                var b = $('<button>').text(buttonDef.text).click(buttonDef.click).appendTo(buttonSet);
+                var b = $('<button>').html(buttonDef.text).click(buttonDef.click).appendTo(buttonSet);
                 if (buttonDef.id) {
                     b.attr('id',buttonDef.id);
                 }
@@ -20116,7 +25825,9 @@ RED.notifications = (function() {
 
 
         $("#notifications").append(n);
-        $(n).slideDown(300);
+        if (!RED.notifications.hide) {
+            $(n).slideDown(300);
+        }
         n.close = (function() {
             var nn = n;
             return function() {
@@ -20131,9 +25842,13 @@ RED.notifications = (function() {
                         notificationButtonWrapper.hide();
                     }
                 }
-                $(nn).slideUp(300, function() {
+                if (!RED.notifications.hide) {
+                    $(nn).slideUp(300, function() {
+                        nn.parentNode.removeChild(nn);
+                    });
+                } else {
                     nn.parentNode.removeChild(nn);
-                });
+                }
                 if (options.modal) {
                     $("#full-shade").hide();
                 }
@@ -20146,7 +25861,9 @@ RED.notifications = (function() {
                     return
                 }
                 nn.hidden = true;
-                $(nn).slideUp(300);
+                if (!RED.notifications.hide) {
+                    $(nn).slideUp(300);
+                }
             }
         })();
         n.showNotification = (function() {
@@ -20156,7 +25873,9 @@ RED.notifications = (function() {
                     return
                 }
                 nn.hidden = false;
-                $(nn).slideDown(300);
+                if (!RED.notifications.hide) {
+                    $(nn).slideDown(300);
+                }
             }
         })();
 
@@ -20175,7 +25894,9 @@ RED.notifications = (function() {
                 if (typeof options === 'number') {
                     timeout = options;
                 } else if (options !== undefined) {
-                    timeout = options.timeout;
+                    if (!options.fixed) {
+                        timeout = options.timeout || 5000;
+                    }
                     if (options.buttons) {
                         var buttonSet = $('<div style="margin-top: 20px;" class="ui-dialog-buttonset"></div>').appendTo(nn)
                         options.buttons.forEach(function(buttonDef) {
@@ -20197,6 +25918,11 @@ RED.notifications = (function() {
                 }
                 if (nn.hidden) {
                     nn.showNotification();
+                } else if (!options || !options.silent){
+                    $(nn).addClass("notification-shake-horizontal");
+                    setTimeout(function() {
+                        $(nn).removeClass("notification-shake-horizontal");
+                    },300);
                 }
 
             }
@@ -20215,7 +25941,9 @@ RED.notifications = (function() {
         currentNotifications.push(n);
         if (options.id) {
             persistentNotifications[options.id] = n;
-            notificationButtonWrapper.show();
+            if (options.fixed) {
+                notificationButtonWrapper.show();
+            }
         }
         c+=1;
         return n;
@@ -20283,6 +26011,24 @@ RED.search = (function() {
     var keys = [];
     var results = [];
 
+
+    function indexProperty(node,label,property) {
+        if (typeof property === 'string' || typeof property === 'number') {
+            property = (""+property).toLowerCase();
+            index[property] = index[property] || {};
+            index[property][node.id] = {node:node,label:label};
+        } else if (Array.isArray(property)) {
+            property.forEach(function(prop) {
+                indexProperty(node,label,prop);
+            })
+        } else if (typeof property === 'object') {
+            for (var prop in property) {
+                if (property.hasOwnProperty(prop)) {
+                    indexProperty(node,label,property[prop])
+                }
+            }
+        }
+    }
     function indexNode(n) {
         var l = RED.utils.getNodeLabel(n);
         if (l) {
@@ -20299,17 +26045,11 @@ RED.search = (function() {
         }
         for (var i=0;i<properties.length;i++) {
             if (n.hasOwnProperty(properties[i])) {
-                var v = n[properties[i]];
-                if (typeof v === 'string' || typeof v === 'number') {
-                    v = (""+v).toLowerCase();
-                    index[v] = index[v] || {};
-                    index[v][n.id] = {node:n,label:l};
-                }
+                indexProperty(n, l, n[properties[i]]);
             }
         }
-
-
     }
+
     function indexWorkspace() {
         index = {};
         RED.nodes.eachWorkspace(indexNode);
@@ -20327,9 +26067,18 @@ RED.search = (function() {
 
     function search(val) {
         searchResults.editableList('empty');
+        var typeFilter;
+        var m = /(?:^| )type:([^ ]+)/.exec(val);
+        if (m) {
+            val = val.replace(/(?:^| )type:[^ ]+/,"");
+            typeFilter = m[1];
+        }
+
+        val = val.trim();
+
         selected = -1;
         results = [];
-        if (val.length > 0) {
+        if (val.length > 0 || typeFilter) {
             val = val.toLowerCase();
             var i;
             var j;
@@ -20341,8 +26090,10 @@ RED.search = (function() {
                 if (kpos > -1) {
                     for (j=0;j<index[key].length;j++) {
                         var node = index[key][j];
-                        nodes[node.node.id] = nodes[node.node.id] = node;
-                        nodes[node.node.id].index = Math.min(nodes[node.node.id].index||Infinity,kpos);
+                        if (!typeFilter || node.node.type === typeFilter) {
+                            nodes[node.node.id] = nodes[node.node.id] = node;
+                            nodes[node.node.id].index = Math.min(nodes[node.node.id].index||Infinity,kpos);
+                        }
                     }
                 }
             }
@@ -20363,6 +26114,7 @@ RED.search = (function() {
             }
         }
     }
+
     function ensureSelectedIsVisible() {
         var selectedEntry = searchResults.find("li.selected");
         if (selectedEntry.length === 1) {
@@ -20388,6 +26140,7 @@ RED.search = (function() {
                 search($(this).val());
             }
         });
+
         searchInput.on('keydown',function(evt) {
             var children;
             if (results.length > 0) {
@@ -20438,7 +26191,7 @@ RED.search = (function() {
                     var div = $('<a>',{href:'#',class:"red-ui-search-result"}).appendTo(container);
 
                     var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(div);
-                    var colour = def.color;
+                    var colour = RED.utils.getNodeColor(node.type,def);
                     var icon_url = RED.utils.getNodeIcon(def,node);
                     if (node.type === 'tab') {
                         colour = "#C0DEED";
@@ -20446,7 +26199,7 @@ RED.search = (function() {
                     nodeDiv.css('backgroundColor',colour);
 
                     var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
-                    $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
+                    RED.utils.createIconElement(icon_url, iconContainer, true);
 
                     var contentDiv = $('<div>',{class:"red-ui-search-result-description"}).appendTo(div);
                     if (node.z) {
@@ -20474,12 +26227,13 @@ RED.search = (function() {
         });
 
     }
+
     function reveal(node) {
         hide();
         RED.view.reveal(node.id);
     }
 
-    function show() {
+    function show(v) {
         if (disabled) {
             return;
         }
@@ -20495,11 +26249,13 @@ RED.search = (function() {
                 createDialog();
             }
             dialog.slideDown(300);
+            searchInput.searchBox('value',v)
             RED.events.emit("search:open");
             visible = true;
         }
         searchInput.focus();
     }
+
     function hide() {
         if (visible) {
             RED.keyboard.remove("escape");
@@ -20591,7 +26347,7 @@ RED.search = (function() {
         //shade = $('<div>',{class:"red-ui-type-search-shade"}).appendTo("#main-container");
         dialog = $("<div>",{id:"red-ui-type-search",class:"red-ui-search red-ui-type-search"}).appendTo("#main-container");
         var searchDiv = $("<div>",{class:"red-ui-search-container"}).appendTo(dialog);
-        searchInput = $('<input type="text">').attr("placeholder",RED._("search.addNode")).appendTo(searchDiv).searchBox({
+        searchInput = $('<input type="text" id="red-ui-type-search-input">').attr("placeholder",RED._("search.addNode")).appendTo(searchDiv).searchBox({
             delay: 50,
             change: function() {
                 search($(this).val());
@@ -20622,6 +26378,19 @@ RED.search = (function() {
                     $(children[selected]).addClass('selected');
                     ensureSelectedIsVisible();
                     evt.preventDefault();
+                } else if ((evt.metaKey || evt.ctrlKey) && evt.keyCode === 13 ) {
+                    // (ctrl or cmd) and enter
+                    var index = Math.max(0,selected);
+                    if (index < children.length) {
+                        var n = $(children[index]).find(".red-ui-editableList-item-content").data('data');
+                        typesUsed[n.type] = Date.now();
+                        if (n.def.outputs === 0) {
+                            confirm(n);
+                        } else {
+                            addCallback(n.type,true);
+                        }
+                        $("#red-ui-type-search-input").val("").keyup();
+                    }
                 } else if (evt.keyCode === 13) {
                     // Enter
                     var index = Math.max(0,selected);
@@ -20671,12 +26440,12 @@ RED.search = (function() {
                 var div = $('<a>',{href:'#',class:"red-ui-search-result"}).appendTo(container);
 
                 var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(div);
-                var colour = def.color;
+                var colour = RED.utils.getNodeColor(object.type,def);
                 var icon_url = RED.utils.getNodeIcon(def);
                 nodeDiv.css('backgroundColor',colour);
 
                 var iconContainer = $('<div/>',{class:"palette_icon_container"}).appendTo(nodeDiv);
-                $('<div/>',{class:"palette_icon",style:"background-image: url("+icon_url+")"}).appendTo(iconContainer);
+                RED.utils.createIconElement(icon_url, iconContainer, false);
 
                 if (def.inputs > 0) {
                     $('<div/>',{class:"red-ui-search-result-node-port"}).appendTo(nodeDiv);
@@ -20734,20 +26503,27 @@ RED.search = (function() {
                 createDialog();
             }
             visible = true;
-            setTimeout(function() {
-                $(document).on('mousedown.type-search',handleMouseActivity);
-                $(document).on('mouseup.type-search',handleMouseActivity);
-                $(document).on('click.type-search',handleMouseActivity);
-            },200);
         } else {
             dialog.hide();
             searchResultsDiv.hide();
         }
-        refreshTypeList();
+        $(document).off('mousedown.type-search');
+        $(document).off('mouseup.type-search');
+        $(document).off('click.type-search');
+        setTimeout(function() {
+            $(document).on('mousedown.type-search',handleMouseActivity);
+            $(document).on('mouseup.type-search',handleMouseActivity);
+            $(document).on('click.type-search',handleMouseActivity);
+        },200);
+
+        refreshTypeList(opts);
         addCallback = opts.add;
-        closeCallback = opts.close;
+        cancelCallback = opts.cancel;
         RED.events.emit("type-search:open");
         //shade.show();
+        if ($("#main-container").height() - opts.y - 150 < 0) {
+            opts.y = opts.y - 235;
+        }
         dialog.css({left:opts.x+"px",top:opts.y+"px"}).show();
         searchResultsDiv.slideDown(300);
         setTimeout(function() {
@@ -20773,7 +26549,6 @@ RED.search = (function() {
             $(document).off('click.type-search');
         }
     }
-
     function getTypeLabel(type, def) {
         var label = type;
         if (typeof def.paletteLabel !== "undefined") {
@@ -20797,21 +26572,29 @@ RED.search = (function() {
             return 1;
         }
     }
-    function refreshTypeList() {
+    function applyFilter(filter,type,def) {
+        return !filter ||
+            (
+                (!filter.type || type === filter.type) &&
+                (!filter.input || def.inputs > 0) &&
+                (!filter.output || def.outputs > 0)
+            )
+    }
+    function refreshTypeList(opts) {
         var i;
         searchResults.editableList('empty');
         searchInput.searchBox('value','');
         selected = -1;
         var common = [
             'inject','debug','function','change','switch'
-        ];
+        ].filter(function(t) { return applyFilter(opts.filter,t,RED.nodes.getType(t)); });
 
         var recentlyUsed = Object.keys(typesUsed);
         recentlyUsed.sort(function(a,b) {
             return typesUsed[b]-typesUsed[a];
         });
         recentlyUsed = recentlyUsed.filter(function(t) {
-            return common.indexOf(t) === -1;
+            return applyFilter(opts.filter,t,RED.nodes.getType(t)) && common.indexOf(t) === -1;
         });
 
         var items = [];
@@ -20856,8 +26639,10 @@ RED.search = (function() {
             searchResults.editableList('addItem', item);
         }
         for (i=0;i<items.length;i++) {
-            items[i].i = index++;
-            searchResults.editableList('addItem', items[i]);
+            if (applyFilter(opts.filter,items[i].type,items[i].def)) {
+                items[i].i = index++;
+                searchResults.editableList('addItem', items[i]);
+            }
         }
         setTimeout(function() {
             selected = 0;
@@ -20867,6 +26652,7 @@ RED.search = (function() {
 
     return {
         show: show,
+        refresh: refreshTypeList,
         hide: hide
     };
 
@@ -20891,26 +26677,36 @@ RED.search = (function() {
 
 RED.subflow = (function() {
 
+    var _subflowEditTemplate = '<script type="text/x-red" data-template-name="subflow">'+
+        '<div class="form-row"><label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label><input type="text" id="node-input-name"></div>'+
+        '<div class="form-row" style="margin-bottom: 0px;"><label style="width: auto;" data-i18n="[append]editor:editor-tab.env"><i class="fa fa-th-list"></i> </label></div>'+
+        '<div class="form-row node-input-env-container-row"><ol id="node-input-env-container"></ol></div>'+
+        '</script>';
 
-    function getSubflow() {
-        return RED.nodes.subflow(RED.workspaces.active());
-    }
+    var _subflowTemplateEditTemplate = '<script type="text/x-red" data-template-name="subflow-template">'+
+        '<div class="form-row"><i class="fa fa-tag"></i> <label for="subflow-input-name" data-i18n="common.label.name"></label><input type="text" id="subflow-input-name"></div>'+
+        '<div class="form-row"><i class="fa fa-folder-o"></i> <label for="subflow-input-category" data-i18n="editor:subflow.category"></label><select style="width: 250px;" id="subflow-input-category"></select><input style="display:none; margin-left: 10px; width:calc(100% - 250px)" type="text" id="subflow-input-custom-category"></div>'+
+        '<div class="form-row" style="margin-bottom: 0px;"><label style="width: auto;" data-i18n="[append]editor:editor-tab.env"><i class="fa fa-th-list"></i> </label></div>'+
+        '<div class="form-row node-input-env-container-row"><ol id="node-input-env-container"></ol></div>'+
+        '<div class="form-row form-tips" id="subflow-dialog-user-count"></div>'+
+        '</script>';
 
     function findAvailableSubflowIOPosition(subflow,isInput) {
         var pos = {x:50,y:30};
         if (!isInput) {
             pos.x += 110;
         }
-        for (var i=0;i<subflow.out.length+subflow.in.length;i++) {
-            var port;
-            if (i < subflow.out.length) {
-                port = subflow.out[i];
-            } else {
-                port = subflow.in[i-subflow.out.length];
-            }
+        var ports = [].concat(subflow.out).concat(subflow.in);
+        if (subflow.status) {
+            ports.push(subflow.status);
+        }
+        ports.sort(function(A,B) {
+            return A.x-B.x;
+        });
+        for (var i=0; i<ports.length; i++) {
+            var port = ports[i];
             if (port.x == pos.x && port.y == pos.y) {
                 pos.x += 55;
-                i=0;
             }
         }
         return pos;
@@ -20919,7 +26715,6 @@ RED.subflow = (function() {
     function addSubflowInput() {
         var subflow = RED.nodes.subflow(RED.workspaces.active());
         var position = findAvailableSubflowIOPosition(subflow,true);
-
         var newInput = {
             type:"subflow",
             direction:"in",
@@ -20951,6 +26746,7 @@ RED.subflow = (function() {
         RED.nodes.dirty(true);
         RED.view.redraw();
         $("#workspace-subflow-input .spinner-value").html(subflow.in.length);
+        RED.palette.refresh();
     }
 
     function removeSubflowInput() {
@@ -21031,6 +26827,7 @@ RED.subflow = (function() {
         RED.nodes.dirty(true);
         RED.view.redraw();
         $("#workspace-subflow-output .spinner-value").text(subflow.out.length);
+        RED.palette.refresh();
     }
 
     function removeSubflowOutput(removedSubflowOutputs) {
@@ -21070,8 +26867,63 @@ RED.subflow = (function() {
             }
         }
         activeSubflow.changed = true;
-
+        RED.palette.refresh();
         return {subflowOutputs: removedSubflowOutputs, links: removedLinks}
+    }
+
+    function addSubflowStatus() {
+        var subflow = RED.nodes.subflow(RED.workspaces.active());
+        if (subflow.status) {
+            return;
+        }
+        var position = findAvailableSubflowIOPosition(subflow,false);
+        var statusNode = {
+            type:"subflow",
+            direction:"status",
+            z:subflow.id,
+            x:position.x,
+            y:position.y,
+            id:RED.nodes.id()
+        };
+        subflow.status = statusNode;
+        subflow.dirty = true;
+        var wasDirty = RED.nodes.dirty();
+        var wasChanged = subflow.changed;
+        subflow.changed = true;
+        var result = refresh(true);
+        var historyEvent = {
+            t:'edit',
+            node:subflow,
+            dirty:wasDirty,
+            changed:wasChanged,
+            subflow: { status: true }
+        };
+        RED.history.push(historyEvent);
+        RED.view.select();
+        RED.nodes.dirty(true);
+        RED.view.redraw();
+        $("#workspace-subflow-status").prop("checked",!!subflow.status);
+        $("#workspace-subflow-status").parent().parent().toggleClass("active",!!subflow.status);
+    }
+
+    function removeSubflowStatus() {
+        var subflow = RED.nodes.subflow(RED.workspaces.active());
+        if (!subflow.status) {
+            return;
+        }
+        var subflowRemovedLinks = [];
+        RED.nodes.eachLink(function(l) {
+            if (l.target.type == "subflow" && l.target.z == subflow.id && l.target.direction == "status") {
+                subflowRemovedLinks.push(l);
+            }
+        });
+        subflowRemovedLinks.forEach(function(l) { RED.nodes.removeLink(l)});
+        delete subflow.status;
+
+        $("#workspace-subflow-status").prop("checked",!!subflow.status);
+        $("#workspace-subflow-status").parent().parent().toggleClass("active",!!subflow.status);
+
+        return { links: subflowRemovedLinks }
     }
 
     function refresh(markChange) {
@@ -21105,13 +26957,18 @@ RED.subflow = (function() {
             }
         }
     }
+
     function refreshToolbar(activeSubflow) {
         if (activeSubflow) {
             $("#workspace-subflow-input-add").toggleClass("active", activeSubflow.in.length !== 0);
-            $("#workspace-subflow-input-remove").toggleClass("active", activeSubflow.in.length === 0);
+            $("#workspace-subflow-input-remove").toggleClass("active",activeSubflow.in.length === 0);
 
-            $("#workspace-subflow-input .spinner-value").html(activeSubflow.in.length);
-            $("#workspace-subflow-output .spinner-value").html(activeSubflow.out.length);
+            $("#workspace-subflow-input .spinner-value").text(activeSubflow.in.length);
+            $("#workspace-subflow-output .spinner-value").text(activeSubflow.out.length);
+
+            $("#workspace-subflow-status").prop("checked",!!activeSubflow.status);
+            $("#workspace-subflow-status").parent().parent().toggleClass("active",!!activeSubflow.status);
+
         }
     }
 
@@ -21119,22 +26976,32 @@ RED.subflow = (function() {
         var toolbar = $("#workspace-toolbar");
         toolbar.empty();
 
+        // Edit properties
         $('<a class="button" id="workspace-subflow-edit" href="#" data-i18n="[append]subflow.editSubflowProperties"><i class="fa fa-pencil"></i> </a>').appendTo(toolbar);
+
+        // Inputs
         $('<span style="margin-left: 5px;" data-i18n="subflow.input"></span> <div id="workspace-subflow-input" style="display: inline-block;" class="button-group spinner-group">'+
             '<a id="workspace-subflow-input-remove" class="button" href="#"><i class="fa fa-minus"></i></a>'+
             '<div class="spinner-value">3</div>'+
             '<a id="workspace-subflow-input-add" class="button" href="#"><i class="fa fa-plus"></i></a>'+
             '</div>').appendTo(toolbar);
 
+        // Outputs
         $('<span style="margin-left: 5px;" data-i18n="subflow.output"></span> <div id="workspace-subflow-output" style="display: inline-block;" class="button-group spinner-group">'+
             '<a id="workspace-subflow-output-remove" class="button" href="#"><i class="fa fa-minus"></i></a>'+
             '<div class="spinner-value">3</div>'+
             '<a id="workspace-subflow-output-add" class="button" href="#"><i class="fa fa-plus"></i></a>'+
             '</div>').appendTo(toolbar);
 
+        // Status
+        $('<span class="button-group"><span class="button" style="padding:0"><label for="workspace-subflow-status"><input id="workspace-subflow-status" type="checkbox"> <span data-i18n="subflow.status"></span></label></span></span>').appendTo(toolbar);
+
         // $('<a class="button disabled" id="workspace-subflow-add-input" href="#" data-i18n="[append]subflow.input"><i class="fa fa-plus"></i> </a>').appendTo(toolbar);
         // $('<a class="button" id="workspace-subflow-add-output" href="#" data-i18n="[append]subflow.output"><i class="fa fa-plus"></i> </a>').appendTo(toolbar);
+
+        // Delete
         $('<a class="button" id="workspace-subflow-delete" href="#" data-i18n="[append]subflow.deleteSubflow"><i class="fa fa-trash"></i> </a>').appendTo(toolbar);
+
         toolbar.i18n();
 
 
@@ -21161,6 +27028,7 @@ RED.subflow = (function() {
                 RED.view.redraw(true);
             }
         });
+
         $("#workspace-subflow-output-add").click(function(event) {
             event.preventDefault();
             addSubflowOutput();
@@ -21170,6 +27038,7 @@ RED.subflow = (function() {
             event.preventDefault();
             addSubflowInput();
         });
+
         $("#workspace-subflow-input-remove").click(function(event) {
             event.preventDefault();
             var wasDirty = RED.nodes.dirty();
@@ -21194,6 +27063,33 @@ RED.subflow = (function() {
             }
         });
 
+        $("#workspace-subflow-status").change(function(evt) {
+            if (this.checked) {
+                addSubflowStatus();
+            } else {
+                var currentStatus = activeSubflow.status;
+                var wasChanged = activeSubflow.changed;
+                var result = removeSubflowStatus();
+                if (result) {
+                    activeSubflow.changed = true;
+                    var wasDirty = RED.nodes.dirty();
+                    RED.history.push({
+                        t:'delete',
+                        links:result.links,
+                        changed: wasChanged,
+                        dirty:wasDirty,
+                        subflow: {
+                            id: activeSubflow.id,
+                            status: currentStatus
+                        }
+                    });
+                    RED.view.select();
+                    RED.nodes.dirty(true);
+                    RED.view.redraw();
+                }
+            }
+        })
+
         $("#workspace-subflow-edit").click(function(event) {
             RED.editor.editSubflow(RED.nodes.subflow(RED.workspaces.active()));
             event.preventDefault();
@@ -21215,6 +27111,7 @@ RED.subflow = (function() {
         $("#chart").css({"margin-top": "40px"});
         $("#workspace-toolbar").show();
     }
+
     function hideWorkspaceToolbar() {
         $("#workspace-toolbar").hide().empty();
         $("#chart").css({"margin-top": "0"});
@@ -21257,11 +27154,10 @@ RED.subflow = (function() {
         return {
             nodes:removedNodes,
             links:removedLinks,
-            subflow: {
-                subflow: activeSubflow
-            }
+            subflows: [activeSubflow]
         }
     }
+
     function init() {
         RED.events.on("workspace:change",function(event) {
             var activeSubflow = RED.nodes.subflow(event.workspace);
@@ -21280,7 +27176,11 @@ RED.subflow = (function() {
         });*/
 
         RED.actions.add("core:create-subflow",createSubflow);
-        /*RED.actions.add("core:convert-to-subflow",convertToSubflow);*/
+        //RED.actions.add("core:convert-to-subflow",convertToSubflow);
+
+        $(_subflowEditTemplate).appendTo(document.body);
+        $(_subflowTemplateEditTemplate).appendTo(document.body);
+
     }
 
     function createSubflow() {
@@ -21315,6 +27215,13 @@ RED.subflow = (function() {
         RED.nodes.dirty(true);
     }
 
+    function snapToGrid(x) {
+        if (RED.settings.get("editor").view['view-snap-grid']) {
+            x = Math.round(x / RED.view.gridSize()) * RED.view.gridSize();
+        }
+        return x;
+    }
+
     /*function convertToSubflow() {
         var selection = RED.view.selection();
         if (!selection.nodes) {
@@ -21329,7 +27236,6 @@ RED.subflow = (function() {
         var candidateInputs = [];
         var candidateOutputs = [];
         var candidateInputNodes = {};
-
 
         var boundingBox = [selection.nodes[0].x,
             selection.nodes[0].y,
@@ -21346,8 +27252,14 @@ RED.subflow = (function() {
                 Math.max(boundingBox[3],n.y)
             ]
         }
+        var offsetX = snapToGrid(boundingBox[0] - 200);
+        var offsetY = snapToGrid(boundingBox[1] - 80);
 
-        var center = [(boundingBox[2]+boundingBox[0]) / 2,(boundingBox[3]+boundingBox[1]) / 2];
+
+        var center = [
+            snapToGrid((boundingBox[2]+boundingBox[0]) / 2),
+            snapToGrid((boundingBox[3]+boundingBox[1]) / 2)
+        ];
 
         RED.nodes.eachLink(function(link) {
             if (nodes[link.source.id] && nodes[link.target.id]) {
@@ -21404,8 +27316,8 @@ RED.subflow = (function() {
             in: Object.keys(candidateInputNodes).map(function(v,i) { var index = i; return {
                 type:"subflow",
                 direction:"in",
-                x:candidateInputNodes[v].x-(candidateInputNodes[v].w/2)-80,
-                y:candidateInputNodes[v].y,
+                x:snapToGrid(candidateInputNodes[v].x-(candidateInputNodes[v].w/2)-80 - offsetX),
+                y:snapToGrid(candidateInputNodes[v].y - offsetY),
                 z:subflowId,
                 i:index,
                 id:RED.nodes.id(),
@@ -21413,9 +27325,9 @@ RED.subflow = (function() {
             }}),
             out: candidateOutputs.map(function(v,i) { var index = i; return {
                 type:"subflow",
-                direction:"in",
-                x:v.source.x+(v.source.w/2)+80,
-                y:v.source.y,
+                direction:"out",
+                x:snapToGrid(v.source.x+(v.source.w/2)+80 - offsetX),
+                y:snapToGrid(v.source.y - offsetY),
                 z:subflowId,
                 i:index,
                 id:RED.nodes.id(),
@@ -21490,6 +27402,8 @@ RED.subflow = (function() {
                     return isLocalLink;
                 });
             }
+            n.x -= offsetX;
+            n.y -= offsetY;
             n.z = subflow.id;
         }
 
@@ -21498,7 +27412,9 @@ RED.subflow = (function() {
             nodes:[subflowInstance.id],
             links:new_links,
             subflow: {
-                subflow: subflow
+                subflow: subflow,
+                offsetX: offsetX,
+                offsetY: offsetY
             },
 
             activeWorkspace: RED.workspaces.active(),
@@ -21512,8 +27428,6 @@ RED.subflow = (function() {
         RED.view.redraw(true);
     }*/
 
-
-
     return {
         init: init,
         createSubflow: createSubflow,
@@ -21521,10 +27435,13 @@ RED.subflow = (function() {
         removeSubflow: removeSubflow,
         refresh: refresh,
         removeInput: removeSubflowInput,
-        removeOutput: removeSubflowOutput
+        removeOutput: removeSubflowOutput,
+        removeStatus: removeSubflowStatus
     }
 })();
-;/**
+;/** This file was modified by Sathya Laufer */
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21632,15 +27549,16 @@ RED.userSettings = (function() {
         {
             title: "menu.label.view.grid",
             options: [
-                {setting:"view-show-grid",label:"menu.label.view.showGrid",default:true,toggle:true,onchange:"core:toggle-show-grid"},
-                {setting:"view-snap-grid",label:"menu.label.view.snapGrid",default:true,toggle:true,onchange:"core:toggle-snap-grid"},
-                {setting:"view-grid-size",label:"menu.label.view.gridSize",type:"number",default:10, onchange:RED.view.gridSize}
+                {setting:"view-show-grid",oldSetting:"menu-menu-item-view-show-grid",label:"menu.label.view.showGrid",default:true,toggle:true,onchange:"core:toggle-show-grid"},
+                {setting:"view-snap-grid",oldSetting:"menu-menu-item-view-snap-grid",label:"menu.label.view.snapGrid",default:true,toggle:true,onchange:"core:toggle-snap-grid"},
+                {setting:"view-grid-size",label:"menu.label.view.gridSize",type:"number",default: 10, onchange:RED.view.gridSize}
             ]
         },
         {
             title: "menu.label.nodes",
             options: [
-                {setting:"view-node-status",oldSetting:"menu-menu-item-status",label:"menu.label.displayStatus",default: true, toggle:true,onchange:"core:toggle-status"}
+                {setting:"view-node-status",oldSetting:"menu-menu-item-status",label:"menu.label.displayStatus",default: true, toggle:true,onchange:"core:toggle-status"},
+                {setting:"view-node-show-label",label:"menu.label.showNodeLabelDefault",default: true, toggle:true}
             ]
         },
         {
@@ -21736,14 +27654,14 @@ RED.userSettings = (function() {
                     }
                 }
                 allSettings[opt.setting] = opt;
-                if (opt.onchange) {
-                    var value = currentEditorSettings.view[opt.setting];
-                    if ((value === null || value === undefined) && opt.hasOwnProperty('default')) {
-                        value = opt.default;
-                        currentEditorSettings.view[opt.setting] = value;
-                        editorSettingsChanged = true;
-                    }
+                var value = currentEditorSettings.view[opt.setting];
+                if ((value === null || value === undefined) && opt.hasOwnProperty('default')) {
+                    value = opt.default;
+                    currentEditorSettings.view[opt.setting] = value;
+                    editorSettingsChanged = true;
+                }
 
+                if (opt.onchange) {
                     var callback = opt.onchange;
                     if (typeof callback === 'string') {
                         callback = RED.actions.get(callback);
@@ -21789,19 +27707,19 @@ RED.projects = (function() {
     var activeProject;
     function reportUnexpectedError(error) {
         var notification;
-        if (error.error === 'git_missing_user') {
-            notification = RED.notify("<p>You Git client is not configured with a username/email.</p>",{
+        if (error.code === 'git_missing_user') {
+            notification = RED.notify("<p>"+RED._("projects.errors.no-username-email")+"</p>",{
                 fixed: true,
                 type:'error',
                 buttons: [
                     {
-                        text: "Cancel",
+                        text: RED._("common.label.cancel"),
                         click: function() {
                             notification.close();
                         }
                     },
                     {
-                        text: "Configure Git client",
+                        text: RED._("projects.config-git"),
                         click: function() {
                             RED.userSettings.show('gitconfig');
                             notification.close();
@@ -21811,13 +27729,13 @@ RED.projects = (function() {
             })
         } else {
             console.log(error);
-            notification = RED.notify("<p>An unexpected error occurred:</p><p>"+error.message+"</p><small>code: "+error.error+"</small>",{
+            notification = RED.notify("<p>"+RED._("projects.errors.unexpected")+":</p><p>"+error.message+"</p><small>"+RED._("projects.errors.code")+": "+error.code+"</small>",{
                 fixed: true,
                 modal: true,
                 type: 'error',
                 buttons: [
                     {
-                        text: "Close",
+                        text: RED._("common.label.close"),
                         click: function() {
                             notification.close();
                         }
@@ -21843,14 +27761,14 @@ RED.projects = (function() {
                     migrateProjectHeader.appendTo(container);
 
                     var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
-                    $('<p>').text("Hello! We have introduced 'projects' to Node-RED.").appendTo(body);
-                    $('<p>').text("This is a new way for you to manage your flow files and includes version control of your flows.").appendTo(body);
-                    $('<p>').text("To get started you can create your first project or clone an existing project from a git repository.").appendTo(body);
-                    $('<p>').text("If you are not sure, you can skip this for now. You will still be able to create your first project from the 'Projects' menu at any time.").appendTo(body);
+                    $('<p>').text(RED._("projects.welcome.hello")).appendTo(body);
+                    $('<p>').text(RED._("projects.welcome.desc0")).appendTo(body);
+                    $('<p>').text(RED._("projects.welcome.desc1")).appendTo(body);
+                    $('<p>').text(RED._("projects.welcome.desc2")).appendTo(body);
 
                     var row = $('<div style="text-align: center"></div>').appendTo(body);
-                    var createAsEmpty = $('<button data-type="empty" class="editor-button projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>Create Project</button>').appendTo(row);
-                    var createAsClone = $('<button data-type="clone" class="editor-button projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>Clone Repository</button>').appendTo(row);
+                    var createAsEmpty = $('<button data-type="empty" class="editor-button projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>'+RED._("projects.welcome.create")+'</button>').appendTo(row);
+                    var createAsClone = $('<button data-type="clone" class="editor-button projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>'+RED._("projects.welcome.clone")+'</button>').appendTo(row);
 
                     createAsEmpty.click(function(e) {
                         e.preventDefault();
@@ -21873,7 +27791,19 @@ RED.projects = (function() {
                 buttons: [
                     {
                         // id: "clipboard-dialog-cancel",
-                        text: "Not right now",
+                        text: RED._("projects.welcome.openExistingProject"),
+                        class: "secondary",
+                        click: function() {
+                            createProjectOptions = {
+                                action: "open"
+                            }
+                            show('git-config');
+                        }
+                    },
+
+                    {
+                        // id: "clipboard-dialog-cancel",
+                        text: RED._("projects.welcome.not-right-now"),
                         click: function() {
                             createProjectOptions = {};
                             $( this ).dialog( "close" );
@@ -21907,23 +27837,23 @@ RED.projects = (function() {
                         migrateProjectHeader.appendTo(container);
                         var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
 
-                        $('<p>').text("Setup your version control client").appendTo(body);
-                        $('<p>').text("Node-RED uses the open source tool Git for version control. It tracks changes to your project files and lets you push them to remote repositories.").appendTo(body);
-                        $('<p>').text("When you commit a set of changes, Git records who made the changes with a username and email address. The Username can be anything you want - it does not need to be your real name.").appendTo(body);
+                        $('<p>').text(RED._("projects.git-config.setup")).appendTo(body);
+                        $('<p>').text(RED._("projects.git-config.desc0")).appendTo(body);
+                        $('<p>').text(RED._("projects.git-config.desc1")).appendTo(body);
 
                         if (isGlobalConfig) {
-                            $('<p>').text("Your Git client is already configured with the details below.").appendTo(body);
+                            $('<p>').text(RED._("projects.git-config.desc2")).appendTo(body);
                         }
-                        $('<p>').text("You can change these settings later under the 'Git config' tab of the settings dialog.").appendTo(body);
+                        $('<p>').text(RED._("projects.git-config.desc3")).appendTo(body);
 
                         var row = $('<div class="form-row"></div>').appendTo(body);
-                        $('<label for="">Username</label>').appendTo(row);
+                        $('<label for="">'+RED._("projects.git-config.username")+'</label>').appendTo(row);
                         gitUsernameInput = $('<input type="text">').val((existingGitSettings&&existingGitSettings.name)||"").appendTo(row);
                         // $('<div style="position:relative;"></div>').text("This does not need to be your real name").appendTo(row);
                         gitUsernameInput.on("change keyup paste",validateForm);
 
                         row = $('<div class="form-row"></div>').appendTo(body);
-                        $('<label for="">Email</label>').appendTo(row);
+                        $('<label for="">'+RED._("projects.git-config.email")+'</label>').appendTo(row);
                         gitEmailInput = $('<input type="text">').val((existingGitSettings&&existingGitSettings.email)||"").appendTo(row);
                         gitEmailInput.on("change keyup paste",validateForm);
                         // $('<div style="position:relative;"></div>').text("Something something email").appendTo(row);
@@ -21936,14 +27866,14 @@ RED.projects = (function() {
                     buttons: [
                         {
                             // id: "clipboard-dialog-cancel",
-                            text: "Back",
+                            text: RED._("common.label.back"),
                             click: function() {
                                 show('welcome');
                             }
                         },
                         {
                             id: "projects-dialog-git-config",
-                            text: "Next", // TODO: nls
+                            text: RED._("common.label.next"),
                             class: "primary",
                             click: function() {
                                 var currentGitSettings = RED.settings.get('git') || {};
@@ -21955,6 +27885,8 @@ RED.projects = (function() {
                                     show('project-details');
                                 } else if (createProjectOptions.action === "clone") {
                                     show('clone-project');
+                                } else if (createProjectOptions.action === "open") {
+                                    show('create',{screen:'open'})
                                 }
                             }
                         }
@@ -21984,10 +27916,10 @@ RED.projects = (function() {
                         migrateProjectHeader.appendTo(container);
                         var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
 
-                        $('<p>').text("Create your project").appendTo(body);
-                        $('<p>').text("A project is maintained as a Git repository. It makes it much easier to share your flows with others and to collaborate on them.").appendTo(body);
-                        $('<p>').text("You can create multiple projects and quickly switch between them from the editor.").appendTo(body);
-                        $('<p>').text("To begin, your project needs a name and an optional description.").appendTo(body);
+                        $('<p>').text(RED._("projects.project-details.create")).appendTo(body);
+                        $('<p>').text(RED._("projects.project-details.desc0")).appendTo(body);
+                        $('<p>').text(RED._("projects.project-details.desc1")).appendTo(body);
+                        $('<p>').text(RED._("projects.project-details.desc2")).appendTo(body);
 
                         var validateForm = function() {
                             var projectName = projectNameInput.val();
@@ -22004,14 +27936,14 @@ RED.projects = (function() {
                                     projectNameValid = false;
                                     valid = false;
                                     if (projectList[projectName]) {
-                                        projectNameSublabel.text("Project already exists");
+                                        projectNameSublabel.text(RED._("projects.project-details.already-exists"));
                                     } else {
-                                        projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                        projectNameSublabel.text(RED._("projects.project-details.must-contain"));
                                     }
                                 } else {
                                     projectNameInput.removeClass("input-error");
                                     $('<i style="margin-top: 8px;" class="fa fa-check"></i>').appendTo(projectNameStatus);
-                                    projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                    projectNameSublabel.text(RED._("projects.project-details.must-contain"));
                                     projectNameValid = true;
                                 }
                                 projectNameLastChecked = projectName;
@@ -22021,7 +27953,7 @@ RED.projects = (function() {
                         }
 
                         var row = $('<div class="form-row"></div>').appendTo(body);
-                        $('<label for="projects-dialog-screen-create-project-name">Project name</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-name">'+RED._("projects.project-details.project-name")+'</label>').appendTo(row);
 
                         var subrow = $('<div style="position:relative;"></div>').appendTo(row);
                         projectNameInput = $('<input id="projects-dialog-screen-create-project-name" type="text"></input>').val(createProjectOptions.name||"").appendTo(subrow);
@@ -22051,13 +27983,13 @@ RED.projects = (function() {
                                 checkProjectName = null;
                             },300)
                         });
-                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
+                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>'+RED._("projects.project-details.must-contain")+'</small></label>').appendTo(row).find("small");
 
                         // Empty Project
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty"></div>').appendTo(body);
-                        $('<label for="projects-dialog-screen-create-project-desc">Description</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-desc">'+RED._("projects.project-details.desc")+'</label>').appendTo(row);
                         projectSummaryInput = $('<input id="projects-dialog-screen-create-project-desc" type="text">').val(createProjectOptions.summary||"").appendTo(row);
-                        $('<label class="projects-edit-form-sublabel"><small>Optional</small></label>').appendTo(row);
+                        $('<label class="projects-edit-form-sublabel"><small>'+RED._("projects.project-details.opt")+'</small></label>').appendTo(row);
 
                         setTimeout(function() {
                             projectNameInput.focus();
@@ -22068,7 +28000,7 @@ RED.projects = (function() {
                     buttons: function(options) {
                         return [
                             {
-                                text: "Back",
+                                text: RED._("common.label.back"),
                                 click: function() {
                                     show('git-config');
                                 }
@@ -22076,7 +28008,7 @@ RED.projects = (function() {
                             {
                                 id: "projects-dialog-create-name",
                                 disabled: true,
-                                text: "Next", // TODO: nls
+                                text: RED._("common.label.next"),
                                 class: "primary disabled",
                                 click: function() {
                                     createProjectOptions.name = projectNameInput.val();
@@ -22112,8 +28044,8 @@ RED.projects = (function() {
                         var container = $('<div class="projects-dialog-screen-start"></div>');
                         migrateProjectHeader.appendTo(container);
                         var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
-                        $('<p>').text("Clone a project").appendTo(body);
-                        $('<p>').text("If you already have a git repository containing a project, you can clone it to get started.").appendTo(body);
+                        $('<p>').text(RED._("projects.clone-project.clone")).appendTo(body);
+                        $('<p>').text(RED._("projects.clone-project.desc0")).appendTo(body);
 
                         var projectList = null;
                         var pendingFormValidation = false;
@@ -22144,14 +28076,14 @@ RED.projects = (function() {
                                     projectNameValid = false;
                                     valid = false;
                                     if (projectList[projectName]) {
-                                        projectNameSublabel.text("Project already exists");
+                                        projectNameSublabel.text(RED._("projects.clone-project.already-exists"));
                                     } else {
-                                        projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                        projectNameSublabel.text(RED._("projects.clone-project.must-contain"));
                                     }
                                 } else {
                                     projectNameInput.removeClass("input-error");
                                     $('<i style="margin-top: 8px;" class="fa fa-check"></i>').appendTo(projectNameStatus);
-                                    projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                    projectNameSublabel.text(RED._("projects.clone-project.must-contain"));
                                     projectNameValid = true;
                                 }
                                 projectNameLastChecked = projectName;
@@ -22163,7 +28095,7 @@ RED.projects = (function() {
                             // var validRepo = /^(?:file|git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+(?:\/?|\#[\d\w\.\-_]+?)$/.test(repo);
                             var validRepo = repo.length > 0 && !/\s/.test(repo);
                             if (/^https?:\/\/[^/]+@/i.test(repo)) {
-                                $("#projects-dialog-screen-create-project-repo-label small").text("Do not include the username/password in the url");
+                                $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.clone-project.no-info-in-url"));
                                 validRepo = false;
                             }
                             if (!validRepo) {
@@ -22194,7 +28126,7 @@ RED.projects = (function() {
                         var row;
 
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty projects-dialog-screen-create-row-clone"></div>').appendTo(body);
-                        $('<label for="projects-dialog-screen-create-project-name">Project name</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-name">'+RED._("projects.clone-project.project-name")+'</label>').appendTo(row);
 
                         var subrow = $('<div style="position:relative;"></div>').appendTo(row);
                         projectNameInput = $('<input id="projects-dialog-screen-create-project-name" type="text"></input>').appendTo(subrow);
@@ -22224,19 +28156,19 @@ RED.projects = (function() {
                                 checkProjectName = null;
                             },300)
                         });
-                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
+                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>'+RED._("projects.clone-project.must-contain")+'</small></label>').appendTo(row).find("small");
 
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(body);
-                        $('<label for="projects-dialog-screen-create-project-repo">Git repository URL</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-repo">'+RED._("projects.clone-project.git-url")+'</label>').appendTo(row);
                         projectRepoInput = $('<input id="projects-dialog-screen-create-project-repo" type="text" placeholder="https://git.example.com/path/my-project.git"></input>').appendTo(row);
-                        $('<label id="projects-dialog-screen-create-project-repo-label" class="projects-edit-form-sublabel"><small>https://, ssh:// or file://</small></label>').appendTo(row);
+                        $('<label id="projects-dialog-screen-create-project-repo-label" class="projects-edit-form-sublabel"><small>'+RED._("projects.clone-project.protocols")+'</small></label>').appendTo(row);
                         var projectRepoChanged = false;
                         var lastProjectRepo = "";
                         projectRepoInput.on("change keyup paste",function() {
                             projectRepoChanged = true;
                             var repo = $(this).val();
                             if (lastProjectRepo !== repo) {
-                                $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+                                $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.clone-project.protocols"));
                             }
                             lastProjectRepo = repo;
 
@@ -22254,24 +28186,24 @@ RED.projects = (function() {
 
                         var cloneAuthRows = $('<div class="projects-dialog-screen-create-row"></div>').appendTo(body);
                         row = $('<div class="form-row projects-dialog-screen-create-row-auth-error"></div>').hide().appendTo(cloneAuthRows);
-                        $('<div><i class="fa fa-warning"></i> Authentication failed</div>').appendTo(row);
+                        $('<div><i class="fa fa-warning"></i> '+RED._("projects.clone-project.auth-failed")+'</div>').appendTo(row);
 
                         // Repo credentials - username/password ----------------
                         row = $('<div class="hide form-row projects-dialog-screen-create-row-creds"></div>').hide().appendTo(cloneAuthRows);
 
                         var subrow = $('<div style="width: calc(50% - 10px); display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-user">Username</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-user">'+RED._("projects.clone-project.username")+'</label>').appendTo(subrow);
                         projectRepoUserInput = $('<input id="projects-dialog-screen-create-project-repo-user" type="text"></input>').appendTo(subrow);
 
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-pass">Password</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-pass">'+RED._("projects.clone-project.passwd")+'</label>').appendTo(subrow);
                         projectRepoPasswordInput = $('<input id="projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
                         // -----------------------------------------------------
 
                         // Repo credentials - key/passphrase -------------------
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-sshkey"></div>').hide().appendTo(cloneAuthRows);
                         subrow = $('<div style="width: calc(50% - 10px); display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">SSH Key</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">'+RED._("projects.clone-project.ssh-key")+'</label>').appendTo(subrow);
                         projectRepoSSHKeySelect = $("<select>",{style:"width: 100%"}).appendTo(subrow);
 
                         $.getJSON("settings/user/keys", function(data) {
@@ -22291,16 +28223,16 @@ RED.projects = (function() {
                             }
                         });
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">Passphrase</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">'+RED._("projects.clone-project.passphrase")+'</label>').appendTo(subrow);
                         projectRepoPassphrase = $('<input id="projects-dialog-screen-create-project-repo-passphrase" type="password"></input>').appendTo(subrow);
 
                         subrow = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-sshkey"></div>').appendTo(cloneAuthRows);
                         var sshwarningRow = $('<div class="projects-dialog-screen-create-row-auth-error-no-keys"></div>').hide().appendTo(subrow);
-                        $('<div class="form-row"><i class="fa fa-warning"></i> Before you can clone a repository over ssh you must add an SSH key to access it.</div>').appendTo(sshwarningRow);
+                        $('<div class="form-row"><i class="fa fa-warning"></i> '+RED._("projects.clone-project.ssh-key-desc")+'</div>').appendTo(sshwarningRow);
                         subrow = $('<div style="text-align: center">').appendTo(sshwarningRow);
-                        $('<button class="editor-button">Add an ssh key</button>').appendTo(subrow).click(function(e) {
+                        $('<button class="editor-button">'+RED._("projects.clone-project.ssh-key-add")+'</button>').appendTo(subrow).click(function(e) {
                             e.preventDefault();
-                            $('#projects-dialog-cancel').click();
+                            dialog.dialog( "close" );
                             RED.userSettings.show('gitconfig');
                             setTimeout(function() {
                                 $("#user-settings-gitconfig-add-key").click();
@@ -22311,7 +28243,7 @@ RED.projects = (function() {
 
                         // Secret - clone
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(body);
-                        $('<label>Credentials encryption key</label>').appendTo(row);
+                        $('<label>'+RED._("projects.clone-project.credential-key")+'</label>').appendTo(row);
                         projectSecretInput = $('<input type="password"></input>').appendTo(row);
 
 
@@ -22321,7 +28253,7 @@ RED.projects = (function() {
                     buttons: function(options) {
                         return [
                             {
-                                text: "Back",
+                                text: RED._("common.label.back"),
                                 click: function() {
                                     show('git-config');
                                 }
@@ -22329,7 +28261,7 @@ RED.projects = (function() {
                             {
                                 id: "projects-dialog-clone-project",
                                 disabled: true,
-                                text: "Clone project", // TODO: nls
+                                text: RED._("common.label.clone"),
                                 class: "primary disabled",
                                 click: function() {
                                     var projectType = $(".projects-dialog-screen-create-type.selected").data('type');
@@ -22353,7 +28285,7 @@ RED.projects = (function() {
                                             };
                                         }
                                         else {
-                                            console.log("Error! Can't get selected SSH key path.");
+                                            console.log(RED._("projects.clone-project.cant-get-ssh-key"));
                                             return;
                                         }
                                     }
@@ -22370,7 +28302,7 @@ RED.projects = (function() {
                                     }
 
                                     $(".projects-dialog-screen-create-row-auth-error").hide();
-                                    $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.clone-project.protocols"));
 
                                     projectRepoUserInput.removeClass("input-error");
                                     projectRepoPasswordInput.removeClass("input-error");
@@ -22390,22 +28322,22 @@ RED.projects = (function() {
                                             },
                                             400: {
                                                 'project_exists': function(error) {
-                                                    console.log("already exists");
+                                                    console.log(RED._("projects.clone-project.already-exists2"));
                                                 },
                                                 'git_error': function(error) {
-                                                    console.log("git error",error);
+                                                    console.log(RED._("projects.clone-project.git-error"),error);
                                                 },
                                                 'git_connection_failed': function(error) {
                                                     projectRepoInput.addClass("input-error");
-                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Connection failed");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.clone-project.connection-failed"));
                                                 },
                                                 'git_not_a_repository': function(error) {
                                                     projectRepoInput.addClass("input-error");
-                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Not a git repository");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.clone-project.not-git-repo"));
                                                 },
                                                 'git_repository_not_found': function(error) {
                                                     projectRepoInput.addClass("input-error");
-                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Repository not found");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.clone-project.repo-not-found"));
                                                 },
                                                 'git_auth_failed': function(error) {
                                                     $(".projects-dialog-screen-create-row-auth-error").show();
@@ -22417,6 +28349,10 @@ RED.projects = (function() {
                                                     projectRepoPassphrase.addClass("input-error");
                                                 },
                                                 'missing_flow_file': function(error) {
+                                                    // This is handled via a runtime notification.
+                                                    dialog.dialog("close");
+                                                },
+                                                'missing_package_file': function(error) {
                                                     // This is handled via a runtime notification.
                                                     dialog.dialog("close");
                                                 },
@@ -22457,11 +28393,11 @@ RED.projects = (function() {
                         migrateProjectHeader.appendTo(container);
                         var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
 
-                        $('<p>').text("Create your project files").appendTo(body);
-                        $('<p>').text("A project contains your flow files, a README file and a package.json file.").appendTo(body);
-                        $('<p>').text("It can contain any other files you want to maintain in the Git repository.").appendTo(body);
+                        $('<p>').text(RED._("projects.default-files.create")).appendTo(body);
+                        $('<p>').text(RED._("projects.default-files.desc0")).appendTo(body);
+                        $('<p>').text(RED._("projects.default-files.desc1")).appendTo(body);
                         if (!options.existingProject && RED.settings.files) {
-                            $('<p>').text("Your existing flow and credential files will be copied into the project.").appendTo(body);
+                            $('<p>').text(RED._("projects.default-files.desc2")).appendTo(body);
                         }
 
                         var validateForm = function() {
@@ -22492,7 +28428,7 @@ RED.projects = (function() {
                             $("#projects-dialog-create-default-files").prop('disabled',!valid).toggleClass('disabled ui-button-disabled ui-state-disabled',!valid);
                         }
                         var row = $('<div class="form-row"></div>').appendTo(body);
-                        $('<label for="projects-dialog-screen-create-project-file">Flow file</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-file">'+RED._("projects.default-files.flow-file")+'</label>').appendTo(row);
                         var subrow = $('<div style="position:relative;"></div>').appendTo(row);
                         var defaultFlowFile = (createProjectOptions.files &&createProjectOptions.files.flow) || (RED.settings.files && RED.settings.files.flow)||"flow.json";
                         projectFlowFileInput = $('<input id="projects-dialog-screen-create-project-file" type="text">').val(defaultFlowFile)
@@ -22503,7 +28439,7 @@ RED.projects = (function() {
 
                         var defaultCredentialsFile = (createProjectOptions.files &&createProjectOptions.files.credentials) || (RED.settings.files && RED.settings.files.credentials)||"flow_cred.json";
                         row = $('<div class="form-row"></div>').appendTo(body);
-                        $('<label for="projects-dialog-screen-create-project-credfile">Credentials file</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-credfile">'+RED._("projects.default-files.credentials-file")+'</label>').appendTo(row);
                         subrow = $('<div style="position:relative;"></div>').appendTo(row);
                         projectCredentialFileInput = $('<div style="width: 100%" class="uneditable-input" id="projects-dialog-screen-create-project-credentials">').text(defaultCredentialsFile)
                             .appendTo(subrow);
@@ -22520,7 +28456,7 @@ RED.projects = (function() {
                         return [
                             {
                                 // id: "clipboard-dialog-cancel",
-                                text: options.existingProject?"Cancel":"Back",
+                                text: RED._(options.existingProject ? "common.label.cancel": "common.label.back"),
                                 click: function() {
                                     if (options.existingProject) {
                                         $(this).dialog('close');
@@ -22531,7 +28467,7 @@ RED.projects = (function() {
                             },
                             {
                                 id: "projects-dialog-create-default-files",
-                                text: "Next", // TODO: nls
+                                text: RED._("common.label.next"),
                                 class: "primary",
                                 click: function() {
                                     createProjectOptions.files = {
@@ -22557,22 +28493,22 @@ RED.projects = (function() {
                         migrateProjectHeader.appendTo(container);
                         var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
 
-                        $('<p>').text("Setup encryption of your credentials file").appendTo(body);
+                        $('<p>').text(RED._("projects.encryption-config.setup")).appendTo(body);
                         if (options.existingProject) {
-                            $('<p>').text("Your flow credentials file can be encrypted to keep its contents secure.").appendTo(body);
-                            $('<p>').text("If you want to store these credentials in a public Git repository, you must encrypt them by providing a secret key phrase.").appendTo(body);
+                            $('<p>').text(RED._("projects.encryption-config.desc0")).appendTo(body);
+                            $('<p>').text(RED._("projects.encryption-config.desc1")).appendTo(body);
                         } else {
                             if (RED.settings.flowEncryptionType === 'disabled') {
-                                $('<p>').text("Your flow credentials file is not currently encrypted.").appendTo(body);
-                                $('<p>').text("That means its contents, such as passwords and access tokens, can be read by anyone with access to the file.").appendTo(body);
-                                $('<p>').text("If you want to store these credentials in a public Git repository, you must encrypt them by providing a secret key phrase.").appendTo(body);
+                                $('<p>').text(RED._("projects.encryption-config.desc2")).appendTo(body);
+                                $('<p>').text(RED._("projects.encryption-config.desc3")).appendTo(body);
+                                $('<p>').text(RED._("projects.encryption-config.desc4")).appendTo(body);
                             } else {
                                 if (RED.settings.flowEncryptionType === 'user') {
-                                    $('<p>').text("Your flow credentials file is currently encrypted using the credentialSecret property from your settings file as the key.").appendTo(body);
+                                    $('<p>').text(RED._("projects.encryption-config.desc5")).appendTo(body);
                                 } else if (RED.settings.flowEncryptionType === 'system') {
-                                    $('<p>').text("Your flow credentials file is currently encrypted using a system-generated key. You should provide a new secret key for this project.").appendTo(body);
+                                    $('<p>').text(RED._("projects.encryption-config.desc6")).appendTo(body);
                                 }
-                                $('<p>').text("The key will be stored separately from your project files. You will need to provide the key to use this project in another instance of Node-RED.").appendTo(body);
+                                $('<p>').text(RED._("projects.encryption-config.desc7")).appendTo(body);
                             }
                         }
 
@@ -22600,16 +28536,16 @@ RED.projects = (function() {
 
 
                         var row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty"></div>').appendTo(body);
-                        $('<label>Credentials</label>').appendTo(row);
+                        $('<label>'+RED._("projects.encryption-config.credentials")+'</label>').appendTo(row);
 
                         var credentialsBox = $('<div style="width: 550px">').appendTo(row);
                         var credentialsRightBox = $('<div style="min-height:150px; box-sizing: border-box; float: right; vertical-align: top; width: 331px; margin-left: -1px; padding: 15px; margin-top: -15px; border: 1px solid #ccc; border-radius: 3px;  display: inline-block">').appendTo(credentialsBox);
                         var credentialsLeftBox = $('<div style="vertical-align: top; width: 220px;  display: inline-block">').appendTo(credentialsBox);
 
                         var credentialsEnabledBox = $('<div class="form-row" style="padding:  7px 8px 3px 8px;border: 1px solid #ccc;border-radius: 4px;border-top-right-radius: 0;border-bottom-right-radius: 0;border-right-color: white;"></div>').appendTo(credentialsLeftBox);
-                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="enabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-lock"></i> <span style="vertical-align: middle;">Enable encryption</span></label>').appendTo(credentialsEnabledBox);
+                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="enabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-lock"></i> <span style="vertical-align: middle;">'+RED._("projects.encryption-config.enable")+'</span></label>').appendTo(credentialsEnabledBox);
                         var credentialsDisabledBox = $('<div class="form-row" style="padding:  7px 8px 3px 8px;border: 1px solid white;border-radius: 4px;border-top-right-radius: 0;border-bottom-right-radius: 0;border-right-color: #ccc; "></div>').appendTo(credentialsLeftBox);
-                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="disabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-unlock"></i> <span style="vertical-align: middle;">Disable encryption</span></label>').appendTo(credentialsDisabledBox);
+                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="disabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-unlock"></i> <span style="vertical-align: middle;">'+RED._("projects.encryption-config.disable")+'</span></label>').appendTo(credentialsDisabledBox);
 
                         credentialsLeftBox.find("input[name=projects-encryption-type]").click(function(e) {
                             var val = $(this).val();
@@ -22644,15 +28580,15 @@ RED.projects = (function() {
                         })
 
                         row = $('<div class="form-row projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
-                        $('<label class="projects-edit-form-inline-label '+((RED.settings.flowEncryptionType !== 'user')?'disabled':'')+'" style="margin-left: 5px"><input '+((RED.settings.flowEncryptionType !== 'user')?'disabled':'')+' type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" value="default" name="projects-encryption-key"> <span style="vertical-align: middle;">Copy over existing key</span></label>').appendTo(row);
+                        $('<label class="projects-edit-form-inline-label '+((RED.settings.flowEncryptionType !== 'user')?'disabled':'')+'" style="margin-left: 5px"><input '+((RED.settings.flowEncryptionType !== 'user')?RED._("projects.encryption-config.disabled"):'')+' type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" value="default" name="projects-encryption-key"> <span style="vertical-align: middle;">'+RED._("projects.encryption-config.copy")+'</span></label>').appendTo(row);
                         row = $('<div class="form-row projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
-                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" value="custom" name="projects-encryption-key"> <span style="vertical-align: middle;">Use custom key</span></label>').appendTo(row);
+                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" value="custom" name="projects-encryption-key"> <span style="vertical-align: middle;">'+RED._("projects.encryption-config.use-custom")+'</span></label>').appendTo(row);
                         row = $('<div class="projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
                         emptyProjectCredentialInput = $('<input disabled type="password" style="margin-left: 25px; width: calc(100% - 30px);"></input>').appendTo(row);
                         emptyProjectCredentialInput.on("change keyup paste", validateForm);
 
                         row = $('<div class="form-row projects-encryption-disabled-row"></div>').hide().appendTo(credentialsRightBox);
-                        $('<div class="" style="padding: 5px 20px;"><i class="fa fa-warning"></i> The credentials file will not be encrypted and its contents easily read</div>').appendTo(row);
+                        $('<div class="" style="padding: 5px 20px;"><i class="fa fa-warning"></i> '+RED._("projects.encryption-config.desc8")+'</div>').appendTo(row);
 
                         credentialsRightBox.find("input[name=projects-encryption-key]").click(function() {
                             var val = $(this).val();
@@ -22679,14 +28615,14 @@ RED.projects = (function() {
                             return [
                             {
                                 // id: "clipboard-dialog-cancel",
-                                text: "Back",
+                                text: RED._("common.label.back"),
                                 click: function() {
                                     show('default-files',options);
                                 }
                             },
                             {
                                 id: "projects-dialog-create-encryption",
-                                text: options.existingProject?"Create project files":"Create project", // TODO: nls
+                                text: RED._(options.existingProject?"projects.encryption-config.create-project-files":"projects.encryption-config.create-project"),
                                 class: "primary disabled",
                                 disabled: true,
                                 click: function() {
@@ -22734,10 +28670,10 @@ RED.projects = (function() {
                                             },
                                             400: {
                                                 'project_exists': function(error) {
-                                                    console.log("already exists");
+                                                    console.log(RED._("projects.encryption-config.already-exists"));
                                                 },
                                                 'git_error': function(error) {
-                                                    console.log("git error",error);
+                                                    console.log(RED._("projects.encryption-config.git-error"),error);
                                                 },
                                                 'git_connection_failed': function(error) {
                                                     projectRepoInput.addClass("input-error");
@@ -22746,7 +28682,7 @@ RED.projects = (function() {
                                                     projectRepoUserInput.addClass("input-error");
                                                     projectRepoPasswordInput.addClass("input-error");
                                                     // getRepoAuthDetails(req);
-                                                    console.log("git auth error",error);
+                                                    console.log(RED._("projects.encryption-config.git-auth-error"),error);
                                                 },
                                                 '*': function(error) {
                                                     reportUnexpectedError(error);
@@ -22772,19 +28708,16 @@ RED.projects = (function() {
                     migrateProjectHeader.appendTo(container);
                     var body = $('<div class="projects-dialog-screen-start-body"></div>').appendTo(container);
 
-                    $('<p>').text("You have successfully created your first project!").appendTo(body);
-                    $('<p>').text("You can now continue to use Node-RED just as you always have.").appendTo(body);
-                    $('<p>').text("The 'info' tab in the sidebar shows you what your current active project is. "+
-                    "The button next to the name can be used to access the project settings view.").appendTo(body);
-                    $('<p>').text("The 'history' tab in the sidebar can be used to view files that have changed "+
-                    "in your project and to commit them. It shows you a complete history of your commits and "+
-                    "allows you to push your changes to a remote repository.").appendTo(body);
+                    $('<p>').text(RED._("projects.create-success.success")).appendTo(body);
+                    $('<p>').text(RED._("projects.create-success.desc0")).appendTo(body);
+                    $('<p>').text(RED._("projects.create-success.desc1")).appendTo(body);
+                    $('<p>').text(RED._("projects.create-success.desc2")).appendTo(body);
 
                     return container;
                 },
                 buttons: [
                     {
-                        text: "Done",
+                        text: RED._("common.label.done"),
                         click: function() {
                             $( this ).dialog( "close" );
                         }
@@ -22811,7 +28744,7 @@ RED.projects = (function() {
                 var selectedProject;
 
                 return {
-                    title: "Projects", // TODO: NLS
+                    title: RED._("projects.create.projects"),
                     content: function(options) {
                         var projectList = null;
                         selectedProject = null;
@@ -22845,14 +28778,14 @@ RED.projects = (function() {
                                     projectNameValid = false;
                                     valid = false;
                                     if (projectList[projectName]) {
-                                        projectNameSublabel.text("Project already exists");
+                                        projectNameSublabel.text(RED._("projects.create.already-exists"));
                                     } else {
-                                        projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                        projectNameSublabel.text(RED._("projects.create.must-contain"));
                                     }
                                 } else {
                                     projectNameInput.removeClass("input-error");
                                     $('<i style="margin-top: 8px;" class="fa fa-check"></i>').appendTo(projectNameStatus);
-                                    projectNameSublabel.text("Must contain only A-Z 0-9 _ -");
+                                    projectNameSublabel.text(RED._("projects.create.must-contain"));
                                     projectNameValid = true;
                                 }
                                 projectNameLastChecked = projectName;
@@ -22870,7 +28803,7 @@ RED.projects = (function() {
                                 // var validRepo = /^(?:file|git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+(?:\/?|\#[\d\w\.\-_]+?)$/.test(repo);
                                 var validRepo = repo.length > 0 && !/\s/.test(repo);
                                 if (/^https?:\/\/[^/]+@/i.test(repo)) {
-                                    $("#projects-dialog-screen-create-project-repo-label small").text("Do not include the username/password in the url");
+                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.create.no-info-in-url"));
                                     validRepo = false;
                                 }
                                 if (!validRepo) {
@@ -22927,10 +28860,10 @@ RED.projects = (function() {
 
                         row = $('<div class="form-row button-group"></div>').appendTo(container);
 
-                        var openProject = $('<button data-type="open" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-folder-open"></i><br/>Open Project</button>').appendTo(row);
-                        var createAsEmpty = $('<button data-type="empty" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>Create Project</button>').appendTo(row);
+                        var openProject = $('<button data-type="open" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-folder-open"></i><br/>'+RED._("projects.create.open")+'</button>').appendTo(row);
+                        var createAsEmpty = $('<button data-type="empty" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>'+RED._("projects.create.create")+'</button>').appendTo(row);
                         // var createAsCopy = $('<button data-type="copy" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i class="fa fa-long-arrow-right fa-2x"></i><i class="fa fa-archive fa-2x"></i><br/>Copy existing</button>').appendTo(row);
-                        var createAsClone = $('<button data-type="clone" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>Clone Repository</button>').appendTo(row);
+                        var createAsClone = $('<button data-type="clone" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>'+RED._("projects.create.clone")+'</button>').appendTo(row);
                         // var createAsClone = $('<button data-type="clone" class="editor-button projects-dialog-screen-create-type toggle"><i class="fa fa-git fa-2x"></i><i class="fa fa-arrows-h fa-2x"></i><i class="fa fa-archive fa-2x"></i><br/>Clone Repository</button>').appendTo(row);
                         row.find(".projects-dialog-screen-create-type").click(function(evt) {
                             evt.preventDefault();
@@ -22941,9 +28874,9 @@ RED.projects = (function() {
                             validateForm();
                             projectNameInput.focus();
                             switch ($(this).data('type')) {
-                                case "open": $("#projects-dialog-create").text("Open project"); break;
-                                case "empty": $("#projects-dialog-create").text("Create project"); break;
-                                case "clone": $("#projects-dialog-create").text("Clone project"); break;
+                                case "open": $("#projects-dialog-create").text(RED._("projects.create.open")); break;
+                                case "empty": $("#projects-dialog-create").text(RED._("projects.create.create")); break;
+                                case "clone": $("#projects-dialog-create").text(RED._("projects.create.clone")); break;
                             }
                         })
 
@@ -22969,7 +28902,7 @@ RED.projects = (function() {
                         }).appendTo(row);
 
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty projects-dialog-screen-create-row-clone"></div>').appendTo(container);
-                        $('<label for="projects-dialog-screen-create-project-name">Project name</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-name">'+RED._("projects.create.project-name")+'</label>').appendTo(row);
 
                         var subrow = $('<div style="position:relative;"></div>').appendTo(row);
                         projectNameInput = $('<input id="projects-dialog-screen-create-project-name" type="text"></input>').appendTo(subrow);
@@ -22999,16 +28932,16 @@ RED.projects = (function() {
                                 checkProjectName = null;
                             },300)
                         });
-                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
+                        projectNameSublabel = $('<label class="projects-edit-form-sublabel"><small>'+RED._("projects.create.must-contain")+'</small></label>').appendTo(row).find("small");
 
                         // Empty Project
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty"></div>').appendTo(container);
-                        $('<label for="projects-dialog-screen-create-project-desc">Description</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-desc">'+RED._("projects.create.desc")+'</label>').appendTo(row);
                         projectSummaryInput = $('<input id="projects-dialog-screen-create-project-desc" type="text">').appendTo(row);
-                        $('<label class="projects-edit-form-sublabel"><small>Optional</small></label>').appendTo(row);
+                        $('<label class="projects-edit-form-sublabel"><small>'+RED._("projects.create.opt")+'</small></label>').appendTo(row);
 
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty"></div>').appendTo(container);
-                        $('<label for="projects-dialog-screen-create-project-file">Flow file</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-file">'+RED._("projects.create.flow-file")+'</label>').appendTo(row);
                         subrow = $('<div style="position:relative;"></div>').appendTo(row);
                         projectFlowFileInput = $('<input id="projects-dialog-screen-create-project-file" type="text">').val("flow.json")
                             .on("change keyup paste",validateForm)
@@ -23017,16 +28950,16 @@ RED.projects = (function() {
                         $('<label class="projects-edit-form-sublabel"><small>*.json</small></label>').appendTo(row);
 
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-empty"></div>').appendTo(container);
-                        $('<label>Credentials</label>').appendTo(row);
+                        $('<label>'+RED._("projects.create.credentials")+'</label>').appendTo(row);
 
                         var credentialsBox = $('<div style="width: 550px">').appendTo(row);
                         var credentialsRightBox = $('<div style="min-height:150px; box-sizing: border-box; float: right; vertical-align: top; width: 331px; margin-left: -1px; padding: 15px; margin-top: -15px; border: 1px solid #ccc; border-radius: 3px;  display: inline-block">').appendTo(credentialsBox);
                         var credentialsLeftBox = $('<div style="vertical-align: top; width: 220px;  display: inline-block">').appendTo(credentialsBox);
 
                         var credentialsEnabledBox = $('<div class="form-row" style="padding:  7px 8px 3px 8px;border: 1px solid #ccc;border-radius: 4px;border-top-right-radius: 0;border-bottom-right-radius: 0;border-right-color: white;"></div>').appendTo(credentialsLeftBox);
-                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" checked style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="enabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-lock"></i> <span style="vertical-align: middle;">Enable encryption</span></label>').appendTo(credentialsEnabledBox);
+                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" checked style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="enabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-lock"></i> <span style="vertical-align: middle;">'+RED._("projects.create.enable-encryption")+'</span></label>').appendTo(credentialsEnabledBox);
                         var credentialsDisabledBox = $('<div class="form-row" style="padding:  7px 8px 3px 8px;border: 1px solid white;border-radius: 4px;border-top-right-radius: 0;border-bottom-right-radius: 0;border-right-color: #ccc; "></div>').appendTo(credentialsLeftBox);
-                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="disabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-unlock"></i> <span style="vertical-align: middle;">Disable encryption</span></label>').appendTo(credentialsDisabledBox);
+                        $('<label class="projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" name="projects-encryption-type" value="disabled"> <i style="font-size: 1.4em; margin-right: 8px; vertical-align: middle; color: #888;" class="fa fa-unlock"></i> <span style="vertical-align: middle;">'+RED._("projects.create.disable-encryption")+'</span></label>').appendTo(credentialsDisabledBox);
 
                         credentialsLeftBox.find("input[name=projects-encryption-type]").click(function(e) {
                             var val = $(this).val();
@@ -23060,15 +28993,15 @@ RED.projects = (function() {
                         })
 
                         row = $('<div class="form-row projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
-                        $('<label class="projects-edit-form-inline-label">Encryption key</label>').appendTo(row);
+                        $('<label class="projects-edit-form-inline-label">'+RED._("projects.create.encryption-key")+'</label>').appendTo(row);
                         // row = $('<div class="projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
                         emptyProjectCredentialInput = $('<input type="password"></input>').appendTo(row);
                         emptyProjectCredentialInput.on("change keyup paste", validateForm);
-                        $('<label class="projects-edit-form-sublabel"><small>A phrase to secure your credentials with</small></label>').appendTo(row);
+                        $('<label class="projects-edit-form-sublabel"><small>'+RED._("projects.create.desc0")+'</small></label>').appendTo(row);
 
 
                         row = $('<div class="form-row projects-encryption-disabled-row"></div>').hide().appendTo(credentialsRightBox);
-                        $('<div class="" style="padding: 5px 20px;"><i class="fa fa-warning"></i> The credentials file will not be encrypted and its contents easily read</div>').appendTo(row);
+                        $('<div class="" style="padding: 5px 20px;"><i class="fa fa-warning"></i> '+RED._("projects.create.desc1")+'</div>').appendTo(row);
 
                         credentialsRightBox.find("input[name=projects-encryption-key]").click(function() {
                             var val = $(this).val();
@@ -23081,9 +29014,9 @@ RED.projects = (function() {
 
                         // Clone Project
                         row = $('<div class="hide form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(container);
-                        $('<label for="projects-dialog-screen-create-project-repo">Git repository URL</label>').appendTo(row);
+                        $('<label for="projects-dialog-screen-create-project-repo">'+RED._("projects.create.git-url")+'</label>').appendTo(row);
                         projectRepoInput = $('<input id="projects-dialog-screen-create-project-repo" type="text" placeholder="https://git.example.com/path/my-project.git"></input>').appendTo(row);
-                        $('<label id="projects-dialog-screen-create-project-repo-label" class="projects-edit-form-sublabel"><small>https://, ssh:// or file://</small></label>').appendTo(row);
+                        $('<label id="projects-dialog-screen-create-project-repo-label" class="projects-edit-form-sublabel"><small>'+RED._("projects.create.protocols")+'</small></label>').appendTo(row);
 
                         var projectRepoChanged = false;
                         var lastProjectRepo = "";
@@ -23091,7 +29024,7 @@ RED.projects = (function() {
                             projectRepoChanged = true;
                             var repo = $(this).val();
                             if (lastProjectRepo !== repo) {
-                                $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+                                $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.create.protocols"));
                             }
                             lastProjectRepo = repo;
 
@@ -23110,24 +29043,24 @@ RED.projects = (function() {
 
                         var cloneAuthRows = $('<div class="hide projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').hide().appendTo(container);
                         row = $('<div class="form-row projects-dialog-screen-create-row-auth-error"></div>').hide().appendTo(cloneAuthRows);
-                        $('<div><i class="fa fa-warning"></i> Authentication failed</div>').appendTo(row);
+                        $('<div><i class="fa fa-warning"></i> '+RED._("projects.create.auth-failed")+'</div>').appendTo(row);
 
                         // Repo credentials - username/password ----------------
                         row = $('<div class="hide form-row projects-dialog-screen-create-row-creds"></div>').hide().appendTo(cloneAuthRows);
 
                         var subrow = $('<div style="width: calc(50% - 10px); display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-user">Username</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-user">'+RED._("projects.create.username")+'</label>').appendTo(subrow);
                         projectRepoUserInput = $('<input id="projects-dialog-screen-create-project-repo-user" type="text"></input>').appendTo(subrow);
 
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-pass">Password</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-pass">'+RED._("projects.create.password")+'</label>').appendTo(subrow);
                         projectRepoPasswordInput = $('<input id="projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
                         // -----------------------------------------------------
 
                         // Repo credentials - key/passphrase -------------------
                         row = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-sshkey"></div>').hide().appendTo(cloneAuthRows);
                         subrow = $('<div style="width: calc(50% - 10px); display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">SSH Key</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">'+RED._("projects.create.ssh-key")+'</label>').appendTo(subrow);
                         projectRepoSSHKeySelect = $("<select>",{style:"width: 100%"}).appendTo(subrow);
 
                         $.getJSON("settings/user/keys", function(data) {
@@ -23147,14 +29080,14 @@ RED.projects = (function() {
                             }
                         });
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
-                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">Passphrase</label>').appendTo(subrow);
+                        $('<label for="projects-dialog-screen-create-project-repo-passphrase">'+RED._("projects.create.passphrase")+'</label>').appendTo(subrow);
                         projectRepoPassphrase = $('<input id="projects-dialog-screen-create-project-repo-passphrase" type="password"></input>').appendTo(subrow);
 
                         subrow = $('<div class="form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-sshkey"></div>').appendTo(cloneAuthRows);
                         var sshwarningRow = $('<div class="projects-dialog-screen-create-row-auth-error-no-keys"></div>').hide().appendTo(subrow);
-                        $('<div class="form-row"><i class="fa fa-warning"></i> Before you can clone a repository over ssh you must add an SSH key to access it.</div>').appendTo(sshwarningRow);
+                        $('<div class="form-row"><i class="fa fa-warning"></i> '+RED._("projects.create.desc2")+'</div>').appendTo(sshwarningRow);
                         subrow = $('<div style="text-align: center">').appendTo(sshwarningRow);
-                        $('<button class="editor-button">Add an ssh key</button>').appendTo(subrow).click(function(e) {
+                        $('<button class="editor-button">'+RED._("projects.create.add-ssh-key")+'</button>').appendTo(subrow).click(function(e) {
                             e.preventDefault();
                             $('#projects-dialog-cancel').click();
                             RED.userSettings.show('gitconfig');
@@ -23167,7 +29100,7 @@ RED.projects = (function() {
 
                         // Secret - clone
                         row = $('<div class="hide form-row projects-dialog-screen-create-row projects-dialog-screen-create-row-clone"></div>').appendTo(container);
-                        $('<label>Credentials encryption key</label>').appendTo(row);
+                        $('<label>'+RED._("projects.create.credentials-encryption-key")+'</label>').appendTo(row);
                         projectSecretInput = $('<input type="password"></input>').appendTo(row);
 
 
@@ -23189,9 +29122,9 @@ RED.projects = (function() {
                     buttons: function(options) {
                         var initialLabel;
                         switch (options.screen||"empty") {
-                            case "open": initialLabel = "Open project"; break;
-                            case "empty": initialLabel = "Create project"; break;
-                            case "clone": initialLabel = "Clone project"; break;
+                            case "open": initialLabel = RED._("projects.create.open"); break;
+                            case "empty": initialLabel = RED._("projects.create.create"); break;
+                            case "clone": initialLabel = RED._("projects.create.clone"); break;
                         }
                         return [
                             {
@@ -23245,7 +29178,7 @@ RED.projects = (function() {
                                                 };
                                             }
                                             else {
-                                                console.log("Error! Can't get selected SSH key path.");
+                                                console.log(RED._("projects.create.cant-get-ssh-key-path"));
                                                 return;
                                             }
                                         }
@@ -23264,15 +29197,15 @@ RED.projects = (function() {
                                         return switchProject(selectedProject.name,function(err,data) {
                                             dialog.dialog( "close" );
                                             if (err) {
-                                                if (err.error !== 'credentials_load_failed') {
-                                                    console.log("unexpected_error",err)
+                                                if (err.code !== 'credentials_load_failed') {
+                                                    console.log(RED._("projects.create.unexpected_error"),err)
                                                 }
                                             }
                                         })
                                     }
 
                                     $(".projects-dialog-screen-create-row-auth-error").hide();
-                                    $("#projects-dialog-screen-create-project-repo-label small").text("https://, ssh:// or file://");
+                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.create.protocols"));
 
                                     projectRepoUserInput.removeClass("input-error");
                                     projectRepoPasswordInput.removeClass("input-error");
@@ -23292,22 +29225,22 @@ RED.projects = (function() {
                                             },
                                             400: {
                                                 'project_exists': function(error) {
-                                                    console.log("already exists");
+                                                    console.log(RED._("projects.create.already-exists-2"));
                                                 },
                                                 'git_error': function(error) {
-                                                    console.log("git error",error);
+                                                    console.log(RED._("projects.create.git-error"),error);
                                                 },
                                                 'git_connection_failed': function(error) {
                                                     projectRepoInput.addClass("input-error");
-                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Connection failed");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.create.con-failed"));
                                                 },
                                                 'git_not_a_repository': function(error) {
                                                     projectRepoInput.addClass("input-error");
-                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Not a git repository");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.create.not-git"));
                                                 },
                                                 'git_repository_not_found': function(error) {
                                                     projectRepoInput.addClass("input-error");
-                                                    $("#projects-dialog-screen-create-project-repo-label small").text("Repository not found");
+                                                    $("#projects-dialog-screen-create-project-repo-label small").text(RED._("projects.create.no-resource"));
                                                 },
                                                 'git_auth_failed': function(error) {
                                                     $(".projects-dialog-screen-create-row-auth-error").show();
@@ -23319,6 +29252,10 @@ RED.projects = (function() {
                                                     projectRepoPassphrase.addClass("input-error");
                                                 },
                                                 'missing_flow_file': function(error) {
+                                                    // This is handled via a runtime notification.
+                                                    dialog.dialog("close");
+                                                },
+                                                'missing_package_file': function(error) {
                                                     // This is handled via a runtime notification.
                                                     dialog.dialog("close");
                                                 },
@@ -23358,7 +29295,6 @@ RED.projects = (function() {
         sendRequest({
             url: "projects/"+name,
             type: "PUT",
-            requireCleanWorkspace: true,
             responses: {
                 200: function(data) {
                     done(null,data);
@@ -23387,15 +29323,15 @@ RED.projects = (function() {
             whitespace: "nowrap",
             width:"1000px"
         }).click(function(evt) { evt.stopPropagation(); }).appendTo(row);
-        $('<span>').css({"lineHeight":"40px"}).text("Are you sure you want to delete this project?").appendTo(cover);
-        $('<button style="margin-left:20px" class="editor-button">Cancel</button>')
+        $('<span>').css({"lineHeight":"40px"}).text(RED._("projects.delete.confirm")).appendTo(cover);
+        $('<button style="margin-left:20px" class="editor-button">'+RED._("common.label.cancel")+'</button>')
             .appendTo(cover)
             .click(function(e) {
                 e.stopPropagation();
                 cover.remove();
                 done(true);
             });
-        $('<button style="margin-left:20px" class="editor-button primary">Delete</button>')
+        $('<button style="margin-left:20px" class="editor-button primary">'+RED._("common.label.delete")+'</button>')
             .appendTo(cover)
             .click(function(e) {
                 e.stopPropagation();
@@ -23449,7 +29385,7 @@ RED.projects = (function() {
         var filterTerm = "";
 
         var searchDiv = $("<div>",{class:"red-ui-search-container"}).appendTo(container);
-        var searchInput = $('<input id="projects-dialog-project-list-search" type="text" placeholder="search your projects">').appendTo(searchDiv).searchBox({
+        var searchInput = $('<input id="projects-dialog-project-list-search" type="text" placeholder="'+RED._("projects.create-project-list.search")+'">').appendTo(searchDiv).searchBox({
             //data-i18n="[placeholder]menu.label.searchInput"
             delay: 200,
             change: function() {
@@ -23558,7 +29494,7 @@ RED.projects = (function() {
                 $('<span class="projects-dialog-project-list-entry-name" style=""></span>').text(entry.name).appendTo(header);
                 if (activeProject && activeProject.name === entry.name) {
                     header.addClass("projects-list-entry-current");
-                    $('<span class="projects-dialog-project-list-entry-current">current</span>').appendTo(header);
+                    $('<span class="projects-dialog-project-list-entry-current">'+RED._("projects.create-project-list.current")+'</span>').appendTo(header);
                     if (options.canSelectActive === false) {
                         // active project cannot be selected; so skip the rest
                         return
@@ -23620,7 +29556,7 @@ RED.projects = (function() {
 
     function requireCleanWorkspace(done) {
         if (RED.nodes.dirty()) {
-            var message = '<p>You have undeployed changes that will be lost.</p><p>Do you want to continue?</p>';
+            var message = RED._("projects.require-clean.confirm");
             var cleanNotification = RED.notify(message,{
                 type:"info",
                 fixed: true,
@@ -23635,7 +29571,7 @@ RED.projects = (function() {
                             done(true);
                         }
                     },{
-                        text: 'Continue',
+                        text: RED._("common.label.cont"),
                         click: function() {
                             cleanNotification.close();
                             done(false);
@@ -23650,7 +29586,6 @@ RED.projects = (function() {
     function sendRequest(options,body) {
         // dialogBody.hide();
         // console.log(options.url,body);
-
         if (options.requireCleanWorkspace && RED.nodes.dirty()) {
             var thenCallback;
             var alwaysCallback;
@@ -23709,18 +29644,18 @@ RED.projects = (function() {
                     resultCallback = responses;
                     resultCallbackArgs = {error:responses.statusText};
                     return;
-                } else if (options.handleAuthFail !== false && xhr.responseJSON.error === 'git_auth_failed') {
+                } else if (options.handleAuthFail !== false && xhr.responseJSON.code === 'git_auth_failed') {
                     var url = activeProject.git.remotes[xhr.responseJSON.remote||options.remote||'origin'].fetch;
 
                     var message = $('<div>'+
-                        '<div class="form-row">Authentication required for repository:</div>'+
+                        '<div class="form-row">'+RED._("projects.send-req.auth-req")+':</div>'+
                         '<div class="form-row"><div style="margin-left: 20px;">'+url+'</div></div>'+
                         '</div>');
 
                     var isSSH = false;
                     if (/^https?:\/\//.test(url)) {
-                        $('<div class="form-row"><label for="projects-user-auth-username">Username</label><input id="projects-user-auth-username" type="text"></input></div>'+
-                        '<div class="form-row"><label for=projects-user-auth-password">Password</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
+                        $('<div class="form-row"><label for="projects-user-auth-username">'+RED._("projects.send-req.username")+'</label><input id="projects-user-auth-username" type="text"></input></div>'+
+                          '<div class="form-row"><label for=projects-user-auth-password">'+RED._("projects.send-req.password")+'</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
                     } else if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(url)) {
                         isSSH = true;
                         var row = $('<div class="form-row"></div>').appendTo(message);
@@ -23737,7 +29672,7 @@ RED.projects = (function() {
                             }
                         });
                         row = $('<div class="form-row"></div>').appendTo(message);
-                        $('<label for="projects-user-auth-passphrase">Passphrase</label>').appendTo(row);
+                        $('<label for="projects-user-auth-passphrase">'+RED._("projects.send-req.passphrase")+'</label>').appendTo(row);
                         $('<input id="projects-user-auth-passphrase" type="password"></input>').appendTo(row);
                     }
 
@@ -23754,7 +29689,7 @@ RED.projects = (function() {
                                     notification.close();
                                 }
                             },{
-                                text: $('<span><i class="fa fa-refresh"></i> Retry</span>'),
+                                text: '<span><i class="fa fa-refresh"></i> ' +RED._("projects.send-req.retry") +'</span>',
                                 click: function() {
                                     body = body || {};
                                     var authBody = {};
@@ -23767,7 +29702,7 @@ RED.projects = (function() {
                                     }
                                     var done = function(err) {
                                         if (err) {
-                                            console.log("Failed to update auth");
+                                            console.log(RED._("projects.send-req.update-failed"));
                                             console.log(err);
                                         } else {
                                             sendRequest(options,body);
@@ -23797,8 +29732,8 @@ RED.projects = (function() {
                         ]
                     });
                     return;
-                } else if (responses[xhr.responseJSON.error]) {
-                    resultCallback = responses[xhr.responseJSON.error];
+                } else if (responses[xhr.responseJSON.code]) {
+                    resultCallback = responses[xhr.responseJSON.code];
                     resultCallbackArgs = xhr.responseJSON;
                     return;
                 } else if (responses['*']) {
@@ -23807,7 +29742,8 @@ RED.projects = (function() {
                     return;
                 }
             }
-            console.log("Unhandled error response:");
+            console.log(responses)
+            console.log(RED._("projects.send-req.unhandled")+":");
             console.log(xhr);
             console.log(textStatus);
             console.log(err);
@@ -23841,7 +29777,7 @@ RED.projects = (function() {
                         branchFilterCreateItem.addClass("input-error");
                         branchFilterCreateItem.find("i").addClass("fa-warning").removeClass("fa-code-fork");
                     }
-                    branchFilterCreateItem.find("span").text("Invalid branch: "+branchPrefix+branchFilterTerm);
+                    branchFilterCreateItem.find("span").text(RED._("projects.create-branch-list.invalid")+": "+branchPrefix+branchFilterTerm);
                 } else {
                     if (branchFilterCreateItem.hasClass("input-error")) {
                         branchFilterCreateItem.removeClass("input-error");
@@ -23861,14 +29797,14 @@ RED.projects = (function() {
                 if (!entry.hasOwnProperty('commit')) {
                     branchFilterCreateItem = container;
                     $('<i class="fa fa-code-fork"></i>').appendTo(container);
-                    $('<span>').text("Create branch:").appendTo(container);
+                    $('<span>').text(RED._("projects.create-branch-list.create")+":").appendTo(container);
                     $('<div class="sidebar-version-control-branch-list-entry-create-name" style="margin-left: 10px;">').text(entry.name).appendTo(container);
                 } else {
                     $('<i class="fa fa-code-fork"></i>').appendTo(container);
                     $('<span>').text(entry.name).appendTo(container);
                     if (entry.current) {
                         container.addClass("selected");
-                        $('<span class="current"></span>').text(options.currentLabel||"current").appendTo(container);
+                        $('<span class="current"></span>').text(options.currentLabel||RED._("projects.create-branch-list.current")).appendTo(container);
                     }
                 }
                 container.click(function(evt) {
@@ -24008,9 +29944,9 @@ RED.projects = (function() {
 
     function createDefaultFileSet() {
         if (!activeProject) {
-            throw new Error("Cannot create default file set without an active project");
+            throw new Error(RED._("projects.create-default-file-set.no-active"));
         } else if (!activeProject.empty) {
-            throw new Error("Cannot create default file set on a non-empty project");
+            throw new Error(RED._("projects.create-default-file-set.no-empty"));
         }
         if (!RED.user.hasPermission("projects.write")) {
             RED.notify(RED._("user.errors.notAuthorized"),"error");
@@ -24037,7 +29973,7 @@ RED.projects = (function() {
                 200: function(data) { },
                 400: {
                     'git_error': function(error) {
-                        console.log("git error",error);
+                        console.log(RED._("projects.create-default-file-set.git-error"),error);
                     },
                     'missing_flow_file': function(error) {
                         // This is a natural next error - but let the runtime event
@@ -24115,7 +30051,15 @@ RED.projects = (function() {
                 RED.notify(RED._("user.errors.notAuthorized"),"error");
                 return;
             }
-            show('create',{screen:'open'})
+            if (RED.nodes.dirty()) {
+                return requireCleanWorkspace(function(cancelled) {
+                    if (!cancelled) {
+                        show('create',{screen:'open'})
+                    }
+                })
+            } else {
+                show('create',{screen:'open'})
+            }
         },
         showCredentialsPrompt: function() { //TODO: rename this function
             if (!RED.user.hasPermission("projects.write")) {
@@ -24130,6 +30074,9 @@ RED.projects = (function() {
                 return;
             }
             RED.projects.settings.show('settings');
+            setTimeout(function() {
+                $("#project-settings-tab-settings-file-edit").click();
+            },200)
         },
         showProjectDependencies: function() {
             RED.projects.settings.show('deps');
@@ -24197,7 +30144,7 @@ RED.projects.settings = (function() {
         var tabContainer;
 
         var trayOptions = {
-            title: "Project Settings",// RED._("menu.label.userSettings"),, // TODO: nls
+            title: RED._("sidebar.project.projectSettings.title"),
             buttons: [
                 {
                     id: "node-dialog-ok",
@@ -24321,14 +30268,14 @@ RED.projects.settings = (function() {
         container.empty();
         var bg = $('<span class="button-row" style="position: relative; float: right; margin-right:0;"></span>').appendTo(container);
         var input = $('<input type="text" style="width: calc(100% - 150px); margin-right: 10px;">').val(summary||"").appendTo(container);
-        $('<button class="editor-button">Cancel</button>')
+        $('<button class="editor-button">' + RED._("common.label.cancel") + '</button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
                 updateProjectSummary(activeProject.summary, container);
                 editButton.show();
             });
-        $('<button class="editor-button">Save</button>')
+        $('<button class="editor-button">' + RED._("common.label.save") + '</button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
@@ -24371,7 +30318,7 @@ RED.projects.settings = (function() {
         if (summary) {
             container.text(summary).removeClass('node-info-node');
         } else {
-            container.text("No summary available").addClass('node-info-none');// TODO: nls
+            container.text(RED._("sidebar.project.projectSettings.noSummaryAvailable")).addClass('node-info-none');
         }
     }
 
@@ -24383,7 +30330,7 @@ RED.projects.settings = (function() {
         var summaryContent = $('<div></div>',{style:"color: #999"}).appendTo(summary);
         updateProjectSummary(activeProject.summary, summaryContent);
         if (RED.user.hasPermission("projects.write")) {
-            $('<button class="editor-button editor-button-small" style="float: right;">edit description</button>')
+            $('<button class="editor-button editor-button-small" style="float: right;">' + RED._('sidebar.project.editDescription') + '</button>')
                 .prependTo(summary)
                 .click(function(evt) {
                     evt.preventDefault();
@@ -24398,7 +30345,7 @@ RED.projects.settings = (function() {
         updateProjectDescription(activeProject, descriptionContent);
 
         if (RED.user.hasPermission("projects.write")) {
-            $('<button class="editor-button editor-button-small" style="float: right;">edit README.md</button>')
+            $('<button class="editor-button editor-button-small" style="float: right;">' + RED._('sidebar.project.editReadme') + '</button>')
                 .prependTo(description)
                 .click(function(evt) {
                     evt.preventDefault();
@@ -24464,7 +30411,7 @@ RED.projects.settings = (function() {
         //     depsList.editableList('addItem',{index:3, label:"Unused dependencies"}); // TODO: nls
         // }
         if (totalCount === 0) {
-            depsList.editableList('addItem',{index:0, label:"None"}); // TODO: nls
+            depsList.editableList('addItem',{index:0, label:RED._("sidebar.project.projectSettings.none")});
         }
 
     }
@@ -24529,7 +30476,7 @@ RED.projects.settings = (function() {
     function createDependenciesPane(activeProject) {
         var pane = $('<div id="project-settings-tab-deps" class="project-settings-tab-pane node-help"></div>');
         if (RED.user.hasPermission("projects.write")) {
-            $('<button class="editor-button editor-button-small" style="margin-top:10px;float: right;">edit</button>')
+            $('<button class="editor-button editor-button-small" style="margin-top:10px;float: right;">' + RED._("sidebar.project.projectSettings.edit") + '</button>')
                 .appendTo(pane)
                 .click(function(evt) {
                     evt.preventDefault();
@@ -24599,7 +30546,7 @@ RED.projects.settings = (function() {
                     var buttons = $('<div class="palette-module-button-group"></div>').appendTo(metaRow);
                     if (RED.user.hasPermission("projects.write")) {
                         if (!entry.installed && RED.settings.theme('palette.editable') !== false) {
-                            $('<a href="#" class="editor-button editor-button-small">install</a>').appendTo(buttons)
+                            $('<a href="#" class="editor-button editor-button-small">' + RED._("sidebar.project.projectSettings.install") + '</a>').appendTo(buttons)
                                 .click(function(evt) {
                                     evt.preventDefault();
                                     RED.palette.editor.install(entry,row,function(err) {
@@ -24609,14 +30556,18 @@ RED.projects.settings = (function() {
                                             setTimeout(function() {
                                                 depsList.editableList('removeItem',entry);
                                                 refreshModuleInUseCounts();
-                                                entry.count = modulesInUse[entry.id].count;
+                                                if (modulesInUse.hasOwnProperty(entry.id)) {
+                                                    entry.count = modulesInUse[entry.id].count;
+                                                } else {
+                                                    entry.count = 0;
+                                                }
                                                 depsList.editableList('addItem',entry);
                                             },500);
                                         }
                                     });
                                 })
                         } else if (entry.known && entry.count === 0) {
-                            $('<a href="#" class="editor-button editor-button-small">remove from project</a>').appendTo(buttons)
+                            $('<a href="#" class="editor-button editor-button-small">' + RED._("sidebar.project.projectSettings.removeFromProject") + '</a>').appendTo(buttons)
                                 .click(function(evt) {
                                     evt.preventDefault();
                                     var deps = $.extend(true, {}, activeProject.dependencies);
@@ -24632,7 +30583,7 @@ RED.projects.settings = (function() {
                                     });
                                 });
                         } else if (!entry.known) {
-                            $('<a href="#" class="editor-button editor-button-small">add to project</a>').appendTo(buttons)
+                            $('<a href="#" class="editor-button editor-button-small">' + RED._("sidebar.project.projectSettings.addToProject") + '</a>').appendTo(buttons)
                                 .click(function(evt) {
                                     evt.preventDefault();
                                     var deps = $.extend(true, {}, activeProject.dependencies);
@@ -24670,7 +30621,7 @@ RED.projects.settings = (function() {
 
     }
 
-    function showProjectFileListing(row,activeProject,current,filter,done) {
+    function showProjectFileListing(row,activeProject,current,selectFilter,done) {
         var dialog;
         var dialogBody;
         var filesList;
@@ -24713,14 +30664,15 @@ RED.projects.settings = (function() {
                 })
                 return result;
             }
-            var files = sortFiles("",files,"");
-            createFileSubList(container,files.children,current,filter,done,"height: 175px");
+            var files = sortFiles("",files,"")
+
+            createFileSubList(container,files.children,current,selectFilter,done,"height: 175px");
             spinner.remove();
         });
         return container;
     }
 
-    function createFileSubList(container, files, current, filter, onselect, style) {
+    function createFileSubList(container, files, current, selectFilter, onselect, style) {
         style = style || "";
         var list = $('<ol>',{class:"projects-dialog-file-list", style:style}).appendTo(container).editableList({
             addButton: false,
@@ -24736,7 +30688,7 @@ RED.projects.settings = (function() {
                         } else {
                             children.hide();
                         }
-                        createFileSubList(children,entry.children,current,filter,onselect);
+                        createFileSubList(children,entry.children,current,selectFilter,onselect);
                         header.addClass("selectable");
                         header.click(function(e) {
                             if ($(this).hasClass("expanded")) {
@@ -24762,7 +30714,7 @@ RED.projects.settings = (function() {
                         header.addClass("projects-dialog-file-list-entry-file-type-git");
                     }
                     $('<span class="projects-dialog-file-list-entry-file"> <i class="fa '+fileIcon+'"></i></span>').appendTo(header);
-                    if (filter.test(entry.name)) {
+                    if (selectFilter(entry)) {
                         header.addClass("selectable");
                         if (entry.path === current) {
                             header.addClass("selected");
@@ -24770,7 +30722,7 @@ RED.projects.settings = (function() {
                         header.click(function(e) {
                             $(".projects-dialog-file-list-entry.selected").removeClass("selected");
                             $(this).addClass("selected");
-                            onselect(entry.path);
+                            onselect(entry.path,true);
                         })
                         header.dblclick(function(e) {
                             e.preventDefault();
@@ -24871,21 +30823,30 @@ RED.projects.settings = (function() {
     // }
 
     function createFilesSection(activeProject,pane) {
-        var title = $('<h3></h3>').text("Files").appendTo(pane);
+        var title = $('<h3></h3>').text(RED._("sidebar.project.projectSettings.files")).appendTo(pane);
         var filesContainer = $('<div class="user-settings-section"></div>').appendTo(pane);
         if (RED.user.hasPermission("projects.write")) {
-            var editFilesButton = $('<button class="editor-button editor-button-small" style="float: right;">edit</button>')
+            var editFilesButton = $('<button type="button" id="project-settings-tab-settings-file-edit" class="editor-button editor-button-small" style="float: right;">' + RED._('sidebar.project.projectSettings.edit') + '</button>')
                 .appendTo(title)
                 .click(function(evt) {
                     evt.preventDefault();
                     formButtons.show();
                     editFilesButton.hide();
+                    // packageFileLabelText.hide();
+
+                    if (!activeProject.files.package) {
+                        packageFileSubLabel.find(".projects-edit-form-sublabel-text").text(RED._("sidebar.project.projectSettings.packageCreate"));
+                        packageFileSubLabel.show();
+                    }
+
+                    packageFileInputSearch.show();
+                    // packageFileInputCreate.show();
                     flowFileLabelText.hide();
                     flowFileInput.show();
                     flowFileInputSearch.show();
-                    credFileLabel.hide();
-                    credFileInput.show();
-                    flowFileInput.focus();
+
+                    flowFileInputResize();
+
                     // credentialStateLabel.parent().hide();
                     credentialStateLabel.addClass("uneditable-input");
                     $(".user-settings-row-credentials").show();
@@ -24898,12 +30859,81 @@ RED.projects.settings = (function() {
 
         // Flow files
         row = $('<div class="user-settings-row"></div>').appendTo(filesContainer);
-        $('<label for=""></label>').text('Flow').appendTo(row);
-        var flowFileLabel = $('<div class="uneditable-input" style="padding:0">').appendTo(row);
-        var flowFileLabelText = $('<span style="display:inline-block; padding: 6px">').text(activeProject.files.flow).appendTo(flowFileLabel);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.package")).appendTo(row);
+        var packageFileLabel = $('<div class="uneditable-input" style="padding:0">').appendTo(row);
+        var packageFileLabelText = $('<span style="display:inline-block;  padding: 6px">').text(activeProject.files.package||"package.json").appendTo(packageFileLabel);
+        var packageFileInput = $('<input type="hidden">').val(activeProject.files.package||"package.json").appendTo(packageFileLabel);
 
-        var flowFileInput = $('<input id="" type="text" style="margin-bottom: 0;width: 100%; border: none;">').val(activeProject.files.flow).hide().appendTo(flowFileLabel);
-        var flowFileInputSearch = $('<button class="editor-button" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 36px; height: 34px; position: absolute; top: -1px; right: -1px;"><i class="fa fa-folder-open-o"></i></button>')
+        var packageFileInputSearch = $('<button type="button" class="editor-button toggle single" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 36px; height: 34px; position: absolute; top: -1px; right: -1px;"><i class="fa fa-folder-open-o"></i></button>')
+            .hide()
+            .appendTo(packageFileLabel)
+            .click(function(e) {
+                if ($(this).hasClass('selected')) {
+                    $(this).removeClass('selected');
+                    packageFileLabel.find('.project-file-listing-container').slideUp(200,function() {
+                         $(this).remove();
+                         packageFileLabel.css('height','');
+                     });
+                    packageFileLabel.css('color','');
+                } else {
+                    $(this).addClass('selected');
+                    packageFileLabel.css('color','inherit');
+                    var fileList = showProjectFileListing(packageFileLabel,activeProject,packageFileInput.val(),
+                                        function(entry) { return entry.children || /package\.json$/.test(entry.path); },
+                                        function(result,close) {
+                                            if (result) {
+                                                packageFileInput.val(result);
+                                                packageFileLabelText.text(result);
+                                                var rootDir = result.substring(0,result.length - 12);
+                                                flowFileLabelPrefixText.text(rootDir);
+                                                credFileLabelPrefixText.text(rootDir);
+                                                flowFileInputResize();
+                                                packageFileSubLabel.hide();
+                                            }
+                                            if (close) {
+                                                $(packageFileInputSearch).click();
+                                            }
+                                            checkFiles();
+                                        });
+                    packageFileLabel.css('height','auto');
+                    setTimeout(function() {
+                        fileList.slideDown(200);
+                    },50);
+
+                }
+            })
+        RED.popover.tooltip(packageFileInputSearch,RED._("sidebar.project.projectSettings.selectFile"));
+        var packageFileSubLabel = $('<label style="margin-left: 110px" class="projects-edit-form-sublabel"><small><span class="form-warning"><i class="fa fa-warning"></i> <span class="projects-edit-form-sublabel-text"></span></small></label>').appendTo(row).hide();
+        if (!activeProject.files.package) {
+            packageFileSubLabel.find(".projects-edit-form-sublabel-text").text(RED._("sidebar.project.projectSettings.fileNotExist"));
+            packageFileSubLabel.show();
+        }
+
+
+        var projectPackage = activeProject.files.package||"package.json";
+        var projectRoot = projectPackage.substring(0,projectPackage.length - 12);
+
+        // Flow files
+        row = $('<div class="user-settings-row"></div>').appendTo(filesContainer);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.flow")).appendTo(row);
+        var flowFileLabel = $('<div class="uneditable-input" style="padding:0">').appendTo(row);
+        var flowFileLabelPrefixText = $('<span style="display:inline-block; padding: 6px 0 6px 6px">').text(projectRoot).appendTo(flowFileLabel);
+        var flowFileName = "flows.json";
+        if (activeProject.files.flow) {
+            if (activeProject.files.flow.indexOf(projectRoot) === 0) {
+                flowFileName = activeProject.files.flow.substring(projectRoot.length);
+            } else {
+                flowFileName = activeProject.files.flow;
+            }
+        }
+        var flowFileLabelText = $('<span style="display:inline-block; padding: 6px 6px 6px 0">').text(flowFileName).appendTo(flowFileLabel);
+        var flowFileInputResize = function() {
+            flowFileInput.css({
+                "width": "calc(100% - "+(flowFileInputSearch.width() + flowFileLabelPrefixText.width())+"px)"
+            });
+        }
+        var flowFileInput = $('<input type="text" style="padding-left:1px; margin-top: -2px; margin-bottom: 0;border: none;">').val(flowFileName).hide().appendTo(flowFileLabel);
+        var flowFileInputSearch = $('<button type="button" class="editor-button toggle single" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px; width: 36px; height: 34px; position: absolute; top: -1px; right: -1px;"><i class="fa fa-folder-open-o"></i></button>')
             .hide()
             .appendTo(flowFileLabel)
             .click(function(e) {
@@ -24917,15 +30947,24 @@ RED.projects.settings = (function() {
                 } else {
                     $(this).addClass('selected');
                     flowFileLabel.css('color','inherit');
-                    var fileList = showProjectFileListing(flowFileLabel,activeProject,flowFileInput.val(), /.*\.json$/,function(result,isDblClick) {
-                        if (result) {
-                            flowFileInput.val(result);
-                        }
-                        if (isDblClick) {
-                            $(flowFileInputSearch).click();
-                        }
-                        checkFiles();
-                    });
+                    var packageFile = packageFileInput.val();
+                    var packagePrefix = packageFile.substring(0,packageFile.length - 12);
+                    var re = new RegExp("^"+packagePrefix+".*\.json$");
+                    var fileList = showProjectFileListing(flowFileLabel,
+                                                          activeProject,
+                                                          flowFileInput.val(),
+                                                          function(entry) { return !/package.json$/.test(entry.path) && re.test(entry.path) && !/_cred\.json$/.test(entry.path) },
+                                                          function(result,isDblClick) {
+                                                              if (result) {
+                                                                  flowFileInput.val(result.substring(packagePrefix.length));
+
+                                                              }
+                                                              if (isDblClick) {
+                                                                  $(flowFileInputSearch).click();
+                                                              }
+                                                              checkFiles();
+                                                          }
+                                                      );
                     flowFileLabel.css('height','auto');
                     setTimeout(function() {
                         fileList.slideDown(200);
@@ -24933,26 +30972,41 @@ RED.projects.settings = (function() {
 
                 }
             })
+        RED.popover.tooltip(flowFileInputSearch,RED._("sidebar.project.projectSettings.selectFile"));
 
         row = $('<div class="user-settings-row"></div>').appendTo(filesContainer);
-        $('<label for=""></label>').text('Credentials').appendTo(row);
-        var credFileLabel = $('<div class="uneditable-input">').text(activeProject.files.credentials).appendTo(row);
-        var credFileInput = $('<div class="uneditable-input">').text(activeProject.files.credentials).hide().insertAfter(credFileLabel);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.credentials")).appendTo(row);
+
+        var credFileName = "flows_cred.json";
+        if (activeProject.files.credentials) {
+            if (activeProject.files.flow.indexOf(projectRoot) === 0) {
+                credFileName = activeProject.files.credentials.substring(projectRoot.length);
+            } else {
+                credFileName = activeProject.files.credentials;
+            }
+        }
+
+        var credFileLabel = $('<div class="uneditable-input" style="padding:0">').appendTo(row);
+        var credFileLabelPrefixText = $('<span style="display:inline-block;padding: 6px 0 6px 6px">').text(projectRoot).appendTo(credFileLabel);
+        var credFileLabelText = $('<span style="display:inline-block; padding: 6px 6px 6px 0">').text(credFileName).appendTo(credFileLabel);
+
+        var credFileInput = $('<input type="hidden">').val(credFileName).insertAfter(credFileLabel);
 
         var checkFiles = function() {
             var saveDisabled;
             var currentFlowValue = flowFileInput.val();
             var m = /^(.+?)(\.[^.]*)?$/.exec(currentFlowValue);
             if (m) {
-                credFileInput.text(m[1]+"_cred"+(m[2]||".json"));
+                credFileLabelText.text(m[1]+"_cred"+(m[2]||".json"));
             } else if (currentFlowValue === "") {
-                credFileInput.text("");
+                credFileLabelText.text("");
             }
+            credFileInput.val(credFileLabelText.text());
             var isFlowInvalid = currentFlowValue==="" ||
                                 /\.\./.test(currentFlowValue) ||
                                 /\/$/.test(currentFlowValue);
 
-            saveDisabled = isFlowInvalid || credFileInput.text()==="";
+            saveDisabled = isFlowInvalid || credFileLabelText.text()==="";
 
             if (credentialSecretExistingInput.is(":visible")) {
                 credentialSecretExistingInput.toggleClass("input-error", credentialSecretExistingInput.val() === "");
@@ -24965,19 +31019,22 @@ RED.projects.settings = (function() {
 
 
             flowFileInput.toggleClass("input-error", isFlowInvalid);
-            credFileInput.toggleClass("input-error",credFileInput.text()==="");
+            // credFileInput.toggleClass("input-error",credFileInput.text()==="");
             saveButton.toggleClass('disabled',saveDisabled);
             saveButton.prop('disabled',saveDisabled);
         }
         flowFileInput.on("change keyup paste",checkFiles);
 
 
-        if (!activeProject.files.flow) {
-            $('<span class="form-warning"><i class="fa fa-warning"></i> Missing</span>').appendTo(flowFileLabelText);
-        }
-        if (!activeProject.files.credentials) {
-            $('<span class="form-warning"><i class="fa fa-warning"></i> Missing</span>').appendTo(credFileLabel);
-        }
+        // if (!activeProject.files.package) {
+        //     $('<span class="form-warning"><i class="fa fa-warning"></i> Missing</span>').appendTo(packageFileLabelText);
+        // }
+        // if (!activeProject.files.flow) {
+        //     $('<span class="form-warning"><i class="fa fa-warning"></i> Missing</span>').appendTo(flowFileLabelText);
+        // }
+        // if (!activeProject.files.credentials) {
+        //     $('<span class="form-warning"><i class="fa fa-warning"></i> Missing</span>').appendTo(credFileLabel);
+        // }
 
 
         row = $('<div class="user-settings-row"></div>').appendTo(filesContainer);
@@ -24988,7 +31045,7 @@ RED.projects.settings = (function() {
 
         credentialStateLabel.css('color','#666');
         credentialSecretButtons.css('vertical-align','top');
-        var credentialSecretResetButton = $('<button class="editor-button" style="vertical-align: top; width: 36px; margin-bottom: 10px"><i class="fa fa-trash-o"></i></button>')
+        var credentialSecretResetButton = $('<button type="button" class="editor-button" style="vertical-align: top; width: 36px; margin-bottom: 10px"><i class="fa fa-trash-o"></i></button>')
             .appendTo(credentialSecretButtons)
             .click(function(e) {
                 e.preventDefault();
@@ -25010,7 +31067,9 @@ RED.projects.settings = (function() {
                 }
                 checkFiles();
             });
-        var credentialSecretEditButton = $('<button class="editor-button" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px; vertical-align: top; width: 36px; margin-bottom: 10px"><i class="fa fa-pencil"></i></button>')
+        RED.popover.tooltip(credentialSecretResetButton,RED._("sidebar.project.projectSettings.resetTheEncryptionKey"));
+
+        var credentialSecretEditButton = $('<button type="button" class="editor-button" style="border-top-right-radius: 4px; border-bottom-right-radius: 4px; vertical-align: top; width: 36px; margin-bottom: 10px"><i class="fa fa-pencil"></i></button>')
             .appendTo(credentialSecretButtons)
             .click(function(e) {
                 e.preventDefault();
@@ -25040,6 +31099,7 @@ RED.projects.settings = (function() {
                 checkFiles();
             })
 
+        RED.popover.tooltip(credentialSecretEditButton,RED._("sidebar.project.projectSettings.changeTheEncryptionKey"));
 
         row = $('<div class="user-settings-row user-settings-row-credentials"></div>').hide().appendTo(filesContainer);
 
@@ -25047,12 +31107,12 @@ RED.projects.settings = (function() {
 
         var credentialFormRows = $('<div>',{style:"margin-top:10px"}).hide().appendTo(credentialStateLabel);
 
-        var credentialSetLabel = $('<div style="margin: 20px 0 10px 5px;">Set the encryption key:</div>').hide().appendTo(credentialFormRows);
-        var credentialChangeLabel = $('<div style="margin: 20px 0 10px 5px;">Change the encryption key:</div>').hide().appendTo(credentialFormRows);
-        var credentialResetLabel = $('<div style="margin: 20px 0 10px 5px;">Reset the encryption key:</div>').hide().appendTo(credentialFormRows);
+        var credentialSetLabel = $('<div style="margin: 20px 0 10px 5px;">' + RED._("sidebar.project.projectSettings.setTheEncryptionKey") + '</div>').hide().appendTo(credentialFormRows);
+        var credentialChangeLabel = $('<div style="margin: 20px 0 10px 5px;">' + RED._("sidebar.project.projectSettings.changeTheEncryptionKey") + '</div>').hide().appendTo(credentialFormRows);
+        var credentialResetLabel = $('<div style="margin: 20px 0 10px 5px;">' + RED._("sidebar.project.projectSettings.resetTheEncryptionKey") + '</div>').hide().appendTo(credentialFormRows);
 
         var credentialSecretExistingRow = $('<div class="user-settings-row user-settings-row-credentials"></div>').appendTo(credentialFormRows);
-        $('<label for=""></label>').text('Current key').appendTo(credentialSecretExistingRow);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.currentKey")).appendTo(credentialSecretExistingRow);
         var credentialSecretExistingInput = $('<input type="password">').appendTo(credentialSecretExistingRow)
             .on("change keyup paste",function() {
                 if (popover) {
@@ -25065,20 +31125,22 @@ RED.projects.settings = (function() {
         var credentialSecretNewRow = $('<div class="user-settings-row user-settings-row-credentials"></div>').appendTo(credentialFormRows);
 
 
-        $('<label for=""></label>').text('New key').appendTo(credentialSecretNewRow);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.newKey")).appendTo(credentialSecretNewRow);
         var credentialSecretNewInput = $('<input type="password">').appendTo(credentialSecretNewRow).on("change keyup paste",checkFiles);
 
-        var credentialResetWarning = $('<div class="form-tips form-warning" style="margin: 10px;"><i class="fa fa-warning"></i> This will delete all existing credentials</div>').hide().appendTo(credentialFormRows);
+        var credentialResetWarning = $('<div class="form-tips form-warning" style="margin: 10px;"><i class="fa fa-warning"></i>' + RED._("sidebar.project.projectSettings.credentialsAlert") + '</div>').hide().appendTo(credentialFormRows);
 
 
         var hideEditForm = function() {
             editFilesButton.show();
             formButtons.hide();
+            // packageFileLabelText.show();
+            packageFileInputSearch.hide();
+            // packageFileInputCreate.hide();
             flowFileLabelText.show();
             flowFileInput.hide();
             flowFileInputSearch.hide();
-            credFileLabel.show();
-            credFileInput.hide();
+
             // credentialStateLabel.parent().show();
             credentialStateLabel.removeClass("uneditable-input");
             credentialStateLabel.css('height','');
@@ -25098,13 +31160,26 @@ RED.projects.settings = (function() {
         }
 
         var formButtons = $('<span class="button-row" style="position: relative; float: right; margin-right:0;"></span>').hide().appendTo(filesContainer);
-        $('<button class="editor-button">Cancel</button>')
+        $('<button type="button" class="editor-button">' + RED._("common.label.cancel") + '</button>')
             .appendTo(formButtons)
             .click(function(evt) {
                 evt.preventDefault();
+                var projectPackage = activeProject.files.package||"package.json";
+                var projectRoot = projectPackage.substring(0,projectPackage.length - 12);
+                flowFileLabelPrefixText.text(projectRoot);
+                credFileLabelPrefixText.text(projectRoot);
+                packageFileLabelText.text(activeProject.files.package||"package.json");
+                if (!activeProject.files.package) {
+                    packageFileSubLabel.find(".projects-edit-form-sublabel-text").text(RED._("sidebar.project.projectSettings.fileNotExist"));
+                    packageFileSubLabel.show();
+                } else {
+                    packageFileSubLabel.hide();
+                }
+                flowFileInput.val(flowFileLabelText.text());
+                credFileLabelText.text(credFileName);
                 hideEditForm();
             });
-        var saveButton = $('<button class="editor-button">Save</button>')
+        var saveButton = $('<button type="button" class="editor-button">' + RED._("common.label.save") + '</button>')
             .appendTo(formButtons)
             .click(function(evt) {
                 evt.preventDefault();
@@ -25116,13 +31191,17 @@ RED.projects.settings = (function() {
                         return;
                     }
                     flowFileLabelText.text(flowFileInput.val());
-                    credFileLabel.text(credFileInput.text());
+                    credFileLabelText.text(credFileInput.val());
+                    packageFileSubLabel.hide();
                     hideEditForm();
                 }
+                var rootPath = packageFileInput.val();
+                rootPath = rootPath.substring(0,rootPath.length-12);
                 var payload = {
                     files: {
-                        flow: flowFileInput.val(),
-                        credentials: credFileInput.text()
+                        package: packageFileInput.val(),
+                        flow: rootPath+flowFileInput.val(),
+                        credentials: rootPath+credFileInput.val()
                     }
                 }
 
@@ -25135,8 +31214,6 @@ RED.projects.settings = (function() {
                         payload.currentCredentialSecret = credentialSecretExistingInput.val();
                     }
                 }
-
-                // console.log(JSON.stringify(payload,null,4));
                 RED.deploy.setDeployInflight(true);
                 utils.sendRequest({
                     url: "projects/"+activeProject.name,
@@ -25180,13 +31257,13 @@ RED.projects.settings = (function() {
         var updateForm = function() {
             if (activeProject.settings.credentialSecretInvalid) {
                 credentialStateLabel.find(".user-settings-credentials-state-icon").removeClass().addClass("user-settings-credentials-state-icon fa fa-warning");
-                credentialStateLabel.find(".user-settings-credentials-state").text("Invalid encryption key");
+                credentialStateLabel.find(".user-settings-credentials-state").text(RED._("sidebar.project.projectSettings.invalidEncryptionKey"));
             } else if (activeProject.settings.credentialsEncrypted) {
                 credentialStateLabel.find(".user-settings-credentials-state-icon").removeClass().addClass("user-settings-credentials-state-icon fa fa-lock");
-                credentialStateLabel.find(".user-settings-credentials-state").text("Encryption enabled");
+                credentialStateLabel.find(".user-settings-credentials-state").text(RED._("sidebar.project.projectSettings.encryptionEnabled"));
             } else {
                 credentialStateLabel.find(".user-settings-credentials-state-icon").removeClass().addClass("user-settings-credentials-state-icon fa fa-unlock");
-                credentialStateLabel.find(".user-settings-credentials-state").text("Encryption disabled");
+                credentialStateLabel.find(".user-settings-credentials-state").text(RED._("sidebar.project.projectSettings.encryptionDisabled"));
             }
             credentialSecretResetButton.toggleClass('disabled',!activeProject.settings.credentialSecretInvalid && !activeProject.settings.credentialsEncrypted);
             credentialSecretResetButton.prop('disabled',!activeProject.settings.credentialSecretInvalid && !activeProject.settings.credentialsEncrypted);
@@ -25198,7 +31275,7 @@ RED.projects.settings = (function() {
 
     function createLocalBranchListSection(activeProject,pane) {
         var localBranchContainer = $('<div class="user-settings-section"></div>').appendTo(pane);
-        $('<h4></h4>').text("Branches").appendTo(localBranchContainer);
+        $('<h4></h4>').text(RED._("sidebar.project.projectSettings.branches")).appendTo(localBranchContainer);
 
         var row = $('<div class="user-settings-row projects-dialog-list"></div>').appendTo(localBranchContainer);
 
@@ -25211,7 +31288,7 @@ RED.projects.settings = (function() {
                 var container = $('<div class="projects-dialog-list-entry">').appendTo(row);
                 if (entry.empty) {
                     container.addClass('red-ui-search-empty');
-                    container.text("No branches");
+                    container.text(RED._("sidebar.project.projectSettings.noBranches"));
                     return;
                 }
                 if (entry.current) {
@@ -25243,7 +31320,7 @@ RED.projects.settings = (function() {
                         .click(function(e) {
                             e.preventDefault();
                             var spinner = utils.addSpinnerOverlay(row).addClass('projects-dialog-spinner-contain');
-                            var notification = RED.notify("Are you sure you want to delete the local branch '"+entry.name+"'? This cannot be undone.", {
+                            var notification = RED.notify(RED._("sidebar.project.projectSettings.deleteConfirm", { name: entry.name }), {
                                 type: "warning",
                                 modal: true,
                                 fixed: true,
@@ -25271,7 +31348,7 @@ RED.projects.settings = (function() {
                                                     },
                                                     400: {
                                                         'git_delete_branch_unmerged': function(error) {
-                                                            notification = RED.notify("The local branch '"+entry.name+"' has unmerged changes that will be lost. Are you sure you want to delete it?", {
+                                                            notification = RED.notify(RED._("sidebar.project.projectSettings.unmergedConfirm", { name: entry.name }), {
                                                                 type: "warning",
                                                                 modal: true,
                                                                 fixed: true,
@@ -25283,7 +31360,7 @@ RED.projects.settings = (function() {
                                                                             notification.close();
                                                                         }
                                                                     },{
-                                                                        text: 'Delete unmerged branch',
+                                                                        text: RED._("sidebar.project.projectSettings.deleteUnmergedBranch"),
                                                                         click: function() {
                                                                             options.url += "?force=true";
                                                                             notification.close();
@@ -25331,14 +31408,14 @@ RED.projects.settings = (function() {
     }
 
     function createRemoteRepositorySection(activeProject,pane) {
-        $('<h3></h3>').text("Version Control").appendTo(pane);
+        $('<h3></h3>').text(RED._("sidebar.project.projectSettings.versionControl")).appendTo(pane);
 
         createLocalBranchListSection(activeProject,pane);
 
         var repoContainer = $('<div class="user-settings-section"></div>').appendTo(pane);
-        var title = $('<h4></h4>').text("Git remotes").appendTo(repoContainer);
+        var title = $('<h4></h4>').text(RED._("sidebar.project.projectSettings.gitRemotes")).appendTo(repoContainer);
 
-        var editRepoButton = $('<button class="editor-button editor-button-small" style="float: right; margin-right: 10px;">add remote</button>')
+        var editRepoButton = $('<button class="editor-button editor-button-small" style="float: right; margin-right: 10px;">' + RED._("sidebar.project.projectSettings.addRemote") + '</button>')
             .appendTo(title)
             .click(function(evt) {
                 editRepoButton.attr('disabled',true);
@@ -25369,7 +31446,7 @@ RED.projects.settings = (function() {
                 var container = $('<div class="projects-dialog-list-entry">').appendTo(row);
                 if (entry.empty) {
                     container.addClass('red-ui-search-empty');
-                    container.text("No remotes");
+                    container.text(RED._("sidebar.project.projectSettings.noRemotes"));
                     return;
                 } else {
                     $('<span class="entry-icon"><i class="fa fa-globe"></i></span>').appendTo(container);
@@ -25388,7 +31465,7 @@ RED.projects.settings = (function() {
                         .click(function(e) {
                             e.preventDefault();
                             var spinner = utils.addSpinnerOverlay(row).addClass('projects-dialog-spinner-contain');
-                            var notification = RED.notify("Are you sure you want to delete the remote '"+entry.name+"'?", {
+                            var notification = RED.notify(RED._("sidebar.project.projectSettings.deleteRemoteConfrim", { name: entry.name }), {
                                 type: "warning",
                                 modal: true,
                                 fixed: true,
@@ -25400,7 +31477,7 @@ RED.projects.settings = (function() {
                                             notification.close();
                                         }
                                     },{
-                                        text: 'Delete remote',
+                                        text: RED._("sidebar.project.projectSettings.deleteRemote"),
                                         click: function() {
                                             notification.close();
 
@@ -25463,10 +31540,10 @@ RED.projects.settings = (function() {
             // var validRepo = /^(?:file|git|ssh|https?|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?[\w\.@:\/~_-]+(?:\.git)?(?:\/?|\#[\d\w\.\-_]+?)$/.test(remoteURLInput.val());
             var validRepo = repo.length > 0 && !/\s/.test(repo);
             if (/^https?:\/\/[^/]+@/i.test(repo)) {
-                remoteURLLabel.text("Do not include the username/password in the url");
+                remoteURLLabel.text(RED._("sidebar.project.projectSettings.urlRule2"));
                 validRepo = false;
             } else {
-                remoteURLLabel.text("https://, ssh:// or file://");
+                remoteURLLabel.text(RED._("sidebar.project.projectSettings.urlRule"));
             }
             saveButton.attr('disabled',(!validName || !validRepo))
             remoteNameInput.toggleClass('input-error',remoteNameInputChanged&&!validName);
@@ -25480,22 +31557,22 @@ RED.projects.settings = (function() {
         var remoteNameInputChanged = false;
         var remoteURLInputChanged = false;
 
-        $('<div class="projects-dialog-list-dialog-header">').text('Add remote').appendTo(addRemoteDialog);
+        $('<div class="projects-dialog-list-dialog-header">').text(RED._('sidebar.project.projectSettings.addRemote2')).appendTo(addRemoteDialog);
 
         row = $('<div class="user-settings-row"></div>').appendTo(addRemoteDialog);
-        $('<label for=""></label>').text('Remote name').appendTo(row);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.remoteName")).appendTo(row);
         var remoteNameInput = $('<input type="text">').appendTo(row).on("change keyup paste",function() {
             remoteNameInputChanged = true;
             validateForm();
         });
-        $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
+        $('<label class="projects-edit-form-sublabel"><small>' + RED._("sidebar.project.projectSettings.nameRule") + '</small></label>').appendTo(row).find("small");
         row = $('<div class="user-settings-row"></div>').appendTo(addRemoteDialog);
-        $('<label for=""></label>').text('URL').appendTo(row);
+        $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.url")).appendTo(row);
         var remoteURLInput = $('<input type="text">').appendTo(row).on("change keyup paste",function() {
             remoteURLInputChanged = true;
             validateForm()
         });
-        var remoteURLLabel = $('<label class="projects-edit-form-sublabel"><small>https://, ssh:// or file://</small></label>').appendTo(row).find("small");
+        var remoteURLLabel = $('<label class="projects-edit-form-sublabel"><small>' + RED._("sidebar.project.projectSettings.urlRule") +'</small></label>').appendTo(row).find("small");
 
         var hideEditForm = function() {
             editRepoButton.attr('disabled',false);
@@ -25509,13 +31586,13 @@ RED.projects.settings = (function() {
         }
         var formButtons = $('<span class="button-row" style="position: relative; float: right; margin: 10px;"></span>')
             .appendTo(addRemoteDialog);
-        $('<button class="editor-button">Cancel</button>')
+        $('<button class="editor-button">' + RED._("common.label.cancel") + '</button>')
             .appendTo(formButtons)
             .click(function(evt) {
                 evt.preventDefault();
                 hideEditForm();
             });
-        var saveButton = $('<button class="editor-button">Add remote</button>')
+        var saveButton = $('<button class="editor-button">' + RED._("sidebar.project.projectSettings.addRemote2") + '</button>')
             .appendTo(formButtons)
             .click(function(evt) {
                 evt.preventDefault();
@@ -25632,19 +31709,19 @@ RED.projects.settings = (function() {
         utils = _utils;
         addPane({
             id:'main',
-            title: "Project", // TODO: nls
+            title: RED._("sidebar.project.name"),
             get: createMainPane,
             close: function() { }
         });
         addPane({
             id:'deps',
-            title: "Dependencies", // TODO: nls
+            title: RED._("sidebar.project.dependencies"),
             get: createDependenciesPane,
             close: function() { }
         });
         addPane({
             id:'settings',
-            title: "Settings", // TODO: nls
+            title: RED._("sidebar.project.settings"),
             get: createSettingsPane,
             close: function() {
                 if (popover) {
@@ -25707,18 +31784,18 @@ RED.projects.userSettings = (function() {
         var currentGitSettings = RED.settings.get('git') || {};
         currentGitSettings.user = currentGitSettings.user || {};
 
-        var title = $('<h3></h3>').text("Committer Details").appendTo(pane);
+        var title = $('<h3></h3>').text(RED._("editor:sidebar.project.userSettings.committerDetail")).appendTo(pane);
 
         var gitconfigContainer = $('<div class="user-settings-section"></div>').appendTo(pane);
-        $('<div style="color:#aaa;"></div>').appendTo(gitconfigContainer).text("Leave blank to use system default");
+        $('<div style="color:#aaa;"></div>').appendTo(gitconfigContainer).text(RED._("editor:sidebar.project.userSettings.committerTip"));
 
         var row = $('<div class="user-settings-row"></div>').appendTo(gitconfigContainer);
-        $('<label for=""></label>').text('Username').appendTo(row);
+        $('<label for=""></label>').text(RED._("editor:sidebar.project.userSettings.userName")).appendTo(row);
         gitUsernameInput = $('<input type="text">').appendTo(row);
         gitUsernameInput.val(currentGitSettings.user.name||"");
 
         row = $('<div class="user-settings-row"></div>').appendTo(gitconfigContainer);
-        $('<label for=""></label>').text('Email').appendTo(row);
+        $('<label for=""></label>').text(RED._("editor:sidebar.project.userSettings.email")).appendTo(row);
         gitEmailInput = $('<input type="text">').appendTo(row);
         gitEmailInput.val(currentGitSettings.user.email||"");
     }
@@ -25727,10 +31804,10 @@ RED.projects.userSettings = (function() {
     function createSSHKeySection(pane) {
         var container = $('<div class="user-settings-section"></div>').appendTo(pane);
         var popover;
-        var title = $('<h3></h3>').text("SSH Keys").appendTo(container);
-        var subtitle = $('<div style="color:#aaa;"></div>').appendTo(container).text("Allows you to create secure connections to remote git repositories.");
+        var title = $('<h3></h3>').text(RED._("editor:sidebar.project.userSettings.sshKeys")).appendTo(container);
+        var subtitle = $('<div style="color:#aaa;"></div>').appendTo(container).text(RED._("editor:sidebar.project.userSettings.sshKeysTip"));
 
-        var addKeyButton = $('<button id="user-settings-gitconfig-add-key" class="editor-button editor-button-small" style="float: right; margin-right: 10px;">add key</button>')
+        var addKeyButton = $('<button id="user-settings-gitconfig-add-key" class="editor-button editor-button-small" style="float: right; margin-right: 10px;">'+RED._("editor:sidebar.project.userSettings.add")+'</button>')
             .appendTo(subtitle)
             .click(function(evt) {
                 addKeyButton.attr('disabled',true);
@@ -25755,9 +31832,9 @@ RED.projects.userSettings = (function() {
                 var validPassphrase = passphrase.length === 0 || passphrase.length >= 8;
                 passphraseInput.toggleClass('input-error',!validPassphrase);
                 if (!validPassphrase) {
-                    passphraseInputSubLabel.text("Passphrase too short");
+                    passphraseInputSubLabel.text(RED._("editor:sidebar.project.userSettings.passphraseShort"));
                 } else if (passphrase.length === 0) {
-                    passphraseInputSubLabel.text("Optional");
+                    passphraseInputSubLabel.text(RED._("editor:sidebar.project.userSettings.optional"));
                 } else {
                     passphraseInputSubLabel.text("");
                 }
@@ -25774,11 +31851,11 @@ RED.projects.userSettings = (function() {
 
         var row = $('<div class="user-settings-row"></div>').appendTo(container);
         var addKeyDialog = $('<div class="projects-dialog-list-dialog"></div>').hide().appendTo(row);
-        $('<div class="projects-dialog-list-dialog-header">').text('Add SSH Key').appendTo(addKeyDialog);
+        $('<div class="projects-dialog-list-dialog-header">').text(RED._("editor:sidebar.project.userSettings.addSshKey")).appendTo(addKeyDialog);
         var addKeyDialogBody = $('<div>').appendTo(addKeyDialog);
 
         row = $('<div class="user-settings-row"></div>').appendTo(addKeyDialogBody);
-        $('<div style="color:#aaa;"></div>').appendTo(row).text("Generate a new public/private key pair");
+        $('<div style="color:#aaa;"></div>').appendTo(row).text(RED._("editor:sidebar.project.userSettings.addSshKeyTip"));
         // var bg = $('<div></div>',{class:"button-group", style:"text-align: center"}).appendTo(row);
         // var addLocalButton = $('<button class="editor-button toggle selected">use local key</button>').appendTo(bg);
         // var uploadButton = $('<button class="editor-button toggle">upload key</button>').appendTo(bg);
@@ -25808,19 +31885,19 @@ RED.projects.userSettings = (function() {
 
 
         row = $('<div class="user-settings-row"></div>').appendTo(addKeyDialogBody);
-        $('<label for=""></label>').text('Name').appendTo(row);
+        $('<label for=""></label>').text(RED._("editor:sidebar.project.userSettings.name")).appendTo(row);
         var keyNameInputChanged = false;
         var keyNameInput = $('<input type="text">').appendTo(row).on("change keyup paste",function() {
             keyNameInputChanged = true;
             validateForm();
         });
-        $('<label class="projects-edit-form-sublabel"><small>Must contain only A-Z 0-9 _ -</small></label>').appendTo(row).find("small");
+        $('<label class="projects-edit-form-sublabel"><small>'+RED._("editor:sidebar.project.userSettings.nameRule")+'</small></label>').appendTo(row).find("small");
 
         var generateKeyPane = $('<div>').appendTo(addKeyDialogBody);
         row = $('<div class="user-settings-row"></div>').appendTo(generateKeyPane);
-        $('<label for=""></label>').text('Passphrase').appendTo(row);
+        $('<label for=""></label>').text(RED._("editor:sidebar.project.userSettings.passphrase")).appendTo(row);
         var passphraseInput = $('<input type="password">').appendTo(row).on("change keyup paste",validateForm);
-        var passphraseInputSubLabel = $('<label class="projects-edit-form-sublabel"><small>Optional</small></label>').appendTo(row).find("small");
+        var passphraseInputSubLabel = $('<label class="projects-edit-form-sublabel"><small>'+RED._("editor:sidebar.project.userSettings.optional")+'</small></label>').appendTo(row).find("small");
 
         // var addLocalKeyPane = $('<div>').hide().appendTo(addKeyDialogBody);
         // row = $('<div class="user-settings-row"></div>').appendTo(addLocalKeyPane);
@@ -25862,13 +31939,13 @@ RED.projects.userSettings = (function() {
             }
         }
         var formButtons = $('<span class="button-row" style="position: relative; float: right; margin: 10px;"></span>').appendTo(addKeyDialog);
-        $('<button class="editor-button">Cancel</button>')
+        $('<button class="editor-button">'+RED._("editor:sidebar.project.userSettings.cancel")+'</button>')
             .appendTo(formButtons)
             .click(function(evt) {
                 evt.preventDefault();
                 hideEditForm();
             });
-        var saveButton = $('<button class="editor-button">Generate key</button>')
+        var saveButton = $('<button class="editor-button">'+RED._("editor:sidebar.project.userSettings.generate")+'</button>')
             .appendTo(formButtons)
             .click(function(evt) {
                 evt.preventDefault();
@@ -25947,7 +32024,7 @@ RED.projects.userSettings = (function() {
             utils.sendRequest(options);
 
             var formButtons = $('<span class="button-row" style="position: relative; float: right; margin: 10px;"></span>').appendTo(row);
-            $('<button class="editor-button editor-button-small">Copy public key to clipboard</button>')
+            $('<button class="editor-button editor-button-small">'+RED._("editor:sidebar.project.userSettings.copyPublicKey")+'</button>')
                 .appendTo(formButtons)
                 .click(function(evt) {
                     try {
@@ -25972,7 +32049,7 @@ RED.projects.userSettings = (function() {
                 var container = $('<div class="projects-dialog-list-entry">').appendTo(row);
                 if (entry.empty) {
                     container.addClass('red-ui-search-empty');
-                    container.text("No SSH keys");
+                    container.text(RED._("editor:sidebar.project.userSettings.noSshKeys"));
                     return;
                 }
                 var topRow = $('<div class="projects-dialog-ssh-key-header">').appendTo(container);
@@ -25996,7 +32073,7 @@ RED.projects.userSettings = (function() {
                         .click(function(e) {
                             e.stopPropagation();
                             var spinner = utils.addSpinnerOverlay(row).addClass('projects-dialog-spinner-contain');
-                            var notification = RED.notify("Are you sure you want to delete the SSH key '"+entry.name+"'? This cannot be undone.", {
+                            var notification = RED.notify(RED._("editor:sidebar.project.userSettings.deleteConfirm", {name:entry.name}), {
                                 type: 'warning',
                                 modal: true,
                                 fixed: true,
@@ -26009,7 +32086,7 @@ RED.projects.userSettings = (function() {
                                         }
                                     },
                                     {
-                                        text: "Delete key",
+                                        text: RED._("editor:sidebar.project.userSettings.delete"),
                                         click: function() {
                                             notification.close();
                                             var url = "settings/user/keys/"+entry.name;
@@ -26083,7 +32160,7 @@ RED.projects.userSettings = (function() {
         utils = _utils;
         RED.userSettings.add({
             id:'gitconfig',
-            title: "Git config", // TODO: nls
+            title: RED._("editor:sidebar.project.userSettings.gitConfig"),
             get: createSettingsPane,
             close: function() {
                 var currentGitSettings = RED.settings.get('git') || {};
@@ -26153,11 +32230,11 @@ RED.sidebar.versionControl = (function() {
                 200: function(data) {
                     var title;
                     if (state === 'unstaged') {
-                        title = 'Unstaged changes : '+entry.file
+                        title = RED._("sidebar.project.versionControl.unstagedChanges")+' : '+entry.file
                     } else if (state === 'staged') {
-                        title = 'Staged changes : '+entry.file
+                        title = RED._("sidebar.project.versionControl.stagedChanges")+' : '+entry.file
                     } else {
-                        title = 'Resolve conflicts : '+entry.file
+                        title = RED._("sidebar.project.versionControl.resolveConflicts")+' : '+entry.file
                     }
                     var options = {
                         diff: data.diff,
@@ -26166,18 +32243,18 @@ RED.sidebar.versionControl = (function() {
                         project: activeProject
                     }
                     if (state == 'unstaged') {
-                        options.oldRevTitle = entry.indexStatus === " "?"HEAD":"Staged";
-                        options.newRevTitle = "Unstaged";
+                        options.oldRevTitle = entry.indexStatus === " "?RED._("sidebar.project.versionControl.head"):RED._("sidebar.project.versionControl.staged");
+                        options.newRevTitle = RED._("sidebar.project.versionControl.unstaged");
                         options.oldRev = entry.indexStatus === " "?"@":":0";
                         options.newRev = "_";
                     } else if (state === 'staged') {
-                        options.oldRevTitle = "HEAD";
-                        options.newRevTitle = "Staged";
+                        options.oldRevTitle = RED._("sidebar.project.versionControl.head");
+                        options.newRevTitle = RED._("sidebar.project.versionControl.staged");
                         options.oldRev = "@";
                         options.newRev = ":0";
                     } else {
-                        options.oldRevTitle = "Local";
-                        options.newRevTitle = "Remote";
+                        options.oldRevTitle = RED._("sidebar.project.versionControl.local");
+                        options.newRevTitle = RED._("sidebar.project.versionControl.remote");
                         options.commonRev = ":1";
                         options.oldRev = ":2";
                         options.newRev = ":3";
@@ -26257,7 +32334,7 @@ RED.sidebar.versionControl = (function() {
                     evt.preventDefault();
 
                     var spinner = utils.addSpinnerOverlay(container).addClass('projects-dialog-spinner-contain');
-                    var notification = RED.notify("Are you sure you want to revert the changes to '"+entry.file+"'? This cannot be undone.", {
+                    var notification = RED.notify(RED._("sidebar.project.versionControl.revert",{file:entry.file}), {
                         type: "warning",
                         modal: true,
                         fixed: true,
@@ -26269,7 +32346,7 @@ RED.sidebar.versionControl = (function() {
                                     notification.close();
                                 }
                             },{
-                                text: 'Revert changes',
+                                text: RED._("sidebar.project.versionControl.revertChanges"),
                                 click: function() {
                                     notification.close();
                                     var activeProject = RED.projects.getActiveProject();
@@ -26301,12 +32378,12 @@ RED.sidebar.versionControl = (function() {
 
                         ]
                     })
-
                 });
+            RED.popover.tooltip(revertButton,RED._("sidebar.project.versionControl.revertChanges"));
         }
         bg = $('<span class="button-group"></span>').appendTo(entryTools);
         if (state !== 'unmerged') {
-            $('<button class="editor-button editor-button-small"><i class="fa fa-'+((state==='unstaged')?"plus":"minus")+'"></i></button>')
+            var stageButton = $('<button class="editor-button editor-button-small"><i class="fa fa-'+((state==='unstaged')?"plus":"minus")+'"></i></button>')
                 .appendTo(bg)
                 .click(function(evt) {
                     evt.preventDefault();
@@ -26332,6 +32409,7 @@ RED.sidebar.versionControl = (function() {
                         }
                     },{});
                 });
+            RED.popover.tooltip(stageButton,RED._("sidebar.project.versionControl."+((state==='unstaged')?"stage":"unstage")+"Change"));
         }
         entry["update"+((state==='unstaged')?"Unstaged":"Staged")] = function(entry,status) {
             container.removeClass();
@@ -26382,6 +32460,8 @@ RED.sidebar.versionControl = (function() {
         entry["update"+((state==='unstaged')?"Unstaged":"Staged")](entry, status);
     }
     var utils;
+    var emptyStagedItem;
+    var emptyMergedItem;
     function init(_utils) {
         utils = _utils;
 
@@ -26413,24 +32493,28 @@ RED.sidebar.versionControl = (function() {
         });
 
         localChanges = sections.add({
-            title: "Local Changes",
+            title: RED._("sidebar.project.versionControl.localChanges"),
             collapsible: true
         });
         localChanges.expand();
         localChanges.content.css({height:"100%"});
 
         var bg = $('<div style="float: right"></div>').appendTo(localChanges.header);
-        $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
+        var refreshButton = $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
+                evt.stopPropagation();
                 refresh(true);
-            })
+            });
+        RED.popover.tooltip(refreshButton,RED._("sidebar.project.versionControl.refreshChanges"));
 
+        emptyStagedItem = { label: RED._("sidebar.project.versionControl.none") };
+        emptyMergedItem = { label: RED._("sidebar.project.versionControl.conflictResolve") };
 
         var unstagedContent = $('<div class="sidebar-version-control-change-container"></div>').appendTo(localChanges.content);
-        var header = $('<div class="sidebar-version-control-change-header">Local files</div>').appendTo(unstagedContent);
-        stageAllButton = $('<button class="editor-button editor-button-small" style="float: right"><i class="fa fa-plus"></i> all</button>')
+        var header = $('<div class="sidebar-version-control-change-header">'+RED._("sidebar.project.versionControl.localFiles")+'</div>').appendTo(unstagedContent);
+        stageAllButton = $('<button class="editor-button editor-button-small" style="float: right"><i class="fa fa-plus"></i> '+RED._("sidebar.project.versionControl.all")+'</button>')
             .appendTo(header)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26440,6 +32524,7 @@ RED.sidebar.versionControl = (function() {
                 });
                 updateBulk(toStage,true);
             });
+        RED.popover.tooltip(stageAllButton,RED._("sidebar.project.versionControl.stageAllChange"));
         unstagedChangesList = $("<ol>",{style:"position: absolute; top: 30px; bottom: 0; right:0; left:0;"}).appendTo(unstagedContent);
         unstagedChangesList.editableList({
             addButton: false,
@@ -26460,9 +32545,9 @@ RED.sidebar.versionControl = (function() {
 
         unmergedContent = $('<div class="sidebar-version-control-change-container"></div>').appendTo(localChanges.content);
 
-        header = $('<div class="sidebar-version-control-change-header">Unmerged changes</div>').appendTo(unmergedContent);
+        header = $('<div class="sidebar-version-control-change-header">'+RED._("sidebar.project.versionControl.unmergedChanges")+'</div>').appendTo(unmergedContent);
         bg = $('<div style="float: right"></div>').appendTo(header);
-        var abortMergeButton = $('<button class="editor-button editor-button-small" style="margin-right: 5px;">abort merge</button>')
+        var abortMergeButton = $('<button class="editor-button editor-button-small" style="margin-right: 5px;">'+RED._("sidebar.project.versionControl.abortMerge")+'</button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26500,7 +32585,7 @@ RED.sidebar.versionControl = (function() {
             addItem: function(row,index,entry) {
                 if (entry === emptyMergedItem) {
                     entry.button = {
-                        label: 'commit',
+                        label: RED._("sidebar.project.versionControl.commit"),
                         click: function(evt) {
                             evt.preventDefault();
                             evt.stopPropagation();
@@ -26524,12 +32609,12 @@ RED.sidebar.versionControl = (function() {
 
         var stagedContent = $('<div class="sidebar-version-control-change-container"></div>').appendTo(localChanges.content);
 
-        header = $('<div class="sidebar-version-control-change-header">Changes to commit</div>').appendTo(stagedContent);
+        header = $('<div class="sidebar-version-control-change-header">'+RED._("sidebar.project.versionControl.changeToCommit")+'</div>').appendTo(stagedContent);
 
         bg = $('<div style="float: right"></div>').appendTo(header);
         var showCommitBox = function() {
             commitMessage.val("");
-            submitCommitButton.attr("disabled",true);
+            submitCommitButton.prop("disabled",true);
             unstagedContent.css("height","30px");
             if (unmergedContent.is(":visible")) {
                 unmergedContent.css("height","30px");
@@ -26541,20 +32626,21 @@ RED.sidebar.versionControl = (function() {
             setTimeout(function() {
                 commitBox.css("height","175px");
             },10);
-            stageAllButton.attr("disabled",true);
-            unstageAllButton.attr("disabled",true);
-            commitButton.attr("disabled",true);
-            abortMergeButton.attr("disabled",true);
+            stageAllButton.prop("disabled",true);
+            unstageAllButton.prop("disabled",true);
+            commitButton.prop("disabled",true);
+            abortMergeButton.prop("disabled",true);
             commitMessage.focus();
         }
-        commitButton = $('<button class="editor-button editor-button-small" style="margin-right: 5px;">commit</button>')
+        commitButton = $('<button class="editor-button editor-button-small" style="margin-right: 5px;">'+RED._("sidebar.project.versionControl.commit")+'</button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
                 evt.stopPropagation();
                 showCommitBox();
             });
-        unstageAllButton = $('<button class="editor-button editor-button-small"><i class="fa fa-minus"></i> all</button>')
+        RED.popover.tooltip(commitButton,RED._("sidebar.project.versionControl.commitChanges"));
+        unstageAllButton = $('<button class="editor-button editor-button-small"><i class="fa fa-minus"></i> '+RED._("sidebar.project.versionControl.all")+'</button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26565,6 +32651,7 @@ RED.sidebar.versionControl = (function() {
                 updateBulk(toUnstage,false);
 
             });
+        RED.popover.tooltip(unstageAllButton,RED._("sidebar.project.versionControl.unstageAllChange"));
 
 
         stagedChangesList = $("<ol>",{style:"position: absolute; top: 30px; bottom: 0; right:0; left:0;"}).appendTo(stagedContent);
@@ -26581,14 +32668,14 @@ RED.sidebar.versionControl = (function() {
 
         commitBox = $('<div class="sidebar-version-control-slide-box sidebar-version-control-slide-box-bottom"></div>').hide().appendTo(localChanges.content);
 
-        var commitMessage = $('<textarea placeholder="Enter your commit message"></textarea>')
+        var commitMessage = $('<textarea placeholder='+RED._("sidebar.project.versionControl.commitPlaceholder")+'></textarea>')
             .appendTo(commitBox)
             .on("change keyup paste",function() {
-                submitCommitButton.attr('disabled',$(this).val().trim()==="");
+                submitCommitButton.prop('disabled',$(this).val().trim()==="");
             });
         var commitToolbar = $('<div class="sidebar-version-control-slide-box-toolbar button-group">').appendTo(commitBox);
 
-        var cancelCommitButton = $('<button class="editor-button">Cancel</button>')
+        var cancelCommitButton = $('<button class="editor-button">'+RED._("sidebar.project.versionControl.cancelCapital")+'</button>')
             .appendTo(commitToolbar)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26600,13 +32687,13 @@ RED.sidebar.versionControl = (function() {
                 setTimeout(function() {
                     commitBox.hide();
                 },200);
-                stageAllButton.attr("disabled",false);
-                unstageAllButton.attr("disabled",false);
-                commitButton.attr("disabled",false);
-                abortMergeButton.attr("disabled",false);
+                stageAllButton.prop("disabled",false);
+                unstageAllButton.prop("disabled",false);
+                commitButton.prop("disabled",false);
+                abortMergeButton.prop("disabled",false);
 
             })
-        var submitCommitButton = $('<button class="editor-button">Commit</button>')
+        var submitCommitButton = $('<button class="editor-button">'+RED._("sidebar.project.versionControl.commitCapital")+'</button>')
             .appendTo(commitToolbar)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26642,21 +32729,23 @@ RED.sidebar.versionControl = (function() {
 
 
         var localHistory = sections.add({
-            title: "Commit History",
+            title: RED._("sidebar.project.versionControl.commitHistory"),
             collapsible: true
         });
 
-        var bg = $('<div style="float: right"></div>').appendTo(localHistory.header);
-        $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
+        bg = $('<div style="float: right"></div>').appendTo(localHistory.header);
+        refreshButton = $('<button class="editor-button editor-button-small"><i class="fa fa-refresh"></i></button>')
             .appendTo(bg)
             .click(function(evt) {
                 evt.preventDefault();
+                evt.stopPropagation();
                 refresh(true,true);
             })
+        RED.popover.tooltip(refreshButton,RED._("sidebar.project.versionControl.refreshCommitHistory"))
 
         var localBranchToolbar = $('<div class="sidebar-version-control-change-header" style="text-align: right;"></div>').appendTo(localHistory.content);
 
-        var localBranchButton = $('<button class="editor-button editor-button-small"><i class="fa fa-code-fork"></i> Branch: <span id="sidebar-version-control-local-branch"></span></button>')
+        var localBranchButton = $('<button class="editor-button editor-button-small"><i class="fa fa-code-fork"></i> '+RED._("sidebar.project.versionControl.branch")+' <span id="sidebar-version-control-local-branch"></span></button>')
             .appendTo(localBranchToolbar)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26675,6 +32764,7 @@ RED.sidebar.versionControl = (function() {
                     },100);
                 }
             })
+        RED.popover.tooltip(localBranchButton,RED._("sidebar.project.versionControl.changeLocalBranch"))
         var repoStatusButton = $('<button class="editor-button editor-button-small" style="margin-left: 10px;" id="sidebar-version-control-repo-status-button">'+
                                  '<span id="sidebar-version-control-repo-status-stats">'+
                                     '<i class="fa fa-long-arrow-up"></i> <span id="sidebar-version-control-commits-ahead"></span> '+
@@ -26703,6 +32793,7 @@ RED.sidebar.versionControl = (function() {
 
                 }
             });
+        RED.popover.tooltip(repoStatusButton,RED._("sidebar.project.versionControl.manageRemoteBranch"))
 
         localCommitList = $("<ol>",{style:"position: absolute; top: 30px; bottom: 0px; right:0; left:0;"}).appendTo(localHistory.content);
         localCommitListShade = $('<div class="component-shade" style="z-Index: 3"></div>').css('top',"30px").hide().appendTo(localHistory.content);
@@ -26713,7 +32804,7 @@ RED.sidebar.versionControl = (function() {
                 row.addClass('sidebar-version-control-commit-entry');
                 if (entry.url) {
                     row.addClass('sidebar-version-control-commit-more');
-                    row.text("+ "+(entry.total-entry.totalKnown)+" more commit(s)");
+                    row.text("+ "+(entry.total-entry.totalKnown)+RED._("sidebar.project.versionControl.moreCommits"));
                     row.click(function(e) {
                         e.preventDefault();
                         getCommits(entry.url,localCommitList,row,entry.limit,entry.before);
@@ -26727,8 +32818,8 @@ RED.sidebar.versionControl = (function() {
                                 result.parents = entry.parents;
                                 result.oldRev = entry.sha+"~1";
                                 result.newRev = entry.sha;
-                                result.oldRevTitle = "Commit "+entry.sha.substring(0,7)+"~1";
-                                result.newRevTitle = "Commit "+entry.sha.substring(0,7);
+                                result.oldRevTitle = RED._("sidebar.project.versionControl.commitCapital")+" "+entry.sha.substring(0,7)+"~1";
+                                result.newRevTitle = RED._("sidebar.project.versionControl.commitCapital")+" "+entry.sha.substring(0,7);
                                 result.date = humanizeSinceDate(parseInt(entry.date));
                                 RED.diff.showCommitDiff(result);
                             });
@@ -26767,10 +32858,10 @@ RED.sidebar.versionControl = (function() {
         }
         var localBranchBox = $('<div class="sidebar-version-control-slide-box sidebar-version-control-slide-box-top" style="top:30px;"></div>').hide().appendTo(localHistory.content);
 
-        $('<div class="sidebar-version-control-slide-box-header"></div>').text("Change local branch").appendTo(localBranchBox);
+        $('<div class="sidebar-version-control-slide-box-header"></div>').text(RED._("sidebar.project.versionControl.changeLocalBranch")).appendTo(localBranchBox);
 
         var localBranchList = utils.createBranchList({
-            placeholder: "Find or create a branch",
+            placeholder: RED._("sidebar.project.versionControl.createBranchPlaceholder"),
             container: localBranchBox,
             onselect: function(body) {
                 if (body.current) {
@@ -26802,7 +32893,7 @@ RED.sidebar.versionControl = (function() {
                         400: {
                             'git_local_overwrite': function(error) {
                                 spinner.remove();
-                                RED.notify("You have local changes that would be overwritten by changing the branch. You must either commit or undo those changes first.",{
+                                RED.notify(RED._("sidebar.project.versionControl.localOverwrite"),{
                                     type:'error',
                                     timeout: 8000
                                 });
@@ -26845,10 +32936,10 @@ RED.sidebar.versionControl = (function() {
                 },200);
             }
         }
-        $('<div class="sidebar-version-control-slide-box-header"></div>').text("Manage remote branch").appendTo(remoteBox);
+        $('<div class="sidebar-version-control-slide-box-header"></div>').text(RED._("sidebar.project.versionControl.manageRemoteBranch")).appendTo(remoteBox);
 
         var remoteBranchRow = $('<div style="margin-bottom: 5px;"></div>').appendTo(remoteBox);
-        var remoteBranchButton = $('<button id="sidebar-version-control-repo-branch" class="sidebar-version-control-repo-action editor-button"><i class="fa fa-code-fork"></i> Remote: <span id="sidebar-version-control-remote-branch"></span></button>')
+        var remoteBranchButton = $('<button id="sidebar-version-control-repo-branch" class="sidebar-version-control-repo-action editor-button"><i class="fa fa-code-fork"></i> '+RED._("sidebar.project.versionControl.remote")+': <span id="sidebar-version-control-remote-branch"></span></button>')
             .appendTo(remoteBranchRow)
             .click(function(evt) {
                 evt.preventDefault();
@@ -26871,9 +32962,9 @@ RED.sidebar.versionControl = (function() {
 
 
         var errorMessage = $('<div id="sidebar-version-control-repo-toolbar-error-message" class="sidebar-version-control-slide-box-header" style="min-height: 100px;"></div>').hide().appendTo(remoteBox);
-        $('<div style="margin-top: 10px;"><i class="fa fa-warning"></i> Unable to access remote repository</div>').appendTo(errorMessage)
+        $('<div style="margin-top: 10px;"><i class="fa fa-warning"></i> '+RED._("sidebar.project.versionControl.unableToAccess")+'</div>').appendTo(errorMessage)
         var buttonRow = $('<div style="margin: 10px 30px; text-align: center"></div>').appendTo(errorMessage);
-        $('<button class="editor-button" style="width: 80%;"><i class="fa fa-refresh"></i> Retry</button>')
+        $('<button class="editor-button" style="width: 80%;"><i class="fa fa-refresh"></i> '+RED._("sidebar.project.versionControl.retry")+'</button>')
             .appendTo(buttonRow)
             .click(function(e) {
                 e.preventDefault();
@@ -26911,12 +33002,12 @@ RED.sidebar.versionControl = (function() {
                 });
             })
 
-        $('<div class="sidebar-version-control-slide-box-header" style="height: 20px;"><label id="sidebar-version-control-repo-toolbar-set-upstream-row" for="sidebar-version-control-repo-toolbar-set-upstream" class="hide"><input type="checkbox" id="sidebar-version-control-repo-toolbar-set-upstream"> Set as upstream branch</label></div>').appendTo(remoteBox);
+        $('<div class="sidebar-version-control-slide-box-header" style="height: 20px;"><label id="sidebar-version-control-repo-toolbar-set-upstream-row" for="sidebar-version-control-repo-toolbar-set-upstream" class="hide"><input type="checkbox" id="sidebar-version-control-repo-toolbar-set-upstream"> '+RED._("sidebar.project.versionControl.setUpstreamBranch")+'</label></div>').appendTo(remoteBox);
 
         var remoteBranchSubRow = $('<div style="height: 0;overflow:hidden; transition: height 0.2s ease-in-out;"></div>').hide().appendTo(remoteBranchRow);
         var remoteBranchList = utils.createBranchList({
-            placeholder: "Find or create a remote branch",
-            currentLabel: "upstream",
+            placeholder: RED._("sidebar.project.versionControl.createRemoteBranchPlaceholder"),
+            currentLabel: RED._("sidebar.project.versionControl.upstream"),
             remote: function() {
                 var project = RED.projects.getActiveProject();
                 var remotes = Object.keys(project.git.remotes);
@@ -26946,14 +33037,14 @@ RED.sidebar.versionControl = (function() {
                         })
                     } else {
                         if (!activeProject.git.branches.remote) {
-                            $('#sidebar-version-control-repo-toolbar-message').text("The created branch will be set as the tracked upstream branch.");
+                            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.trackedUpstreamBranch"));
                             $("#sidebar-version-control-repo-toolbar-set-upstream").prop('checked',true);
                             $("#sidebar-version-control-repo-toolbar-set-upstream").prop('disabled',true);
                         } else {
-                            $('#sidebar-version-control-repo-toolbar-message').text("The branch will be created. Select below to set it as the tracked upstream branch.");
+                            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.selectUpstreamBranch"));
                         }
-                        $("#sidebar-version-control-repo-pull").attr('disabled',true);
-                        $("#sidebar-version-control-repo-push").attr('disabled',false);
+                        $("#sidebar-version-control-repo-pull").prop('disabled',true);
+                        $("#sidebar-version-control-repo-push").prop('disabled',false);
                     }
                 });
             }
@@ -26962,12 +33053,18 @@ RED.sidebar.versionControl = (function() {
 
         var row = $('<div style="margin-bottom: 5px;"></div>').appendTo(remoteBox);
 
-        $('<button id="sidebar-version-control-repo-push" class="sidebar-version-control-repo-sub-action editor-button"><i class="fa fa-long-arrow-up"></i> <span>push</span></button>')
+        $('<button id="sidebar-version-control-repo-push" class="sidebar-version-control-repo-sub-action editor-button"><i class="fa fa-long-arrow-up"></i> <span data-i18n="sidebar.project.versionControl.push"></span></button>')
             .appendTo(row)
             .click(function(e) {
                 e.preventDefault();
                 var spinner = utils.addSpinnerOverlay(remoteBox).addClass("projects-dialog-spinner-contain");
+                var buttonRow = $('<div style="position: relative; bottom: 60px;"></div>').appendTo(spinner);
+                $('<button class="editor-button"></button>').text(RED._("eventLog.view")).appendTo(buttonRow).click(function(evt) {
+                    evt.preventDefault();
+                    RED.actions.invoke("core:show-event-log");
+                });
                 var activeProject = RED.projects.getActiveProject();
+                RED.eventLog.startEvent("Push changes"+(activeProject.git.branches.remoteAlt?(" : "+activeProject.git.branches.remoteAlt):""));
                 var url = "projects/"+activeProject.name+"/push";
                 if (activeProject.git.branches.remoteAlt) {
                     url+="/"+activeProject.git.branches.remoteAlt;
@@ -26994,8 +33091,8 @@ RED.sidebar.versionControl = (function() {
                         },
                         400: {
                             'git_push_failed': function(err) {
-                                // TODO: better message + NLS
-                                RED.notify("NLS: Push failed as the remote has more recent commits. Pull first and write a better error message!","error");
+                                // TODO: better message
+                                RED.notify(RED._("sidebar.project.versionControl.pushFailed"),"error");
                             },
                             'unexpected_error': function(error) {
                                 console.log(error);
@@ -27011,7 +33108,13 @@ RED.sidebar.versionControl = (function() {
         var pullRemote = function(options) {
             options = options || {};
             var spinner = utils.addSpinnerOverlay(remoteBox).addClass("projects-dialog-spinner-contain");
+            var buttonRow = $('<div style="position: relative; bottom: 60px;"></div>').appendTo(spinner);
+            $('<button class="editor-button"></button>').text(RED._("eventLog.view")).appendTo(buttonRow).click(function(evt) {
+                evt.preventDefault();
+                RED.actions.invoke("core:show-event-log");
+            });
             var activeProject = RED.projects.getActiveProject();
+            RED.eventLog.startEvent("Pull changes"+(activeProject.git.branches.remoteAlt?(" : "+activeProject.git.branches.remoteAlt):""));
             var url = "projects/"+activeProject.name+"/pull";
             if (activeProject.git.branches.remoteAlt) {
                 url+="/"+activeProject.git.branches.remoteAlt;
@@ -27046,18 +33149,18 @@ RED.sidebar.versionControl = (function() {
                     },
                     400: {
                         'git_local_overwrite': function(err) {
-                            RED.notify("<p>Unable to pull remote changes; your unstaged local changes would be overwritten.</p><p>Commit your changes and try again.</p>"+
-                                '<p><a href="#" onclick="RED.sidebar.versionControl.showLocalChanges(); return false;">'+'Show unstaged changes'+'</a></p>',"error",false,10000000);
+                            RED.notify(RED._("sidebar.project.versionControl.unablePull")+
+                                '<p><a href="#" onclick="RED.sidebar.versionControl.showLocalChanges(); return false;">'+RED._("sidebar.project.versionControl.showUnstagedChanges")+'</a></p>',"error",false,10000000);
                         },
                         'git_pull_merge_conflict': function(err) {
                             refresh(true);
                             closeRemoteBox();
                         },
                         'git_connection_failed': function(err) {
-                            RED.notify("Could not connect to remote repository: "+err.toString(),"warning")
+                            RED.notify(RED._("sidebar.project.versionControl.connectionFailed")+err.toString(),"warning")
                         },
                         'git_pull_unrelated_history': function(error) {
-                            var notification = RED.notify("<p>The remote has an unrelated history of commits.</p><p>Are you sure you want to pull the changes into your local repository?</p>",{
+                            var notification = RED.notify(RED._("sidebar.project.versionControl.pullUnrelatedHistory"),{
                                 type: 'error',
                                 modal: true,
                                 fixed: true,
@@ -27068,7 +33171,7 @@ RED.sidebar.versionControl = (function() {
                                             notification.close();
                                         }
                                     },{
-                                        text: 'Pull changes',
+                                        text: RED._("sidebar.project.versionControl.pullChanges"),
                                         click: function() {
                                             notification.close();
                                             options.allowUnrelatedHistories = true;
@@ -27087,7 +33190,7 @@ RED.sidebar.versionControl = (function() {
                 spinner.remove();
             });
         }
-        $('<button id="sidebar-version-control-repo-pull" class="sidebar-version-control-repo-sub-action editor-button"><i class="fa fa-long-arrow-down"></i> <span>pull</span></button>')
+        $('<button id="sidebar-version-control-repo-pull" class="sidebar-version-control-repo-sub-action editor-button"><i class="fa fa-long-arrow-down"></i> <span data-i18n="sidebar.project.versionControl.pull"></span></button>')
             .appendTo(row)
             .click(function(e) {
                 e.preventDefault();
@@ -27100,10 +33203,13 @@ RED.sidebar.versionControl = (function() {
 
         RED.sidebar.addTab({
             id: "version-control",
-            label: "history",
-            name: "Project History",
+            label: RED._("sidebar.project.versionControl.history"),
+            name: RED._("sidebar.project.versionControl.projectHistory"),
             content: sidebarContent,
             enableOnEdit: false,
+            pinned: true,
+            iconClass: "fa fa-code-fork",
+            action: "core:show-version-control-tab",
             onchange: function() {
                 setTimeout(function() {
                     sections.resize();
@@ -27120,17 +33226,17 @@ RED.sidebar.versionControl = (function() {
         if (daysDelta > 30) {
             return (new Date(date*1000)).toLocaleDateString();
         } else if (daysDelta > 0) {
-            return daysDelta+" day"+(daysDelta>1?"s":"")+" ago";
+            return RED._("sidebar.project.versionControl.daysAgo", {count:daysDelta})
         }
         var hoursDelta = Math.floor(delta / (60*60));
         if (hoursDelta > 0) {
-            return hoursDelta+" hour"+(hoursDelta>1?"s":"")+" ago";
+            return RED._("sidebar.project.versionControl.hoursAgo", {count:hoursDelta})
         }
         var minutesDelta = Math.floor(delta / 60);
         if (minutesDelta > 0) {
-            return minutesDelta+" minute"+(minutesDelta>1?"s":"")+" ago";
+            return RED._("sidebar.project.versionControl.minsAgo", {count:minutesDelta})
         }
-        return "Seconds ago";
+        return RED._("sidebar.project.versionControl.secondsAgo");
     }
 
     function updateBulk(files,unstaged) {
@@ -27164,9 +33270,6 @@ RED.sidebar.versionControl = (function() {
     }
 
     var refreshInProgress = false;
-
-    var emptyStagedItem = { label:"None" };
-    var emptyMergedItem = { label:"All conflicts resolved. Commit the changes to complete the merge." };
 
     function getCommits(url,targetList,spinnerTarget,limit,before) {
         var spinner = utils.addSpinnerOverlay(spinnerTarget);
@@ -27332,9 +33435,9 @@ RED.sidebar.versionControl = (function() {
         var unstagedCount = unstagedChangesList.editableList('length');
         var unmergedCount = unmergedChangesList.editableList('length');
 
-        commitButton.attr('disabled',(isMerging && unmergedCount > 0)||(!isMerging && stagedCount === 0));
-        stageAllButton.attr('disabled',unstagedCount === 0);
-        unstageAllButton.attr('disabled',stagedCount === 0);
+        commitButton.prop('disabled',(isMerging && unmergedCount > 0)||(!isMerging && stagedCount === 0));
+        stageAllButton.prop('disabled',unstagedCount === 0);
+        unstageAllButton.prop('disabled',stagedCount === 0);
 
         if (stagedCount === 0) {
             stagedChangesList.editableList('addItem',emptyStagedItem);
@@ -27375,7 +33478,7 @@ RED.sidebar.versionControl = (function() {
                 refreshFiles(result);
 
                 $('#sidebar-version-control-local-branch').text(result.branches.local);
-                $('#sidebar-version-control-remote-branch').text(result.branches.remote||"none");
+                $('#sidebar-version-control-remote-branch').text(result.branches.remote||RED._("sidebar.project.versionControl.none"));
 
                 var commitsAhead = result.commits.ahead || 0;
                 var commitsBehind = result.commits.behind || 0;
@@ -27384,9 +33487,9 @@ RED.sidebar.versionControl = (function() {
                     if (result.branches.hasOwnProperty("remoteError") && result.branches.remoteError.code !== 'git_remote_gone') {
                         $("#sidebar-version-control-repo-status-auth-issue").show();
                         $("#sidebar-version-control-repo-status-stats").hide();
-                        $('#sidebar-version-control-repo-branch').attr('disabled',true);
-                        $("#sidebar-version-control-repo-pull").attr('disabled',true);
-                        $("#sidebar-version-control-repo-push").attr('disabled',true);
+                        $('#sidebar-version-control-repo-branch').prop('disabled',true);
+                        $("#sidebar-version-control-repo-pull").prop('disabled',true);
+                        $("#sidebar-version-control-repo-push").prop('disabled',true);
                         $('#sidebar-version-control-repo-toolbar-message').hide();
                         $('#sidebar-version-control-repo-toolbar-error-message').show();
                     } else {
@@ -27396,7 +33499,7 @@ RED.sidebar.versionControl = (function() {
                         $("#sidebar-version-control-repo-status-auth-issue").hide();
                         $("#sidebar-version-control-repo-status-stats").show();
 
-                        $('#sidebar-version-control-repo-branch').attr('disabled',false);
+                        $('#sidebar-version-control-repo-branch').prop('disabled',false);
 
                         $("#sidebar-version-control-repo-status-button").show();
                         if (result.branches.hasOwnProperty('remote')) {
@@ -27405,9 +33508,9 @@ RED.sidebar.versionControl = (function() {
                             $('#sidebar-version-control-commits-ahead').text("");
                             $('#sidebar-version-control-commits-behind').text("");
 
-                            $('#sidebar-version-control-repo-toolbar-message').text("Your local branch is not currently tracking a remote branch.");
-                            $("#sidebar-version-control-repo-pull").attr('disabled',true);
-                            $("#sidebar-version-control-repo-push").attr('disabled',true);
+                            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.notTracking"));
+                            $("#sidebar-version-control-repo-pull").prop('disabled',true);
+                            $("#sidebar-version-control-repo-push").prop('disabled',true);
                         }
                     }
                 } else {
@@ -27431,25 +33534,28 @@ RED.sidebar.versionControl = (function() {
         $('#sidebar-version-control-commits-ahead').text(commitsAhead);
         $('#sidebar-version-control-commits-behind').text(commitsBehind);
         if (isMerging) {
-            $('#sidebar-version-control-repo-toolbar-message').text("Your repository has unmerged changes. You need to fix the conflicts and commit the result.");
-            $("#sidebar-version-control-repo-pull").attr('disabled',true);
-            $("#sidebar-version-control-repo-push").attr('disabled',true);
+            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.statusUnmergedChanged"));
+            $("#sidebar-version-control-repo-pull").prop('disabled',true);
+            $("#sidebar-version-control-repo-push").prop('disabled',true);
         } else if (commitsAhead > 0 && commitsBehind === 0) {
-            $('#sidebar-version-control-repo-toolbar-message').text("Your repository is "+commitsAhead+" commit"+(commitsAhead===1?'':'s')+" ahead of the remote. You can push "+(commitsAhead===1?'this commit':'these commits')+" now.");
-            $("#sidebar-version-control-repo-pull").attr('disabled',true);
-            $("#sidebar-version-control-repo-push").attr('disabled',false);
+            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.commitsAhead", {count:commitsAhead}));
+            $("#sidebar-version-control-repo-pull").prop('disabled',true);
+            $("#sidebar-version-control-repo-push").prop('disabled',false);
         } else if (commitsAhead === 0 && commitsBehind > 0) {
-            $('#sidebar-version-control-repo-toolbar-message').text("Your repository is "+commitsBehind+" commit"+(commitsBehind===1?'':'s')+" behind of the remote. You can pull "+(commitsBehind===1?'this commit':'these commits')+" now.");
-            $("#sidebar-version-control-repo-pull").attr('disabled',false);
-            $("#sidebar-version-control-repo-push").attr('disabled',true);
+            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.commitsBehind",{ count: commitsBehind }));
+            $("#sidebar-version-control-repo-pull").prop('disabled',false);
+            $("#sidebar-version-control-repo-push").prop('disabled',true);
         } else if (commitsAhead > 0 && commitsBehind > 0) {
-            $('#sidebar-version-control-repo-toolbar-message').text("Your repository is "+commitsBehind+" commit"+(commitsBehind===1?'':'s')+" behind and "+commitsAhead+" commit"+(commitsAhead===1?'':'s')+" ahead of the remote. You must pull the remote commit"+(commitsBehind===1?'':'s')+" down before pushing.");
-            $("#sidebar-version-control-repo-pull").attr('disabled',false);
-            $("#sidebar-version-control-repo-push").attr('disabled',true);
+            $('#sidebar-version-control-repo-toolbar-message').text(
+                RED._("sidebar.project.versionControl.commitsAheadAndBehind1",{ count:commitsBehind })+
+                RED._("sidebar.project.versionControl.commitsAheadAndBehind2",{ count:commitsAhead })+
+                RED._("sidebar.project.versionControl.commitsAheadAndBehind3",{ count:commitsBehind }));
+            $("#sidebar-version-control-repo-pull").prop('disabled',false);
+            $("#sidebar-version-control-repo-push").prop('disabled',true);
         } else if (commitsAhead === 0 && commitsBehind === 0) {
-            $('#sidebar-version-control-repo-toolbar-message').text("Your repository is up to date.");
-            $("#sidebar-version-control-repo-pull").attr('disabled',true);
-            $("#sidebar-version-control-repo-push").attr('disabled',true);
+            $('#sidebar-version-control-repo-toolbar-message').text(RED._("sidebar.project.versionControl.repositoryUpToDate"));
+            $("#sidebar-version-control-repo-pull").prop('disabled',true);
+            $("#sidebar-version-control-repo-push").prop('disabled',true);
         }
     }
     function show() {

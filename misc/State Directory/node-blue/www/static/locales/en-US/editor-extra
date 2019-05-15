@@ -1,0 +1,30 @@
+{
+    "menu": {
+        "label": {
+            "powered": "Powered by Node-RED",
+            "nodebluewebsite": "Node-BLUE website"
+        }
+    },
+    "notification": {
+        "info": "<strong>Info</strong>: __message__",
+        "infoMessages": {
+            "flowsStarted": "Flows have been (re)started."
+        },
+        "warnings": {
+            "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
+        },
+        "errors": {
+             "flowStartError": "<p>Failed to start flow '__flow__'. Please see the error log for more details.</p>"
+        }
+    },
+    "history": {
+        "title": "History",
+        "lastValue": "Last value:"
+    },
+    "fixedInputs": {
+        "title": "Set fixed input",
+        "description": "You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.",
+        "clear": "Clear",
+        "set": "Set"
+    }
+}
