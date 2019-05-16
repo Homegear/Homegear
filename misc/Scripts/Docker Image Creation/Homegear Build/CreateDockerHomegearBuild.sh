@@ -561,7 +561,9 @@ createPackage Homegear-IPCam $1 homegear-ipcam 0
 createPackage Homegear-Intertechno $1 homegear-intertechno 0
 createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage Homegear-CCU $1 homegear-ccu 0
-createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
+if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
+	createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
+fi
 createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
 createPackage homegear-management $1 homegear-management 0
@@ -659,7 +661,9 @@ cleanUp homegear-ipcam
 cleanUp homegear-intertechno
 cleanUp homegear-nanoleaf
 cleanUp homegear-ccu
-cleanUp homegear-velux-klf200
+if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
+	cleanUp homegear-velux-klf200
+fi
 cleanUp homegear-influxdb
 cleanUp homegear-gateway
 cleanUp homegear-management
@@ -685,7 +689,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-webssh
 fi
 EOF
-echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-ccu.deb && test -f homegear-velux-klf200.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb; then
+echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-ccu.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb; then
 	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -703,10 +707,19 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-nanoleaf.deb homegear-nanoleaf_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-ccu.deb homegear-ccu_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-velux-klf200.deb homegear-velux-klf200_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-influxdb.deb homegear-influxdb_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
+
+	if [ \"\$distributionVersion\" != \"jessie\" ] && [ \"\$distributionVersion\" != \"xenial\" ]; then
+		if test ! -f homegear-velux-klf200.deb; then
+			echo \"Error: Some or all packages from GitHub could not be created.\"
+			exit 1
+		fi
+
+		mv homegear-velux-klf200.deb homegear-velux-klf200_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	fi
+
 	if [[ -n \$1 ]]; then
 		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-webssh.deb; then
 			echo \"Error: Some or all packages from gitit.de could not be created.\"
@@ -755,7 +768,14 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb; then
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb; then
+	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
+		if test ! -f homegear-velux-klf200_*.deb; then
+			echo "Error: Some or all packages from GitHub could not be created."
+			exit 1
+		fi
+	fi
+
 	if [[ -n $1 ]]; then
 		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
@@ -786,7 +806,14 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb; then
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb; then
+	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
+		if test ! -f homegear-velux-klf200_*.deb; then
+			echo "Error: Some or all packages from GitHub could not be created."
+			exit 1
+		fi
+	fi
+
 	if [[ -n $1 ]]; then
 		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
