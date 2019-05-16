@@ -196,7 +196,7 @@ class HomegearDevice extends HomegearDeviceBase
 					<operationType>store</operationType>
 				</physicalNone>
 			</parameter>
-			<parameter id="BATT_LOW">
+			<parameter id="LOWBAT">
 				<properties>
 					<casts>
 						<rpcBinary/>
