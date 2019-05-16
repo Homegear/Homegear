@@ -1468,9 +1468,48 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		}
 
 		std::string contentString;
-	    if(path.compare(0, 18, "node-blue/context/") == 0)
+	    if(path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18)
         {
-            contentString = "{\"memory\":{}}";
+	        auto subpath = path.substr(18);
+	        auto subpathParts = BaseLib::HelperFunctions::splitAll(subpath, '/');
+	        std::string dataId;
+
+	        if(!subpathParts.empty() && subpathParts.at(0) == "global") dataId = "global";
+	        else if(subpathParts.size() > 1) dataId = subpathParts.at(1);
+            std::string key;
+            if(dataId == "global" && subpathParts.size() > 1) key = subpathParts.at(1);
+            else key = subpathParts.size() > 2 ? BaseLib::HelperFunctions::splitFirst(subpathParts.at(2), '?').first : "";
+
+	        if(!dataId.empty())
+            {
+                auto nodeData = _bl->db->getNodeData(dataId, key, false);
+                auto contextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                auto innerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                if(key.empty())
+                {
+                    for(auto& innerNodeData : *nodeData->structValue)
+                    {
+                        auto innerInnerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                        innerInnerContextData->structValue->emplace("msg", innerNodeData.second);
+                        innerInnerContextData->structValue->emplace("format", std::make_shared<BaseLib::Variable>(getNodeBlueFormatFromVariableType(innerNodeData.second)));
+                        innerContextData->structValue->emplace(innerNodeData.first, innerInnerContextData);
+                    }
+                }
+                else
+                {
+                    innerContextData->structValue->emplace("msg", nodeData);
+                    innerContextData->structValue->emplace("format", std::make_shared<BaseLib::Variable>(getNodeBlueFormatFromVariableType(nodeData)));
+                }
+
+                if(key.empty())
+                {
+                    contextData->structValue->emplace("memory", innerContextData);
+                    _jsonEncoder->encode(contextData, contentString);
+                }
+                else _jsonEncoder->encode(innerContextData, contentString);
+            }
+            else contentString = "{\"memory\":{}}";
             responseEncoding = "application/json";
         }
 		else if(path == "node-blue/locales/nodes")
@@ -1541,7 +1580,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
                                 {
                                     if(subsubelement.second->type == BaseLib::VariableType::tStruct)
                                     {
-                                        _out.printWarning("Warning: File " + path + "-extra has two many levels. Only three levels are allowed.");
+                                        _out.printWarning("Warning: File " + path + "-extra has too many levels. Only three levels are allowed.");
                                     }
                                     else (*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first] = subsubelement.second;
                                 }
@@ -1744,6 +1783,58 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
+#endif
+}
+
+std::string NodeBlueServer::handleDelete(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
+{
+#ifdef NO_SCRIPTENGINE
+    return "unauthorized";
+#else
+    try
+    {
+        bool sessionValid = false;
+        {
+            auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+            if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+            if(!sessionValid)
+            {
+                sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+                if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+            }
+            if(!sessionValid)
+            {
+                sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
+                if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+            }
+        }
+
+        std::string contentString;
+        if(path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18)
+        {
+            auto subpath = path.substr(18);
+            auto subpathParts = BaseLib::HelperFunctions::splitAll(subpath, '/');
+            std::string dataId;
+
+            if(!subpathParts.empty() && subpathParts.at(0) == "global") dataId = "global";
+            else if(subpathParts.size() > 1) dataId = subpathParts.at(1);
+            std::string key;
+            if(dataId == "global" && subpathParts.size() > 1) key = subpathParts.at(1);
+            else if(subpathParts.size() > 2) key = BaseLib::HelperFunctions::splitFirst(subpathParts.at(2), '?').first;
+
+            if(!dataId.empty() && !key.empty()) _bl->db->deleteNodeData(dataId, key);
+        }
+        return contentString;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 #endif
 }
 
@@ -2771,11 +2862,51 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& par
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::string NodeBlueServer::getNodeBlueFormatFromVariableType(const BaseLib::PVariable& variable)
+{
+    std::string format;
+    switch(variable->type)
+    {
+        case BaseLib::VariableType::tArray:
+            format = "array[" + std::to_string(variable->arrayValue->size()) + "]";
+            break;
+        case BaseLib::VariableType::tBoolean:
+            format = "boolean";
+            break;
+        case BaseLib::VariableType::tFloat:
+            format = "number";
+            break;
+        case BaseLib::VariableType::tInteger:
+            format = "number";
+            break;
+        case BaseLib::VariableType::tInteger64:
+            format = "number";
+            break;
+        case BaseLib::VariableType::tString:
+            format = "string[" + std::to_string(variable->stringValue.size()) + "]";
+            if(variable->stringValue.size() > 1000) variable->stringValue = variable->stringValue.substr(0, 1000) + "...";
+            variable->stringValue = BaseLib::HelperFunctions::stripNonPrintable(variable->stringValue);
+            break;
+        case BaseLib::VariableType::tStruct:
+            format = "Object";
+            break;
+        case BaseLib::VariableType::tBase64:
+            format = "string[" + std::to_string(variable->stringValue.size()) + "]";
+            if(variable->stringValue.size() > 1000) variable->stringValue = variable->stringValue.substr(0, 1000) + "...";
+            variable->stringValue = BaseLib::HelperFunctions::stripNonPrintable(variable->stringValue);
+            break;
+        case BaseLib::VariableType::tVariant:
+            break;
+        case BaseLib::VariableType::tBinary:
+            break;
+        case BaseLib::VariableType::tVoid:
+            format = "null";
+            break;
+    }
+    return format;
 }
 
 // {{{ RPC methods

@@ -81,6 +81,8 @@ public:
 
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 
+    std::string handleDelete(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
 
 	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
@@ -218,6 +220,8 @@ private:
 	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+
+	std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable& variable);
 
 	// {{{ RPC methods
 	BaseLib::PVariable registerFlowsClient(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);

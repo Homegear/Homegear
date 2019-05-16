@@ -1525,7 +1525,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                 if(http.headerProcessingStarted()) processHttp = true;
                 else
                 {
-                    if(!strncmp(buffer.data(), "GET ", 4) || !strncmp(buffer.data(), "HEAD ", 5))
+                    if(!strncmp(buffer.data(), "GET ", 4) || !strncmp(buffer.data(), "HEAD ", 5) || !strncmp(buffer.data(), "DELETE ", 7))
                     {
                         buffer.at(bytesRead) = '\0';
                         packetType = PacketType::Enum::xmlRequest;
@@ -1650,6 +1650,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     http.getHeader().remotePort = client->port;
                                     if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(client, http, client->socket);
                                     else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(client, http, client->socket, _info->cacheAssets);
+                                    else if(http.getHeader().method == "DELETE") _webServer->delete_(client, http, client->socket);
                                     if(http.getHeader().connection & BaseLib::Http::Connection::Enum::close) closeClientConnection(client);
                                     client->lastReceivedPacket = BaseLib::HelperFunctions::getTime();
                                 }

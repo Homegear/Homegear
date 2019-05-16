@@ -547,6 +547,67 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 	}
 }
 
+void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+{
+    try
+    {
+        if(!socket)
+        {
+            _out.printError("Error: Socket is nullptr.");
+            return;
+        }
+        std::string path = http.getHeader().path;
+
+        std::vector<char> content;
+        if(!path.empty() && path.front() == '/') path = path.substr(1);
+
+        if(GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
+        {
+            _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: DELETE)");
+            std::string responseEncoding;
+            std::string contentString = GD::nodeBlueServer->handleDelete(path, http, responseEncoding);
+            if(contentString == "unauthorized")
+            {
+                getError(401, _http.getStatusText(401), "You are not logged in.", content);
+                send(socket, content);
+                return;
+            }
+            else if(!contentString.empty())
+            {
+                std::vector<std::string> headers;
+                std::string header;
+                _http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
+                content.insert(content.end(), header.begin(), header.end());
+                content.insert(content.end(), contentString.begin(), contentString.end());
+                send(socket, content);
+                return;
+            }
+            else
+            {
+                std::vector<std::string> headers;
+                std::string header;
+                _http.constructHeader(contentString.size(), responseEncoding, 204, "No Content", headers, header);
+                content.insert(content.end(), header.begin(), header.end());
+                send(socket, content);
+                return;
+            }
+        }
+
+        GD::out.printWarning("Warning: Requested URL not found: " + path);
+        getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+        send(socket, content);
+        return;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content)
 {
 	try
