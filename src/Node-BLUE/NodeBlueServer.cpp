@@ -1235,6 +1235,7 @@ void NodeBlueServer::startFlows()
 		std::string topic = "flowsStarted";
 		BaseLib::PVariable value = std::make_shared<BaseLib::Variable>(true);
 		GD::rpcClient->broadcastNodeEvent(nodeId, topic, value);
+        nodeEventLog("Flows have been (re)started successfully.");
 	}
 	catch(const std::exception& ex)
 	{
@@ -2909,6 +2910,21 @@ std::string NodeBlueServer::getNodeBlueFormatFromVariableType(const BaseLib::PVa
     return format;
 }
 
+void NodeBlueServer::nodeEventLog(const std::string& message)
+{
+    try
+    {
+        auto value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        value->structValue->emplace("ts", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime()));
+        value->structValue->emplace("data", std::make_shared<BaseLib::Variable>(message));
+        GD::rpcClient->broadcastNodeEvent("", "event-log/flowsStarted", value);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
 // {{{ RPC methods
 BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
 {
@@ -2951,10 +2967,6 @@ BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clie
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -3086,11 +3098,24 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, Ba
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::nodeEventLog(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+
+        nodeEventLog(parameters->at(0)->stringValue);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
 

@@ -206,7 +206,7 @@ public:
 
 	virtual BaseLib::PVariable getSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, bool checkAcls);
 
-	virtual BaseLib::Database::PSystemVariable getSystemVariableInternal(std::string& variableId);
+	virtual BaseLib::Database::PSystemVariable getSystemVariableInternal(const std::string& variableId);
 
 	virtual BaseLib::PVariable getSystemVariableCategories(std::string& variableId);
 

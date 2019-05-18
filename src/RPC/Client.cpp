@@ -176,7 +176,7 @@ BaseLib::PVariable Client::getNodeEvents()
     return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
-void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value)
+void Client::broadcastNodeEvent(const std::string& nodeId, const std::string& topic, const BaseLib::PVariable& value)
 {
     try
     {
@@ -220,7 +220,7 @@ void Client::broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib
     }
 }
 
-void Client::broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::string& deviceAddress, std::shared_ptr<std::vector<std::string>>& valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>>& values)
+void Client::broadcastEvent(const std::string& source, uint64_t id, int32_t channel, const std::string& deviceAddress, const std::shared_ptr<std::vector<std::string>>& valueKeys, const std::shared_ptr<std::vector<BaseLib::PVariable>>& values)
 {
     try
     {

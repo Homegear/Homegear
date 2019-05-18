@@ -1045,7 +1045,7 @@ void Mqtt::disconnect()
     }
 }
 
-void Mqtt::queueMessage(std::string topic, std::string& payload)
+void Mqtt::queueMessage(const std::string& topic, const std::string& payload)
 {
 
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(topic, payload)-> topic:" + topic + " payload:" + payload);
@@ -1063,7 +1063,7 @@ void Mqtt::queueMessage(std::string topic, std::string& payload)
 	}
 }
 
-void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
+void Mqtt::queueMessage(const std::string& source, uint64_t peerId, int32_t channel, const std::string& key, const BaseLib::PVariable& value)
 {
 
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, key, value) -> peerId=" + std::to_string(peerId) + ", channel=" + std::to_string(channel) + ", key=" + key + ", value=" + value->stringValue);
@@ -1144,7 +1144,7 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 	}
 }
 
-void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values)
+void Mqtt::queueMessage(const std::string& source, uint64_t peerId, int32_t channel, const std::vector<std::string>& keys, const std::vector<BaseLib::PVariable>& values)
 {
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, keys, values) -> peerId=" + std::to_string(peerId) + ", channel=" + std::to_string(channel) + ", keys, values");
 	try

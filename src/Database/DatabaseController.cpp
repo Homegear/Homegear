@@ -2961,7 +2961,7 @@ BaseLib::PVariable DatabaseController::getSystemVariable(BaseLib::PRpcClientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::Database::PSystemVariable DatabaseController::getSystemVariableInternal(std::string& variableId)
+BaseLib::Database::PSystemVariable DatabaseController::getSystemVariableInternal(const std::string& variableId)
 {
     try
     {

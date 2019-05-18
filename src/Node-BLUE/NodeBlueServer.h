@@ -223,6 +223,8 @@ private:
 
 	std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable& variable);
 
+	void nodeEventLog(const std::string& message);
+
 	// {{{ RPC methods
 	BaseLib::PVariable registerFlowsClient(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 
@@ -233,6 +235,8 @@ private:
 	BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 
 	BaseLib::PVariable nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+
+    BaseLib::PVariable nodeEventLog(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 	// }}}
 };
 
