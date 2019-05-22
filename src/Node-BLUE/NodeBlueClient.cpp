@@ -804,6 +804,7 @@ void NodeBlueClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& 
 void NodeBlueClient::log(const std::string& nodeId, int32_t logLevel, const std::string& message)
 {
     _out.printMessage("Node " + nodeId + ": " + message, logLevel, logLevel <= 3);
+    frontendEventLog(nodeId, message);
 }
 
 void NodeBlueClient::frontendEventLog(const std::string& nodeId, const std::string& message)

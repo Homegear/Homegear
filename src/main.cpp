@@ -1333,6 +1333,7 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
+                BaseLib::ProcessManager::registerSignalHandler();
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
     			GD::licensingController->init();
@@ -1348,6 +1349,7 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
+                BaseLib::ProcessManager::registerSignalHandler();
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
     			GD::licensingController->init();

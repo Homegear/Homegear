@@ -3108,7 +3108,8 @@ BaseLib::PVariable NodeBlueServer::frontendEventLog(PNodeBlueClientData& clientD
     {
         if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameter.");
 
-        frontendNodeEventLog(parameters->at(1)->stringValue);
+        if(parameters->at(0)->stringValue.empty()) frontendNodeEventLog(parameters->at(1)->stringValue);
+        else frontendNodeEventLog("Node " + parameters->at(0)->stringValue + ": " + parameters->at(1)->stringValue);
 
         return std::make_shared<BaseLib::Variable>();
     }
