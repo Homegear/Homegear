@@ -6647,9 +6647,9 @@ RED.utils = (function() {
         } else if ((format === 'number') && (payload === "-Infinity")) {
             payload = -Infinity;
         } else if (format === 'Object' || /^array/.test(format) || format === 'boolean' || format === 'number' ) {
-            payload = JSON.parse(payload);
+            //payload = JSON.parse(payload);
         } else if (/error/i.test(format)) {
-            payload = JSON.parse(payload);
+            //payload = JSON.parse(payload);
             payload = (payload.name?payload.name+": ":"")+payload.message;
         } else if (format === 'null') {
             payload = null;

@@ -13,6 +13,7 @@
 				<internal>true</internal>
 			</properties>
 			<configParameters>config</configParameters>
+			<variables>maint_ch0_values</variables>
 		</function>
 		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualThermostat">
 			<variables>custom_ch1_values</variables>
@@ -20,6 +21,17 @@
 	</functions>
 	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
 		<configParameters id="config"/>
+		<variables id="maint_ch0_values">
+			<parameter id="LOWBAT">
+				<properties>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
 		<variables id="custom_ch1_values">
 			<parameter id="ACTUAL_TEMPERATURE">
 				<properties>
@@ -77,17 +89,6 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
-				</properties>
-				<logicalBoolean/>
-				<physicalNone>
-					<operationType>store</operationType>
-				</physicalNone>
-			</parameter>
-			<parameter id="LOWBAT">
-				<properties>
-					<casts>
-						<rpcBinary/>
-					</casts>
 				</properties>
 				<logicalBoolean/>
 				<physicalNone>

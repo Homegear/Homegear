@@ -165,7 +165,7 @@ void StatefulPhpNode::startUpComplete()
 	}
 }
 
-void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
+void StatefulPhpNode::variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
 {
 	try
 	{
@@ -190,7 +190,7 @@ void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::strin
 	}
 }
 
-void StatefulPhpNode::setNodeVariable(std::string& variable, Flows::PVariable& value)
+void StatefulPhpNode::setNodeVariable(const std::string& variable, Flows::PVariable value)
 {
 	try
 	{
@@ -260,7 +260,7 @@ void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PV
 	}
 }
 
-Flows::PVariable StatefulPhpNode::invokeLocal(std::string methodName, Flows::PArray& innerParameters)
+Flows::PVariable StatefulPhpNode::invokeLocal(const std::string& methodName, Flows::PArray& innerParameters)
 {
 	try
 	{

@@ -114,7 +114,7 @@ NodeManager::~NodeManager()
 	_nodeLoaders.clear();
 }
 
-Flows::PINode NodeManager::getNode(std::string& id)
+Flows::PINode NodeManager::getNode(const std::string& id)
 {
 	try
 	{
@@ -273,7 +273,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
 	return "";
 }
 
-int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::string id, Flows::PINode& node)
+int32_t NodeManager::loadNode(const std::string& nodeNamespace, const std::string& type, const std::string& id, Flows::PINode& node)
 {
 	try
 	{
@@ -371,7 +371,7 @@ int32_t NodeManager::loadNode(std::string nodeNamespace, std::string type, std::
 	return -1;
 }
 
-int32_t NodeManager::unloadNode(std::string id)
+int32_t NodeManager::unloadNode(const std::string& id)
 {
 	try
 	{

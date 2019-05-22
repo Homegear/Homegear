@@ -92,7 +92,7 @@ public:
 	};
 	typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
 
-	NodeManager(const std::atomic_bool* nodeEventsEnabled);
+	explicit NodeManager(const std::atomic_bool* nodeEventsEnabled);
 
 	virtual ~NodeManager();
 
@@ -111,19 +111,19 @@ public:
 	 * @param[out] node If loading was successful, this variable contains the loaded node.
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
 	 */
-	int32_t loadNode(std::string nodeNamespace, std::string type, std::string id, Flows::PINode& node);
+	int32_t loadNode(const std::string& nodeNamespace, const std::string& type, const std::string& id, Flows::PINode& node);
 
 	/**
 	 * Unloads a previously loaded node.
 	 * @param id The id of the node (e. g. 142947a.387ef34ad).
 	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node not loaded, -1: System error, -2: Node does not exists
 	 */
-	int32_t unloadNode(std::string id);
+	int32_t unloadNode(const std::string& id);
 
 	/*
 	 * Returns the node specified by id.
 	 */
-	Flows::PINode getNode(std::string& id);
+	Flows::PINode getNode(const std::string& id);
 
 private:
 	std::mutex _nodeLoadersMutex;
