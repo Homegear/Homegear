@@ -71,9 +71,9 @@ bool Client::lifetick()
     try
     {
         std::lock_guard<std::mutex> lifetickGuard(_lifetick1Mutex);
-        if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 60000)
+        if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 900000)
         {
-            GD::out.printCritical("Critical: RPC client's lifetick was not updated for more than 60 seconds.");
+            GD::out.printCritical("Critical: RPC client's lifetick was not updated for more than 900 seconds.");
             return false;
         }
         return true;
