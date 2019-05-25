@@ -72,6 +72,12 @@ void Mqtt::start()
 {
 	try
 	{
+	    if(GD::rpcServers.empty())
+        {
+	        _out.printError("Error: Could not start MQTT client as there are no RPC servers available.");
+	        return;
+        }
+
 		if(_started) return;
 		_started = true;
 
