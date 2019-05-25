@@ -361,7 +361,11 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
             _out.printError("Error: Settings is nullptr.");
             return;
         }
-        if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
+        if(!_info->familyServer && !_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer)
+        {
+            GD::out.printWarning("Warning: Not starting server as no server types are specified.");
+            return;
+        }
         if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::undefined)
         {
             _out.printError("Error: authType is not set.");
@@ -949,7 +953,7 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
     try
     {
         if(!parameters) parameters = BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tArray));
-        if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
+        if(GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
         auto rpcMethodsIterator = _rpcMethods->find(methodName);
         if(rpcMethodsIterator == _rpcMethods->end())
         {
