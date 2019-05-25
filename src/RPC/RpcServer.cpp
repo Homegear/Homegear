@@ -308,23 +308,23 @@ bool RpcServer::lifetick()
 {
     try
     {
-        _lifetick1Mutex.lock();
-        if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
         {
-            GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
-            _lifetick1Mutex.unlock();
-            return false;
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+                return false;
+            }
         }
-        _lifetick1Mutex.unlock();
 
-        _lifetick2Mutex.lock();
-        if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
         {
-            GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
-            _lifetick2Mutex.unlock();
-            return false;
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+                return false;
+            }
         }
-        _lifetick2Mutex.unlock();
         return true;
     }
     catch(const std::exception& ex)
@@ -950,7 +950,8 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
     {
         if(!parameters) parameters = BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tArray));
         if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
-        if(_rpcMethods->find(methodName) == _rpcMethods->end())
+        auto rpcMethodsIterator = _rpcMethods->find(methodName);
+        if(rpcMethodsIterator == _rpcMethods->end())
         {
             if(_info->familyServer)
             {
@@ -960,10 +961,13 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
             BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
             return result;
         }
-        _lifetick1Mutex.lock();
-        _lifetick1.second = false;
-        _lifetick1.first = BaseLib::HelperFunctions::getTime();
-        _lifetick1Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = false;
+            _lifetick1.first = BaseLib::HelperFunctions::getTime();
+        }
+
         if(GD::bl->debugLevel >= 4)
         {
             _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
@@ -972,15 +976,17 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
                 (*i)->print(true, false);
             }
         }
-        BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(clientInfo, parameters->arrayValue);
+        BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(clientInfo, parameters->arrayValue);
         if(GD::bl->debugLevel >= 5)
         {
             _out.printDebug("Response: ");
             ret->print(true, false);
         }
-        _lifetick1Mutex.lock();
-        _lifetick1.second = true;
-        _lifetick1Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = true;
+        }
         return ret;
     }
     catch(const std::exception& ex)
@@ -1012,7 +1018,8 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
             return;
         }
 
-        if(_rpcMethods->find(methodName) == _rpcMethods->end())
+        auto rpcMethodsIterator = _rpcMethods->find(methodName);
+        if(rpcMethodsIterator == _rpcMethods->end())
         {
             if(_info->familyServer)
             {
@@ -1027,10 +1034,13 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
             sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
             return;
         }
-        _lifetick2Mutex.lock();
-        _lifetick2.first = BaseLib::HelperFunctions::getTime();
-        _lifetick2.second = false;
-        _lifetick2Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.first = BaseLib::HelperFunctions::getTime();
+            _lifetick2.second = false;
+        }
+
         if(GD::bl->debugLevel >= 4 && methodName != "getNodeVariable")
         {
             _out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->clientType == BaseLib::RpcClientType::ccu2 ? " (CCU)" : "") + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t) (client->rpcType)) + ") Parameters:");
@@ -1039,16 +1049,18 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
                 (*i)->print(true, false);
             }
         }
-        BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(client, parameters);
+        BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(client, parameters);
         if(GD::bl->debugLevel >= 5)
         {
             _out.printDebug("Response: ");
             ret->print(true, false);
         }
         sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
-        _lifetick2Mutex.lock();
-        _lifetick2.second = true;
-        _lifetick2Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = true;
+        }
     }
     catch(const std::exception& ex)
     {

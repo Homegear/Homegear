@@ -205,14 +205,13 @@ void terminateThread()
         GD::out.printInfo( "(Shutdown) => Stopping Event handler");
         if(GD::eventHandler) GD::eventHandler->dispose();
     #endif
-        stopRPCServers(true);
-        GD::rpcServers.clear();
-
         if(GD::mqtt && GD::mqtt->enabled())
         {
             GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
             GD::mqtt->stop();
         }
+        stopRPCServers(true);
+        GD::rpcServers.clear();
         GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
         if(GD::rpcClient) GD::rpcClient->dispose();
         GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
@@ -287,8 +286,8 @@ void reloadThread()
             GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
             GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
             GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
-            GD::mqtt->loadSettings();
             startRPCServers();
+            GD::mqtt->loadSettings();
             if(GD::mqtt->enabled())
             {
                 GD::out.printInfo("Starting MQTT client");;
@@ -1082,13 +1081,13 @@ void startUp()
         GD::out.printInfo("Initializing RPC client...");
         GD::rpcClient->init();
 
-        if(GD::mqtt->enabled())
-		{
-			GD::out.printInfo("Starting MQTT client...");;
-			GD::mqtt->start();
-		}
-
         startRPCServers();
+
+        if(GD::mqtt->enabled())
+        {
+            GD::out.printInfo("Starting MQTT client...");;
+            GD::mqtt->start();
+        }
 
 #ifdef EVENTHANDLER
         GD::out.printInfo("Initializing event handler...");
