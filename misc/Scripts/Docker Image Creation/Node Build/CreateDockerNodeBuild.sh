@@ -154,7 +154,11 @@ rm $rootfs/Release.key
 chroot $rootfs umount /proc
 
 chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 insserv libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev
+
+if [ "$distver" != "bionic" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
+fi
 
 if [ "$distver" == "stretch" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
