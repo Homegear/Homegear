@@ -288,12 +288,12 @@ void reloadThread()
             GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
             GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
             GD::mqtt->loadSettings();
+            startRPCServers();
             if(GD::mqtt->enabled())
             {
                 GD::out.printInfo("Starting MQTT client");;
                 GD::mqtt->start();
             }
-            startRPCServers();
             if(GD::bl->settings.enableUPnP())
             {
                 GD::out.printInfo("Starting UPnP server");
