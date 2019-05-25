@@ -79,7 +79,8 @@ public:
 		std::string nodeName;
 		std::string readableName;
 		std::string version;
-		int32_t maxThreadCount;
+		bool coreNode = false;
+		int32_t maxThreadCount = 1;
 		std::string frontendListEntry;
 		std::string frontendCode;
 	};

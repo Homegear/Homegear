@@ -1580,9 +1580,44 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
                             {
                                 for(auto& subsubelement : *subelement.second->structValue)
                                 {
+                                    auto subsubsubelementIterator = subsubelementIterator->second->structValue->find(subsubelement.first);
+                                    if(subsubsubelementIterator == subsubelementIterator->second->structValue->end())
+                                    {
+                                        subsubelementIterator->second->structValue->emplace(subsubelement.first, subsubelement.second);
+                                        continue;
+                                    }
+
                                     if(subsubelement.second->type == BaseLib::VariableType::tStruct)
                                     {
-                                        _out.printWarning("Warning: File " + path + "-extra has too many levels. Only three levels are allowed.");
+                                        for(auto& subsubsubelement : *subsubelement.second->structValue)
+                                        {
+                                            auto subsubsubsubelementIterator = subsubsubelementIterator->second->structValue->find(subsubsubelement.first);
+                                            if(subsubsubsubelementIterator == subsubsubelementIterator->second->structValue->end())
+                                            {
+                                                subsubsubelementIterator->second->structValue->emplace(subsubsubelement.first, subsubsubelement.second);
+                                                continue;
+                                            }
+
+                                            if(subsubsubelement.second->type == BaseLib::VariableType::tStruct)
+                                            {
+                                                for(auto& subsubsubsubelement : *subsubsubelement.second->structValue)
+                                                {
+                                                    auto subsubsubsubsubelementIterator = subsubsubsubelementIterator->second->structValue->find(subsubsubsubelement.first);
+                                                    if(subsubsubsubsubelementIterator == subsubsubsubelementIterator->second->structValue->end())
+                                                    {
+                                                        subsubsubsubelementIterator->second->structValue->emplace(subsubsubsubelement.first, subsubsubsubelement.second);
+                                                        continue;
+                                                    }
+
+                                                    if(subsubsubsubelement.second->type == BaseLib::VariableType::tStruct)
+                                                    {
+                                                        _out.printWarning("Warning: File " + path + "-extra has too many levels. Only five levels are allowed.");
+                                                    }
+                                                    else (*(*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first]->structValue)[subsubsubsubelement.first] = subsubsubsubelement.second;
+                                                }
+                                            }
+                                            else (*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first] = subsubsubelement.second;
+                                        }
                                     }
                                     else (*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first] = subsubelement.second;
                                 }
@@ -1674,7 +1709,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 					nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
 					nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(infoEntry->nodeName)})));
 					nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-					nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
+					nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(!infoEntry->coreNode));
 					nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
 					nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
 					frontendNodeList->arrayValue->push_back(nodeListEntry);
@@ -1743,9 +1778,10 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			}
 		}
 
+        if(!sessionValid) return "unauthorized";
+
 		if(path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
-			if(!sessionValid) return "unauthorized";
 			_out.printInfo("Info: Deploying (1)...");
 			std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
 			_out.printInfo("Info: Deploying (2)...");
@@ -1775,6 +1811,28 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 
 			return "{\"rev\": \"" + md5String + "\"}";
 		}
+		else if(path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
+        {
+            responseEncoding = "application/json";
+            _out.printInfo("Info: Installing node (1)...");
+            std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
+            _out.printInfo("Info: Installing node (2)...");
+            BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
+            auto moduleIterator = json->structValue->find("module");
+            if(moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return "{\"result\":\"error\"}";
+
+            std::string method = "managementInstallNode";
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->push_back(moduleIterator->second);
+            BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+            if(result->errorStruct)
+            {
+                _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
+                return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+            }
+
+            return "{\"result\":\"success\",\"commandStatusId\":" + std::to_string(result->integerValue64) + "}";
+        }
 	}
 	catch(const std::exception& ex)
 	{
@@ -1811,6 +1869,8 @@ std::string NodeBlueServer::handleDelete(std::string& path, BaseLib::Http& http,
             }
         }
 
+        if(!sessionValid) return "unauthorized";
+
         std::string contentString;
         if(path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18)
         {
@@ -1826,6 +1886,27 @@ std::string NodeBlueServer::handleDelete(std::string& path, BaseLib::Http& http,
 
             if(!dataId.empty() && !key.empty()) _bl->db->deleteNodeData(dataId, key);
         }
+        else if(path.compare(0, 16, "node-blue/nodes/") == 0 && path.size() > 16)
+        {
+            responseEncoding = "application/json";
+            auto node = path.substr(16);
+            _out.printInfo("Info: Uninstalling node (1)...");
+            std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
+            _out.printInfo("Info: Uninstalling node (2)...");
+
+            std::string method = "managementUninstallNode";
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->push_back(std::make_shared<BaseLib::Variable>(node));
+            BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+            if(result->errorStruct)
+            {
+                _out.printError("Error: Could not uninstall node: " + result->structValue->at("faultString")->stringValue);
+                return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+            }
+
+            return "{\"result\":\"success\",\"commandStatusId\":" + std::to_string(result->integerValue64) + "}";
+        }
+
         return contentString;
     }
     catch(const std::exception& ex)

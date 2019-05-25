@@ -686,7 +686,8 @@ var RED = (function() {
     }
 
     return {
-        init: init
+        init: init,
+        reloadNodes: loadNodeList
     }
 })();
 ;/**
@@ -1423,6 +1424,7 @@ RED.comms = (function() {
             }
         });
         homegear.error(function(message) {
+            console.log(window);
             if(errornotification) errornotification.close();
             errornotification = RED.notify(RED._("notification.error",{message:RED._("notification.errors.lostConnection")}),"error",true);
         });
@@ -6570,7 +6572,7 @@ RED.utils = (function() {
             } else if (def.category === 'subflows') {
                 return RED.settings.apiRootUrl+"icons/node-red/subflow.png";
             } else {
-                return RED.settings.apiRootUrl+"icons/node-red/arrow-in.png";
+                return RED.settings.apiRootUrl+"icons/"+def.namespace+"/"+def.icon;
             }
         }
     }
@@ -19741,6 +19743,7 @@ RED.palette.editor = (function() {
             callback();
         },delta);
     }
+
     function changeNodeState(id,state,shade,callback) {
         /*shade.show();
         var start = Date.now();
@@ -19763,6 +19766,24 @@ RED.palette.editor = (function() {
             });
         })*/
     }
+
+    function checkNodeInstallStatus(callback, commandStatusId) {
+        RED.comms.homegear().invoke("managementGetCommandStatus", function(response) {
+            if(!response.result.finished)
+            {
+                setTimeout(checkNodeInstallStatus, 2000, callback, commandStatusId);
+            }
+            else
+            {
+                RED.eventLog.startEvent(response.result.output);
+                if(response.result.exitCode != 0) {
+                    RED.notify(RED._('palette.editor.errors.installFailed',{module: id,message: ""}),"error",false);
+                }
+                else callback();
+            }
+        }, commandStatusId);
+    }
+
     function installNodeModule(id,version,callback) {
         var requestBody = {
             module: id
@@ -19776,17 +19797,37 @@ RED.palette.editor = (function() {
             data: JSON.stringify(requestBody),
             contentType: "application/json; charset=utf-8"
         }).done(function(data,textStatus,xhr) {
-            callback();
+            if(data.result == "error") RED.notify(RED._('palette.editor.errors.installFailed',{module: id, message: data.error}),"error",false);
+            else setTimeout(checkNodeInstallStatus, 2000, callback, data.commandStatusId);
         }).fail(function(xhr,textStatus,err) {
             callback(xhr);
         });
     }
+
+    function checkNodeRemoveStatus(callback, commandStatusId) {
+        RED.comms.homegear().invoke("managementGetCommandStatus", function(response) {
+            if(!response.result.finished)
+            {
+                setTimeout(checkNodeRemoveStatus, 2000, callback, commandStatusId);
+            }
+            else
+            {
+                RED.eventLog.startEvent(response.result.output);
+                if(response.result.exitCode != 0) {
+                    RED.notify(RED._('palette.editor.errors.removeFailed',{module: id,message: ""}),"error",false);
+                }
+                else callback();
+            }
+        }, commandStatusId);
+    }
+
     function removeNodeModule(id,callback) {
         $.ajax({
             url:"nodes/"+id,
             type: "DELETE"
         }).done(function(data,textStatus,xhr) {
-            callback();
+            if(data.result == "error") RED.notify(RED._('palette.editor.errors.removeFailed',{module: id, message: data.error}),"error",false);
+            else setTimeout(checkNodeRemoveStatus, 2000, callback, data.commandStatusId);
         }).fail(function(xhr,textStatus,err) {
             callback(xhr);
         })
@@ -19955,8 +19996,8 @@ RED.palette.editor = (function() {
                     nodeEntry.errorRow.show();
                 }
 
-                var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount;
-                nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
+                //var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount;
+                //nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
 
                 if (nodeEntries[module].totalUseCount > 0) {
                     //nodeEntry.enableButton.text(RED._('palette.editor.inuse'));
@@ -19975,7 +20016,7 @@ RED.palette.editor = (function() {
                     nodeEntry.container.toggleClass("disabled",(activeTypeCount === 0));
                 }
             }
-            if (moduleInfo.pending_version) {
+            /*if (moduleInfo.pending_version) {
                 nodeEntry.versionSpan.html(moduleInfo.version+' <i class="fa fa-long-arrow-right"></i> '+moduleInfo.pending_version).appendTo(nodeEntry.metaRow)
                 nodeEntry.updateButton.text(RED._('palette.editor.updated')).addClass('disabled').css('display', 'inline-block');
             } else if (loadedIndex.hasOwnProperty(module)) {
@@ -19987,7 +20028,8 @@ RED.palette.editor = (function() {
                 }
             } else {
                 nodeEntry.updateButton.hide();
-            }
+            }*/
+            nodeEntry.updateButton.hide();
         }
 
     }
@@ -20054,33 +20096,46 @@ RED.palette.editor = (function() {
 
     function initInstallTab() {
         if (loadedList.length === 0) {
-            loadedList = [];
-            loadedIndex = {};
-            packageList.editableList('empty');
+            RED.comms.homegear().invoke("managementGetSystemInfo", function(response) {
+                if(response.error)
+                {
+                    RED.notify(RED._("notification.error",{message:RED._("notification.errors.loadCatalogManagementError")}),"error",false);
+                    return;
+                }
 
-            $(".palette-module-shade-status").text(RED._('palette.editor.loading'));
-            var catalogues = RED.settings.theme('palette.catalogues')||['https://apt.node-blue.com/catalog.json'];
-            catalogueLoadStatus = [];
-            catalogueLoadErrors = false;
-            catalogueCount = catalogues.length;
-            if (catalogues.length > 1) {
-                $(".palette-module-shade-status").html(RED._('palette.editor.loading')+"<br>0/"+catalogues.length);
-            }
-            $("#palette-module-install-shade").show();
-            catalogueLoadStart = Date.now();
-            var handled = 0;
-            catalogues.forEach(function(catalog,index) {
-                $.getJSON(catalog, {_: new Date().getTime()},function(v) {
-                    handleCatalogResponse(null,catalog,index,v);
-                    refreshNodeModuleList();
-                }).fail(function(jqxhr, textStatus, error) {
-                    handleCatalogResponse(jqxhr,catalog,index);
-                }).always(function() {
-                    handled++;
-                    if (handled === catalogueCount) {
-                        searchInput.searchBox('change');
-                    }
-                })
+                var repositoryType = response.result.repositoryType;
+                var system = response.result.system;
+                var codename = response.result.codename;
+                var architecture = response.result.architecture;
+
+                loadedList = [];
+                loadedIndex = {};
+                packageList.editableList('empty');
+
+                $(".palette-module-shade-status").text(RED._('palette.editor.loading'));
+                var catalogues = RED.settings.theme('palette.catalogues')||['https://apt.node-blue.com/' + repositoryType + '/' + system + '/' + codename + '/catalog_all.json','https://apt.node-blue.com/' + repositoryType + '/' + system + '/' + codename + '/catalog_' + architecture + '.json'];
+                catalogueLoadStatus = [];
+                catalogueLoadErrors = false;
+                catalogueCount = catalogues.length;
+                if (catalogues.length > 1) {
+                    $(".palette-module-shade-status").html(RED._('palette.editor.loading')+"<br>0/"+catalogues.length);
+                }
+                $("#palette-module-install-shade").show();
+                catalogueLoadStart = Date.now();
+                var handled = 0;
+                catalogues.forEach(function(catalog,index) {
+                    $.getJSON(catalog, {_: new Date().getTime()},function(v) {
+                        handleCatalogResponse(null,catalog,index,v);
+                        refreshNodeModuleList();
+                    }).fail(function(jqxhr, textStatus, error) {
+                        handleCatalogResponse(jqxhr,catalog,index);
+                    }).always(function() {
+                        handled++;
+                        if (handled === catalogueCount) {
+                            searchInput.searchBox('change');
+                        }
+                    })
+                });
             });
         }
     }
@@ -20304,8 +20359,8 @@ RED.palette.editor = (function() {
                     var errorRow = $('<div class="palette-module-meta palette-module-errors"><i class="fa fa-warning"></i></div>').hide().appendTo(headerRow);
                     var errorList = $('<ul class="palette-module-error-list"></ul>').appendTo(errorRow);
                     var buttonRow = $('<div>',{class:"palette-module-meta"}).appendTo(headerRow);
-                    var setButton = $('<a href="#" class="editor-button editor-button-small palette-module-set-button"><i class="fa fa-angle-right palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
-                    var setCount = $('<span>').appendTo(setButton);
+                    //var setButton = $('<a href="#" class="editor-button editor-button-small palette-module-set-button"><i class="fa fa-angle-right palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
+                    //var setCount = $('<span>').appendTo(setButton);
                     var buttonGroup = $('<div>',{class:"palette-module-button-group"}).appendTo(buttonRow);
 
                     var updateButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.update')).appendTo(buttonGroup);
@@ -20318,12 +20373,18 @@ RED.palette.editor = (function() {
                         update(entry,loadedIndex[entry.name].version,container,function(err){});
                     })
 
-
                     var removeButton = $('<a href="#" class="editor-button editor-button-small"></a>').text(RED._('palette.editor.remove')).appendTo(buttonGroup);
                     removeButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
                     removeButton.click(function(evt) {
                         evt.preventDefault();
-                        remove(entry,container,function(err){});
+                        remove(entry,container,function(err){
+                            for (var set in entry.sets) {
+                                if (entry.sets.hasOwnProperty(set)) {
+                                    RED.nodes.removeNodeSet(entry.sets[set].id);
+                                }
+                            }
+                            refreshNodeModuleList();
+                        });
                     })
                     if (!entry.local) {
                         removeButton.hide();
@@ -20339,13 +20400,13 @@ RED.palette.editor = (function() {
                         //enableButton: enableButton,
                         errorRow: errorRow,
                         errorList: errorList,
-                        setCount: setCount,
+                        //setCount: setCount,
                         container: container,
                         shade: shade,
                         versionSpan: versionSpan,
                         sets: {}
                     }
-                    setButton.click(function(evt) {
+                    /*setButton.click(function(evt) {
                         evt.preventDefault();
                         if (container.hasClass('expanded')) {
                             container.removeClass('expanded');
@@ -20354,7 +20415,7 @@ RED.palette.editor = (function() {
                             container.addClass('expanded');
                             contentRow.slideDown();
                         }
-                    })
+                    })*/
 
                     var setList = Object.keys(entry.sets)
                     setList.sort(function(A,B) {
@@ -20536,7 +20597,13 @@ RED.palette.editor = (function() {
                     installButton.click(function(e) {
                         e.preventDefault();
                         if (!$(this).hasClass('disabled')) {
-                            install(entry,container,function(xhr) {});
+                            install(entry,container,function(xhr) {
+                                if(!xhr) {
+                                    installButton.addClass('disabled');
+                                    installButton.text(RED._('palette.editor.installed'));
+                                    RED.reloadNodes();
+                                }
+                            });
                         }
                     })
                     if (nodeEntries.hasOwnProperty(entry.id)) {
@@ -20674,6 +20741,7 @@ RED.palette.editor = (function() {
                                         ]
                                     });                                }
                             }
+                            done(xhr);
                         })
                         notification.close();
                     }

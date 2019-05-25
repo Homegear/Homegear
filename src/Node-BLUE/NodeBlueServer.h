@@ -160,6 +160,7 @@ private:
 	std::mutex _restartFlowsMutex;
 	std::mutex _flowsPostMutex;
 	std::mutex _flowsFileMutex;
+	std::mutex _nodesInstallMutex;
 	std::map<std::string, uint32_t> _maxThreadCounts;
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;

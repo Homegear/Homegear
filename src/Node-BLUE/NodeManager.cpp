@@ -201,6 +201,9 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 					}
 					nodeInfo->version = headerIterator->second->stringValue;
 
+                    headerIterator = header->structValue->find("coreNode");
+                    if(headerIterator != header->structValue->end()) nodeInfo->coreNode = headerIterator->second->booleanValue;
+
 					headerIterator = header->structValue->find("maxThreadCount");
 					if(headerIterator == header->structValue->end())
 					{
