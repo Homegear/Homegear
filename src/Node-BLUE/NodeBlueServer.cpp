@@ -1778,10 +1778,9 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			}
 		}
 
-        if(!sessionValid) return "unauthorized";
-
 		if(path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
+            if(!sessionValid) return "unauthorized";
 			_out.printInfo("Info: Deploying (1)...");
 			std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
 			_out.printInfo("Info: Deploying (2)...");
@@ -1813,6 +1812,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		}
 		else if(path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
         {
+            if(!sessionValid) return "unauthorized";
             responseEncoding = "application/json";
             _out.printInfo("Info: Installing node (1)...");
             std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);

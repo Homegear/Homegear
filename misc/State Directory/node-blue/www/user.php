@@ -8,14 +8,14 @@ class User
 
     public function checkAuth($redirectToLogin)
     {
-        if (array_key_exists('SSL_CLIENT_VERIFY',$_SERVER) && $_SERVER['SSL_CLIENT_VERIFY'] == "SUCCESS" && !isset($_SESSION["authorized"])) {
+        if (array_key_exists('SSL_CLIENT_VERIFY', $_SERVER) && $_SERVER['SSL_CLIENT_VERIFY'] == "SUCCESS" && !isset($_SESSION["authorized"])) {
             // CERT-Auth
             $settings = hg_get_user_metadata($_SERVER['SSL_CLIENT_S_DN_CN']);
             $_SESSION['authorized'] = true;
             $_SESSION['user'] = $_SERVER['SSL_CLIENT_S_DN_CN'];
             $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'de-DE'));
         }
-        
+
         $authorized = (isset($_SESSION["authorized"]) && $_SESSION["authorized"] === true && isset($_SESSION["user"]));
         if(!$authorized && $redirectToLogin)
         {
