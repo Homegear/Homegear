@@ -53,6 +53,8 @@ public:
 
 	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
 
+	void broadcastProcessEvent(pid_t processId, const BaseLib::PVariable& data);
+
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
@@ -147,6 +149,8 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
+    BaseLib::PVariable setPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);

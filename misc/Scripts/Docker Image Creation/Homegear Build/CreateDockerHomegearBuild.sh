@@ -373,11 +373,13 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget --https-only https://github.com/Homegear/Homegear-Velux-KLF200/archive/${1}.zip
-[ $? -ne 0 ] && exit 1
-unzip ${1}.zip
-[ $? -ne 0 ] && exit 1
-rm ${1}.zip
+if [ "$distributionVersion" != "jessie" ]; then
+	wget --https-only https://github.com/Homegear/Homegear-Velux-KLF200/archive/${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+fi
 
 wget --https-only https://github.com/Homegear/homegear-influxdb/archive/${1}.zip
 [ $? -ne 0 ] && exit 1

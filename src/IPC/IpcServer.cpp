@@ -238,6 +238,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("setUserMetadata", std::make_shared<Rpc::RPCSetUserMetadata>());
 	}
 
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("setPid", std::bind(&IpcServer::setPid, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getClientId", std::bind(&IpcServer::getClientId, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("cliGeneralCommand", std::bind(&IpcServer::cliGeneralCommand, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -331,6 +332,7 @@ void IpcServer::stop()
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				clients.push_back(i->second);
@@ -371,7 +373,7 @@ void IpcServer::homegearShuttingDown()
 	try
 	{
 		_shuttingDown = true;
-		std::vector<PIpcClientData> clients;
+
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
@@ -450,6 +452,7 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -474,10 +477,39 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+}
+
+void IpcServer::broadcastProcessEvent(pid_t processId, const BaseLib::PVariable& data)
+{
+    try
+    {
+        if(_shuttingDown || processId == 0) return;
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("processEvent")) return;
+
+        std::vector<PIpcClientData> clients;
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(2);
+            for(auto& client : _clients)
+            {
+                if(client.second->closed || client.second->pid != processId) continue;
+                clients.push_back(client.second);
+            }
+        }
+
+        for(auto& client : clients)
+        {
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->emplace_back(data);
+            std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastProcessEvent", parameters);
+            if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastProcessEvent\". Queue is full.");
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
@@ -507,6 +539,7 @@ void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -542,6 +575,7 @@ void IpcServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo)
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -588,6 +622,7 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 		std::vector<PIpcClientData> clients;
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
 			for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
 			{
 				if(i->second->closed) continue;
@@ -1228,6 +1263,28 @@ std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> IpcSer
 }
 
 // {{{ RPC methods
+BaseLib::PVariable IpcServer::setPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() < 1) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
+        if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type integer.");
+
+        clientData->pid = parameters->at(0)->integerValue64;
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable IpcServer::getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
 {
 	try
