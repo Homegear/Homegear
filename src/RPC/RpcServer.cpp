@@ -263,6 +263,12 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
 
+    { // System variables
+        _rpcMethods->emplace("addRoleToSystemVariable", std::make_shared<RPCAddRoleToSystemVariable>());
+        _rpcMethods->emplace("getSystemVariablesInRole", std::make_shared<RPCGetSystemVariablesInRole>());
+        _rpcMethods->emplace("removeRoleFromSystemVariable", std::make_shared<RPCRemoveRoleFromSystemVariable>());
+    }
+
     { // Roles
         _rpcMethods->emplace("addRoleToVariable", std::make_shared<RPCAddRoleToVariable>());
         _rpcMethods->emplace("aggregateRoles", std::make_shared<RPCAggregateRoles>());

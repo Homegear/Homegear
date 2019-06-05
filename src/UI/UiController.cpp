@@ -256,41 +256,57 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
             parameters->arrayValue->emplace_back(channelIterator->second);
             parameters->arrayValue->emplace_back(nameIterator->second);
 
-            auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-            if(!result->errorStruct) variableInput->structValue->emplace("value", result);
+            auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+            if(!value->errorStruct) variableInput->structValue->emplace("value", value);
 
-            methodName = "getVariableDescription";
-            result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-            if(result->errorStruct)
+            if(peerIdIterator->second != 0)
             {
-                GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + result->structValue->at("faultString")->stringValue);
-                continue;
+                methodName = "getVariableDescription";
+                auto description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                if(description->errorStruct)
+                {
+                    GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + description->structValue->at("faultString")->stringValue);
+                    continue;
+                }
+
+                auto typeIterator = description->structValue->find("TYPE");
+                if(typeIterator != description->structValue->end()) variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
+
+                auto minimumValueIterator = variableInput->structValue->find("minimumValue");
+                auto maximumValueIterator = variableInput->structValue->find("maximumValue");
+                if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
+                {
+                    if(minimumValueIterator == variableInput->structValue->end())
+                    {
+                        auto minimumValueIterator2 = description->structValue->find("MIN");
+                        if(minimumValueIterator2 != description->structValue->end())
+                        {
+                            variableInput->structValue->emplace("minimumValue", minimumValueIterator2->second);
+                        }
+                    }
+
+                    if(maximumValueIterator == variableInput->structValue->end())
+                    {
+                        auto maximumValueIterator2 = description->structValue->find("MAX");
+                        if(maximumValueIterator2 != description->structValue->end())
+                        {
+                            variableInput->structValue->emplace("maximumValue", maximumValueIterator2->second);
+                        }
+                    }
+                }
             }
-
-            auto typeIterator = result->structValue->find("TYPE");
-            if(typeIterator != result->structValue->end()) variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
-
-            auto minimumValueIterator = variableInput->structValue->find("minimumValue");
-            auto maximumValueIterator = variableInput->structValue->find("maximumValue");
-            if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
+            else
             {
-                if(minimumValueIterator == variableInput->structValue->end())
-                {
-                    auto minimumValueIterator2 = result->structValue->find("MIN");
-                    if(minimumValueIterator2 != result->structValue->end())
-                    {
-                        variableInput->structValue->emplace("minimumValue", minimumValueIterator2->second);
-                    }
-                }
+                std::string type;
+                if(value->type == BaseLib::VariableType::tBoolean) type = "BOOL";
+                else if(value->type == BaseLib::VariableType::tString) type = "STRING";
+                else if(value->type == BaseLib::VariableType::tInteger) type = "INTEGER";
+                else if(value->type == BaseLib::VariableType::tInteger64) type = "INTEGER64";
+                else if(value->type == BaseLib::VariableType::tFloat) type = "FLOAT";
+                else if(value->type == BaseLib::VariableType::tArray) type = "ARRAY";
+                else if(value->type == BaseLib::VariableType::tStruct) type = "STRUCT";
 
-                if(maximumValueIterator == variableInput->structValue->end())
-                {
-                    auto maximumValueIterator2 = result->structValue->find("MAX");
-                    if(maximumValueIterator2 != result->structValue->end())
-                    {
-                        variableInput->structValue->emplace("maximumValue", maximumValueIterator2->second);
-                    }
-                }
+                variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(type)));
             }
         }
     }
@@ -552,31 +568,49 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
 
         for(auto& variableInput : rpcElement->variableInputs)
         {
-            for(auto& family : families)
+            if(variableInput->peerId == 0)
             {
-                auto central = family.second->getCentral();
-                if(!central) continue;
+                auto systemVariable = GD::bl->db->getSystemVariableInternal(variableInput->name);
+                if(!systemVariable) return false;
+                clientInfo->acls->checkSystemVariableReadAccess(systemVariable);
+            }
+            else
+            {
+                for(auto& family : families)
+                {
+                    auto central = family.second->getCentral();
+                    if(!central) continue;
 
-                auto peer = central->getPeer((uint64_t) variableInput->peerId);
-                if(!peer) continue;
+                    auto peer = central->getPeer((uint64_t) variableInput->peerId);
+                    if(!peer) continue;
 
-                if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
-                if(!clientInfo->acls->checkVariableReadAccess(peer, variableInput->channel, variableInput->name)) return false;
+                    if(!clientInfo->acls->checkDeviceReadAccess(peer)) return false;
+                    if(!clientInfo->acls->checkVariableReadAccess(peer, variableInput->channel, variableInput->name)) return false;
+                }
             }
         }
 
         for(auto& variableOutput : rpcElement->variableOutputs)
         {
-            for(auto& family : families)
+            if(variableOutput->peerId == 0)
             {
-                auto central = family.second->getCentral();
-                if(!central) continue;
+                auto systemVariable = GD::bl->db->getSystemVariableInternal(variableOutput->name);
+                if(!systemVariable) return false;
+                clientInfo->acls->checkSystemVariableReadAccess(systemVariable);
+            }
+            else
+            {
+                for(auto& family : families)
+                {
+                    auto central = family.second->getCentral();
+                    if(!central) continue;
 
-                auto peer = central->getPeer((uint64_t) variableOutput->peerId);
-                if(!peer) continue;
+                    auto peer = central->getPeer((uint64_t) variableOutput->peerId);
+                    if(!peer) continue;
 
-                if(!clientInfo->acls->checkDeviceWriteAccess(peer)) return false;
-                if(!clientInfo->acls->checkVariableWriteAccess(peer, variableOutput->channel, variableOutput->name)) return false;
+                    if(!clientInfo->acls->checkDeviceWriteAccess(peer)) return false;
+                    if(!clientInfo->acls->checkVariableWriteAccess(peer, variableOutput->channel, variableOutput->name)) return false;
+                }
             }
         }
 
