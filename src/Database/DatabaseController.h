@@ -212,17 +212,25 @@ public:
 
 	virtual std::set<uint64_t> getSystemVariableCategoriesInternal(std::string& variableId);
 
+    virtual BaseLib::PVariable getSystemVariableRoles(std::string& variableId);
+
+    virtual std::set<uint64_t> getSystemVariableRolesInternal(std::string& variableId);
+
 	virtual BaseLib::PVariable getSystemVariableRoom(std::string& variableId);
 
 	virtual BaseLib::PVariable getSystemVariablesInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, bool checkAcls);
+
+    virtual BaseLib::PVariable getSystemVariablesInRole(BaseLib::PRpcClientInfo clientInfo, uint64_t roleId, bool checkAcls);
 
 	virtual BaseLib::PVariable getSystemVariablesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
 
 	virtual uint64_t getSystemVariableRoomInternal(std::string& variableId);
 
-	virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesFlags, bool checkAcls);
+	virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesRolesFlags, bool checkAcls);
 
 	virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
+
+    virtual void removeRoleFromSystemVariables(uint64_t categoryId);
 
 	virtual void removeRoomFromSystemVariables(uint64_t roomId);
 
@@ -230,9 +238,13 @@ public:
 
 	virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categories);
 
+    virtual BaseLib::PVariable setSystemVariableRoles(std::string& variableId, std::set<uint64_t>& roles);
+
 	virtual BaseLib::PVariable setSystemVariableRoom(std::string& variableId, uint64_t room);
 
 	virtual bool systemVariableHasCategory(std::string& variableId, uint64_t categoryId);
+
+    virtual bool systemVariableHasRole(std::string& variableId, uint64_t roleId);
 	// }}}
 
 	// {{{ Users
