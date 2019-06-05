@@ -141,7 +141,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                     if(peerElement->type == BaseLib::VariableType::tStruct)
                     {
                         auto peerIdIterator = peerElement->structValue->find("peer");
-                        if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
+                        if(peerIdIterator == peerElement->structValue->end()) continue;
 
                         variableInfo->peerId = (uint64_t) peerIdIterator->second->integerValue64;
 
@@ -163,7 +163,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto maximumValueScaledIterator = peerElement->structValue->find("maximumScaled");
                         if(maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
                     }
-                    else if(peerElement->integerValue64 != 0)
+                    else if(peerElement->type == BaseLib::VariableType::tInteger || peerElement->type == BaseLib::VariableType::tInteger64)
                     {
                         variableInfo->peerId = (uint64_t) peerElement->integerValue64;
                     }
@@ -190,7 +190,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                     if(peerElement->type == BaseLib::VariableType::tStruct)
                     {
                         auto peerIdIterator = peerElement->structValue->find("peer");
-                        if(peerIdIterator == peerElement->structValue->end() || peerIdIterator->second->integerValue64 == 0) continue;
+                        if(peerIdIterator == peerElement->structValue->end()) continue;
 
                         variableInfo->peerId = (uint64_t) peerIdIterator->second->integerValue64;
 
@@ -206,7 +206,7 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto maximumValueIterator = peerElement->structValue->find("maximum");
                         if(maximumValueIterator != peerElement->structValue->end()) variableInfo->maximumValue = maximumValueIterator->second;
                     }
-                    else if(peerElement->integerValue64 != 0)
+                    else if(peerElement->type == BaseLib::VariableType::tInteger || peerElement->type == BaseLib::VariableType::tInteger64)
                     {
                         variableInfo->peerId = (uint64_t) peerElement->integerValue64;
                     }
