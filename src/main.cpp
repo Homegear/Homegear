@@ -1041,6 +1041,8 @@ void startUp()
         GD::uiController.reset(new UiController());
 		GD::uiController->load();
 
+		GD::ipcLogger.reset(new IpcLogger());
+
 #ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
 #endif

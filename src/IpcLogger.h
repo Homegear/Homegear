@@ -4,16 +4,16 @@
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -28,42 +28,56 @@
  * files in the program, then also delete it here.
 */
 
-#include "GD.h"
-#include "../UPnP/UPnP.h"
+#ifndef HOMEGEAR_IPCLOGGER_H
+#define HOMEGEAR_IPCLOGGER_H
+
+#include <homegear-base/BaseLib.h>
 
 namespace Homegear
 {
 
-std::unique_ptr<BaseLib::SharedObjects> GD::bl;
-BaseLib::Output GD::out;
-std::string GD::runAsUser = "";
-std::string GD::runAsGroup = "";
-std::string GD::configPath = "/etc/homegear/";
-std::string GD::pidfilePath = "";
-std::string GD::workingDirectory = "";
-std::string GD::executablePath = "";
-std::string GD::executableFile = "";
-int64_t GD::startingTime = BaseLib::HelperFunctions::getTime();
-std::unique_ptr<FamilyController> GD::familyController;
-std::unique_ptr<FamilyServer> GD::familyServer;
-std::unique_ptr<LicensingController> GD::licensingController;
-std::map<int32_t, std::shared_ptr<Rpc::RpcServer>> GD::rpcServers;
-std::unique_ptr<Rpc::Client> GD::rpcClient;
-int32_t GD::rpcLogLevel = 1;
-BaseLib::Rpc::ServerInfo GD::serverInfo;
-Rpc::ClientSettings GD::clientSettings;
-std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingModules;
-std::unique_ptr<UPnP> GD::uPnP(new UPnP());
-std::unique_ptr<Mqtt> GD::mqtt;
-std::unique_ptr<UiController> GD::uiController;
-#ifdef EVENTHANDLER
-std::unique_ptr<EventHandler> GD::eventHandler;
-#endif
-#ifndef NO_SCRIPTENGINE
-std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
-#endif
-std::unique_ptr<IpcServer> GD::ipcServer;
-std::unique_ptr<NodeBlue::NodeBlueServer> GD::nodeBlueServer;
-std::unique_ptr<IpcLogger> GD::ipcLogger;
+enum class IpcModule
+{
+    scriptEngine = 1,
+    nodeBlue = 2,
+    ipc = 3
+};
+
+enum class IpcLoggerPacketDirection
+{
+    toServer,
+    toClient
+};
+
+class IpcLogger
+{
+private:
+    bool _enabled = false;
+    std::mutex _outputMutex;
+    std::ofstream _outputStream;
+public:
+    IpcLogger();
+    ~IpcLogger();
+
+    /**
+     * Returns `true` when the logger is enabled. Don't check the settings as a change in them don't change the enabled state without Homegear restart.
+     *
+     * @return
+     */
+    bool enabled();
+
+    /**
+     * Writes an entry to the IPC log file.
+     *
+     * @param module The module the log entry is for.
+     * @param packetId The packet ID as encoded in the IPC packet.
+     * @param pid The process ID of the IPC client process.
+     * @param direction Direction of the packet.
+     * @param data The full binary RPC packet.
+     */
+    void log(IpcModule module, int32_t packetId, pid_t pid, IpcLoggerPacketDirection direction, const std::vector<char>& data);
+};
 
 }
+
+#endif //HOMEGEAR_IPCLOGGER_H

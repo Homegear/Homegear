@@ -140,10 +140,6 @@ private:
     typedef std::shared_ptr<ClientScriptInfo> PClientScriptInfo;
 
     BaseLib::Output _out;
-#ifdef DEBUGSESOCKET
-    std::mutex _socketOutputMutex;
-    std::ofstream _socketOutput;
-#endif
     std::string _socketPath;
     std::atomic_bool _shuttingDown;
     std::atomic_bool _stopServer;
@@ -182,10 +178,6 @@ private:
     std::mutex _unconnectedProcessesMutex;
     std::queue<pid_t> _unconnectedProcesses;
     // }}}
-
-#ifdef DEBUGSESOCKET
-    void socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data);
-#endif
 
     void collectGarbage();
 

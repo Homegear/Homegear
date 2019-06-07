@@ -926,6 +926,8 @@ BaseLib::PVariable IpcServer::sendRequest(PIpcClientData& clientData, std::strin
 			return BaseLib::Variable::createError(-32500, "Unknown application error.");
 		}
 
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::ipc, packetId, clientData->pid, IpcLoggerPacketDirection::toClient, data);
+
 		BaseLib::PVariable result = send(clientData, data);
 		if(result->errorStruct)
 		{
@@ -982,6 +984,7 @@ void IpcServer::sendResponse(PIpcClientData& clientData, BaseLib::PVariable& thr
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{threadId, packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::ipc, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
@@ -1146,6 +1149,21 @@ void IpcServer::readClient(PIpcClientData& clientData)
 				processedBytes += clientData->binaryRpc->process(clientData->buffer.data() + processedBytes, bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
+                    if(GD::ipcLogger->enabled())
+                    {
+                        if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                        {
+                            std::string methodName;
+                            BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+                            GD::ipcLogger->log(IpcModule::ipc, request->at(1)->integerValue, clientData->id, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                        else
+                        {
+                            BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
+                            GD::ipcLogger->log(IpcModule::ipc, response->arrayValue->at(0)->integerValue, clientData->id, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                    }
+
 					std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(clientData, clientData->binaryRpc->getData());
 					if(!enqueue(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request ? 0 : 1, queueEntry)) printQueueFullError(_out, "Error: Could not queue incoming RPC packet. Queue is full.");
 					clientData->binaryRpc->reset();

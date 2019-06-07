@@ -118,6 +118,8 @@ set(SOURCE_FILES
         src/WebServer/WebServer.cpp
         src/WebServer/WebServer.h
         src/main.cpp
+        src/IpcLogger.cpp
+        src/IpcLogger.h
         src/Monitor.cpp
         src/Monitor.h
         config.h)

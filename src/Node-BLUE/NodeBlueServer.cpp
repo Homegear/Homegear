@@ -2436,6 +2436,8 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 			}
 		}
 
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::nodeBlue, packetId, clientData->pid, IpcLoggerPacketDirection::toClient, data);
+
 		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		BaseLib::PVariable result = send(clientData, data);
 		if(result->errorStruct || !wait)
@@ -2492,6 +2494,7 @@ void NodeBlueServer::sendResponse(PNodeBlueClientData& clientData, BaseLib::PVar
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::nodeBlue, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
 		send(clientData, data);
 	}
 	catch(const std::exception& ex)
@@ -2732,6 +2735,21 @@ void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
 				processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
+                    if(GD::ipcLogger->enabled())
+                    {
+                        if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                        {
+                            std::string methodName;
+                            BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+                            GD::ipcLogger->log(IpcModule::nodeBlue, request->at(1)->integerValue, clientData->pid, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                        else
+                        {
+                            BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
+                            GD::ipcLogger->log(IpcModule::nodeBlue, response->arrayValue->at(0)->integerValue, clientData->pid, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                    }
+
 					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
 					{
 						std::string methodName;
