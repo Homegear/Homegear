@@ -510,6 +510,49 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                 GD::out.printError("Error: Could not set role: " + result->structValue->at("faultString")->stringValue);
                 return std::make_shared<BaseLib::Variable>(false);
             }
+
+            //{{{ Add variables from metadata
+            auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(3)->integerValue64);
+            auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+            if(addVariablesIterator != roleMetadata->structValue->end())
+            {
+                for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+                {
+                    auto idIterator = variableInfo->structValue->find("id");
+                    auto typeIterator = variableInfo->structValue->find("type");
+                    if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
+                    {
+                        continue;
+                    }
+                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+                    auto defaultValueIterator = variableInfo->structValue->find("default");
+                    auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
+                    if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
+                    if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                    else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                    else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                    else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
+                    else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                    else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
+                    else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
+
+                    GD::bl->db->setSystemVariable(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                    auto roleSystemVariable = GD::bl->db->getSystemVariableInternal(roleSystemVariableName);
+                    if(!roleSystemVariable) continue;
+
+                    auto rolesIterator = variableInfo->structValue->find("roles");
+                    if(rolesIterator != variableInfo->structValue->end())
+                    {
+                        for(auto& role : *rolesIterator->second->arrayValue)
+                        {
+                            if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64);
+                        }
+                    }
+                    GD::bl->db->setSystemVariableRoles(roleSystemVariable->name, roleSystemVariable->roles);
+                }
+            }
+            //}}}
+
             return std::make_shared<BaseLib::Variable>(true);
         }
 
@@ -933,6 +976,49 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
             GD::out.printError("Error: Could not set role: " + result->structValue->at("faultString")->stringValue);
             return std::make_shared<BaseLib::Variable>(false);
         }
+
+        //{{{ Add variables from metadata
+        auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(1)->integerValue64);
+        auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+        if(addVariablesIterator != roleMetadata->structValue->end())
+        {
+            for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+            {
+                auto idIterator = variableInfo->structValue->find("id");
+                auto typeIterator = variableInfo->structValue->find("type");
+                if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
+                {
+                    continue;
+                }
+                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+                auto defaultValueIterator = variableInfo->structValue->find("default");
+                auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
+                if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
+                if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
+                else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
+                else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
+
+                GD::bl->db->setSystemVariable(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                auto roleSystemVariable = GD::bl->db->getSystemVariableInternal(roleSystemVariableName);
+                if(!roleSystemVariable) continue;
+
+                auto rolesIterator = variableInfo->structValue->find("roles");
+                if(rolesIterator != variableInfo->structValue->end())
+                {
+                    for(auto& role : *rolesIterator->second->arrayValue)
+                    {
+                        if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64);
+                    }
+                }
+                GD::bl->db->setSystemVariableRoles(roleSystemVariable->name, roleSystemVariable->roles);
+            }
+        }
+        //}}}
+
         return std::make_shared<BaseLib::Variable>(true);
     }
     catch(const std::exception& ex)
@@ -5831,6 +5917,25 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
 
         if(parameters->at(1)->integerValue64 != 0) systemVariable->roles.erase((uint64_t) parameters->at(1)->integerValue64);
 
+        //{{{ Remove variables from metadata
+        auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(1)->integerValue64);
+        auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+        if(addVariablesIterator != roleMetadata->structValue->end())
+        {
+            for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+            {
+                auto idIterator = variableInfo->structValue->find("id");
+                if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty())
+                {
+                    continue;
+                }
+                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+
+                GD::bl->db->deleteSystemVariable(roleSystemVariableName);
+            }
+        }
+        //}}}
+
         return GD::bl->db->setSystemVariableRoles(systemVariable->name, systemVariable->roles);
     }
     catch(const std::exception& ex)
@@ -5873,6 +5978,26 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
                 GD::out.printError("Error: Could not remove role from system variable: " + result->structValue->at("faultString")->stringValue);
                 return std::make_shared<BaseLib::Variable>(false);
             }
+
+            //{{{ Remove variables from metadata
+            auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(3)->integerValue64);
+            auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+            if(addVariablesIterator != roleMetadata->structValue->end())
+            {
+                for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+                {
+                    auto idIterator = variableInfo->structValue->find("id");
+                    if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty())
+                    {
+                        continue;
+                    }
+                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+
+                    GD::bl->db->deleteSystemVariable(roleSystemVariableName);
+                }
+            }
+            //}}}
+
             return std::make_shared<BaseLib::Variable>(true);
         }
 
