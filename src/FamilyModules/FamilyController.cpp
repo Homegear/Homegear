@@ -252,18 +252,6 @@ void FamilyController::onEvent(std::string source, uint64_t peerID, int32_t chan
     }
 }
 
-void FamilyController::onProcessEvent(pid_t processId, const BaseLib::PVariable& data)
-{
-    try
-    {
-        if(GD::ipcServer) GD::ipcServer->broadcastProcessEvent(processId, data);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-}
-
 void FamilyController::onRunScript(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, bool wait)
 {
     try

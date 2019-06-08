@@ -258,6 +258,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&NodeBlueServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 #endif
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&NodeBlueServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("invokeIpcProcessMethod", std::bind(&NodeBlueServer::invokeIpcProcessMethod, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("nodeEvent", std::bind(&NodeBlueServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("frontendEventLog", std::bind(&NodeBlueServer::frontendEventLog, this, std::placeholders::_1, std::placeholders::_2)));
 }
@@ -2383,13 +2384,14 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 		std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
 		while(totallySentBytes < (signed) data.size())
 		{
-			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
-			if(sentBytes <= 0)
+			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, data.data() + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+			if(sentBytes == -1)
 			{
 				if(errno == EAGAIN) continue;
 				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
+			else if(sentBytes == 0) return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			totallySentBytes += sentBytes;
 		}
 	}
@@ -3178,6 +3180,28 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientD
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::invokeIpcProcessMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+        if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "First parameter is not of type Integer.");
+        if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Second parameter is not of type String.");
+        if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Third parameter is not of type Array.");
+
+        return GD::ipcServer->callProcessRpcMethod(parameters->at(0)->integerValue64, _dummyClientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)

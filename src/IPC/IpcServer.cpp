@@ -485,39 +485,6 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 	}
 }
 
-void IpcServer::broadcastProcessEvent(pid_t processId, const BaseLib::PVariable& data)
-{
-    try
-    {
-        if(_shuttingDown || processId == 0) return;
-        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("processEvent")) return;
-
-        std::vector<PIpcClientData> clients;
-
-        {
-            std::lock_guard<std::mutex> stateGuard(_stateMutex);
-            clients.reserve(2);
-            for(auto& client : _clients)
-            {
-                if(client.second->closed || client.second->pid != processId) continue;
-                clients.push_back(client.second);
-            }
-        }
-
-        for(auto& client : clients)
-        {
-            auto parameters = std::make_shared<BaseLib::Array>();
-            parameters->emplace_back(data);
-            std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastProcessEvent", parameters);
-            if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastProcessEvent\". Queue is full.");
-        }
-    }
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-}
-
 void IpcServer::broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions)
 {
 	try
@@ -703,7 +670,55 @@ bool IpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& me
 	return false;
 }
 
-BaseLib::PVariable IpcServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable IpcServer::callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        std::vector<PIpcClientData> clients;
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(2);
+            for(auto& client : _clients)
+            {
+                if(client.second->closed || client.second->pid != processId) continue;
+                clients.push_back(client.second);
+            }
+        }
+
+        BaseLib::PVariable responses;
+        BaseLib::PVariable responseStruct;
+        if(clients.size() > 1)
+        {
+            responses = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            responses->structValue->emplace("multipleClients", std::make_shared<BaseLib::Variable>(true));
+            responseStruct = responses->structValue->emplace("returnValues", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first->second;
+        }
+        for(auto& client : clients)
+        {
+            BaseLib::PVariable response = sendRequest(client, methodName, parameters);
+            if(response->errorStruct)
+            {
+                _out.printError("Error calling \"" + methodName + "\" on client " + std::to_string(client->id) + ": " + response->structValue->at("faultString")->stringValue);
+            }
+            if(clients.size() == 1) return response;
+            else responseStruct->structValue->emplace(std::to_string(client->id), response);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::callRpcMethod(const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters)
 {
 	try
 	{
@@ -872,7 +887,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 	}
 }
 
-BaseLib::PVariable IpcServer::send(PIpcClientData& clientData, std::vector<char>& data)
+BaseLib::PVariable IpcServer::send(const PIpcClientData& clientData, const std::vector<char>& data)
 {
 	try
 	{
@@ -901,7 +916,7 @@ BaseLib::PVariable IpcServer::send(PIpcClientData& clientData, std::vector<char>
 	return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable IpcServer::sendRequest(PIpcClientData& clientData, std::string methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData& clientData, const std::string& methodName, const BaseLib::PArray& parameters)
 {
 	try
 	{

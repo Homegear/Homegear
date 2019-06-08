@@ -53,8 +53,6 @@ public:
 
 	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
 
-	void broadcastProcessEvent(pid_t processId, const BaseLib::PVariable& data);
-
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 
 	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
@@ -63,7 +61,9 @@ public:
 
 	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
-	BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters);
+    BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
+
+	BaseLib::PVariable callRpcMethod(const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
 
 	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
 
@@ -138,9 +138,9 @@ private:
 
 	void readClient(PIpcClientData& clientData);
 
-	BaseLib::PVariable send(PIpcClientData& clientData, std::vector<char>& data);
+	BaseLib::PVariable send(const PIpcClientData& clientData, const std::vector<char>& data);
 
-	BaseLib::PVariable sendRequest(PIpcClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendRequest(const PIpcClientData& clientData, const std::string& methodName, const BaseLib::PArray& parameters);
 
 	void sendResponse(PIpcClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 

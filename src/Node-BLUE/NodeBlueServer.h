@@ -235,6 +235,8 @@ private:
 
 	BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 
+    BaseLib::PVariable invokeIpcProcessMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 
     BaseLib::PVariable frontendEventLog(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
