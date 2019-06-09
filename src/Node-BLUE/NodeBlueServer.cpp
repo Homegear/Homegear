@@ -51,6 +51,11 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_lastNodeEvent = 0;
 	_nodeEventCounter = 0;
 
+    _lifetick1.first = 0;
+    _lifetick1.second = true;
+    _lifetick2.first = 0;
+    _lifetick2.second = true;
+
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
 	_jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
@@ -267,6 +272,40 @@ NodeBlueServer::~NodeBlueServer()
 {
 	if(!_stopServer) stop();
 	GD::bl->threadManager.join(_maintenanceThread);
+}
+
+bool NodeBlueServer::lifetick()
+{
+    try
+    {
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+                return false;
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+                return false;
+            }
+        }
+        return true;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 void NodeBlueServer::collectGarbage()
@@ -2410,6 +2449,12 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 {
 	try
 	{
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = false;
+            _lifetick1.first = BaseLib::HelperFunctions::getTime();
+        }
+
 		int32_t packetId;
 		{
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
@@ -2476,6 +2521,11 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 			clientData->rpcResponses.erase(packetId);
 		}
 
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = true;
+        }
+
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -2493,11 +2543,22 @@ void NodeBlueServer::sendResponse(PNodeBlueClientData& clientData, BaseLib::PVar
 {
 	try
 	{
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = false;
+            _lifetick2.first = BaseLib::HelperFunctions::getTime();
+        }
+
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
         if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::nodeBlue, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
 		send(clientData, data);
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = true;
+        }
 	}
 	catch(const std::exception& ex)
 	{

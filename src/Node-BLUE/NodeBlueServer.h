@@ -51,6 +51,8 @@ public:
 
 	virtual ~NodeBlueServer();
 
+    bool lifetick();
+
 	bool start();
 
 	void stop();
@@ -175,6 +177,11 @@ private:
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+    std::mutex _lifetick1Mutex;
+    std::pair<int64_t, bool> _lifetick1;
+    std::mutex _lifetick2Mutex;
+    std::pair<int64_t, bool> _lifetick2;
 
 	// {{{ Debugging / Valgrinding
 	pid_t _manualClientCurrentProcessId = 1;

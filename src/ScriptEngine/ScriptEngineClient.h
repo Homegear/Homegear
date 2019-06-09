@@ -153,9 +153,6 @@ private:
     std::atomic_int _processingThreadCount2;
     std::atomic<int64_t> _processingThreadCountMaxReached1;
     std::atomic<int64_t> _processingThreadCountMaxReached2;
-#ifdef DEBUGSESOCKET
-    std::ofstream _socketOutput;
-#endif
     std::string _socketPath;
     std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
     int64_t _lastGargabeCollection = 0;
@@ -229,11 +226,6 @@ private:
     void checkSessionIdThread(std::string sessionId, std::string* result);
 
     BaseLib::PVariable send(std::vector<char>& data);
-
-#ifdef DEBUGSESOCKET
-    std::mutex _socketOutputMutex;
-    void socketOutput(int32_t packetId, bool clientRequest, bool request, std::vector<char> data);
-#endif
 
     // {{{ RPC methods
     /**
