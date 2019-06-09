@@ -299,6 +299,7 @@ wget --https-only https://github.com/Homegear/python3-homegear/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
+rm -f python3-homegear*/CMakeLists.txt
 rm ${1}.zip
 
 wget --https-only https://github.com/Homegear/Homegear/archive/${1}.zip
@@ -547,7 +548,7 @@ else
 	exit 1
 fi
 
-createPackage python3-homegear $1 python3-homegear 0
+createPackageWithoutAutomake python3-homegear $1 python3-homegear 0
 
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 createPackage Homegear $1 homegear 0
