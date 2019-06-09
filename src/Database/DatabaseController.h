@@ -387,6 +387,7 @@ protected:
 
 	std::mutex _systemVariableMutex;
 	std::unordered_map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
+	std::set<std::string> _specialSystemVariables;
 
 	std::mutex _dataMutex;
 	std::unordered_map<std::string, std::map<std::string, BaseLib::PVariable>> _data;

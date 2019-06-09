@@ -73,6 +73,18 @@ void DatabaseController::init()
 
         std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
         _systemVariables.emplace("homegearStartTime", systemVariable);
+        _specialSystemVariables.emplace("homegearStartTime");
+    }
+
+    {
+        auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
+        systemVariable->name = "socketPath";
+        systemVariable->value = std::make_shared<BaseLib::Variable>(GD::bl->settings.socketPath());
+        systemVariable->flags = 1; //Readonly
+
+        std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+        _systemVariables.emplace("socketPath", systemVariable);
+        _specialSystemVariables.emplace("socketPath");
     }
 
     startQueue(0, true, 1, 0, SCHED_OTHER);
@@ -2774,45 +2786,48 @@ BaseLib::PVariable DatabaseController::getAllSystemVariables(BaseLib::PRpcClient
         BaseLib::PVariable systemVariableStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
         { //Insert special variables
-            BaseLib::Database::PSystemVariable systemVariable;
-
+            for(auto& specialSystemVariable : _specialSystemVariables)
             {
-                std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
-                auto systemVariableIterator = _systemVariables.find("homegearStartTime");
-                if(systemVariableIterator != _systemVariables.end()) systemVariable = systemVariableIterator->second;
-            }
+                BaseLib::Database::PSystemVariable systemVariable;
 
-            if(systemVariable && (!checkAcls || (checkAcls && clientInfo->acls->checkSystemVariableReadAccess(systemVariable))))
-            {
-                if(returnRoomsCategoriesRolesFlags)
                 {
-                    BaseLib::PVariable element = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-
-                    if(systemVariable->room != 0) element->structValue->emplace("ROOM", std::make_shared<BaseLib::Variable>(systemVariable->room));
-
-                    BaseLib::PVariable categoriesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                    categoriesArray->arrayValue->reserve(systemVariable->categories.size());
-                    for(auto category : systemVariable->categories)
-                    {
-                        if(category != 0) categoriesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
-                    }
-                    if(!categoriesArray->arrayValue->empty()) element->structValue->emplace("CATEGORIES", categoriesArray);
-
-                    BaseLib::PVariable rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                    rolesArray->arrayValue->reserve(systemVariable->roles.size());
-                    for(auto role : systemVariable->roles)
-                    {
-                        if(role != 0) rolesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(role));
-                    }
-                    if(!rolesArray->arrayValue->empty()) element->structValue->emplace("ROLES", categoriesArray);
-
-                    if(systemVariable->flags > 0) element->structValue->emplace("FLAGS", std::make_shared<BaseLib::Variable>(systemVariable->flags));
-
-                    element->structValue->emplace("VALUE", systemVariable->value);
-
-                    systemVariableStruct->structValue->insert(BaseLib::StructElement(systemVariable->name, element));
+                    std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+                    auto systemVariableIterator = _systemVariables.find(specialSystemVariable);
+                    if(systemVariableIterator != _systemVariables.end()) systemVariable = systemVariableIterator->second;
                 }
-                else systemVariableStruct->structValue->insert(BaseLib::StructElement(systemVariable->name, systemVariable->value));
+
+                if(systemVariable && (!checkAcls || (checkAcls && clientInfo->acls->checkSystemVariableReadAccess(systemVariable))))
+                {
+                    if(returnRoomsCategoriesRolesFlags)
+                    {
+                        BaseLib::PVariable element = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                        if(systemVariable->room != 0) element->structValue->emplace("ROOM", std::make_shared<BaseLib::Variable>(systemVariable->room));
+
+                        BaseLib::PVariable categoriesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                        categoriesArray->arrayValue->reserve(systemVariable->categories.size());
+                        for(auto category : systemVariable->categories)
+                        {
+                            if(category != 0) categoriesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(category));
+                        }
+                        if(!categoriesArray->arrayValue->empty()) element->structValue->emplace("CATEGORIES", categoriesArray);
+
+                        BaseLib::PVariable rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                        rolesArray->arrayValue->reserve(systemVariable->roles.size());
+                        for(auto role : systemVariable->roles)
+                        {
+                            if(role != 0) rolesArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(role));
+                        }
+                        if(!rolesArray->arrayValue->empty()) element->structValue->emplace("ROLES", categoriesArray);
+
+                        if(systemVariable->flags > 0) element->structValue->emplace("FLAGS", std::make_shared<BaseLib::Variable>(systemVariable->flags));
+
+                        element->structValue->emplace("VALUE", systemVariable->value);
+
+                        systemVariableStruct->structValue->insert(BaseLib::StructElement(systemVariable->name, element));
+                    }
+                    else systemVariableStruct->structValue->insert(BaseLib::StructElement(systemVariable->name, systemVariable->value));
+                }
             }
         }
 
