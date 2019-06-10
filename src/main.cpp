@@ -718,12 +718,18 @@ void startUp()
             sigprocmask(SIG_BLOCK, &set, nullptr);
         }
 
-        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
+        if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
 
         //Use sigaction over signal because of different behavior in Linux and BSD
         struct sigaction sa{};
 		sa.sa_handler = SIG_IGN;
 		sigaction(SIGPIPE, &sa, nullptr);
+
+        setLimits();
+
+        initGnuTls();
+
+        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
         _processManagerCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(sigchildHandler, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 
@@ -746,11 +752,8 @@ void startUp()
     	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
     	GD::out.printMessage(std::string("Git branch of Homegear:             ") + GITBRANCHHOMEGEAR);
 
-    	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
     	if(_monitorProcess)
     	{
-    		setLimits();
-
     		while(_monitorProcess)
     		{
     			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
@@ -762,8 +765,6 @@ void startUp()
     			_monitor.checkHealth(_mainProcessId);
     		}
     	}
-
-    	initGnuTls();
 
         if(GD::bl->settings.waitForCorrectTime())
         {
@@ -792,8 +793,6 @@ void startUp()
 				}
 			}
 		}
-
-		setLimits();
 
 		GD::bl->db->init();
 		std::string databasePath = GD::bl->settings.databasePath();
