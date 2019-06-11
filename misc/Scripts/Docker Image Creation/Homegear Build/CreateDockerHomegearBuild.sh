@@ -186,6 +186,19 @@ else
 fi
 # }}}
 
+# {{{ UI build dependencies
+if [ "$distver" == "jessie" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php5-cli npm
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli npm
+fi
+
+# Fix missing link on some systems
+ln -s /usr/bin/nodejs /usr/bin/node
+
+DEBIAN_FRONTEND=noninteractive chroot $rootfs npm -g install babel-cli
+# }}}
+
 mkdir $rootfs/build
 cat > "$rootfs/build/CreateDebianPackage.sh" <<-'EOF'
 #!/bin/bash
