@@ -141,7 +141,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https curl
 
 echo "deb https://homegear.eu/packages/$dist/ $distver/
 " > $rootfs/etc/apt/sources.list.d/homegear.list
@@ -150,8 +150,10 @@ wget -P $rootfs https://homegear.eu/packages/Release.key
 chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
+DEBIAN_FRONTEND=noninteractive chroot $rootfs curl -sL https://deb.nodesource.com/setup_12.x | bash -
+
 chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools nodejs
 
 if [ "$distver" != "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
@@ -188,13 +190,10 @@ fi
 
 # {{{ UI build dependencies
 if [ "$distver" == "jessie" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php5-cli npm
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php5-cli
 else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli npm
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 fi
-
-# Fix missing link on some systems
-ln -s /usr/bin/nodejs /usr/bin/node
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs npm -g install babel-cli
 # }}}
