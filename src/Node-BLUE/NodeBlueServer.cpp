@@ -1288,10 +1288,6 @@ void NodeBlueServer::startFlows()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void NodeBlueServer::sendShutdown()
@@ -3236,10 +3232,6 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientD
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -3257,10 +3249,6 @@ BaseLib::PVariable NodeBlueServer::invokeIpcProcessMethod(PNodeBlueClientData& c
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

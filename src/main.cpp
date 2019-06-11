@@ -729,8 +729,8 @@ void startUp()
 
         initGnuTls();
 
+        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager); //Needs to be called before starting any threads
         GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
-        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
         _processManagerCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(sigchildHandler, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 
     	if(_startAsDaemon || _nonInteractive)
@@ -1133,6 +1133,13 @@ void startUp()
         GD::familyController->physicalInterfaceStartListening();
 		if(!GD::familyController->physicalInterfaceIsOpen()) GD::out.printCritical("Critical: At least one of the communication modules could not be opened...");
 
+        GD::out.printInfo("Starting IPC server...");
+        if(!GD::ipcServer->start())
+        {
+            GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
+            exitHomegear(1);
+        }
+
 		if(GD::bl->settings.enableNodeBlue())
 		{
 			GD::out.printInfo("Starting Node-BLUE server...");
@@ -1141,13 +1148,6 @@ void startUp()
 				GD::out.printCritical("Critical: Cannot start Node-BLUE server. Exiting Homegear.");
 				exitHomegear(1);
 			}
-		}
-
-		GD::out.printInfo("Starting IPC server...");
-		if(!GD::ipcServer->start())
-		{
-			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
-			exitHomegear(1);
 		}
 
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");

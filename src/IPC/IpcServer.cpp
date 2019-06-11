@@ -727,6 +727,8 @@ BaseLib::PVariable IpcServer::callProcessRpcMethod(pid_t processId, const BaseLi
             }
         }
 
+        if(clients.empty()) return BaseLib::Variable::createError(-1, "Process not found");
+
         BaseLib::PVariable responses;
         BaseLib::PVariable responseStruct;
         if(clients.size() > 1)
