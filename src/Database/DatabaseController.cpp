@@ -69,7 +69,7 @@ void DatabaseController::init()
         auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
         systemVariable->name = "homegearStartTime";
         systemVariable->value = std::make_shared<BaseLib::Variable>((double)(BaseLib::HelperFunctions::getTime() / 1000.0));
-        systemVariable->flags = 1; //Readonly
+        systemVariable->flags = 0b00000101; //System, -, readonly
 
         std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
         _systemVariables.emplace("homegearStartTime", systemVariable);
@@ -80,7 +80,7 @@ void DatabaseController::init()
         auto systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
         systemVariable->name = "socketPath";
         systemVariable->value = std::make_shared<BaseLib::Variable>(GD::bl->settings.socketPath());
-        systemVariable->flags = 1; //Readonly
+        systemVariable->flags = 0b00000111; //System, hidden, readonly
 
         std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
         _systemVariables.emplace("socketPath", systemVariable);
@@ -2737,7 +2737,12 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
 
         {
             std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
-            if(_systemVariables.find(variableId) != _systemVariables.end()) _systemVariables.erase(variableId);
+            auto systemVariableIterator = _systemVariables.find(variableId);
+            if(systemVariableIterator != _systemVariables.end())
+            {
+                if(systemVariableIterator->second->flags & 4) return BaseLib::Variable::createError(-1, "Variable is not deletable.");
+                _systemVariables.erase(variableId);
+            }
         }
 
         BaseLib::Database::DataRow data;
