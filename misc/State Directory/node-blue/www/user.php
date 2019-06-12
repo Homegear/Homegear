@@ -15,7 +15,7 @@ class User
             $_SESSION['user'] = $_SERVER['SSL_CLIENT_S_DN_CN'];
             $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'de-DE'));
         }
-
+        
         $authorized = (isset($_SESSION["authorized"]) && $_SESSION["authorized"] === true && isset($_SESSION["user"]));
         if(!$authorized && $redirectToLogin)
         {
@@ -23,6 +23,7 @@ class User
             die("unauthorized");
         }
         hg_set_user_privileges($_SESSION["user"]);
+        if(\Homegear\Homegear::checkServiceAccess("node-blue") !== true) return -2;
         return $authorized;
     }
 
