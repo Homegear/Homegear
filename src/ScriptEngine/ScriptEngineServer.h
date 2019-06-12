@@ -75,7 +75,7 @@ public:
 
     void homegearReloading();
 
-    void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
+    void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
     void devTestClient();
 

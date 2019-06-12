@@ -766,6 +766,22 @@ void startUp()
     		}
     	}
 
+        GD::out.printMessage("Determining maximum thread count...");
+        try
+        {
+            // {{{ Get maximum thread count
+            std::string output;
+            BaseLib::ProcessManager::exec(GD::executablePath + GD::executableFile + " -tc", GD::bl->fileDescriptorManager.getMax(), output);
+            BaseLib::HelperFunctions::trim(output);
+            if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
+            // }}}
+        }
+        catch(const std::exception& ex)
+        {
+            GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+        GD::out.printMessage("Maximum thread count is: " + std::to_string(GD::bl->threadManager.getMaxThreadCount()));
+
         if(GD::bl->settings.waitForCorrectTime())
         {
             while(BaseLib::HelperFunctions::getTime() < 1000000000000)
@@ -1665,24 +1681,6 @@ int main(int argc, char* argv[])
     	}
 
     	if(!isatty(STDIN_FILENO)) _nonInteractive = true;
-
-    	try
-    	{
-    		// {{{ Get maximum thread count
-				std::string output;
-				BaseLib::ProcessManager::exec(GD::executablePath + GD::executableFile + " -tc", GD::bl->fileDescriptorManager.getMax(), output);
-				BaseLib::HelperFunctions::trim(output);
-				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
-			// }}}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
 
     	// {{{ Load settings
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");

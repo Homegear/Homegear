@@ -559,7 +559,7 @@ void ScriptEngineServer::homegearReloading()
     }
 }
 
-void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
+void ScriptEngineServer::processKilled(pid_t pid, int exitCode, int signal, bool coreDumped)
 {
     try
     {

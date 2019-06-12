@@ -592,7 +592,7 @@ void NodeBlueServer::homegearReloading()
 	}
 }
 
-void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
+void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool coreDumped)
 {
 	try
 	{
