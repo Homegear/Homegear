@@ -3647,6 +3647,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
                 }
 
                 systemVariable->value = value;
+                if(systemVariable->flags & 4) flags |= 4;
                 if(flags != -1) systemVariable->flags = flags;
             }
         }
