@@ -154,10 +154,10 @@ chroot $rootfs apt-key add nodesource.gpg.key
 rm $rootfs/nodesource.gpg.key
 
 if [ "$arch" == "i386" ]; then
-	echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
-else
 	# 10.x and later are not available for i386
 	echo "deb https://deb.nodesource.com/node_9.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+else
+	echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
 fi
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
