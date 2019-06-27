@@ -200,6 +200,9 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
                         auto nameIterator = peerElement->structValue->find("name");
                         if(nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
 
+                        auto valueIterator = peerElement->structValue->find("value");
+                        if(valueIterator != peerElement->structValue->end()) variableInfo->value = valueIterator->second;
+
                         auto minimumValueIterator = peerElement->structValue->find("minimum");
                         if(minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
 
