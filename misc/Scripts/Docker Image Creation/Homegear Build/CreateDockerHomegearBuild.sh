@@ -132,8 +132,19 @@ if [ "$distver" == "stretch" ]; then
 fi
 
 if [ "$distver" == "bionic" ]; then
+	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
+		export MAN_DISABLE_SECCOMP=1
+	fi
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
+fi
+
+if [ "$distver" == "jessie" ]; then
+	wget -P $rootfs https://packages.sury.org/php/apt.gpg
+	chroot $rootfs apt-key add apt.gpg
+	rm $rootfs/apt.gpg
+
+	echo "deb https://packages.sury.org/php $distver main" > $rootfs/etc/apt/sources.list.d/php7.list
 fi
 
 chroot $rootfs apt-get update
@@ -200,12 +211,7 @@ fi
 # }}}
 
 # {{{ UI build dependencies
-if [ "$distver" == "jessie" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php5-cli
-else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
-fi
-
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 DEBIAN_FRONTEND=noninteractive chroot $rootfs npm -g install babel-cli
 # }}}
 
