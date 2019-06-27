@@ -120,9 +120,9 @@
 			"default": 0,
 			"enumeration": [
 				"unset",
+				"frostProtection",
 				"comfort",
-				"eco",
-				"frostProtection"
+				"eco"
 			],
 			"roles": [201003]
 		}

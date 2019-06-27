@@ -153,7 +153,12 @@ wget -P $rootfs https://deb.nodesource.com/gpgkey/nodesource.gpg.key
 chroot $rootfs apt-key add nodesource.gpg.key
 rm $rootfs/nodesource.gpg.key
 
-echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+if [ "$arch" == "i386" ]; then
+	echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+else
+	# 10.x and later are not available for i386
+	echo "deb https://deb.nodesource.com/node_9.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+fi
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools nodejs
