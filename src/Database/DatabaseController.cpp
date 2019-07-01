@@ -2740,7 +2740,7 @@ BaseLib::PVariable DatabaseController::deleteSystemVariable(std::string& variabl
             auto systemVariableIterator = _systemVariables.find(variableId);
             if(systemVariableIterator != _systemVariables.end())
             {
-                if(systemVariableIterator->second->flags & 4) return BaseLib::Variable::createError(-1, "Variable is not deletable.");
+                if(systemVariableIterator->second->flags != -1 && (systemVariableIterator->second->flags & 4)) return BaseLib::Variable::createError(-1, "Variable is not deletable.");
                 _systemVariables.erase(variableId);
             }
         }
@@ -3647,7 +3647,7 @@ BaseLib::PVariable DatabaseController::setSystemVariable(BaseLib::PRpcClientInfo
                 }
 
                 systemVariable->value = value;
-                if(systemVariable->flags & 4) flags |= 4;
+                if(systemVariable->flags != -1 && (systemVariable->flags & 4)) flags |= 4;
                 if(flags != -1) systemVariable->flags = flags;
             }
         }
