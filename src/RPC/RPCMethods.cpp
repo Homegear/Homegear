@@ -1093,13 +1093,38 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tStruct})
-                                                                                                                 }));
+            //UI element name; UI element data
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tStruct}),
+            //Array of peer ID, channel and variable name; label
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tArray, BaseLib::VariableType::tString}),
+            //Peer ID; channel; variable name; label
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tString})
+        }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("addUiElement")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
+        if(parameters->size() > 2 || parameters->at(0)->type == BaseLib::VariableType::tArray)
+        {
+            BaseLib::PVariable variableArray;
+            std::string label;
+            if(parameters->size() == 4)
+            {
+                variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                variableArray->arrayValue->reserve(3);
+                variableArray->arrayValue->push_back(parameters->at(0));
+                variableArray->arrayValue->push_back(parameters->at(1));
+                variableArray->arrayValue->push_back(parameters->at(2));
+                label = parameters->at(3)->stringValue;
+            }
+            else
+            {
+                variableArray = parameters->at(0);
+                label = parameters->at(1)->stringValue;
+            }
+            return GD::uiController->addUiElementSimple(clientInfo, label, variableArray);
+        }
+        else return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
     }
     catch(const std::exception& ex)
     {
@@ -4622,9 +4647,19 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
+
+        std::unordered_set<std::string> fields;
+        if(parameters->size() == 4)
+        {
+            for(auto& field : *parameters->at(3)->arrayValue)
+            {
+                fields.emplace(field->stringValue);
+            }
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -4638,7 +4673,7 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
                     if(!peer || !clientInfo->acls->checkVariableReadAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
                 }
 
-                return central->getVariableDescription(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+                return central->getVariableDescription(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue, fields);
             }
         }
 

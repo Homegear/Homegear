@@ -114,6 +114,47 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clientInfo, const std::string& label, BaseLib::PVariable variables)
+{
+    try
+    {
+        if(variables->arrayValue->empty() || variables->arrayValue->at(0)->arrayValue->size() < 3)
+        {
+            return BaseLib::Variable::createError(-1, "No variables were passed.");
+        }
+
+        uint64_t roleId = 0;
+
+        { //Get role ID
+            BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+            requestParameters->arrayValue->push_back(variables->arrayValue->at(0));
+            requestParameters->arrayValue->push_back(variables->arrayValue->at(1));
+            requestParameters->arrayValue->push_back(variables->arrayValue->at(2));
+            BaseLib::PVariable fields(new BaseLib::Variable(BaseLib::VariableType::tArray));
+            fields->arrayValue->push_back(std::make_shared<BaseLib::Variable>("ROLES"));
+            requestParameters->arrayValue->push_back(fields);
+            std::string methodName = "getVariableDescription";
+            auto roles = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+            if(roles->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variable description. Are you authorized to access the variable?");
+            if(roles->arrayValue->size() > 1) return BaseLib::Variable::createError(-1, "Variable has multiple roles.");
+            roleId = roles->arrayValue->at(0)->integerValue64;
+        }
+
+        auto roleMetadata = GD::bl->db->getRoleMetadata(roleId);
+        auto uiIterator = roleMetadata->structValue->find("ui");
+        if(uiIterator == roleMetadata->structValue->end()) return BaseLib::Variable::createError(-1, "Role has no UI definition.");
+
+
+
+        //return addUiElement(clientInfo, elementId, data);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVariable& data)
 {
     try

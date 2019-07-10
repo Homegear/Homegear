@@ -407,12 +407,18 @@ void DatabaseController::initializeDatabase()
                                     metadata->structValue->emplace("addVariables", addVariablesIterator->second);
                                 }
 
+                                auto uiIterator = roleEntry->structValue->find("ui");
+                                if(uiIterator != roleEntry->structValue->end())
+                                {
+                                    metadata->structValue->emplace("ui", uiIterator->second);
+                                }
+
                                 auto metadataIterator = roleEntry->structValue->find("metadata");
                                 if(metadataIterator != roleEntry->structValue->end())
                                 {
                                     for(auto& metadataEntry : *metadataIterator->second->structValue)
                                     {
-                                        if(metadataEntry.first == "addVariables") continue;
+                                        if(metadataEntry.first == "addVariables" || metadataEntry.first == "ui") continue;
                                         metadata->structValue->emplace(metadataEntry.first, metadataEntry.second);
                                     }
                                 }

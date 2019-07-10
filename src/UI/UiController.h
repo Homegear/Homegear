@@ -61,6 +61,8 @@ public:
 
     BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data);
 
+    BaseLib::PVariable addUiElementSimple(BaseLib::PRpcClientInfo clientInfo, const std::string& label, BaseLib::PVariable variables);
+
     BaseLib::PVariable getAllUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language);
 
     BaseLib::PVariable getAvailableUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language);

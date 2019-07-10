@@ -7,6 +7,19 @@
 	}
 },
 {
+	"id": 100001,
+	"translations": {
+		"en-US": "light - state", 
+		"de-DE": "Licht - Status"
+	},
+	"ui": {
+		"element": "Base.lightingSwitch",
+		"roleIdsIn": [100001],
+		"roleIdsOut": [100001],
+		"metadata": {"l2_only": true}
+	} 
+},
+{
 	"id": 101000,
 	"translations": {
 		"en-US": "light - brightness", 

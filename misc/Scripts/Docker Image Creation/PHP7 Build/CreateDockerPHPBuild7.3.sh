@@ -90,14 +90,6 @@ elif [ "$dist" == "Raspbian" ]; then
 	echo "deb http://archive.raspbian.org/raspbian/ $distver main contrib" > $rootfs/etc/apt/sources.list
 fi
 
-if [ "$distver" == "bionic" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-elif [ "$distver" == "trusty" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-else
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-fi
-
 # prevent init scripts from running during install/update
 cat > "$rootfs/usr/sbin/policy-rc.d" <<'EOF'
 #!/bin/sh
@@ -144,6 +136,32 @@ if [ "$distver" == "bionic" ]; then
 	chroot $rootfs apt-get -y install gnupg
 fi
 
+chroot $rootfs apt-get update
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+fi
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano git
+
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ];  then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
+fi
+
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+fi
+
+if [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+elif [ "$distver" == "trusty" ]; then
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+else
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+fi
+
 cat > "$rootfs/php-gpg.key" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
@@ -161,24 +179,7 @@ FjEnCreZTcRUu2oBQyolORDl+BmF4DjL
 EOF
 chroot $rootfs apt-key add /php-gpg.key
 rm $rootfs/php-gpg.key
-
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
-fi
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano git
-
-if [ "$distver" == "stretch" ];  then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
-else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
-fi
-
-if [ "$distver" == "stretch" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
-fi
 
 mkdir $rootfs/PHPBuild
 chroot $rootfs bash -c "cd /PHPBuild && apt-get source php7.3"
