@@ -131,10 +131,13 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "bionic" ]; then
+if [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
+fi
+
+if [ "$distver" == "bionic" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
@@ -148,7 +151,7 @@ if [ "$distver" == "jessie" ]; then
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -177,11 +180,11 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-ce
 # Fix npm uid/gid issue (effect: npm install doesn't work)
 echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
 
-if [ "$distver" != "bionic" ]; then
+if [ "$distver" != "bionic" ] && [ "$distver" != "buster" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
 fi
 
-if [ "$distver" == "stretch" ];  then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
@@ -196,14 +199,14 @@ if [ "$distver" == "wheezy" ]; then
 	ln -s gcc-4.7 $rootfs/usr/bin/gcc
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "stretch" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
+	if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
 		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	fi
 fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "stretch" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bionic" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
@@ -250,7 +253,7 @@ function createPackage {
 		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
 		sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
 	fi
-	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "wheezy" ] && [ "$distributionVersion" != "xenial" ] && [ "$distributionVersion" != "bionic" ]; then
+	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "buster" ] && [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "wheezy" ] && [ "$distributionVersion" != "xenial" ] && [ "$distributionVersion" != "bionic" ]; then
 		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
 		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
 	fi
