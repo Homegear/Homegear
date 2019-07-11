@@ -137,7 +137,7 @@ if [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	fi
 fi
 
-if [ "$distver" == "bionic" ]; then
+if [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi

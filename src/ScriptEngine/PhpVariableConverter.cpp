@@ -59,7 +59,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
         else if(Z_TYPE_P(value) == IS_LONG)
         {
             variable = std::make_shared<BaseLib::Variable>(Z_LVAL_P(value));
-            variable->type = (sizeof(long) == 8) ? BaseLib::VariableType::tInteger64 : BaseLib::VariableType::tInteger;
+            variable->type = (SIZEOF_ZEND_LONG == 8) ? BaseLib::VariableType::tInteger64 : BaseLib::VariableType::tInteger;
         }
         else if(Z_TYPE_P(value) == IS_DOUBLE)
         {
