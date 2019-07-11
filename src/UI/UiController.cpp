@@ -141,7 +141,6 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
             if(variableDescription->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variable description. Are you authorized to access the variable?");
             auto rolesIterator = variableDescription->structValue->find("ROLES");
             if(rolesIterator == variableDescription->structValue->end() || rolesIterator->second->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Variable has no roles.");
-            if(rolesIterator->second->arrayValue->size() > 1) return BaseLib::Variable::createError(-1, "Variable has multiple roles.");
             roleId = rolesIterator->second->arrayValue->at(0)->integerValue64;
             auto roomIterator = variableDescription->structValue->find("ROOM");
             if(roomIterator != variableDescription->structValue->end() && roomIterator->second->integerValue64 > 0)

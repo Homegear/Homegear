@@ -17,6 +17,7 @@
 		"roleIdsIn": [[100001]],
 		"roleIdsOut": [[100001]],
 		"metadata": {"l2_only": true},
+
 		"icon": "licht1",
         "invokeOutputs": [
             {
@@ -331,6 +332,11 @@
 		"de-DE": "Sicherheit - Fensterzustand"
 	},
 	"ui": {
+		"element": "Base.windowContact",
+		"roleIdsIn": [[301002]],
+		"roleIdsOut": [[301002]],
+		"metadata": {"l2_only": true},
+
         "icon": "fenster1",
         "translations": {
            "de-DE": {
@@ -349,6 +355,11 @@
 {
 	"id": 301003,
 	"translations": {
+		"element": "Base.doorLock",
+		"roleIdsIn": [[301003]],
+		"roleIdsOut": [[301003]],
+		"metadata": {"l2_only": true},
+
 		"en-US": "security - Door lock", 
 		"de-DE": "Sicherheit - Türschloss"
 	},
@@ -371,8 +382,20 @@
 	"translations": {
 		"en-US": "socket", 
 		"de-DE": "Steckdose"
+	}
+},
+{
+	"id": 400001,
+	"translations": {
+		"en-US": "socket - state", 
+		"de-DE": "Steckdose - Zustand"
 	},
 	"ui": {
+		"element": "Base.socketSwitch",
+		"roleIdsIn": [[400001]],
+		"roleIdsOut": [[400001]],
+		"metadata": {"l2_only": true},
+
         "icon": "socket1",
         "invokeOutputs": [
             {
@@ -391,13 +414,6 @@
            }
         }
     }
-},
-{
-	"id": 401000,
-	"translations": {
-		"en-US": "socket - state", 
-		"de-DE": "Steckdose - Zustand"
-	}
 },
 {
 	"id": 500000,
