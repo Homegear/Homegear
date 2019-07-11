@@ -209,6 +209,11 @@
 		}
 	],
 	"ui": {
+		"element": "Base.heatingIsStateSliderMode",
+		"roleIdsIn": [[201001],[201002],[201003]],
+		"roleIdsOut": [[201001],[201002],[201003]],
+		"metadata": {"l2_only": true},
+
         "translations": {
            "de-DE": {
              "0": "Soll"
