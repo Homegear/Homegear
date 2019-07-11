@@ -1095,8 +1095,6 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
             //UI element name; UI element data
             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tStruct}),
-            //Array of peer ID, channel and variable name; label
-            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tArray, BaseLib::VariableType::tString}),
             //Peer ID; channel; variable name; label
             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tString})
         }));
@@ -1104,24 +1102,16 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("addUiElement")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        if(parameters->size() > 2 || parameters->at(0)->type == BaseLib::VariableType::tArray)
+        if(parameters->size() == 4)
         {
             BaseLib::PVariable variableArray;
             std::string label;
-            if(parameters->size() == 4)
-            {
-                variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                variableArray->arrayValue->reserve(3);
-                variableArray->arrayValue->push_back(parameters->at(0));
-                variableArray->arrayValue->push_back(parameters->at(1));
-                variableArray->arrayValue->push_back(parameters->at(2));
-                label = parameters->at(3)->stringValue;
-            }
-            else
-            {
-                variableArray = parameters->at(0);
-                label = parameters->at(1)->stringValue;
-            }
+            variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            variableArray->arrayValue->reserve(3);
+            variableArray->arrayValue->push_back(parameters->at(0));
+            variableArray->arrayValue->push_back(parameters->at(1));
+            variableArray->arrayValue->push_back(parameters->at(2));
+            label = parameters->at(3)->stringValue;
             return GD::uiController->addUiElementSimple(clientInfo, label, variableArray);
         }
         else return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
@@ -4389,7 +4379,8 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -4401,6 +4392,7 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
 
         BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
+        if(parameters->size() == 1 || parameters->at(1)->integerValue64 == 0)
         {
             auto systemVariables = GD::bl->db->getSystemVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
             if(!systemVariables->arrayValue->empty())
@@ -4417,8 +4409,21 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
             std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
             if(central)
             {
-                auto variables = central->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
-                result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+                if(parameters->size() == 2)
+                {
+                    if(!central->peerExists((uint64_t)parameters->at(1)->integerValue64)) continue;
+
+                    auto peer = central->getPeer((uint64_t)parameters->at(1)->integerValue64);
+                    if(!peer) continue;
+                    if(checkDeviceAcls && !clientInfo->acls->checkDeviceReadAccess(peer)) continue;
+
+                    return peer->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+                }
+                else
+                {
+                    auto variables = central->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
+                    result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+                }
             }
         }
 
