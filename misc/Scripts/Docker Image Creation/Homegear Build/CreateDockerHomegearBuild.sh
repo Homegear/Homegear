@@ -175,7 +175,7 @@ else
 fi
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools nodejs
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools nodejs
 
 # Fix npm uid/gid issue (effect: npm install doesn't work)
 echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
