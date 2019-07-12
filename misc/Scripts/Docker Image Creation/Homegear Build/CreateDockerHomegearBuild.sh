@@ -167,15 +167,23 @@ wget -P $rootfs https://deb.nodesource.com/gpgkey/nodesource.gpg.key
 chroot $rootfs apt-key add nodesource.gpg.key
 rm $rootfs/nodesource.gpg.key
 
-if [ "$arch" == "i386" ]; then
-	# 10.x and later are not available for i386
-	echo "deb https://deb.nodesource.com/node_9.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
-else
-	echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+if [ "$distver" != "buster" ]; then
+	if [ "$arch" == "i386" ]; then
+		# 10.x and later are not available for i386
+		echo "deb https://deb.nodesource.com/node_9.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+	else
+		echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
+	fi
 fi
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools nodejs
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools
+
+if [ "$distver" == "buster" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install npm
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install nodejs
+fi
 
 # Fix npm uid/gid issue (effect: npm install doesn't work)
 echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
