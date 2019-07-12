@@ -229,6 +229,7 @@ fi
 # {{{ UI build dependencies
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 DEBIAN_FRONTEND=noninteractive chroot $rootfs npm -g install babel-cli
+DEBIAN_FRONTEND=noninteractive chroot $rootfs ln -s /usr/local/bin/babel /usr/bin/babel
 # }}}
 
 mkdir $rootfs/build
