@@ -186,7 +186,12 @@ else
 fi
 
 # Fix npm uid/gid issue (effect: npm install doesn't work)
-echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
+if test -d $rootfs/usr/lib/node_modules/npm/node_modules/uid-number; then
+	echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
+fi
+if test -d $rootfs/usr/lib/nodejs/npm/node_modules/uid-number; then
+	echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/nodejs/npm/node_modules/uid-number/uid-number.js
+fi
 
 if [ "$distver" != "bionic" ] && [ "$distver" != "buster" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
