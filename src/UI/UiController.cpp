@@ -123,7 +123,7 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
             return BaseLib::Variable::createError(-1, "No variables were passed.");
         }
 
-        uint64_t roleId = 0;
+        std::set<uint64_t> roleIds;
         uint64_t roomId = 0;
 
         { //Get role ID and room ID
@@ -141,7 +141,10 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
             if(variableDescription->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variable description. Are you authorized to access the variable?");
             auto rolesIterator = variableDescription->structValue->find("ROLES");
             if(rolesIterator == variableDescription->structValue->end() || rolesIterator->second->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Variable has no roles.");
-            roleId = rolesIterator->second->arrayValue->at(0)->integerValue64;
+            for(auto& roleId : *rolesIterator->second->arrayValue)
+            {
+                if(roleId->integerValue64 != 0) roleIds.emplace(roleId->integerValue64);
+            }
             auto roomIterator = variableDescription->structValue->find("ROOM");
             if(roomIterator != variableDescription->structValue->end() && roomIterator->second->integerValue64 > 0)
             {
@@ -176,15 +179,31 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
 
         if(roomId == 0) return BaseLib::Variable::createError(-1, "Variable, channel and device have no room assigned.");
 
-        auto roleMetadata = GD::bl->db->getRoleMetadata(roleId);
-        auto uiIterator = roleMetadata->structValue->find("ui");
-        if(uiIterator == roleMetadata->structValue->end()) return BaseLib::Variable::createError(-1, "Role has no UI definition.");
+        BaseLib::PVariable roleMetadata;
+        BaseLib::PVariable uiInfo;
+        uint64_t uiRole = 0;
+        for(auto roleId : roleIds)
+        {
+            roleMetadata = GD::bl->db->getRoleMetadata(roleId);
+            auto uiRefIterator = roleMetadata->structValue->find("uiRef");
+            if(uiRefIterator != roleMetadata->structValue->end() && uiRefIterator->second->integerValue64 != 0)
+            {
+                roleId = uiRefIterator->second->integerValue64;
+                if(uiRole == 0) uiRole = roleId;
+                roleMetadata = GD::bl->db->getRoleMetadata(roleId);
+            }
+            auto uiIterator = roleMetadata->structValue->find("ui");
+            if(uiIterator == roleMetadata->structValue->end()) continue;
+            if(!uiInfo) uiInfo = uiIterator->second;
+            else if(uiRole != roleId) return BaseLib::Variable::createError(-1, "Variable has more than one role with UI definition. UI element creation is not possible.");
+        }
+        if(!uiInfo) return BaseLib::Variable::createError(-1, "Role has no UI definition.");
 
         std::string elementId;
 
         { //Get element ID
-            auto elementIdIterator = uiIterator->second->structValue->find("element");
-            if(elementIdIterator == uiIterator->second->structValue->end() || elementIdIterator->second->stringValue.empty())
+            auto elementIdIterator = uiInfo->structValue->find("element");
+            if(elementIdIterator == uiInfo->structValue->end() || elementIdIterator->second->stringValue.empty())
             {
                 return BaseLib::Variable::createError(-1, "Role is missing key \"element\" containing the UI element ID.");
             }
@@ -193,8 +212,8 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
 
         BaseLib::PVariable metadata;
         { //Get metadata
-            auto metadataIterator = uiIterator->second->structValue->find("metadata");
-            if(metadataIterator != uiIterator->second->structValue->end() && metadataIterator->second->type == BaseLib::VariableType::tStruct)
+            auto metadataIterator = uiInfo->structValue->find("metadata");
+            if(metadataIterator != uiInfo->structValue->end() && metadataIterator->second->type == BaseLib::VariableType::tStruct)
             {
                 metadata = metadataIterator->second;
             }
@@ -208,10 +227,10 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
             std::unordered_set<uint64_t> uniqueRoleIdsIn;
             std::unordered_set<uint64_t> uniqueRoleIdsOut;
 
-            auto roleIdsInIterator = uiIterator->second->structValue->find("roleIdsIn");
-            auto roleIdsOutIterator = uiIterator->second->structValue->find("roleIdsOut");
+            auto roleIdsInIterator = uiInfo->structValue->find("roleIdsIn");
+            auto roleIdsOutIterator = uiInfo->structValue->find("roleIdsOut");
 
-            if(roleIdsInIterator != uiIterator->second->structValue->end())
+            if(roleIdsInIterator != uiInfo->structValue->end())
             {
                 for(auto& roleIdOuter : *roleIdsInIterator->second->arrayValue)
                 {
@@ -226,7 +245,7 @@ BaseLib::PVariable UiController::addUiElementSimple(BaseLib::PRpcClientInfo clie
                 if(uniqueRoleIdsIn.size() != roleIdsInIterator->second->arrayValue->size()) return BaseLib::Variable::createError(-1, "\"roleIdsIn\" has the same role ID twice. Simple UI element creation is not possible.");
             }
 
-            if(roleIdsOutIterator != uiIterator->second->structValue->end())
+            if(roleIdsOutIterator != uiInfo->structValue->end())
             {
                 for(auto& roleIdOuter : *roleIdsOutIterator->second->arrayValue)
                 {
@@ -495,18 +514,18 @@ void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVa
     }
 }
 
-void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variableInputs)
+void UiController::addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue)
 {
     try
     {
-        for(auto& variableInput : *variableInputs)
+        for(auto& variable : *variables)
         {
-            auto peerIdIterator = variableInput->structValue->find("peer");
-            if(peerIdIterator == variableInput->structValue->end()) continue;
-            auto channelIterator = variableInput->structValue->find("channel");
-            if(channelIterator == variableInput->structValue->end()) continue;
-            auto nameIterator = variableInput->structValue->find("name");
-            if(nameIterator == variableInput->structValue->end()) continue;
+            auto peerIdIterator = variable->structValue->find("peer");
+            if(peerIdIterator == variable->structValue->end()) continue;
+            auto channelIterator = variable->structValue->find("channel");
+            if(channelIterator == variable->structValue->end()) continue;
+            auto nameIterator = variable->structValue->find("name");
+            if(nameIterator == variable->structValue->end()) continue;
 
             std::string methodName = "getValue";
             auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
@@ -515,11 +534,14 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
             parameters->arrayValue->emplace_back(channelIterator->second);
             parameters->arrayValue->emplace_back(nameIterator->second);
 
-            auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-            if(!value->errorStruct) variableInput->structValue->emplace("value", value);
-
             if(peerIdIterator->second != 0)
             {
+                if(addValue)
+                {
+                    auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                    if(!value->errorStruct) variable->structValue->emplace("value", value);
+                }
+
                 methodName = "getVariableDescription";
                 auto description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
                 if(description->errorStruct)
@@ -529,33 +551,36 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
                 }
 
                 auto typeIterator = description->structValue->find("TYPE");
-                if(typeIterator != description->structValue->end()) variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
+                if(typeIterator != description->structValue->end()) variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
 
-                auto minimumValueIterator = variableInput->structValue->find("minimumValue");
-                auto maximumValueIterator = variableInput->structValue->find("maximumValue");
-                if(minimumValueIterator == variableInput->structValue->end() || maximumValueIterator == variableInput->structValue->end())
+                auto minimumValueIterator = variable->structValue->find("minimumValue");
+                auto maximumValueIterator = variable->structValue->find("maximumValue");
+                if(minimumValueIterator == variable->structValue->end() || maximumValueIterator == variable->structValue->end())
                 {
-                    if(minimumValueIterator == variableInput->structValue->end())
+                    if(minimumValueIterator == variable->structValue->end())
                     {
                         auto minimumValueIterator2 = description->structValue->find("MIN");
                         if(minimumValueIterator2 != description->structValue->end())
                         {
-                            variableInput->structValue->emplace("minimumValue", minimumValueIterator2->second);
+                            variable->structValue->emplace("minimumValue", minimumValueIterator2->second);
                         }
                     }
 
-                    if(maximumValueIterator == variableInput->structValue->end())
+                    if(maximumValueIterator == variable->structValue->end())
                     {
                         auto maximumValueIterator2 = description->structValue->find("MAX");
                         if(maximumValueIterator2 != description->structValue->end())
                         {
-                            variableInput->structValue->emplace("maximumValue", maximumValueIterator2->second);
+                            variable->structValue->emplace("maximumValue", maximumValueIterator2->second);
                         }
                     }
                 }
             }
             else
             {
+                auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                if(addValue && !value->errorStruct) variable->structValue->emplace("value", value);
+
                 std::string type;
                 if(value->type == BaseLib::VariableType::tBoolean) type = "BOOL";
                 else if(value->type == BaseLib::VariableType::tString) type = "STRING";
@@ -565,7 +590,7 @@ void UiController::addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, 
                 else if(value->type == BaseLib::VariableType::tArray) type = "ARRAY";
                 else if(value->type == BaseLib::VariableType::tStruct) type = "STRUCT";
 
-                variableInput->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(type)));
+                variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(type)));
             }
         }
     }
@@ -623,7 +648,7 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
             //{{{ value
             //Simple
             auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-            if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue, true);
             else //Complex
             {
                 auto controlsIterator = elementInfo->structValue->find("controls");
@@ -632,7 +657,23 @@ BaseLib::PVariable UiController::getAllUiElements(BaseLib::PRpcClientInfo client
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
                         auto variableInputsIterator = control->structValue->find("variableInputs");
-                        if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue);
+                        if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue, true);
+                    };
+                }
+            }
+
+            //Simple
+            auto variableOutputsIterator = elementInfo->structValue->find("variableOutputs");
+            if(variableOutputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableOutputsIterator->second->arrayValue, false);
+            else //Complex
+            {
+                auto controlsIterator = elementInfo->structValue->find("controls");
+                if(controlsIterator != elementInfo->structValue->end())
+                {
+                    for(auto& control : *controlsIterator->second->arrayValue)
+                    {
+                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableOutputsIterator->second->arrayValue, false);
                     };
                 }
             }
@@ -719,7 +760,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
             //{{{ value
             //Simple
             auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-            if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
             else //Complex
             {
                 auto controlsIterator = elementInfo->structValue->find("controls");
@@ -728,7 +769,23 @@ BaseLib::PVariable UiController::getUiElementsInRoom(BaseLib::PRpcClientInfo cli
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
                         auto variableInputsIterator = control->structValue->find("variableInputs");
-                        if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
+                    }
+                }
+            }
+
+            //Simple
+            auto variableOutputsIterator = elementInfo->structValue->find("variableOutputs");
+            if(variableOutputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
+            else //Complex
+            {
+                auto controlsIterator = elementInfo->structValue->find("controls");
+                if(controlsIterator != elementInfo->structValue->end())
+                {
+                    for(auto& control : *controlsIterator->second->arrayValue)
+                    {
+                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     }
                 }
             }
@@ -790,7 +847,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
             //{{{ value
             //Simple
             auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-            if(variableInputsIterator != elementInfo->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
             else //Complex
             {
                 auto controlsIterator = elementInfo->structValue->find("controls");
@@ -799,7 +856,23 @@ BaseLib::PVariable UiController::getUiElementsInCategory(BaseLib::PRpcClientInfo
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
                         auto variableInputsIterator = control->structValue->find("variableInputs");
-                        if(variableInputsIterator != control->structValue->end()) addVariableValues(clientInfo, uiElement, variableInputsIterator->second->arrayValue);
+                        if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
+                    }
+                }
+            }
+
+            //Simple
+            auto variableOutputsIterator = elementInfo->structValue->find("variableOutputs");
+            if(variableOutputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
+            else //Complex
+            {
+                auto controlsIterator = elementInfo->structValue->find("controls");
+                if(controlsIterator != elementInfo->structValue->end())
+                {
+                    for(auto& control : *controlsIterator->second->arrayValue)
+                    {
+                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     }
                 }
             }

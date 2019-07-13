@@ -473,6 +473,21 @@
 	"translations": {
 		"en-US": "shading - blind - up", 
 		"de-DE": "Beschattung - hoch"
+	},
+	"ui": {
+		"element": "Base.lightingSwitch",
+		"roleIdsIn": [[100001]],
+		"roleIdsOut": [[100001]],
+		"metadata": {"l2_only": true},
+
+		"translations": {
+	       "de-DE": {
+	         "0": "Hoch"
+	       },
+	       "en-US": {
+	         "0": "Up"
+	       }
+	    }
 	}
 },
 {
@@ -482,21 +497,21 @@
 		"de-DE": "Beschattung - runter"
 	},
 	"ui": {
-        "translations": {
-           "de-DE": {
-             "0": "Runter"
-           },
-           "en-US": {
-             "0": "Down"
-           }
-        }
+	    "translations": {
+	       "de-DE": {
+	         "0": "Runter"
+	       },
+	       "en-US": {
+	         "0": "Down"
+	       }
+	    }
     }
 },
 {
 	"id": 501003,
 	"translations": {
-		"en-US": "shading - blind - position", 
-		"de-DE": "Beschattung - Position"
+		"en-US": "shading - blind - stop", 
+		"de-DE": "Beschattung - Stopp"
 	},
 	"ui": {
         "translations": {
@@ -510,10 +525,10 @@
     }
 },
 {
-	"id": 501003,
+	"id": 501004,
 	"translations": {
-		"en-US": "shading - blind - stop", 
-		"de-DE": "Beschattung - Stopp"
+		"en-US": "shading - blind - position", 
+		"de-DE": "Beschattung - Position"
 	}
 },
 {

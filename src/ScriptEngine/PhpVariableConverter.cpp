@@ -109,7 +109,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval* value, bool arraysAre
                             if(key || arraysAreStructsLocal)
                             {
                                 std::string keyName;
-                                keyName = key ? std::string(key->val, key->len) : std::to_string((int64_t) keyIndex);
+                                keyName = key ? std::string(key->val, key->len) : std::to_string(SIZEOF_ZEND_LONG == 8 ? (int64_t)keyIndex : (int32_t)keyIndex);
                                 if(keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
                                 variable->structValue->emplace(keyName, arrayElement);
                             }
