@@ -560,14 +560,14 @@
 		"simpleCreationInfo": [
 			{
 				"element": "Base.shadingButtonsPositionSlats",
-				"roleIdsIn": [[501001, 501003, 501002], [501004]],
-				"roleIdsOut": [[501001, 501003, 501002], [501004]],
+				"roleIdsIn": [[502001, 502003, 502002], [502004]],
+				"roleIdsOut": [[502001, 502003, 502002], [502004]],
 				"metadata": {"l2_action": {"control": 0, "input": 0}}
 			},
 			{
 				"element": "Base.shadingButtonsUpDown",
-				"roleIdsIn": [[501001, 501002]],
-				"roleIdsOut": [[501001, 501002]],
+				"roleIdsIn": [[502001, 502002]],
+				"roleIdsOut": [[502001, 502002]],
 				"metadata": {"l2_action": {"control": 0, "input": 0}}
 			}
 		]
