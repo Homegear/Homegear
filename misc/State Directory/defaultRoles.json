@@ -555,7 +555,23 @@
 	"translations": {
 		"en-US": "shading - awning", 
 		"de-DE": "Beschattung - Markise"
-	}
+	},
+	"ui": {
+		"simpleCreationInfo": [
+			{
+				"element": "Base.shadingButtonsPositionSlats",
+				"roleIdsIn": [[501001, 501003, 501002], [501004]],
+				"roleIdsOut": [[501001, 501003, 501002], [501004]],
+				"metadata": {"l2_action": {"control": 0, "input": 0}}
+			},
+			{
+				"element": "Base.shadingButtonsUpDown",
+				"roleIdsIn": [[501001, 501002]],
+				"roleIdsOut": [[501001, 501002]],
+				"metadata": {"l2_action": {"control": 0, "input": 0}}
+			}
+		]
+    }
 },
 {
 	"id": 502001,
@@ -563,6 +579,7 @@
 		"en-US": "shading - awning - retract", 
 		"de-DE": "Beschattung - Markise - einfahren"
 	},
+	"uiRef": 502000,
 	"ui": {
         "translations": {
            "de-DE": {
@@ -580,6 +597,7 @@
 		"en-US": "shading - awning - extend", 
 		"de-DE": "Beschattung - Markise - ausfahren"
 	},
+	"uiRef": 502000,
 	"ui": {
         "translations": {
            "de-DE": {
@@ -594,9 +612,10 @@
 {
 	"id": 502003,
 	"translations": {
-		"en-US": "shading - awning - position", 
-		"de-DE": "Beschattung - Markise - Position"
+		"en-US": "shading - awning - stop", 
+		"de-DE": "Beschattung - Markise - Stopp"
 	},
+	"uiRef": 502000,
 	"ui": {
         "translations": {
            "de-DE": {
@@ -609,10 +628,11 @@
     }
 },
 {
-	"id": 502003,
+	"id": 502004,
 	"translations": {
-		"en-US": "shading - awning - stop", 
-		"de-DE": "Beschattung - Markise - Stopp"
-	}
+		"en-US": "shading - awning - position", 
+		"de-DE": "Beschattung - Markise - Position"
+	},
+	"uiRef": 502000
 }
 ]
