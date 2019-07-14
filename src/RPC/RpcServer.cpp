@@ -284,6 +284,7 @@ RpcServer::RpcServer()
     
     //{{{ UI
         _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
+        _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RPCCheckUiElementSimpleCreation>());
         _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
         _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
         _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());

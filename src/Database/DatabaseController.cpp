@@ -413,6 +413,12 @@ void DatabaseController::initializeDatabase()
                                     metadata->structValue->emplace("ui", uiIterator->second);
                                 }
 
+                                auto uiRefIterator = roleEntry->structValue->find("uiRef");
+                                if(uiRefIterator != roleEntry->structValue->end())
+                                {
+                                    metadata->structValue->emplace("uiRef", uiRefIterator->second);
+                                }
+
                                 auto metadataIterator = roleEntry->structValue->find("metadata");
                                 if(metadataIterator != roleEntry->structValue->end())
                                 {

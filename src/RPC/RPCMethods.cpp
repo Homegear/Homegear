@@ -1112,7 +1112,7 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
             variableArray->arrayValue->push_back(parameters->at(1));
             variableArray->arrayValue->push_back(parameters->at(2));
             label = parameters->at(3)->stringValue;
-            return GD::uiController->addUiElementSimple(clientInfo, label, variableArray);
+            return GD::uiController->addUiElementSimple(clientInfo, label, variableArray, false);
         }
         else return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
     }
@@ -1249,6 +1249,38 @@ BaseLib::PVariable RPCCheckServiceAccess::invoke(BaseLib::PRpcClientInfo clientI
         if(error != ParameterError::Enum::noError) return getError(error);
 
         return std::make_shared<BaseLib::Variable>(clientInfo->acls->checkServiceAccess(parameters->at(0)->stringValue));
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCCheckUiElementSimpleCreation::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         //Peer ID; channel; variable name
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("checkUiElementSimpleCreation")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        BaseLib::PVariable variableArray;
+        variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        variableArray->arrayValue->reserve(3);
+        variableArray->arrayValue->push_back(parameters->at(0));
+        variableArray->arrayValue->push_back(parameters->at(1));
+        variableArray->arrayValue->push_back(parameters->at(2));
+        auto result = GD::uiController->addUiElementSimple(clientInfo, "", variableArray, true);
+        return std::make_shared<BaseLib::Variable>(!result->errorStruct);
     }
     catch(const std::exception& ex)
     {

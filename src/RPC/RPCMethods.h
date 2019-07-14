@@ -350,6 +350,17 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCCheckUiElementSimpleCreation : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCCheckUiElementSimpleCreation()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCCopyConfig : public BaseLib::Rpc::RpcMethod
 {
 public:
