@@ -129,6 +129,8 @@ void DatabaseController::initializeDatabase()
         _db.executeCommand("CREATE INDEX IF NOT EXISTS licenseVariablesIndex ON licenseVariables (variableID, moduleID, variableIndex)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL, groups BLOB NOT NULL, metadata BLOB NOT NULL, keyIndex1 INTEGER, keyIndex2 INTEGER)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS userData (userID INTEGER, component TEXT, key TEXT, value BLOB)");
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS userDataIndex ON users (userID, component, key)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS groups (id INTEGER PRIMARY KEY UNIQUE, translations BLOB NOT NULL, acl BLOB NOT NULL)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS groupsIndex ON groups (id)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
@@ -3881,7 +3883,7 @@ bool DatabaseController::systemVariableHasRole(std::string& variableId, uint64_t
 
 //End system variables
 
-//Users
+//{{{ Users
 std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 {
     try
@@ -4018,6 +4020,7 @@ bool DatabaseController::deleteUser(uint64_t id)
     {
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(id));
+        _db.executeCommand("DELETE FROM userData WHERE userID=?", data);
         _db.executeCommand("DELETE FROM users WHERE userID=?", data);
 
         std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
@@ -4255,7 +4258,170 @@ BaseLib::PVariable DatabaseController::setUserMetadata(uint64_t userId, BaseLib:
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
-//End users
+//}}}
+
+//{{{ User data
+BaseLib::PVariable DatabaseController::deleteUserData(uint64_t userId, const std::string& component, const std::string& key)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        if(_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
+        {
+            std::lock_guard<std::mutex> dataGuard(_dataMutex);
+            if(key.empty()) _data.erase(component);
+            else
+            {
+                auto dataIterator = _data.find(component);
+                if(dataIterator != _data.end()) dataIterator->second.erase(key);
+            }
+        }
+
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+        std::string command("DELETE FROM userData WHERE userID=? AND component=?");
+        if(!key.empty())
+        {
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+            command.append(" AND key=?");
+        }
+        std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
+        enqueue(0, entry);
+
+        return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getUserData(uint64_t userId, const std::string& component, const std::string& key)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        if(_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
+        BaseLib::PVariable value;
+
+        if(!key.empty())
+        {
+            std::lock_guard<std::mutex> dataGuard(_dataMutex);
+            auto componentIterator = _data.find(component);
+            if(componentIterator != _data.end())
+            {
+                auto keyIterator = componentIterator->second.find(key);
+                if(keyIterator != componentIterator->second.end())
+                {
+                    value = keyIterator->second;
+                    return value;
+                }
+            }
+        }
+
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+        std::string command;
+        if(!key.empty())
+        {
+            command = "SELECT value FROM userData WHERE userID=? AND component=? AND key=?";
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+        }
+        else command = "SELECT key, value FROM userData WHERE userID=? AND component=?";
+
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand(command, data);
+        if(rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
+
+        if(key.empty())
+        {
+            value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            for(auto& row : *rows)
+            {
+                value->structValue->emplace(row.second.at(0)->textValue, _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue));
+            }
+        }
+        else
+        {
+            value = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+            std::lock_guard<std::mutex> dataGuard(_dataMutex);
+            _data[component][key] = value;
+        }
+
+        return value;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::setUserData(uint64_t userId, const std::string& component, const std::string& key, const BaseLib::PVariable& value)
+{
+    try
+    {
+        if(!value) return BaseLib::Variable::createError(-32602, "Could not parse data.");
+        if(component.empty()) return BaseLib::Variable::createError(-32602, "component is an empty string.");
+        if(key.empty()) return BaseLib::Variable::createError(-32602, "key is an empty string.");
+        if(component.size() > 250) return BaseLib::Variable::createError(-32602, "component has more than 250 characters.");
+        if(key.size() > 250) return BaseLib::Variable::createError(-32602, "key has more than 250 characters.");
+        //Don't check for type here, so base64, string and future data types that use stringValue are handled
+        if(value->type != BaseLib::VariableType::tBase64 && value->type != BaseLib::VariableType::tString && value->type != BaseLib::VariableType::tInteger && value->type != BaseLib::VariableType::tInteger64 && value->type != BaseLib::VariableType::tFloat && value->type != BaseLib::VariableType::tBoolean && value->type != BaseLib::VariableType::tStruct && value->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
+
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(userId));
+        if(_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
+
+        std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM userData");
+        if(rows->size() == 0 || rows->at(0).size() == 0)
+        {
+            return BaseLib::Variable::createError(-32500, "Error counting data in database.");
+        }
+        if(rows->at(0).at(0)->intValue > 1000000)
+        {
+            return BaseLib::Variable::createError(-32500, "Reached limit of 1000000 data entries. Please delete data before adding new entries.");
+        }
+
+        {
+            std::lock_guard<std::mutex> dataGuard(_dataMutex);
+            _data[component][key] = value;
+        }
+
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+        std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM userData WHERE userID=? AND component=? AND key=?", data);
+        enqueue(0, entry);
+
+        std::vector<char> encodedValue;
+        _rpcEncoder->encodeResponse(value, encodedValue);
+        data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+        entry = std::make_shared<QueueEntry>("INSERT INTO userData VALUES(?, ?, ?, ?)", data);
+        enqueue(0, entry);
+
+        return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//}}}
 
 //Groups
 BaseLib::PVariable DatabaseController::createGroup(BaseLib::PVariable translations, BaseLib::PVariable aclStruct)

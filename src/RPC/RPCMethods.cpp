@@ -113,14 +113,21 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 
         BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
         auto methods = GD::rpcServers.begin()->second->getMethods();
+        auto ipcMethods = GD::ipcServer->getRpcMethods();
+        methodInfo->arrayValue->reserve(methods->size() + ipcMethods.size());
         for(auto& method : *methods)
         {
-            methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
+            if(clientInfo->acls->checkMethodAccess(method.first))
+            {
+                methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
+            }
         }
-        std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
         for(auto& method : ipcMethods)
         {
-            methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
+            if(clientInfo->acls->checkMethodAccess(method.first))
+            {
+                methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
+            }
         }
 
         return methodInfo;
@@ -143,6 +150,8 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("system.methodHelp")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo->acls->checkMethodAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         BaseLib::PVariable help;
 
@@ -179,6 +188,8 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("system.methodSignature")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo->acls->checkMethodAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         BaseLib::PVariable signature;
 
@@ -247,6 +258,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
                 continue;
             }
             std::string methodName = (*i)->structValue->at("methodName")->stringValue;
+            if(!clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
             auto parameters = (*i)->structValue->at("params");
 
             if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
@@ -1912,6 +1924,33 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         return GD::bl->db->deleteSystemVariable(parameters->at(0)->stringValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCDeleteUserData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("deleteUserData")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+        User::deleteData(clientInfo->user, parameters->at(0)->stringValue, key);
+
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {
@@ -4540,6 +4579,31 @@ BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo
         }
 
         return updateInfo;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetUserData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getUserData")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+        return User::getData(clientInfo->user, parameters->at(0)->stringValue, key);
     }
     catch(const std::exception& ex)
     {
@@ -7344,6 +7408,30 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
         }
 
         return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCSetUserData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setUserData")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        return std::make_shared<BaseLib::Variable>(User::setData(clientInfo->user, parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2)));
     }
     catch(const std::exception& ex)
     {

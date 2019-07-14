@@ -296,6 +296,12 @@ RpcServer::RpcServer()
         _rpcMethods->emplace("getUserMetadata", std::make_shared<RPCGetUserMetadata>());
         _rpcMethods->emplace("setUserMetadata", std::make_shared<RPCSetUserMetadata>());
     //}}}
+
+    //{{{ User data
+    _rpcMethods->emplace("deleteUserData", std::make_shared<RPCDeleteUserData>());
+    _rpcMethods->emplace("getUserData", std::make_shared<RPCGetUserData>());
+    _rpcMethods->emplace("setUserData", std::make_shared<RPCSetUserData>());
+    //}}}
 }
 
 RpcServer::~RpcServer()

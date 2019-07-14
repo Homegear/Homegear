@@ -270,7 +270,13 @@ void UPnP::processPacket(BaseLib::Http& http)
 				{
 					mx = BaseLib::HelperFunctions::getRandomNumber(0, mx - 500);
 					_out.printDebug("Debug: Sleeping " + std::to_string(mx) + "ms before sending response.");
-					std::this_thread::sleep_for(std::chrono::milliseconds(mx));
+					for(int32_t i = 0; i < mx / 1000; i++)
+                    {
+					    if(_stopServer) break;
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                    }
+                    if(_stopServer) return;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(mx % 1000));
 				}
 				sendOK(address.first, port, header.fields.at("st") == "upnp:rootdevice");
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));

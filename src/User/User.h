@@ -81,6 +81,12 @@ public:
 
 	static bool setMetadata(const std::string& userName, BaseLib::PVariable metadata);
 
+    static void deleteData(const std::string& userName, const std::string& component, const std::string& key);
+
+    static BaseLib::PVariable getData(const std::string& userName, const std::string& component, const std::string& key);
+
+    static bool setData(const std::string& userName,const std::string& component, const std::string& key, const BaseLib::PVariable& value);
+
 	static bool getAll(std::map<uint64_t, UserInfo>& users);
 
 	// {{{ OAuth

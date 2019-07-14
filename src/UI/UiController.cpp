@@ -645,35 +645,60 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
         auto uiElements = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
         uiElements->arrayValue->reserve(_uiElements.size());
 
+        auto clickCountsData = User::getData(clientInfo->user, "ui.clickCounts", "");
+        std::multimap<uint64_t, PUiElement> uiElementsByClickCount;
+        std::unordered_set<uint64_t> addedElementIds;
+        for(auto& uiElement : *clickCountsData->structValue)
+        {
+            auto uiElementId = BaseLib::Math::getUnsignedNumber64(uiElement.first);
+            auto uiElementsIterator = _uiElements.find(uiElementId);
+            if(uiElementsIterator == _uiElements.end())
+            {
+                User::deleteData(clientInfo->user, "ui.clickCounts", uiElement.first);
+                continue;
+            }
+            uiElementsByClickCount.emplace(uiElement.second->integerValue64, uiElementsIterator->second);
+            addedElementIds.emplace(uiElementId);
+        }
+
         for(auto& uiElement : _uiElements)
         {
-            auto languageIterator = uiElement.second->rpcElement.find(language);
-            if(languageIterator == uiElement.second->rpcElement.end())
+            if(addedElementIds.find(uiElement.first) != addedElementIds.end()) continue;
+
+            uiElementsByClickCount.emplace(0, uiElement.second);
+        }
+
+        for(auto uiElementIterator = uiElementsByClickCount.rbegin(); uiElementIterator != uiElementsByClickCount.rend(); uiElementIterator++)
+        {
+            auto& uiElement = uiElementIterator->second;
+            auto languageIterator = uiElement->rpcElement.find(language);
+            if(languageIterator == uiElement->rpcElement.end())
             {
-                auto rpcElement = _descriptions->getUiElement(language, uiElement.second->elementId, uiElement.second->peerInfo);
+                auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
                 if(!rpcElement) continue;
-                uiElement.second->rpcElement.emplace(language, rpcElement);
-                languageIterator = uiElement.second->rpcElement.find(language);
-                if(languageIterator == uiElement.second->rpcElement.end()) continue;
+                uiElement->rpcElement.emplace(language, rpcElement);
+                languageIterator = uiElement->rpcElement.find(language);
+                if(languageIterator == uiElement->rpcElement.end()) continue;
             }
 
             if(checkAcls)
             {
-                if(!clientInfo->acls->checkRoomReadAccess(uiElement.second->roomId)) continue;
-                for(auto categoryId : uiElement.second->categoryIds)
+                if(!clientInfo->acls->checkRoomReadAccess(uiElement->roomId)) continue;
+                for(auto categoryId : uiElement->categoryIds)
                 {
                     if(!clientInfo->acls->checkCategoryReadAccess(categoryId)) continue;
                 }
-                if(!checkElementAccess(clientInfo, uiElement.second, languageIterator->second)) continue;
+                if(!checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
             }
 
             auto elementInfo = languageIterator->second->getElementInfo();
-            elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement.second->databaseId));
-            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement.second->label));
-            elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement.second->roomId));
+            elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+            elementInfo->structValue->emplace("clickCount", std::make_shared<BaseLib::Variable>(uiElementIterator->first));
+            elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
+            elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
             auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-            categories->arrayValue->reserve(uiElement.second->categoryIds.size());
-            for(auto categoryId : uiElement.second->categoryIds)
+            categories->arrayValue->reserve(uiElement->categoryIds.size());
+            for(auto categoryId : uiElement->categoryIds)
             {
                 categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
             }
@@ -682,7 +707,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
             //{{{ value
             //Simple
             auto variableInputsIterator = elementInfo->structValue->find("variableInputs");
-            if(variableInputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue, true);
+            if(variableInputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
             else //Complex
             {
                 auto controlsIterator = elementInfo->structValue->find("controls");
@@ -691,14 +716,14 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
                         auto variableInputsIterator = control->structValue->find("variableInputs");
-                        if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableInputsIterator->second->arrayValue, true);
+                        if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
                     };
                 }
             }
 
             //Simple
             auto variableOutputsIterator = elementInfo->structValue->find("variableOutputs");
-            if(variableOutputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableOutputsIterator->second->arrayValue, false);
+            if(variableOutputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
             else //Complex
             {
                 auto controlsIterator = elementInfo->structValue->find("controls");
@@ -707,14 +732,14 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
                         auto variableOutputsIterator = control->structValue->find("variableOutputs");
-                        if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement.second, variableOutputsIterator->second->arrayValue, false);
+                        if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     };
                 }
             }
             //}}}
 
-            auto dataIterator = uiElement.second->data->structValue->find("metadata");
-            if(dataIterator != uiElement.second->data->structValue->end())
+            auto dataIterator = uiElement->data->structValue->find("metadata");
+            if(dataIterator != uiElement->data->structValue->end())
             {
                 auto metadataIterator = elementInfo->structValue->find("metadata");
                 if(metadataIterator == elementInfo->structValue->end()) metadataIterator = elementInfo->structValue->emplace("metadata", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first;

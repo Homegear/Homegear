@@ -277,6 +277,12 @@ public:
 	virtual bool userNameExists(const std::string& name);
 	// }}}
 
+	//{{{ User data
+    BaseLib::PVariable setUserData(uint64_t userId, const std::string& component, const std::string& key, const BaseLib::PVariable& value) override;
+    BaseLib::PVariable getUserData(uint64_t userId, const std::string& component, const std::string& key) override;
+    BaseLib::PVariable deleteUserData(uint64_t userId, const std::string& component, const std::string& key) override;
+	//}}}
+
 	// {{{ Groups
 	virtual BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl);
 
