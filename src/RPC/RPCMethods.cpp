@@ -1160,9 +1160,7 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-            if(parameters->at(3)->integerValue64 != 0) systemVariable->room = parameters->at(3)->integerValue64;
-
-            auto result = GD::systemVariableController->setRoom(systemVariable->name, systemVariable->room);
+            auto result = GD::systemVariableController->setRoom(systemVariable->name, parameters->at(3)->integerValue64);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not set room: " + result->structValue->at("faultString")->stringValue);
@@ -4763,13 +4761,14 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
 
         if(parameters->at(0)->integerValue64 == 0)
         {
+            //System variable
             bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
 
-            //System variable
-
+            return GD::systemVariableController->getVariableDescription(clientInfo, parameters->at(2)->stringValue, fields, checkAcls);
         }
         else
         {
+            //Device variable
             bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
             std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();

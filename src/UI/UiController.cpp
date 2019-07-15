@@ -170,8 +170,11 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables for roles required by UI element.");
 
-                    auto channelIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
-                    if(channelIterator != variables->structValue->end() && !channelIterator->second->arrayValue->empty())
+                    auto peerIdIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(0)->integerValue64));
+                    if(peerIdIterator == variables->structValue->end()) return BaseLib::Variable::createError(-1, "Required role not found for UI element.");
+
+                    auto channelIterator = peerIdIterator->second->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
+                    if(channelIterator != peerIdIterator->second->structValue->end() && !channelIterator->second->arrayValue->empty())
                     {
                         if(channelIterator->second->arrayValue->size() > 1) return BaseLib::Variable::createError(-1, "Required role exists multiple times in channel. Simple UI element creation is not possible.");
 
@@ -185,10 +188,9 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     else
                     {
                         //Role not in channel
-
                         size_t roleCount = 0;
 
-                        for(auto& channelIterator2 : *variables->structValue)
+                        for(auto& channelIterator2 : *peerIdIterator->second->structValue)
                         {
                             if(channelIterator2.second->arrayValue->empty()) continue;
 
@@ -221,8 +223,11 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables for roles required by UI element.");
 
-                    auto channelIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
-                    if(channelIterator != variables->structValue->end() && !channelIterator->second->arrayValue->empty())
+                    auto peerIdIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(0)->integerValue64));
+                    if(peerIdIterator == variables->structValue->end()) return BaseLib::Variable::createError(-1, "Required role not found for UI element.");
+
+                    auto channelIterator = peerIdIterator->second->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
+                    if(channelIterator != peerIdIterator->second->structValue->end() && !channelIterator->second->arrayValue->empty())
                     {
                         if(channelIterator->second->arrayValue->size() > 1) return BaseLib::Variable::createError(-1, "Required role exists multiple times in channel. Simple UI element creation is not possible.");
 
@@ -304,7 +309,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
             {
                 roomId = roomIterator->second->integerValue64;
             }
-            else
+            else if(variable->arrayValue->at(0)->integerValue64 != 0) //Device variable?
             {
                 fields->arrayValue->resize(1);
                 requestParameters->arrayValue->at(2) = fields;

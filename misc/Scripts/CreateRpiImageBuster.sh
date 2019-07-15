@@ -146,7 +146,7 @@ rm -f /debconf.set
 apt-get update
 ls -l /etc/apt/sources.list.d
 cat /etc/apt/sources.list
-apt-get -y install apt-transport-https ca-certificates
+apt-get -y install apt-transport-https ca-certificates wget
 update-ca-certificates --fresh
 mkdir -p /etc/apt/sources.list.d/
 echo "deb http://archive.raspberrypi.org/debian/ buster main ui" > /etc/apt/sources.list.d/raspi.list
