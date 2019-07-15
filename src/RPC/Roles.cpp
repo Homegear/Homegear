@@ -187,7 +187,8 @@ BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInf
                     auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(result->errorStruct) continue;
                     variableCount++;
-                    counts[result->integerValue64]++;
+                    if(result->type == BaseLib::VariableType::tBoolean) counts[(int64_t)result->booleanValue]++;
+                    else counts[result->integerValue64]++;
                 }
             }
         }
