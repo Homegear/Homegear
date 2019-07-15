@@ -83,14 +83,6 @@ bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
@@ -118,14 +110,6 @@ std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return eventData;
 }
 
@@ -140,14 +124,6 @@ void PhpEvents::addPeer(uint64_t peerId, int32_t channel, std::string& variable)
     catch(const std::exception& ex)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -166,14 +142,6 @@ void PhpEvents::removePeer(uint64_t peerId, int32_t channel, std::string& variab
     catch(const std::exception& ex)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -197,14 +165,6 @@ bool PhpEvents::peerSubscribed(uint64_t peerId, int32_t channel, std::string& va
     catch(const std::exception& ex)
     {
         GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(const BaseLib::Exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }

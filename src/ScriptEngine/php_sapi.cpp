@@ -650,6 +650,35 @@ static void php_homegear_register_variables(zval* track_vars_array)
             BaseLib::HelperFunctions::toUpper(name);
             php_register_variable_safe((char*)name.c_str(), (char*)i->second.c_str(), i->second.size(), track_vars_array);
         }
+        if(scriptInfo->clientInfo)
+        {
+            if(scriptInfo->clientInfo->authenticated) php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"true", 4, track_vars_array);
+            else php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"false", 5, track_vars_array);
+            if(scriptInfo->clientInfo->hasClientCertificate)
+            {
+                std::string sslClientVerify = "SUCCESS";
+                php_register_variable_safe((char*) "SSL_CLIENT_VERIFY", (char*) sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+                php_register_variable_safe((char*) "SSL_CLIENT_S_DN", (char*) scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
+                auto dnParts = BaseLib::HelperFunctions::splitAll(scriptInfo->clientInfo->distinguishedName, ',');
+                for(auto& attribute : dnParts)
+                {
+                    auto attributePair = BaseLib::HelperFunctions::splitFirst(attribute, '=');
+                    BaseLib::HelperFunctions::trim(attributePair.first);
+                    BaseLib::HelperFunctions::toUpper(attributePair.first);
+                    BaseLib::HelperFunctions::trim(attributePair.second);
+                    BaseLib::HelperFunctions::toLower(attributePair.second);
+                    if(attributePair.first.empty() || attributePair.second.empty()) continue;
+                    std::string name = "SSL_CLIENT_S_DN_" + attributePair.first;
+                    php_register_variable_safe((char*) name.c_str(), (char*) attributePair.second.c_str(), attributePair.second.size(), track_vars_array);
+                }
+            }
+        }
+        else
+        {
+            std::string sslClientVerify = "NONE";
+            php_register_variable_safe((char*)"SSL_CLIENT_VERIFY", (char*)sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+        }
+
         zval_ptr_dtor(&value);
     }
 }
@@ -692,7 +721,7 @@ ZEND_FUNCTION(print_v)
 
     bool returnString = (Z_TYPE(args[1]) == IS_TRUE);
 
-    BaseLib::PVariable parameter = Homegear::PhpVariableConverter::getVariable(&args[0]);
+    BaseLib::PVariable parameter = Homegear::PhpVariableConverter::getVariable(args);
     if(!parameter) RETURN_FALSE;
     std::string result = parameter->print();
     if(returnString) ZVAL_STRINGL(return_value, result.c_str(), result.size());
@@ -1495,9 +1524,9 @@ ZEND_FUNCTION(hg_get_http_contents)
         BaseLib::HttpClient client(Homegear::GD::bl.get(), hostname, port, false, true, caFile, verifyCertificate);
         client.get(path, data);
     }
-    catch(BaseLib::Exception& ex)
+    catch(std::exception& ex)
     {
-        Homegear::GD::out.printError("Error downloading file: " + ex.what());
+        Homegear::GD::out.printError("Error downloading file: " + std::string(ex.what()));
         RETURN_FALSE;
     }
 
@@ -1567,9 +1596,9 @@ ZEND_FUNCTION(hg_download)
         if(http.getContentSize() <= 1) RETURN_FALSE;
         BaseLib::Io::writeFile(filename, http.getContent(), http.getContentSize());
     }
-    catch(BaseLib::Exception& ex)
+    catch(std::exception& ex)
     {
-        Homegear::GD::out.printError("Error downloading file: " + ex.what());
+        Homegear::GD::out.printError("Error downloading file: " + std::string(ex.what()));
         RETURN_FALSE;
     }
 
@@ -1675,9 +1704,9 @@ ZEND_FUNCTION(hg_ssdp_search)
 
         Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
     }
-    catch(BaseLib::Exception& ex)
+    catch(std::exception& ex)
     {
-        Homegear::GD::out.printError("Error searching devices: " + ex.what());
+        Homegear::GD::out.printError("Error searching devices: " + std::string(ex.what()));
         RETURN_FALSE;
     }
 }
@@ -1810,12 +1839,12 @@ ZEND_FUNCTION(hg_configure_gateway)
             }
             catch(const BaseLib::SocketClosedException& ex)
             {
-                zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+                zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
                 RETURN_NULL();
             }
             catch(const BaseLib::SocketOperationException& ex)
             {
-                zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+                zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
                 RETURN_NULL();
             }
 
@@ -1834,7 +1863,7 @@ ZEND_FUNCTION(hg_configure_gateway)
             }
             catch(BaseLib::Rpc::BinaryRpcException& ex)
             {
-                zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+                zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
                 RETURN_NULL();
             }
         }
@@ -1849,9 +1878,9 @@ ZEND_FUNCTION(hg_configure_gateway)
 
         Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
     }
-    catch(BaseLib::Exception& ex)
+    catch(std::exception& ex)
     {
-        zend_throw_exception(homegear_exception_class_entry, ex.what().c_str(), -1);
+        zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
         RETURN_NULL()
     }
 }
@@ -2106,7 +2135,7 @@ ZEND_FUNCTION(hg_serial_open)
     }
     catch(BaseLib::SerialReaderWriterException& ex)
     {
-        Homegear::GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + std::string(ex.what()));
         ZVAL_LONG(return_value, -1);
     }
 }
@@ -2130,7 +2159,7 @@ ZEND_FUNCTION(hg_serial_close)
     }
     catch(BaseLib::SerialReaderWriterException& ex)
     {
-        Homegear::GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + std::string(ex.what()));
         RETURN_FALSE;
     }
 }
@@ -2178,7 +2207,7 @@ ZEND_FUNCTION(hg_serial_read)
     }
     catch(BaseLib::SerialReaderWriterException& ex)
     {
-        Homegear::GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + std::string(ex.what()));
         ZVAL_LONG(return_value, -1);
     }
 }
@@ -2227,7 +2256,7 @@ ZEND_FUNCTION(hg_serial_readline)
     }
     catch(BaseLib::SerialReaderWriterException& ex)
     {
-        Homegear::GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + std::string(ex.what()));
         ZVAL_LONG(return_value, -1);
     }
 }
@@ -2275,7 +2304,7 @@ ZEND_FUNCTION(hg_serial_write)
     }
     catch(BaseLib::SerialReaderWriterException& ex)
     {
-        Homegear::GD::out.printError("Script engine: " + ex.what());
+        Homegear::GD::out.printError("Script engine: " + std::string(ex.what()));
         RETURN_FALSE;
     }
 }

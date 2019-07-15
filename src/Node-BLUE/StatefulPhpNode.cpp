@@ -143,14 +143,6 @@ void StatefulPhpNode::configNodesStarted()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void StatefulPhpNode::startUpComplete()
@@ -171,17 +163,9 @@ void StatefulPhpNode::startUpComplete()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
+void StatefulPhpNode::variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
 {
 	try
 	{
@@ -204,17 +188,9 @@ void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::strin
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void StatefulPhpNode::setNodeVariable(std::string& variable, Flows::PVariable& value)
+void StatefulPhpNode::setNodeVariable(const std::string& variable, Flows::PVariable value)
 {
 	try
 	{
@@ -234,14 +210,6 @@ void StatefulPhpNode::setNodeVariable(std::string& variable, Flows::PVariable& v
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -264,14 +232,6 @@ Flows::PVariable StatefulPhpNode::getConfigParameterIncoming(std::string name)
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::make_shared<Flows::Variable>();
 }
@@ -298,17 +258,9 @@ void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PV
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-Flows::PVariable StatefulPhpNode::invokeLocal(std::string methodName, Flows::PArray& innerParameters)
+Flows::PVariable StatefulPhpNode::invokeLocal(const std::string& methodName, Flows::PArray& innerParameters)
 {
 	try
 	{
@@ -325,14 +277,6 @@ Flows::PVariable StatefulPhpNode::invokeLocal(std::string methodName, Flows::PAr
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return Flows::Variable::createError(-32601, ": Requested method not found.");
 }

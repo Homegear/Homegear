@@ -45,6 +45,7 @@ private:
 
 public:
 	int32_t id = 0;
+	pid_t pid = 0;
 	bool closed = false;
 	std::vector<char> buffer;
 	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;

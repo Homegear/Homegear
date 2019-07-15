@@ -88,7 +88,7 @@ public:
 	 * @param topic The MQTT topic.
 	 * @param payload The MQTT payload.
 	 */
-	void queueMessage(std::string topic, std::string& payload);
+	void queueMessage(const std::string& topic, const std::string& payload);
 
 	/**
 	 * Queues a peer message for publishing to the MQTT broker.
@@ -99,7 +99,7 @@ public:
 	 * @param key The name of the variable.
 	 * @param value The value of the variable.
 	 */
-	void queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value);
+	void queueMessage(const std::string& source, uint64_t peerId, int32_t channel, const std::string& key, const BaseLib::PVariable& value);
 
 	/**
 	 * Queues a peer message containing multiple variables for publishing to the MQTT broker.
@@ -110,7 +110,7 @@ public:
 	 * @param keys The names of the variables.
 	 * @param values The values of the variables.
 	 */
-	void queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values);
+	void queueMessage(const std::string& source, uint64_t peerId, int32_t channel, const std::vector<std::string>& keys, const std::vector<BaseLib::PVariable>& values);
 
 private:
 	class QueueEntrySend : public BaseLib::IQueueEntry

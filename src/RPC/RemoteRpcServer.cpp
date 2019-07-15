@@ -134,20 +134,6 @@ void RemoteRpcServer::queueMethod(std::shared_ptr<std::pair<std::string, std::sh
 		std::cerr << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
 				  << ": " << ex.what() << std::endl;
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		std::cout << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
-				  << ": " << ex.what() << std::endl;
-		std::cerr << "Error in file " << __FILE__ << " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__
-				  << ": " << ex.what() << std::endl;
-	}
-	catch(...)
-	{
-		std::cout << "Unknown error in file " << __FILE__ << " line " << __LINE__ << " in function "
-				  << __PRETTY_FUNCTION__ << "." << std::endl;
-		std::cerr << "Unknown error in file " << __FILE__ << " line " << __LINE__ << " in function "
-				  << __PRETTY_FUNCTION__ << "." << std::endl;
-	}
 }
 
 void RemoteRpcServer::processMethods()
@@ -186,14 +172,6 @@ void RemoteRpcServer::processMethods()
 		catch(const std::exception& ex)
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(const BaseLib::Exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 	}
 }
@@ -277,14 +255,6 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

@@ -189,11 +189,11 @@
   },
   "$flowContext" : {
     "args" : "Zeichenfolge [, Zeichenfolge]",
-    "desc" : "Ruft eine Flusskontexteigenschaft ab."
+    "desc" : "Ruft eine Flusskontexteigenschaft ab.\n\nDies ist eine definierte Funktion vom Typ \"Node-RED\"."
   },
   "$globalContext" : {
     "args" : "Zeichenfolge [, Zeichenfolge]",
-    "desc" : "Ruft eine globale Kontexteigenschaft ab."
+    "desc" : "Ruft eine globale Kontexteigenschaft ab.\n\nDies ist eine definierte Funktion vom Typ \"Node-RED\"."
   },
   "$pad" : {
     "args" : "string, width [, char]",
@@ -214,5 +214,9 @@
   "$toMillis" : {
     "args" : "Zeitmarke",
     "desc" : "Konvertieren Sie eine Zeichenfolge `Zeitmarke' im ISO 8601-Format in die Anzahl der Millisekunden seit der Unix-Epoche (1. Januar 1970 (UTC)) als Zahl. Es wird ein Fehler ausgelöst, wenn die Zeichenfolge nicht das richtige Format hat."
+  },
+  "$env" : {
+    "args" : "arg",
+    "desc" : "Gibt den Wert einer Umgebungsvariablen zurück.\n\nDies ist eine definierte Funktion vom Typ \"Node-RED\"."
   }
 }

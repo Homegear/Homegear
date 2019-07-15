@@ -110,14 +110,6 @@ void CliClient::onConnect()
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Ipc::IpcException& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void CliClient::onDisconnect()
@@ -386,14 +378,6 @@ int32_t CliClient::terminal(std::string& command)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return 0;
 }
 
@@ -408,14 +392,6 @@ void CliClient::standardOutputReference(std::string& text)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void CliClient::standardOutput(std::string text)
@@ -428,14 +404,6 @@ void CliClient::standardOutput(std::string text)
     catch(const std::exception& ex)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -450,14 +418,6 @@ void CliClient::errorOutputReference(std::string& text)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void CliClient::errorOutput(std::string text)
@@ -470,14 +430,6 @@ void CliClient::errorOutput(std::string text)
     catch(const std::exception& ex)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -505,14 +457,6 @@ Ipc::PVariable CliClient::output(Ipc::PArray& parameters)
     catch(const std::exception& ex)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Ipc::Variable::createError(-32500, "Unknown application error.");
 }
@@ -556,14 +500,6 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
     catch(const std::exception& ex)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Ipc::Variable::createError(-32500, "Unknown application error.");
 }

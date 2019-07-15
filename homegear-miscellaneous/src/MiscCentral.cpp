@@ -31,6 +31,8 @@
 #include "MiscCentral.h"
 #include "GD.h"
 
+#include <iomanip>
+
 namespace Misc {
 
 MiscCentral::MiscCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, GD::bl, eventHandler)
@@ -83,11 +85,6 @@ void MiscCentral::loadPeers()
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	_peersMutex.unlock();
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	_peersMutex.unlock();
-    }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -103,10 +100,6 @@ void MiscCentral::addPeer(std::shared_ptr<MiscPeer> peer)
 		if(_peersById.find(peer->getID()) == _peersById.end()) _peersById[peer->getID()] = peer;
 	}
 	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -169,11 +162,6 @@ void MiscCentral::deletePeer(uint64_t id)
 		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
     	_peersMutex.unlock();
@@ -194,10 +182,6 @@ std::shared_ptr<MiscPeer> MiscCentral::getPeer(uint64_t id)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -225,10 +209,6 @@ std::shared_ptr<MiscPeer> MiscCentral::getPeer(std::string serialNumber)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -252,10 +232,6 @@ void MiscCentral::savePeers(bool full)
 		}
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -342,11 +318,6 @@ std::string MiscCentral::handleCliCommand(std::string command)
 					_peersMutex.unlock();
 				}
 				catch(const std::exception& ex)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
 				{
 					_peersMutex.unlock();
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -533,11 +504,6 @@ std::string MiscCentral::handleCliCommand(std::string command)
 				_peersMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
 			catch(...)
 			{
 				_peersMutex.unlock();
@@ -646,10 +612,6 @@ std::string MiscCentral::handleCliCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -670,10 +632,6 @@ std::shared_ptr<MiscPeer> MiscCentral::createPeer(uint32_t deviceType, std::stri
 		return peer;
 	}
     catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -706,10 +664,6 @@ PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t 
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
 		catch(...)
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -725,10 +679,6 @@ PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t 
 		return PVariable(new Variable((uint32_t)peer->getID()));
 	}
 	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -759,10 +709,6 @@ PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::str
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -788,10 +734,6 @@ PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t
 		return PVariable(new Variable(VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

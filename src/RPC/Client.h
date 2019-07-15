@@ -83,9 +83,9 @@ public:
 
 	void initServerMethods(std::pair<std::string, std::string> address);
 
-	void broadcastNodeEvent(std::string& nodeId, std::string& topic, BaseLib::PVariable& value);
+	void broadcastNodeEvent(const std::string& nodeId, const std::string& topic, const BaseLib::PVariable& value);
 
-	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::string& deviceAddress, std::shared_ptr<std::vector<std::string>>& valueKeys, std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
+	void broadcastEvent(const std::string& source, uint64_t id, int32_t channel, const std::string& deviceAddress, const std::shared_ptr<std::vector<std::string>>& valueKeys, const std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
 
 	void systemListMethods(std::pair<std::string, std::string>& address);
 

@@ -36,6 +36,7 @@
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
+#include <homegear-base/Managers/ProcessManager.h>
 #include "../config.h"
 
 #include <execinfo.h>
@@ -56,6 +57,7 @@
 #include <algorithm>
 
 #include <gcrypt.h>
+#include <grp.h>
 
 using namespace Homegear;
 
@@ -75,6 +77,8 @@ std::atomic_bool _startUpComplete;
 std::atomic_bool _shutdownQueued;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
+std::thread _signalHandlerThread;
+int32_t _processManagerCallbackHandlerId = -1;
 
 void exitHomegear(int exitCode)
 {
@@ -146,60 +150,34 @@ void stopRPCServers(bool dispose)
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
 }
 
-void sigchld_handler(int32_t signalNumber)
+void sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped)
 {
 	try
 	{
-		pid_t pid;
-		int status;
+        GD::out.printInfo("Info: Process with id " + std::to_string(pid) + " ended.");
+        if(pid == _mainProcessId)
+        {
+            _mainProcessId = 0;
+            bool stop = false;
+            if(signal != -1)
+            {
+                if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
+                if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
+                if(coreDumped) GD::out.printError("Error: Core was dumped.");
+            }
+            else stop = true;
+            if(stop)
+            {
+                GD::out.printInfo("Info: Homegear exited with exit code " + std::to_string(exitCode) + ". Stopping monitor process.");
+                exit(0);
+            }
 
-		while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
-		{
-			int32_t exitStatus = WEXITSTATUS(status);
-			int32_t signal = -1;
-			bool coreDumped = false;
-			if(WIFSIGNALED(status))
-			{
-				signal = WTERMSIG(status);
-				if(WCOREDUMP(status)) coreDumped = true;
-			}
-
-			GD::out.printInfo("Info: Process with id " + std::to_string(pid) + " ended.");
-			if(pid == _mainProcessId)
-			{
-				_mainProcessId = 0;
-				bool stop = false;
-				if(signal != -1)
-				{
-					if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
-					if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
-					if(coreDumped) GD::out.printError("Error: Core was dumped.");
-				}
-				else stop = true;
-				if(stop)
-				{
-					GD::out.printInfo("Info: Homegear exited with exit code " + std::to_string(exitStatus) + ". Stopping monitor process.");
-					exit(0);
-				}
-
-				GD::out.printError("Homegear was terminated. Restarting (1)...");
-				_monitor.suspend();
-				_fork = true;
-			}
-			else
-			{
-#ifndef NO_SCRIPTENGINE
-				if(GD::scriptEngineServer) GD::scriptEngineServer->processKilled(pid, exitStatus, signal, coreDumped);
-#endif
-				if(GD::nodeBlueServer) GD::nodeBlueServer->processKilled(pid, exitStatus, signal, coreDumped);
-			}
-		}
+            GD::out.printError("Homegear was terminated. Restarting (1)...");
+            _monitor.suspend();
+            _fork = true;
+        }
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -209,10 +187,35 @@ void sigchld_handler(int32_t signalNumber)
     }
 }
 
-void terminateThread()
+void terminateHomegear(int signalNumber)
 {
     try
     {
+        if(_monitorProcess)
+        {
+            GD::out.printMessage("Info: Redirecting signal to child process...");
+            if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
+            else _exit(0);
+            return;
+        }
+
+        _shuttingDownMutex.lock();
+        if(!_startUpComplete)
+        {
+            GD::out.printMessage("Info: Startup is not complete yet. Queueing shutdown.");
+            _shutdownQueued = true;
+            _shuttingDownMutex.unlock();
+            return;
+        }
+        if(GD::bl->shuttingDown)
+        {
+            _shuttingDownMutex.unlock();
+            return;
+        }
+        GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
+        GD::bl->shuttingDown = true;
+        _shuttingDownMutex.unlock();
+
         if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
         if(GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
     #ifndef NO_SCRIPTENGINE
@@ -229,14 +232,13 @@ void terminateThread()
         GD::out.printInfo( "(Shutdown) => Stopping Event handler");
         if(GD::eventHandler) GD::eventHandler->dispose();
     #endif
-        stopRPCServers(true);
-        GD::rpcServers.clear();
-
         if(GD::mqtt && GD::mqtt->enabled())
         {
             GD::out.printInfo( "(Shutdown) => Stopping MQTT client");;
             GD::mqtt->stop();
         }
+        stopRPCServers(true);
+        GD::rpcServers.clear();
         GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
         if(GD::rpcClient) GD::rpcClient->dispose();
         GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
@@ -266,13 +268,25 @@ void terminateThread()
         if(GD::licensingController) GD::licensingController->dispose();
         GD::bl->fileDescriptorManager.dispose();
         _monitor.stop();
+
+        BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
+        BaseLib::ProcessManager::unregisterCallbackHandler(_processManagerCallbackHandlerId);
+
         GD::out.printMessage("(Shutdown) => Shutdown complete.");
+
+        if(_startAsDaemon || _nonInteractive)
+        {
+            fclose(stdout);
+            fclose(stderr);
+        }
+        gnutls_global_deinit();
+        gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+        gcry_control(GCRYCTL_TERM_SECMEM);
+        gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+
+        _exit(0);
     }
     catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -280,9 +294,10 @@ void terminateThread()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _exit(1);
 }
 
-void reloadThread()
+void reloadHomegear()
 {
     try
     {
@@ -315,13 +330,13 @@ void reloadThread()
             GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
             GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
             GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+            startRPCServers();
             GD::mqtt->loadSettings();
             if(GD::mqtt->enabled())
             {
                 GD::out.printInfo("Starting MQTT client");;
                 GD::mqtt->start();
             }
-            startRPCServers();
             if(GD::bl->settings.enableUPnP())
             {
                 GD::out.printInfo("Starting UPnP server");
@@ -340,127 +355,103 @@ void reloadThread()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void terminate(int signalNumber)
+void signalHandlerThread()
 {
-	try
-	{
-		if (signalNumber == SIGTERM || signalNumber == SIGINT)
-		{
-			if(_monitorProcess)
-			{
-				GD::out.printMessage("Info: Redirecting signal to child process...");
-				if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
-				else _exit(0);
-				return;
-			}
+    sigset_t set{};
+    int signalNumber = -1;
+    sigemptyset(&set);
+    sigaddset(&set, SIGHUP);
+    sigaddset(&set, SIGTERM);
+    sigaddset(&set, SIGINT);
+    sigaddset(&set, SIGABRT);
+    sigaddset(&set, SIGSEGV);
+    sigaddset(&set, SIGQUIT);
+    sigaddset(&set, SIGILL);
+    sigaddset(&set, SIGFPE);
+    sigaddset(&set, SIGALRM);
+    sigaddset(&set, SIGUSR1);
+    sigaddset(&set, SIGUSR2);
+    sigaddset(&set, SIGTSTP);
+    sigaddset(&set, SIGTTIN);
+    sigaddset(&set, SIGTTOU);
 
-			_shuttingDownMutex.lock();
-			if(!_startUpComplete)
-			{
-				GD::out.printMessage("Info: Startup is not complete yet. Queueing shutdown.");
-				_shutdownQueued = true;
-				_shuttingDownMutex.unlock();
-				return;
-			}
-			if(GD::bl->shuttingDown)
-			{
-				_shuttingDownMutex.unlock();
-				return;
-			}
-			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
-			GD::bl->shuttingDown = true;
-			_shuttingDownMutex.unlock();
-
-            std::thread t(terminateThread); //Stop in thread to not lock mutexes in signal handler => possible deadlock. If an additional signal now occurs, the thread continues to run.
-            t.join();
-
-			if(_startAsDaemon || _nonInteractive)
-			{
-				fclose(stdout);
-				fclose(stderr);
-			}
-			gnutls_global_deinit();
-			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-			gcry_control(GCRYCTL_TERM_SECMEM);
-			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-			_exit(0);
-		}
-		else if(signalNumber == SIGHUP)
-		{
-			if(_monitorProcess)
-			{
-				GD::out.printMessage("Info: Redirecting signal to child process...");
-				if(_mainProcessId != 0) kill(_mainProcessId, SIGHUP);
-				return;
-			}
-
-			GD::out.printMessage("Info: SIGHUP received...");
-			_shuttingDownMutex.lock();
-			GD::out.printMessage("Info: Reloading...");
-			if(!_startUpComplete)
-			{
-				_shuttingDownMutex.unlock();
-				GD::out.printError("Error: Cannot reload. Startup is not completed.");
-				return;
-			}
-			_startUpComplete = false;
-			_shuttingDownMutex.unlock();
-
-			std::thread t(reloadThread); //Reload in thread to not lock mutexes in signal handler => possible deadlock. If an additional signal now occurs, the thread continues to run.
-			t.join();
-
-			//Reopen log files, important for logrotate
-			if(_startAsDaemon || _nonInteractive)
-			{
-				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
-				{
-					GD::out.printError("Error: Could not redirect output to new log file.");
-				}
-				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
-				{
-					GD::out.printError("Error: Could not redirect errors to new log file.");
-				}
-			}
-
-			_shuttingDownMutex.lock();
-			_startUpComplete = true;
-			if(_shutdownQueued)
-			{
-				_shuttingDownMutex.unlock();
-				terminate(SIGTERM);
-				return;
-			}
-			_shuttingDownMutex.unlock();
-			GD::out.printInfo("Info: Reload complete.");
-		}
-		else
-		{
-			if (!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
-			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
-			kill(getpid(), signalNumber); //Generate core dump
-		}
-	}
-	catch(const std::exception& ex)
+    while(true)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        try
+        {
+            sigwait(&set, &signalNumber);
+            if(signalNumber == SIGTERM || signalNumber == SIGINT)
+            {
+                terminateHomegear(signalNumber);
+            }
+            else if(signalNumber == SIGHUP)
+            {
+                if(_monitorProcess)
+                {
+                    GD::out.printMessage("Info: Redirecting signal to child process...");
+                    if(_mainProcessId != 0) kill(_mainProcessId, SIGHUP);
+                    return;
+                }
+
+                GD::out.printMessage("Info: SIGHUP received...");
+                _shuttingDownMutex.lock();
+                GD::out.printMessage("Info: Reloading...");
+                if(!_startUpComplete)
+                {
+                    _shuttingDownMutex.unlock();
+                    GD::out.printError("Error: Cannot reload. Startup is not completed.");
+                    return;
+                }
+                _startUpComplete = false;
+                _shuttingDownMutex.unlock();
+
+                reloadHomegear();
+
+                //Reopen log files, important for logrotate
+                if(_startAsDaemon || _nonInteractive)
+                {
+                    if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+                    {
+                        GD::out.printError("Error: Could not redirect output to new log file.");
+                    }
+                    if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+                    {
+                        GD::out.printError("Error: Could not redirect errors to new log file.");
+                    }
+                }
+
+                _shuttingDownMutex.lock();
+                _startUpComplete = true;
+                if(_shutdownQueued)
+                {
+                    _shuttingDownMutex.unlock();
+                    terminateHomegear(SIGTERM);
+                    return;
+                }
+                _shuttingDownMutex.unlock();
+                GD::out.printInfo("Info: Reload complete.");
+            }
+            else
+            {
+                if(!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
+                signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
+                kill(getpid(), signalNumber); //Generate core dump
+            }
+        }
+        catch(const std::exception& ex)
+        {
+            GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+        catch(...)
+        {
+            GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        }
     }
 }
 
@@ -652,10 +643,6 @@ void startMainProcess()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -695,10 +682,6 @@ void startDaemon()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -715,30 +698,40 @@ void startUp()
 			exitHomegear(1);
 		}
 
-    	struct sigaction sa;
-		memset(&sa, 0, sizeof(sa));
-		sa.sa_handler = terminate;
+        {
+            sigset_t set{};
+            sigemptyset(&set);
+            sigaddset(&set, SIGHUP);
+            sigaddset(&set, SIGTERM);
+            sigaddset(&set, SIGINT);
+            sigaddset(&set, SIGABRT);
+            sigaddset(&set, SIGSEGV);
+            sigaddset(&set, SIGQUIT);
+            sigaddset(&set, SIGILL);
+            sigaddset(&set, SIGFPE);
+            sigaddset(&set, SIGALRM);
+            sigaddset(&set, SIGUSR1);
+            sigaddset(&set, SIGUSR2);
+            sigaddset(&set, SIGTSTP);
+            sigaddset(&set, SIGTTIN);
+            sigaddset(&set, SIGTTOU);
+            sigprocmask(SIG_BLOCK, &set, nullptr);
+        }
 
-		//Use sigaction over signal because of different behavior in Linux and BSD
-    	sigaction(SIGHUP, &sa, NULL);
-    	sigaction(SIGTERM, &sa, NULL);
-		sigaction(SIGINT, &sa, NULL);
-    	sigaction(SIGABRT, &sa, NULL);
-    	sigaction(SIGSEGV, &sa, NULL);
-		sigaction(SIGQUIT, &sa, NULL);
-		sigaction(SIGILL, &sa, NULL);
-		sigaction(SIGABRT, &sa, NULL);
-		sigaction(SIGFPE, &sa, NULL);
-		sigaction(SIGALRM, &sa, NULL);
-		sigaction(SIGUSR1, &sa, NULL);
-		sigaction(SIGUSR2, &sa, NULL);
-		sigaction(SIGTSTP, &sa, NULL);
-		sigaction(SIGTTIN, &sa, NULL);
-		sigaction(SIGTTOU, &sa, NULL);
-    	sa.sa_handler = sigchld_handler;
-    	sigaction(SIGCHLD, &sa, NULL);
+        if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
+
+        //Use sigaction over signal because of different behavior in Linux and BSD
+        struct sigaction sa{};
 		sa.sa_handler = SIG_IGN;
-		sigaction(SIGPIPE, &sa, NULL);
+		sigaction(SIGPIPE, &sa, nullptr);
+
+        setLimits();
+
+        initGnuTls();
+
+        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager); //Needs to be called before starting any threads
+        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
+        _processManagerCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(sigchildHandler, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 
     	if(_startAsDaemon || _nonInteractive)
 		{
@@ -759,11 +752,8 @@ void startUp()
     	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
     	GD::out.printMessage(std::string("Git branch of Homegear:             ") + GITBRANCHHOMEGEAR);
 
-    	if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
     	if(_monitorProcess)
     	{
-    		setLimits();
-
     		while(_monitorProcess)
     		{
     			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
@@ -776,7 +766,32 @@ void startUp()
     		}
     	}
 
-    	initGnuTls();
+        GD::out.printMessage("Determining maximum thread count...");
+        try
+        {
+            // {{{ Get maximum thread count
+            std::string output;
+            BaseLib::ProcessManager::exec(GD::executablePath + GD::executableFile + " -tc", GD::bl->fileDescriptorManager.getMax(), output);
+            BaseLib::HelperFunctions::trim(output);
+            if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
+            // }}}
+        }
+        catch(const std::exception& ex)
+        {
+            GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+        GD::out.printMessage("Maximum thread count is: " + std::to_string(GD::bl->threadManager.getMaxThreadCount()));
+
+        if(GD::bl->settings.waitForCorrectTime())
+        {
+            while(BaseLib::HelperFunctions::getTime() < 1000000000000)
+            {
+                if(_shutdownQueued) exitHomegear(1);
+                GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+            }
+        }
+        GD::bl->setStartTime(BaseLib::HelperFunctions::getTime());
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.socketPath()))
 		{
@@ -794,8 +809,6 @@ void startUp()
 				}
 			}
 		}
-
-		setLimits();
 
 		GD::bl->db->init();
 		std::string databasePath = GD::bl->settings.databasePath();
@@ -831,10 +844,6 @@ void startUp()
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
 				catch(...)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -864,10 +873,6 @@ void startUp()
 					files = GD::bl->io.getFiles(currentPath, false);
 				}
 				catch(const std::exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
@@ -902,10 +907,6 @@ void startUp()
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
 				catch(...)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -933,16 +934,26 @@ void startUp()
                 bindRPCServers();
                 break;
             }
-            catch (BaseLib::NetException& ex)
+            catch(const BaseLib::NetException& ex)
             {
                 if(_shutdownQueued) exitHomegear(1);
-                GD::out.printError("Error binding RPC servers: " + ex.what() + " Retrying in 5 seconds...");
+                GD::out.printError("Error binding RPC servers (1): " + std::string(ex.what()) + " Retrying in 5 seconds...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                continue;
+            }
+            catch(const BaseLib::SocketOperationException& ex)
+            {
+                if(_shutdownQueued) exitHomegear(1);
+                GD::out.printError("Error binding RPC servers (2): " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
             }
         }
 
     	GD::licensingController->loadModules();
+
+        GD::out.printInfo("Initializing system variable controller...");
+        GD::systemVariableController.reset(new SystemVariableController());
 
         GD::familyController->init();
 		GD::familyController->loadModules();
@@ -1041,10 +1052,6 @@ void startUp()
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
 		catch(...)
 		{
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -1079,20 +1086,12 @@ void startUp()
 			}
 		}
 
-	    if(GD::bl->settings.waitForCorrectTime())
-		{
-			while(BaseLib::HelperFunctions::getTime() < 1000000000000)
-			{
-				if(_shutdownQueued) exitHomegear(1);
-				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
-				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-			}
-		}
-
         GD::bl->globalServiceMessages.load();
 
         GD::uiController.reset(new UiController());
 		GD::uiController->load();
+
+		GD::ipcLogger.reset(new IpcLogger());
 
 #ifdef EVENTHANDLER
 		GD::eventHandler.reset(new EventHandler());
@@ -1134,13 +1133,13 @@ void startUp()
         GD::out.printInfo("Initializing RPC client...");
         GD::rpcClient->init();
 
-        if(GD::mqtt->enabled())
-		{
-			GD::out.printInfo("Starting MQTT client...");;
-			GD::mqtt->start();
-		}
-
         startRPCServers();
+
+        if(GD::mqtt->enabled())
+        {
+            GD::out.printInfo("Starting MQTT client...");;
+            GD::mqtt->start();
+        }
 
 #ifdef EVENTHANDLER
         GD::out.printInfo("Initializing event handler...");
@@ -1153,6 +1152,13 @@ void startUp()
         GD::familyController->physicalInterfaceStartListening();
 		if(!GD::familyController->physicalInterfaceIsOpen()) GD::out.printCritical("Critical: At least one of the communication modules could not be opened...");
 
+        GD::out.printInfo("Starting IPC server...");
+        if(!GD::ipcServer->start())
+        {
+            GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
+            exitHomegear(1);
+        }
+
 		if(GD::bl->settings.enableNodeBlue())
 		{
 			GD::out.printInfo("Starting Node-BLUE server...");
@@ -1161,13 +1167,6 @@ void startUp()
 				GD::out.printCritical("Critical: Cannot start Node-BLUE server. Exiting Homegear.");
 				exitHomegear(1);
 			}
-		}
-
-		GD::out.printInfo("Starting IPC server...");
-		if(!GD::ipcServer->start())
-		{
-			GD::out.printCritical("Critical: Cannot start IPC server. Exiting Homegear.");
-			exitHomegear(1);
 		}
 
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
@@ -1201,7 +1200,7 @@ void startUp()
 		if(_shutdownQueued)
 		{
 			_shuttingDownMutex.unlock();
-			terminate(SIGTERM);
+			terminateHomegear(SIGTERM);
 		}
 		_shuttingDownMutex.unlock();
 
@@ -1213,10 +1212,6 @@ void startUp()
         while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1389,6 +1384,7 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
+                BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
     			GD::licensingController->init();
@@ -1396,6 +1392,7 @@ int main(int argc, char* argv[])
     			ScriptEngine::ScriptEngineClient scriptEngineClient;
     			scriptEngineClient.start();
     			GD::licensingController->dispose();
+                BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
     			exit(0);
     		}
 #endif
@@ -1404,6 +1401,7 @@ int main(int argc, char* argv[])
     			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
     			initGnuTls();
     			setLimits();
+                BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
     			GD::licensingController.reset(new LicensingController());
     			GD::licensingController->loadModules();
     			GD::licensingController->init();
@@ -1411,6 +1409,7 @@ int main(int argc, char* argv[])
     			NodeBlue::NodeBlueClient nodeBlueClient;
     			nodeBlueClient.start();
     			GD::licensingController->dispose();
+                BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
     			exit(0);
     		}
     		else if(arg == "-e")
@@ -1686,28 +1685,6 @@ int main(int argc, char* argv[])
 
     	if(!isatty(STDIN_FILENO)) _nonInteractive = true;
 
-    	try
-    	{
-    		// {{{ Get maximum thread count
-				std::string output;
-				BaseLib::HelperFunctions::exec(GD::executablePath + GD::executableFile + " -tc", output);
-				BaseLib::HelperFunctions::trim(output);
-				if(BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
-			// }}}
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-
     	// {{{ Load settings
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
 			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
@@ -1756,15 +1733,11 @@ int main(int argc, char* argv[])
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	terminate(SIGTERM);
+	terminateHomegear(SIGTERM);
 
     return 1;
 }
