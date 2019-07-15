@@ -952,6 +952,9 @@ void startUp()
 
     	GD::licensingController->loadModules();
 
+        GD::out.printInfo("Initializing system variable controller...");
+        GD::systemVariableController.reset(new SystemVariableController());
+
         GD::familyController->init();
 		GD::familyController->loadModules();
 

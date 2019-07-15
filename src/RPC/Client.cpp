@@ -274,7 +274,7 @@ void Client::broadcastEvent(const std::string& source, uint64_t id, int32_t chan
                         {
                             if(server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet())
                             {
-                                auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
+                                auto systemVariable = GD::systemVariableController->getInternal(valueKeys->at(i));
                                 if(!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable)) continue;
                             }
                         }
@@ -307,7 +307,7 @@ void Client::broadcastEvent(const std::string& source, uint64_t id, int32_t chan
                         {
                             if(server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet())
                             {
-                                auto systemVariable = GD::bl->db->getSystemVariableInternal(valueKeys->at(i));
+                                auto systemVariable = GD::systemVariableController->getInternal(valueKeys->at(i));
                                 if(!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable)) continue;
                             }
                         }

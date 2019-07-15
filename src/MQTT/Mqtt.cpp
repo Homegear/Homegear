@@ -1196,7 +1196,7 @@ void Mqtt::queueMessage(const std::string& source, uint64_t peerId, int32_t chan
 				{
 					if(_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
 					{
-						auto systemVariable = GD::bl->db->getSystemVariableInternal(keys.at(i));
+						auto systemVariable = GD::systemVariableController->getInternal(keys.at(i));
 						if(!systemVariable || !_dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 					}
 				}

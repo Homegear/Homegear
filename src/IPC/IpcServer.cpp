@@ -483,7 +483,7 @@ void IpcServer::broadcastEvent(std::string& source, uint64_t id, int32_t channel
 				{
 					if(_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
 					{
-						auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+						auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
 						if(systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
 						{
 							newVariables->push_back(variables->at(i));

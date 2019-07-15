@@ -817,7 +817,7 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
                 {
                     if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
                     {
-                        auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+                        auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
                         if(systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
                         {
                             newVariables->push_back(variables->at(i));

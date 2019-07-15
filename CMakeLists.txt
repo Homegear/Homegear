@@ -122,7 +122,7 @@ set(SOURCE_FILES
         src/IpcLogger.h
         src/Monitor.cpp
         src/Monitor.h
-        config.h)
+        config.h src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h)
 
 add_custom_target(homegear COMMAND ../../devscripts/makeAll.sh SOURCES ${SOURCE_FILES})
 

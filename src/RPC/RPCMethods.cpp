@@ -509,14 +509,14 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(2)->stringValue);
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
             if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             if(parameters->at(3)->integerValue64 != 0) systemVariable->roles.emplace(parameters->at(3)->integerValue64);
 
-            auto result = GD::bl->db->setSystemVariableRoles(systemVariable->name, systemVariable->roles);
+            auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not set role: " + result->structValue->at("faultString")->stringValue);
@@ -548,8 +548,8 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                     else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
                     else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
 
-                    GD::bl->db->setSystemVariable(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
-                    auto roleSystemVariable = GD::bl->db->getSystemVariableInternal(roleSystemVariableName);
+                    GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                    auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
                     if(!roleSystemVariable) continue;
 
                     auto rolesIterator = variableInfo->structValue->find("roles");
@@ -560,7 +560,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                             if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64);
                         }
                     }
-                    GD::bl->db->setSystemVariableRoles(roleSystemVariable->name, roleSystemVariable->roles);
+                    GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
                 }
             }
             //}}}
@@ -612,14 +612,14 @@ BaseLib::PVariable RPCAddCategoryToSystemVariable::invoke(BaseLib::PRpcClientInf
 
         if(!GD::bl->db->categoryExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         if(parameters->at(1)->integerValue64 != 0) systemVariable->categories.emplace(parameters->at(1)->integerValue64);
 
-        return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+        return GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
     }
     catch(const std::exception& ex)
     {
@@ -648,14 +648,14 @@ BaseLib::PVariable RPCAddCategoryToVariable::invoke(BaseLib::PRpcClientInfo clie
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(2)->stringValue);
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
             if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             if(parameters->at(3)->integerValue64 != 0) systemVariable->categories.emplace(parameters->at(3)->integerValue64);
 
-            auto result = GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+            auto result = GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not set category: " + result->structValue->at("faultString")->stringValue);
@@ -975,14 +975,14 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
 
         if(!GD::bl->db->roleExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         if(parameters->at(1)->integerValue64 != 0) systemVariable->roles.emplace(parameters->at(1)->integerValue64);
 
-        auto result = GD::bl->db->setSystemVariableRoles(systemVariable->name, systemVariable->roles);
+        auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
         if(result->errorStruct)
         {
             GD::out.printError("Error: Could not set role: " + result->structValue->at("faultString")->stringValue);
@@ -1014,8 +1014,8 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
                 else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
                 else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
 
-                GD::bl->db->setSystemVariable(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
-                auto roleSystemVariable = GD::bl->db->getSystemVariableInternal(roleSystemVariableName);
+                GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
                 if(!roleSystemVariable) continue;
 
                 auto rolesIterator = variableInfo->structValue->find("roles");
@@ -1026,7 +1026,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
                         if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64);
                     }
                 }
-                GD::bl->db->setSystemVariableRoles(roleSystemVariable->name, roleSystemVariable->roles);
+                GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
             }
         }
         //}}}
@@ -1082,12 +1082,12 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
 
         if(!GD::bl->db->roomExists((uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->setSystemVariableRoom(systemVariable->name, (uint64_t) parameters->at(1)->integerValue64);
+        return GD::systemVariableController->setRoom(systemVariable->name, (uint64_t) parameters->at(1)->integerValue64);
     }
     catch(const std::exception& ex)
     {
@@ -1155,14 +1155,14 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(2)->stringValue);
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
             if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             if(parameters->at(3)->integerValue64 != 0) systemVariable->room = parameters->at(3)->integerValue64;
 
-            auto result = GD::bl->db->setSystemVariableRoom(systemVariable->name, systemVariable->room);
+            auto result = GD::systemVariableController->setRoom(systemVariable->name, systemVariable->room);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not set room: " + result->structValue->at("faultString")->stringValue);
@@ -1602,7 +1602,7 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
             }
         }
 
-        GD::bl->db->removeCategoryFromSystemVariables(categoryId);
+        GD::systemVariableController->removeCategory(categoryId);
 
         return result;
     }
@@ -1802,7 +1802,7 @@ BaseLib::PVariable RPCDeleteRole::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         BaseLib::PVariable result = GD::bl->db->deleteRole(roleId);
         if(result->errorStruct) return result;
 
-        GD::bl->db->removeRoleFromSystemVariables(roleId);
+        GD::systemVariableController->removeRole(roleId);
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -1869,7 +1869,7 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
             }
         }
 
-        GD::bl->db->removeRoomFromSystemVariables(roomId);
+        GD::systemVariableController->removeRoom(roomId);
         GD::bl->db->removeRoomFromStories(roomId);
 
         return result;
@@ -1918,12 +1918,12 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return std::make_shared<BaseLib::Variable>();
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->deleteSystemVariable(parameters->at(0)->stringValue);
+        return GD::systemVariableController->erase(parameters->at(0)->stringValue);
     }
     catch(const std::exception& ex)
     {
@@ -2276,7 +2276,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
             returnRoomsCategoriesFlags = parameters->at(0)->booleanValue;
         }
 
-        return GD::bl->db->getAllSystemVariables(clientInfo, returnRoomsCategoriesFlags, checkAcls);
+        return GD::systemVariableController->getAll(clientInfo, returnRoomsCategoriesFlags, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4272,7 +4272,7 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        return GD::bl->db->getSystemVariable(clientInfo, parameters->at(0)->stringValue, checkAcls);
+        return GD::systemVariableController->getValue(clientInfo, parameters->at(0)->stringValue, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4295,7 +4295,7 @@ BaseLib::PVariable RPCGetSystemVariableFlags::invoke(BaseLib::PRpcClientInfo cli
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
@@ -4327,7 +4327,7 @@ BaseLib::PVariable RPCGetSystemVariablesInCategory::invoke(BaseLib::PRpcClientIn
 
         if(!GD::bl->db->categoryExists((uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-        return GD::bl->db->getSystemVariablesInCategory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
+        return GD::systemVariableController->getVariablesInCategory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4354,7 +4354,7 @@ BaseLib::PVariable RPCGetSystemVariablesInRole::invoke(BaseLib::PRpcClientInfo c
 
         if(!GD::bl->db->roleExists((uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
 
-        return GD::bl->db->getSystemVariablesInRole(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
+        return GD::systemVariableController->getVariablesInRole(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4381,7 +4381,7 @@ BaseLib::PVariable RPCGetSystemVariablesInRoom::invoke(BaseLib::PRpcClientInfo c
 
         if(!GD::bl->db->roomExists((uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        return GD::bl->db->getSystemVariablesInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
+        return GD::systemVariableController->getVariablesInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4412,7 +4412,7 @@ BaseLib::PVariable RPCGetVariablesInCategory::invoke(BaseLib::PRpcClientInfo cli
         BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
         {
-            auto systemVariables = GD::bl->db->getSystemVariablesInCategory(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+            auto systemVariables = GD::systemVariableController->getVariablesInCategory(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
             if(!systemVariables->arrayValue->empty())
             {
                 auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -4465,7 +4465,7 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
 
         if(parameters->size() == 1 || parameters->at(1)->integerValue64 == 0)
         {
-            auto systemVariables = GD::bl->db->getSystemVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+            auto systemVariables = GD::systemVariableController->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
             if(!systemVariables->arrayValue->empty())
             {
                 auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -4745,7 +4745,6 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
     try
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getVariableDescription")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}),
@@ -4762,19 +4761,31 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
             }
         }
 
-        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        if(parameters->at(0)->integerValue64 == 0)
         {
-            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-            if(central && central->peerExists((uint64_t) parameters->at(0)->integerValue64))
-            {
-                if(checkAcls)
-                {
-                    auto peer = central->getPeer((uint64_t) parameters->at(0)->integerValue64);
-                    if(!peer || !clientInfo->acls->checkVariableReadAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                }
+            bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
 
-                return central->getVariableDescription(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue, fields);
+            //System variable
+
+        }
+        else
+        {
+            bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central && central->peerExists((uint64_t) parameters->at(0)->integerValue64))
+                {
+                    if(checkAcls)
+                    {
+                        auto peer = central->getPeer((uint64_t) parameters->at(0)->integerValue64);
+                        if(!peer || !clientInfo->acls->checkVariableReadAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                    }
+
+                    return central->getVariableDescription(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue, fields);
+                }
             }
         }
 
@@ -5759,14 +5770,14 @@ BaseLib::PVariable RPCRemoveCategoryFromSystemVariable::invoke(BaseLib::PRpcClie
 
         if(!GD::bl->db->categoryExists((uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         if(parameters->at(1)->integerValue64 != 0) systemVariable->categories.erase((uint64_t) parameters->at(1)->integerValue64);
 
-        return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+        return GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
     }
     catch(const std::exception& ex)
     {
@@ -5795,14 +5806,14 @@ BaseLib::PVariable RPCRemoveCategoryFromVariable::invoke(BaseLib::PRpcClientInfo
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(2)->stringValue);
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
             if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             if(parameters->at(3)->integerValue64 != 0) systemVariable->categories.erase((uint64_t) parameters->at(3)->integerValue64);
 
-            auto result = GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+            auto result = GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not remove category from system variable: " + result->structValue->at("faultString")->stringValue);
@@ -6046,7 +6057,7 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
 
         if(!GD::bl->db->roleExists((uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
@@ -6067,12 +6078,12 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
                 }
                 std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
 
-                GD::bl->db->deleteSystemVariable(roleSystemVariableName);
+                GD::systemVariableController->erase(roleSystemVariableName);
             }
         }
         //}}}
 
-        return GD::bl->db->setSystemVariableRoles(systemVariable->name, systemVariable->roles);
+        return GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
     }
     catch(const std::exception& ex)
     {
@@ -6101,14 +6112,14 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(2)->stringValue);
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
             if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             if(parameters->at(3)->integerValue64 != 0) systemVariable->roles.erase((uint64_t) parameters->at(3)->integerValue64);
 
-            auto result = GD::bl->db->setSystemVariableRoles(systemVariable->name, systemVariable->roles);
+            auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not remove role from system variable: " + result->structValue->at("faultString")->stringValue);
@@ -6129,7 +6140,7 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
                     }
                     std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
 
-                    GD::bl->db->deleteSystemVariable(roleSystemVariableName);
+                    GD::systemVariableController->erase(roleSystemVariableName);
                 }
             }
             //}}}
@@ -6207,12 +6218,12 @@ BaseLib::PVariable RPCRemoveSystemVariableFromRoom::invoke(BaseLib::PRpcClientIn
 
         if(!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        if(systemVariable->room == roomId) return GD::bl->db->setSystemVariableRoom(systemVariable->name, 0);
+        if(systemVariable->room == roomId) return GD::systemVariableController->setRoom(systemVariable->name, 0);
         else return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
@@ -6268,14 +6279,14 @@ BaseLib::PVariable RPCRemoveVariableFromRoom::invoke(BaseLib::PRpcClientInfo cli
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
-            auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(2)->stringValue);
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
             if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
             systemVariable->room = 0;
 
-            auto result = GD::bl->db->setSystemVariableRoom(systemVariable->name, systemVariable->room);
+            auto result = GD::systemVariableController->setRoom(systemVariable->name, systemVariable->room);
             if(result->errorStruct)
             {
                 GD::out.printError("Error: Could not remove room from sytem variable: " + result->structValue->at("faultString")->stringValue);
@@ -7316,7 +7327,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
         int32_t flags = parameters->size() > 2 ? parameters->at(2)->integerValue : -1;
 
-        return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value, flags, checkAcls);
+        return GD::systemVariableController->setValue(clientInfo, parameters->at(0)->stringValue, value, flags, checkAcls);
     }
     catch(const std::exception& ex)
     {

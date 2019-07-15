@@ -563,68 +563,63 @@ void UiController::addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, co
 
             std::string methodName = "getValue";
             auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-            parameters->arrayValue->reserve(3);
+            parameters->arrayValue->reserve(4);
             parameters->arrayValue->emplace_back(peerIdIterator->second);
             parameters->arrayValue->emplace_back(channelIterator->second);
             parameters->arrayValue->emplace_back(nameIterator->second);
 
-            if(peerIdIterator->second != 0)
+            if(addValue)
             {
-                if(addValue)
-                {
-                    auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                    if(!value->errorStruct) variable->structValue->emplace("value", value);
-                }
+                auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                if(!value->errorStruct) variable->structValue->emplace("value", value);
+            }
 
-                methodName = "getVariableDescription";
-                auto description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(description->errorStruct)
-                {
-                    GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + description->structValue->at("faultString")->stringValue);
-                    continue;
-                }
+            auto fields = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            fields->arrayValue->reserve(5);
+            fields->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>("TYPE"));
+            fields->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>("MIN"));
+            fields->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>("MAX"));
+            fields->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>("ROLES"));
+            parameters->arrayValue->emplace_back(fields);
 
-                auto typeIterator = description->structValue->find("TYPE");
-                if(typeIterator != description->structValue->end()) variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
+            methodName = "getVariableDescription";
+            auto description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+            if(description->errorStruct)
+            {
+                GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + description->structValue->at("faultString")->stringValue);
+                continue;
+            }
 
-                auto minimumValueIterator = variable->structValue->find("minimumValue");
-                auto maximumValueIterator = variable->structValue->find("maximumValue");
-                if(minimumValueIterator == variable->structValue->end() || maximumValueIterator == variable->structValue->end())
+            auto typeIterator = description->structValue->find("TYPE");
+            if(typeIterator != description->structValue->end()) variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
+
+            auto minimumValueIterator = variable->structValue->find("minimumValue");
+            auto maximumValueIterator = variable->structValue->find("maximumValue");
+            if(minimumValueIterator == variable->structValue->end() || maximumValueIterator == variable->structValue->end())
+            {
+                if(minimumValueIterator == variable->structValue->end())
                 {
-                    if(minimumValueIterator == variable->structValue->end())
+                    auto minimumValueIterator2 = description->structValue->find("MIN");
+                    if(minimumValueIterator2 != description->structValue->end())
                     {
-                        auto minimumValueIterator2 = description->structValue->find("MIN");
-                        if(minimumValueIterator2 != description->structValue->end())
-                        {
-                            variable->structValue->emplace("minimumValue", minimumValueIterator2->second);
-                        }
+                        variable->structValue->emplace("minimumValue", minimumValueIterator2->second);
                     }
+                }
 
-                    if(maximumValueIterator == variable->structValue->end())
+                if(maximumValueIterator == variable->structValue->end())
+                {
+                    auto maximumValueIterator2 = description->structValue->find("MAX");
+                    if(maximumValueIterator2 != description->structValue->end())
                     {
-                        auto maximumValueIterator2 = description->structValue->find("MAX");
-                        if(maximumValueIterator2 != description->structValue->end())
-                        {
-                            variable->structValue->emplace("maximumValue", maximumValueIterator2->second);
-                        }
+                        variable->structValue->emplace("maximumValue", maximumValueIterator2->second);
                     }
                 }
             }
-            else
+
+            auto rolesIterator = description->structValue->find("ROLES");
+            if(rolesIterator != description->structValue->end())
             {
-                auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(addValue && !value->errorStruct) variable->structValue->emplace("value", value);
-
-                std::string type;
-                if(value->type == BaseLib::VariableType::tBoolean) type = "BOOL";
-                else if(value->type == BaseLib::VariableType::tString) type = "STRING";
-                else if(value->type == BaseLib::VariableType::tInteger) type = "INTEGER";
-                else if(value->type == BaseLib::VariableType::tInteger64) type = "INTEGER64";
-                else if(value->type == BaseLib::VariableType::tFloat) type = "FLOAT";
-                else if(value->type == BaseLib::VariableType::tArray) type = "ARRAY";
-                else if(value->type == BaseLib::VariableType::tStruct) type = "STRUCT";
-
-                variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(type)));
+                variable->structValue->emplace("roles", rolesIterator->second);
             }
         }
     }
@@ -961,7 +956,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
         {
             if(variableInput->peerId == 0)
             {
-                auto systemVariable = GD::bl->db->getSystemVariableInternal(variableInput->name);
+                auto systemVariable = GD::systemVariableController->getInternal(variableInput->name);
                 if(!systemVariable) return false;
                 clientInfo->acls->checkSystemVariableReadAccess(systemVariable);
             }
@@ -985,7 +980,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
         {
             if(variableOutput->peerId == 0)
             {
-                auto systemVariable = GD::bl->db->getSystemVariableInternal(variableOutput->name);
+                auto systemVariable = GD::systemVariableController->getInternal(variableOutput->name);
                 if(!systemVariable) return false;
                 clientInfo->acls->checkSystemVariableReadAccess(systemVariable);
             }
