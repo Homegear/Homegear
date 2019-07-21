@@ -1424,7 +1424,6 @@ RED.comms = (function() {
             }
         });
         homegear.error(function(message) {
-            console.log(window);
             if(errornotification) errornotification.close();
             errornotification = RED.notify(RED._("notification.error",{message:RED._("notification.errors.lostConnection")}),"error",true);
         });
@@ -9068,7 +9067,7 @@ RED.stack = (function() {
         string: {value:"string",label:"string",icon:"red/images/typedInput/az.png"},
         int: {value:"int",label:"int",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*$/},
         float: {value:"float",label:"float",icon:"red/images/typedInput/09.png",validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/},
-        suntime: {value:"suntime",label:"sun",icon:"red/images/typedInput/bool.png",options:["sunrise","sunset","sunriseEnd", "sunsetStart", "dawn", "dusk", "nauticalDawn", "nauticalDusk", "nightEnd", "night", "goldenHourEnd", "goldenHour", "solarNoon", "nadir"]},
+        suntime: {value:"suntime",label:"sun",icon:"red/images/typedInput/bool.png",options:["sunrise","sunriseEnd","goldenHourEnd","solarNoon","goldenHour","sunsetStart","sunset","dusk","nauticalDusk","night","nadir","nightEnd","nauticalDawn","dawn"]},
         time: {value:"time",defaultValue:"HH:MM[:SS]",label:"time",icon:"red/images/typedInput/time.png",validate:/^([0-9]|0[0-9]|1[0-9]|2[0-3])(:[0-5][0-9]){1,2}$/},
         array: {
             value:"array",
