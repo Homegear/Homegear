@@ -23,7 +23,7 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
+void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
 {
 	try
 	{
@@ -50,10 +50,6 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				if(i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler did not handle event.");
 			}
 			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
@@ -246,7 +242,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 #ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
 				scriptInfo->socket = socket;
 				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 				scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -260,11 +256,11 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 					}
 					catch(BaseLib::SocketDataLimitException& ex)
 					{
-						GD::out.printWarning("Warning: " + ex.what());
+						GD::out.printWarning("Warning: " + std::string(ex.what()));
 					}
 					catch(const BaseLib::SocketOperationException& ex)
 					{
-						GD::out.printError("Error: " + ex.what());
+						GD::out.printError("Error: " + std::string(ex.what()));
 					}
 					catch(const std::exception& ex)
 					{
@@ -309,18 +305,8 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			send(socket, content);
 			return;
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
-			send(socket, content);
-			return;
-		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -330,7 +316,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 	}
 }
 
-void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
 {
 	try
 	{
@@ -355,10 +341,6 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				}
 			}
 			catch(const std::exception& ex)
-			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
 			{
 				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
@@ -517,7 +499,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				contentPath = GD::bl->settings.uiPath();
 			}
 			else fullPath = _serverInfo->contentPath + path;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
 			scriptInfo->socket = socket;
 			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 			scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -531,11 +513,11 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				}
 				catch(BaseLib::SocketDataLimitException& ex)
 				{
-					GD::out.printWarning("Warning: " + ex.what());
+					GD::out.printWarning("Warning: " + std::string(ex.what()));
 				}
 				catch(const BaseLib::SocketOperationException& ex)
 				{
-					GD::out.printError("Error: " + ex.what());
+					GD::out.printError("Error: " + std::string(ex.what()));
 				}
 				catch(const std::exception& ex)
 				{
@@ -550,12 +532,6 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			send(socket, content);
 			return;
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
-			send(socket, content);
-			return;
-		}
 #else
         getError(500, _http.getStatusText(500), "Homegear is compiled without script engine.", content);
         send(socket, content);
@@ -565,14 +541,71 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+{
+    try
+    {
+        if(!socket)
+        {
+            _out.printError("Error: Socket is nullptr.");
+            return;
+        }
+        std::string path = http.getHeader().path;
+
+        std::vector<char> content;
+        if(!path.empty() && path.front() == '/') path = path.substr(1);
+
+        if(GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
+        {
+            _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: DELETE)");
+            std::string responseEncoding;
+            std::string contentString = GD::nodeBlueServer->handleDelete(path, http, responseEncoding);
+            if(contentString == "unauthorized")
+            {
+                getError(401, _http.getStatusText(401), "You are not logged in.", content);
+                send(socket, content);
+                return;
+            }
+            else if(!contentString.empty())
+            {
+                std::vector<std::string> headers;
+                std::string header;
+                _http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
+                content.insert(content.end(), header.begin(), header.end());
+                content.insert(content.end(), contentString.begin(), contentString.end());
+                send(socket, content);
+                return;
+            }
+            else
+            {
+                std::vector<std::string> headers;
+                std::string header;
+                _http.constructHeader(contentString.size(), responseEncoding, 204, "No Content", headers, header);
+                content.insert(content.end(), header.begin(), header.end());
+                send(socket, content);
+                return;
+            }
+        }
+
+        GD::out.printWarning("Warning: Requested URL not found: " + path);
+        getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+        send(socket, content);
+        return;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content)
@@ -587,10 +620,6 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
 		content.insert(content.end(), contentString.begin(), contentString.end());
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -614,10 +643,6 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -637,18 +662,14 @@ void WebServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<ch
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
 		{
-			_out.printWarning("Warning: " + ex.what());
+			_out.printWarning("Warning: " + std::string(ex.what()));
 		}
 		catch(const BaseLib::SocketOperationException& ex)
 		{
-			_out.printInfo("Info: " + ex.what());
+			_out.printInfo("Info: " + std::string(ex.what()));
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -703,10 +724,6 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, Base
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -730,10 +747,6 @@ void WebServer::sendOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
 	catch(...)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
@@ -750,10 +763,6 @@ void WebServer::registerSendHeadersHook(std::string& moduleName, std::function<v
 		_sendHeaderHooks[moduleName] = callback;
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

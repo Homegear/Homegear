@@ -415,14 +415,6 @@ std::string CliServer::userCommand(std::string& command)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return "Error executing command. See log file for more details.\n";
 }
 
@@ -654,14 +646,6 @@ std::string CliServer::moduleCommand(std::string& command)
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "Error executing command. See log file for more details.\n";
 }
@@ -1145,16 +1129,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 				exitCode = 127;
 				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				exitCode = 127;
-				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				exitCode = 127;
-				GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
 			auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 			output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(exitCode));
 			output->structValue->emplace("output", std::make_shared<BaseLib::Variable>(stringStream.str()));
@@ -1202,14 +1176,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return std::make_shared<BaseLib::Variable>(std::string("Error executing command. See log file for more details.\n"));
 }
 
@@ -1227,14 +1193,6 @@ std::string CliServer::familyCommand(int32_t familyId, std::string& command)
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "Error executing command. See log file for more details.\n";
 }
@@ -1263,14 +1221,6 @@ std::string CliServer::peerCommand(uint64_t peerId, std::string& command)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return "Error executing command. See log file for more details.\n";
 }
 
@@ -1286,14 +1236,6 @@ void CliServer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, i
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1315,14 +1257,6 @@ void CliServer::scriptOutput(PScriptInfo& scriptInfo, std::string& output, bool 
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 

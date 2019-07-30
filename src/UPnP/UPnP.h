@@ -82,9 +82,11 @@ private:
 
 	void getAddress();
 
+	void setPackets();
+
 	void getUDN();
 
-	void getSocketDescriptor();
+    std::shared_ptr<BaseLib::FileDescriptor> getSocketDescriptor();
 
 	void listen();
 

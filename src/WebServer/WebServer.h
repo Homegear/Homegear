@@ -46,9 +46,11 @@ public:
 
 	virtual ~WebServer();
 
-	void get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime = 0);
+	void get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime = 0);
 
-	void post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+	void post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+
+    void delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
 	void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
 

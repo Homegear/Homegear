@@ -54,7 +54,7 @@ losetup -d $device
 [ $? -ne 0 ] && exit 1
 sleep 1
 
-device=`kpartx -va $image | sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1`
+device=`kpartx -va $image | sed -E 's/.*(loop[0-9]{1,2})p.*/\1/g' | head -1`
 [ $? -ne 0 ] && exit 1
 sleep 1
 
@@ -580,7 +580,7 @@ apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Up
 
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
-apt-get -y install homegear homegear-management homegear-webssh homegear-adminui homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno homegear-ccu2 homegear-zwave | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
+apt-get -y install homegear homegear-management homegear-webssh homegear-adminui homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno homegear-ccu homegear-zwave homegear-nanoleaf | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))

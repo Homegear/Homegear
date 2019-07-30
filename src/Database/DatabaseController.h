@@ -202,37 +202,27 @@ public:
 	// }}}
 
 	// {{{ System variables
-	virtual BaseLib::PVariable deleteSystemVariable(std::string& variableId);
+	virtual void deleteSystemVariable(std::string& variableId);
 
-	virtual BaseLib::PVariable getSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, bool checkAcls);
+    virtual std::shared_ptr<BaseLib::Database::DataTable> getAllSystemVariables();
 
-	virtual BaseLib::Database::PSystemVariable getSystemVariableInternal(std::string& variableId);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getSystemVariable(const std::string& variableId);
 
-	virtual BaseLib::PVariable getSystemVariableCategories(std::string& variableId);
-
-	virtual std::set<uint64_t> getSystemVariableCategoriesInternal(std::string& variableId);
-
-	virtual BaseLib::PVariable getSystemVariableRoom(std::string& variableId);
-
-	virtual BaseLib::PVariable getSystemVariablesInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, bool checkAcls);
-
-	virtual BaseLib::PVariable getSystemVariablesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
-
-	virtual uint64_t getSystemVariableRoomInternal(std::string& variableId);
-
-	virtual BaseLib::PVariable getAllSystemVariables(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesFlags, bool checkAcls);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getSystemVariablesInRoom(uint64_t roomId);
 
 	virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
 
+    virtual void removeRoleFromSystemVariables(uint64_t categoryId);
+
 	virtual void removeRoomFromSystemVariables(uint64_t roomId);
 
-	virtual BaseLib::PVariable setSystemVariable(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value, int32_t flags, bool checkAcls);
+	virtual BaseLib::PVariable setSystemVariable(std::string& variableId, BaseLib::PVariable& value, uint64_t roomId, const std::string& categories, const std::string& roles, int32_t flags);
 
-	virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, std::set<uint64_t>& categories);
+	virtual BaseLib::PVariable setSystemVariableCategories(std::string& variableId, const std::string& categories);
+
+    virtual BaseLib::PVariable setSystemVariableRoles(std::string& variableId, const std::string& roles);
 
 	virtual BaseLib::PVariable setSystemVariableRoom(std::string& variableId, uint64_t room);
-
-	virtual bool systemVariableHasCategory(std::string& variableId, uint64_t categoryId);
 	// }}}
 
 	// {{{ Users
@@ -264,6 +254,12 @@ public:
 
 	virtual bool userNameExists(const std::string& name);
 	// }}}
+
+	//{{{ User data
+    BaseLib::PVariable setUserData(uint64_t userId, const std::string& component, const std::string& key, const BaseLib::PVariable& value) override;
+    BaseLib::PVariable getUserData(uint64_t userId, const std::string& component, const std::string& key) override;
+    BaseLib::PVariable deleteUserData(uint64_t userId, const std::string& component, const std::string& key) override;
+	//}}}
 
 	// {{{ Groups
 	virtual BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl);
@@ -373,17 +369,14 @@ protected:
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-	std::mutex _systemVariableMutex;
-	std::map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
-
 	std::mutex _dataMutex;
-	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
+	std::unordered_map<std::string, std::map<std::string, BaseLib::PVariable>> _data;
 
 	std::mutex _nodeDataMutex;
-	std::map<std::string, std::map<std::string, BaseLib::PVariable>> _nodeData;
+	std::unordered_map<std::string, std::map<std::string, BaseLib::PVariable>> _nodeData;
 
 	std::mutex _metadataMutex;
-	std::map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;
+	std::unordered_map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;
 
 	virtual void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 };

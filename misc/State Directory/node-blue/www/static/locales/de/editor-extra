@@ -1,0 +1,85 @@
+{
+    "menu": {
+        "label": {
+            "powered": "Powered by Node-RED",
+            "nodebluewebsite": "Node-BLUE website"
+        }
+    },
+    "notification": {
+        "info": "<strong>Info</strong>: __message__",
+        "infoMessages": {
+            "flowsStarted": "Flows wurden (neu)gestartet."
+        },
+        "warnings": {
+            "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
+        },
+        "errors": {
+             "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Für weitere Informationen schauen Sie ins Fehlerlog.</p>",
+             "loadCatalogManagementError": "<p>Systemarchitektur konnte nicht ermittelt werden. Ist homegear-management installiert?</p>"
+        }
+    },
+    "editor" : {
+        "nodesUse_plural" : "__count__ Knoten verwenden diese Konfiguration",
+        "addNewConfig" : "Neuen __type__-Konfigurationsknoten hinzufügen",
+        "editNode" : "__type__-Knoten bearbeiten",
+        "editConfig" : "__type__-Konfigurationsknoten bearbeiten",
+        "addNewType" : "Neuen __type__-Knoten hinzufügen ..."
+    },
+    "palette" : {
+        "filter": "Knoten filtern",
+        "search": "Knotenverzeichnis durchsuchen",
+        "label" : {
+            "subflows" : "Subflows",
+            "heating" : "Heizung",
+            "general" : "Allgemein",
+            "communication" : "Kommunikation",
+            "notification" : "Benachrichtigung",
+            "logic" : "Logik",
+            "database" : "Datenbank",
+            "parsers" : "Parser",
+            "time" : "Zeit"
+        },
+        "editor": {
+            "times": {
+                "seconds" : "Vor Sekunden",
+                "minutes" : "Vor Minuten",
+                "minutesV" : "Vor __count__ Minuten",
+                "hoursV" : "Vor einer Stunde",
+                "hoursV_plural" : "Vor __count__ Stunden",
+                "daysV" : "Vor einem Tag",
+                "daysV_plural" : "Vor __count__ Tagen",
+                "weeksV" : "Vor einer Woche",
+                "weeksV_plural" : "Vor __count__ Wochen",
+                "monthsV" : "Vor einem Monat",
+                "monthsV_plural" : "Vor __count__ Monaten",
+                "yearsV" : "Vor einem Jahr",
+                "yearsV_plural" : "Vor __count__ Jahren",
+                "yearMonthsV" : "Vor einem Jahr und einem Monat",
+                "yearMonthsV_plural" : "Vor einem Jahr und __count__ Monaten",
+                "yearsMonthsV" : "Vor ____ Jahren und einem Monat",
+                "yearsMonthsV_plural" : "Vor ____ Jahren und __count__ Monaten"
+            },
+            "remove": "Entfernen",
+            "install": "Installieren",
+            "tab-install" : "Installieren",
+            "confirm": {
+                "install" : {
+                    "body" : "<p>Installieren von '__module__'</p><p>Bitte lesen Sie vor der Installation die Dokumentation des Knotens. Einige Knoten haben Abhängigkeiten, welche nicht automatisch aufgelöst werden können.</p>"
+                },
+                "remove" : {
+                    "body" : "<p>Entfernen von '__module__'</p><p>Sind Sie sicher, dass Sie den Knoten entfernen möchten?</p>"
+                }
+            }
+        }
+    },
+    "history": {
+        "title": "History",
+        "lastValue": "Last value:"
+    },
+    "fixedInputs": {
+        "title": "Set fixed input",
+        "description": "You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.",
+        "clear": "Clear",
+        "set": "Set"
+    }
+}

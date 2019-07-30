@@ -47,14 +47,6 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 Mqtt::~Mqtt()
@@ -66,14 +58,6 @@ Mqtt::~Mqtt()
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -88,6 +72,12 @@ void Mqtt::start()
 {
 	try
 	{
+	    if(GD::rpcServers.empty())
+        {
+	        _out.printError("Error: Could not start MQTT client as there are no RPC servers available.");
+	        return;
+        }
+
 		if(_started) return;
 		_started = true;
 
@@ -123,14 +113,6 @@ void Mqtt::start()
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void Mqtt::stop()
@@ -151,14 +133,6 @@ void Mqtt::stop()
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -265,16 +239,6 @@ void Mqtt::getResponseByType(const std::vector<char>& packet, std::vector<char>&
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_requestsByTypeMutex.unlock();
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		_requestsByTypeMutex.unlock();
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		_requestsByTypeMutex.unlock();
-	}
 }
 
 void Mqtt::getResponse(const std::vector<char>& packet, std::vector<char>& responseBuffer, uint8_t responseType, int16_t packetId, bool errors)
@@ -319,16 +283,6 @@ void Mqtt::getResponse(const std::vector<char>& packet, std::vector<char>& respo
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_requestsMutex.unlock();
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		_requestsMutex.unlock();
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		_requestsMutex.unlock();
-	}
 }
 
 void Mqtt::ping()
@@ -361,14 +315,6 @@ void Mqtt::ping()
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -447,7 +393,7 @@ void Mqtt::listen()
 			catch(BaseLib::SocketOperationException& ex)
 			{
 				_socket->close();
-				_out.printError("Error: " + ex.what());
+				_out.printError("Error: " + std::string(ex.what()));
 				continue;
 			}
 
@@ -468,14 +414,6 @@ void Mqtt::listen()
 		catch(const std::exception& ex)
 		{
 			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 		data.clear();
 		length = 0;
@@ -557,14 +495,6 @@ void Mqtt::processData(std::vector<char>& data)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void Mqtt::processPublish(std::vector<char>& data)
@@ -641,9 +571,9 @@ void Mqtt::processPublish(std::vector<char>& data)
 					}
 				}
 			}
-			catch(BaseLib::Exception& ex)
+			catch(std::exception& ex)
 			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, std::string(ex.what()) + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
 				return;
 			}
 			if(!value)
@@ -701,9 +631,9 @@ void Mqtt::processPublish(std::vector<char>& data)
 			{
 				value = _jsonDecoder->decode(payload);
 			}
-			catch(BaseLib::Exception& ex)
+			catch(std::exception& ex)
 			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, std::string(ex.what()) + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
 				return;
 			}
 			if(value) parameters->arrayValue->push_back(value);
@@ -717,9 +647,9 @@ void Mqtt::processPublish(std::vector<char>& data)
 			{
 				result = _jsonDecoder->decode(payload);
 			}
-			catch(BaseLib::Exception& ex)
+			catch(std::exception& ex)
 			{
-				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what() + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, std::string(ex.what()) + " Payload was: " + BaseLib::HelperFunctions::getHexString(payload));
 				return;
 			}
 			std::string methodName;
@@ -760,14 +690,6 @@ void Mqtt::processPublish(std::vector<char>& data)
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -843,14 +765,6 @@ void Mqtt::subscribe(std::string topic)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void Mqtt::reconnect()
@@ -867,14 +781,6 @@ void Mqtt::reconnect()
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1123,14 +1029,6 @@ void Mqtt::connect()
 		{
 			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 	}
 	_connectMutex.unlock();
@@ -1148,20 +1046,12 @@ void Mqtt::disconnect()
 		_socket->close();
 	}
 	catch(const std::exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
-void Mqtt::queueMessage(std::string topic, std::string& payload)
+void Mqtt::queueMessage(const std::string& topic, const std::string& payload)
 {
 
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(topic, payload)-> topic:" + topic + " payload:" + payload);
@@ -1177,17 +1067,9 @@ void Mqtt::queueMessage(std::string topic, std::string& payload)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::string& key, BaseLib::PVariable& value)
+void Mqtt::queueMessage(const std::string& source, uint64_t peerId, int32_t channel, const std::string& key, const BaseLib::PVariable& value)
 {
 
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, key, value) -> peerId=" + std::to_string(peerId) + ", channel=" + std::to_string(channel) + ", key=" + key + ", value=" + value->stringValue);
@@ -1266,17 +1148,9 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, std::vector<std::string>& keys, std::vector<BaseLib::PVariable>& values)
+void Mqtt::queueMessage(const std::string& source, uint64_t peerId, int32_t channel, const std::vector<std::string>& keys, const std::vector<BaseLib::PVariable>& values)
 {
 	if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: queueMessage(peerId, channel, keys, values) -> peerId=" + std::to_string(peerId) + ", channel=" + std::to_string(channel) + ", keys, values");
 	try
@@ -1322,7 +1196,7 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 				{
 					if(_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
 					{
-						auto systemVariable = GD::bl->db->getSystemVariableInternal(keys.at(i));
+						auto systemVariable = GD::systemVariableController->getInternal(keys.at(i));
 						if(!systemVariable || !_dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
 					}
 				}
@@ -1395,14 +1269,6 @@ void Mqtt::queueMessage(std::string& source, uint64_t peerId, int32_t channel, s
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
@@ -1417,14 +1283,6 @@ void Mqtt::queueMessage(std::shared_ptr<MqttMessage>& message)
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1512,16 +1370,6 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-
-
 }
 
 void Mqtt::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry)
@@ -1546,14 +1394,6 @@ void Mqtt::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(const BaseLib::Exception& ex)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 

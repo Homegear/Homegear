@@ -44,6 +44,8 @@
 #include "../RPC/RpcServer.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"
+#include "../IpcLogger.h"
+#include "../Database/SystemVariableController.h"
 #include <homegear-base/BaseLib.h>
 
 #include <vector>
@@ -89,6 +91,8 @@ public:
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
 	static std::unique_ptr<UiController> uiController;
+    static std::unique_ptr<SystemVariableController> systemVariableController;
+	static std::unique_ptr<IpcLogger> ipcLogger;
 #ifdef EVENTHANDLER
 	static std::unique_ptr<EventHandler> eventHandler;
 #endif

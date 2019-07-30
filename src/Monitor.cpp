@@ -129,14 +129,6 @@ void Monitor::stop()
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void Monitor::dispose()
@@ -170,14 +162,6 @@ void Monitor::checkHealth(pid_t mainProcessId)
 	catch(const std::exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -272,14 +256,6 @@ void Monitor::checkHealthThread(pid_t mainProcessId)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 void Monitor::monitor()
@@ -337,14 +313,6 @@ void Monitor::monitor()
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
 bool Monitor::lifetick()
@@ -362,14 +330,6 @@ bool Monitor::lifetick()
 	catch(const std::exception& ex)
 	{
 		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
 }

@@ -51,6 +51,8 @@ public:
 
 	virtual ~NodeBlueServer();
 
+    bool lifetick();
+
 	bool start();
 
 	void stop();
@@ -61,7 +63,7 @@ public:
 
 	void homegearReloading();
 
-	void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
+	void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
 	uint32_t flowCount();
 
@@ -80,6 +82,8 @@ public:
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+
+    std::string handleDelete(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
 
@@ -138,6 +142,7 @@ private:
 	std::thread _maintenanceThread;
 	int32_t _backlog = 100;
 	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+	std::atomic<int32_t> _processCallbackHandlerId{-1};
 	std::mutex _processRequestMutex;
 	std::mutex _newProcessMutex;
 	std::mutex _processMutex;
@@ -157,6 +162,7 @@ private:
 	std::mutex _restartFlowsMutex;
 	std::mutex _flowsPostMutex;
 	std::mutex _flowsFileMutex;
+	std::mutex _nodesInstallMutex;
 	std::map<std::string, uint32_t> _maxThreadCounts;
 	std::vector<NodeManager::PNodeInfo> _nodeInfo;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
@@ -171,6 +177,11 @@ private:
 
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+    std::mutex _lifetick1Mutex;
+    std::pair<int64_t, bool> _lifetick1;
+    std::mutex _lifetick2Mutex;
+    std::pair<int64_t, bool> _lifetick2;
 
 	// {{{ Debugging / Valgrinding
 	pid_t _manualClientCurrentProcessId = 1;
@@ -218,6 +229,10 @@ private:
 
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
+	std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable& variable);
+
+	void frontendNodeEventLog(const std::string& message);
+
 	// {{{ RPC methods
 	BaseLib::PVariable registerFlowsClient(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 
@@ -227,7 +242,11 @@ private:
 
 	BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 
+    BaseLib::PVariable invokeIpcProcessMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+
+    BaseLib::PVariable frontendEventLog(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
 	// }}}
 };
 

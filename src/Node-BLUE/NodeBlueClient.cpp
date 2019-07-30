@@ -171,14 +171,6 @@ void NodeBlueClient::dispose()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void NodeBlueClient::resetClient(Flows::PVariable packetId)
@@ -295,14 +287,6 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     Flows::PVariable result = Flows::Variable::createError(-32500, "Unknown application error.");
     sendResponse(packetId, result);
@@ -457,7 +441,7 @@ void NodeBlueClient::start()
             }
             catch(Flows::BinaryRpcException& ex)
             {
-                _out.printError("Error processing packet: " + ex.what());
+                _out.printError("Error processing packet: " + std::string(ex.what()));
                 _binaryRpc->reset();
             }
         }
@@ -466,14 +450,6 @@ void NodeBlueClient::start()
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -495,14 +471,6 @@ void NodeBlueClient::registerClient()
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -555,14 +523,6 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
             {
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
             }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
             _processingThreadCountMaxReached1 = 0;
             _processingThreadCount1--;
         }
@@ -612,14 +572,6 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
             catch(const std::exception& ex)
             {
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
             }
             _processingThreadCountMaxReached2 = 0;
             _processingThreadCount2--;
@@ -678,14 +630,6 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
             {
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
             }
-            catch(BaseLib::Exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
             _processingThreadCountMaxReached3 = 0;
             _processingThreadCount3--;
         }
@@ -693,14 +637,6 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -726,18 +662,10 @@ Flows::PVariable NodeBlueClient::send(std::vector<char>& data)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::make_shared<Flows::Variable>();
 }
 
-Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray parameters, bool wait)
+Flows::PVariable NodeBlueClient::invoke(const std::string& methodName, Flows::PArray parameters, bool wait)
 {
     try
     {
@@ -831,18 +759,10 @@ Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray pa
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable NodeBlueClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait)
+Flows::PVariable NodeBlueClient::invokeNodeMethod(const std::string& nodeId, const std::string& methodName, Flows::PArray parameters, bool wait)
 {
     try
     {
@@ -862,14 +782,6 @@ Flows::PVariable NodeBlueClient::invokeNodeMethod(std::string nodeId, std::strin
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -887,22 +799,33 @@ void NodeBlueClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& 
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
+}
+
+void NodeBlueClient::log(const std::string& nodeId, int32_t logLevel, const std::string& message)
+{
+    _out.printMessage("Node " + nodeId + ": " + message, logLevel, logLevel <= 3);
+    frontendEventLog(nodeId, message);
+}
+
+void NodeBlueClient::frontendEventLog(const std::string& nodeId, const std::string& message)
+{
+    try
+    {
+        Flows::PArray parameters = std::make_shared<Flows::Array>();
+        parameters->reserve(2);
+        parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+        parameters->push_back(std::make_shared<Flows::Variable>(message));
+
+        Flows::PVariable result = invoke("frontendEventLog", parameters, false);
+        if(result->errorStruct) GD::out.printError("Error calling frontendEventLog: " + result->structValue->at("faultString")->stringValue);
+    }
+    catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::log(std::string nodeId, int32_t logLevel, std::string message)
-{
-    _out.printMessage("Node " + nodeId + ": " + message, logLevel, logLevel <= 3);
-}
-
-void NodeBlueClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+void NodeBlueClient::subscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable)
 {
     try
     {
@@ -913,17 +836,9 @@ void NodeBlueClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t 
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+void NodeBlueClient::unsubscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable)
 {
     try
     {
@@ -934,17 +849,9 @@ void NodeBlueClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
+void NodeBlueClient::subscribeFlow(const std::string& nodeId, const std::string& flowId)
 {
     try
     {
@@ -956,17 +863,9 @@ void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
+void NodeBlueClient::unsubscribeFlow(const std::string& nodeId, const std::string& flowId)
 {
     try
     {
@@ -978,17 +877,9 @@ void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::subscribeGlobal(std::string nodeId)
+void NodeBlueClient::subscribeGlobal(const std::string& nodeId)
 {
     try
     {
@@ -999,17 +890,9 @@ void NodeBlueClient::subscribeGlobal(std::string nodeId)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::unsubscribeGlobal(std::string nodeId)
+void NodeBlueClient::unsubscribeGlobal(const std::string& nodeId)
 {
     try
     {
@@ -1020,17 +903,9 @@ void NodeBlueClient::unsubscribeGlobal(std::string nodeId)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
+void NodeBlueClient::queueOutput(const std::string& nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
 {
     try
     {
@@ -1198,17 +1073,9 @@ void NodeBlueClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVar
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value)
+void NodeBlueClient::nodeEvent(const std::string& nodeId, const std::string& topic, Flows::PVariable value)
 {
     try
     {
@@ -1229,17 +1096,9 @@ void NodeBlueClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVa
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-Flows::PVariable NodeBlueClient::getNodeData(std::string nodeId, std::string key)
+Flows::PVariable NodeBlueClient::getNodeData(const std::string& nodeId, const std::string& key)
 {
     try
     {
@@ -1261,18 +1120,10 @@ Flows::PVariable NodeBlueClient::getNodeData(std::string nodeId, std::string key
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::make_shared<Flows::Variable>();
 }
 
-void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVariable value)
+void NodeBlueClient::setNodeData(const std::string& nodeId, const std::string& key, Flows::PVariable value)
 {
     try
     {
@@ -1288,17 +1139,9 @@ void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVa
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-Flows::PVariable NodeBlueClient::getFlowData(std::string flowId, std::string key)
+Flows::PVariable NodeBlueClient::getFlowData(const std::string& flowId, const std::string& key)
 {
     try
     {
@@ -1320,18 +1163,10 @@ Flows::PVariable NodeBlueClient::getFlowData(std::string flowId, std::string key
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::make_shared<Flows::Variable>();
 }
 
-void NodeBlueClient::setFlowData(std::string flowId, std::string key, Flows::PVariable value)
+void NodeBlueClient::setFlowData(const std::string& flowId, const std::string& key, Flows::PVariable value)
 {
     try
     {
@@ -1347,17 +1182,9 @@ void NodeBlueClient::setFlowData(std::string flowId, std::string key, Flows::PVa
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-Flows::PVariable NodeBlueClient::getGlobalData(std::string key)
+Flows::PVariable NodeBlueClient::getGlobalData(const std::string& key)
 {
     try
     {
@@ -1377,18 +1204,10 @@ Flows::PVariable NodeBlueClient::getGlobalData(std::string key)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::make_shared<Flows::Variable>();
 }
 
-void NodeBlueClient::setGlobalData(std::string key, Flows::PVariable value)
+void NodeBlueClient::setGlobalData(const std::string& key, Flows::PVariable value)
 {
     try
     {
@@ -1403,17 +1222,9 @@ void NodeBlueClient::setGlobalData(std::string key, Flows::PVariable value)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::setInternalMessage(std::string nodeId, Flows::PVariable message)
+void NodeBlueClient::setInternalMessage(const std::string& nodeId, Flows::PVariable message)
 {
     try
     {
@@ -1437,17 +1248,9 @@ void NodeBlueClient::setInternalMessage(std::string nodeId, Flows::PVariable mes
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void NodeBlueClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
+void NodeBlueClient::setInputValue(const std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
 {
     try
     {
@@ -1482,17 +1285,9 @@ void NodeBlueClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flow
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-Flows::PVariable NodeBlueClient::getConfigParameter(std::string nodeId, std::string name)
+Flows::PVariable NodeBlueClient::getConfigParameter(const std::string& nodeId, const std::string& name)
 {
     try
     {
@@ -1502,14 +1297,6 @@ Flows::PVariable NodeBlueClient::getConfigParameter(std::string nodeId, std::str
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::make_shared<Flows::Variable>();
 }
@@ -1559,14 +1346,6 @@ void NodeBlueClient::watchdog()
         {
             _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         }
-        catch(BaseLib::Exception& ex)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        catch(...)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-        }
     }
 }
 
@@ -1590,14 +1369,6 @@ Flows::PVariable NodeBlueClient::reload(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1613,14 +1384,6 @@ Flows::PVariable NodeBlueClient::shutdown(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -1770,25 +1533,25 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
                 nodeObject->setId(node->id);
                 nodeObject->setFlowId(node->flowId);
 
-                nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&NodeBlueClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray)>(std::bind(&NodeBlueClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
-                nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray, bool)>(std::bind(&NodeBlueClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setSubscribeFlow(std::function<void(std::string, std::string)>(std::bind(&NodeBlueClient::subscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setUnsubscribeFlow(std::function<void(std::string, std::string)>(std::bind(&NodeBlueClient::unsubscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSubscribeGlobal(std::function<void(std::string)>(std::bind(&NodeBlueClient::subscribeGlobal, this, std::placeholders::_1)));
-                nodeObject->setUnsubscribeGlobal(std::function<void(std::string)>(std::bind(&NodeBlueClient::unsubscribeGlobal, this, std::placeholders::_1)));
-                nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setGetFlowData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getFlowData, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSetFlowData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setFlowData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setGetGlobalData(std::function<Flows::PVariable(std::string)>(std::bind(&NodeBlueClient::getGlobalData, this, std::placeholders::_1)));
-                nodeObject->setSetGlobalData(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setGlobalData, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSetInternalMessage(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setLog(std::function<void(const std::string&, int32_t, const std::string&)>(std::bind(&NodeBlueClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setInvoke(std::function<Flows::PVariable(const std::string&, Flows::PArray)>(std::bind(&NodeBlueClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
+                nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(const std::string&, const std::string&, Flows::PArray, bool)>(std::bind(&NodeBlueClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setSubscribePeer(std::function<void(const std::string&, uint64_t, int32_t, const std::string&)>(std::bind(&NodeBlueClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setUnsubscribePeer(std::function<void(const std::string&, uint64_t, int32_t, const std::string&)>(std::bind(&NodeBlueClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setSubscribeFlow(std::function<void(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::subscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setUnsubscribeFlow(std::function<void(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::unsubscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSubscribeGlobal(std::function<void(const std::string&)>(std::bind(&NodeBlueClient::subscribeGlobal, this, std::placeholders::_1)));
+                nodeObject->setUnsubscribeGlobal(std::function<void(const std::string&)>(std::bind(&NodeBlueClient::unsubscribeGlobal, this, std::placeholders::_1)));
+                nodeObject->setOutput(std::function<void(const std::string&, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setNodeEvent(std::function<void(const std::string&, const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetNodeData(std::function<Flows::PVariable(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetNodeData(std::function<void(const std::string&, const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetFlowData(std::function<Flows::PVariable(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::getFlowData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetFlowData(std::function<void(const std::string&, const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setFlowData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetGlobalData(std::function<Flows::PVariable(const std::string&)>(std::bind(&NodeBlueClient::getGlobalData, this, std::placeholders::_1)));
+                nodeObject->setSetGlobalData(std::function<void(const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setGlobalData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetInternalMessage(std::function<void(const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setGetConfigParameter(std::function<Flows::PVariable(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
                 if(!nodeObject->init(node))
                 {
@@ -1818,14 +1581,6 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -1867,14 +1622,6 @@ Flows::PVariable NodeBlueClient::startNodes(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1896,14 +1643,6 @@ Flows::PVariable NodeBlueClient::configNodesStarted(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -1927,14 +1666,6 @@ Flows::PVariable NodeBlueClient::startUpComplete(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -1979,14 +1710,6 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2035,14 +1758,6 @@ Flows::PVariable NodeBlueClient::stopFlow(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2056,14 +1771,6 @@ Flows::PVariable NodeBlueClient::flowCount(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2081,14 +1788,6 @@ Flows::PVariable NodeBlueClient::nodeOutput(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2105,14 +1804,6 @@ Flows::PVariable NodeBlueClient::invokeExternalNodeMethod(Flows::PArray& paramet
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2134,6 +1825,15 @@ Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray& paramet
             if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 3 is not of type string.");
 
             log(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue, innerParameters->at(2)->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+        else if(methodName == "frontendEventLog")
+        {
+            if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+            if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+            if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 3 is not of type string.");
+
+            frontendEventLog(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
             return std::make_shared<Flows::Variable>();
         }
         else if(methodName == "invokeNodeMethod")
@@ -2255,14 +1955,6 @@ Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray& paramet
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2283,14 +1975,6 @@ Flows::PVariable NodeBlueClient::getNodesWithFixedInputs(Flows::PArray& paramete
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2385,14 +2069,6 @@ Flows::PVariable NodeBlueClient::getNodeVariable(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2407,14 +2083,6 @@ Flows::PVariable NodeBlueClient::getFlowVariable(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2518,14 +2186,6 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2547,14 +2207,6 @@ Flows::PVariable NodeBlueClient::setFlowVariable(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2570,14 +2222,6 @@ Flows::PVariable NodeBlueClient::enableNodeEvents(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2592,14 +2236,6 @@ Flows::PVariable NodeBlueClient::disableNodeEvents(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2643,14 +2279,6 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2678,14 +2306,6 @@ Flows::PVariable NodeBlueClient::broadcastFlowVariableEvent(Flows::PArray& param
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2709,14 +2329,6 @@ Flows::PVariable NodeBlueClient::broadcastGlobalVariableEvent(Flows::PArray& par
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2731,14 +2343,6 @@ Flows::PVariable NodeBlueClient::broadcastNewDevices(Flows::PArray& parameters)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2755,14 +2359,6 @@ Flows::PVariable NodeBlueClient::broadcastDeleteDevices(Flows::PArray& parameter
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -2777,14 +2373,6 @@ Flows::PVariable NodeBlueClient::broadcastUpdateDevice(Flows::PArray& parameters
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }

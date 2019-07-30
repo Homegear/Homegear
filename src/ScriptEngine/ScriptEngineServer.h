@@ -65,6 +65,8 @@ public:
 
     virtual ~ScriptEngineServer();
 
+    bool lifetick();
+
     bool start();
 
     void stop();
@@ -73,7 +75,7 @@ public:
 
     void homegearReloading();
 
-    void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
+    void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
     void devTestClient();
 
@@ -140,16 +142,13 @@ private:
     typedef std::shared_ptr<ClientScriptInfo> PClientScriptInfo;
 
     BaseLib::Output _out;
-#ifdef DEBUGSESOCKET
-    std::mutex _socketOutputMutex;
-    std::ofstream _socketOutput;
-#endif
     std::string _socketPath;
     std::atomic_bool _shuttingDown;
     std::atomic_bool _stopServer;
     std::thread _mainThread;
     int32_t _backlog = 100;
     std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+    std::atomic<int32_t> _processCallbackHandlerId{-1};
     std::mutex _newProcessMutex;
     std::mutex _processMutex;
     std::mutex _resourceMutex;
@@ -176,15 +175,16 @@ private:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
     std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
+    std::mutex _lifetick1Mutex;
+    std::pair<int64_t, bool> _lifetick1;
+    std::mutex _lifetick2Mutex;
+    std::pair<int64_t, bool> _lifetick2;
+
     // {{{ Debugging / Valgrinding
     pid_t _manualClientCurrentProcessId = 1;
     std::mutex _unconnectedProcessesMutex;
     std::queue<pid_t> _unconnectedProcesses;
     // }}}
-
-#ifdef DEBUGSESOCKET
-    void socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data);
-#endif
 
     void collectGarbage();
 

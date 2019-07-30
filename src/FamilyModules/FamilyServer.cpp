@@ -55,14 +55,6 @@ bool FamilyServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string&
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
@@ -85,14 +77,6 @@ BaseLib::PVariable FamilyServer::callRpcMethod(BaseLib::PRpcClientInfo clientInf
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -106,14 +90,6 @@ BaseLib::PVariable FamilyServer::rpcTest(BaseLib::PRpcClientInfo& clientInfo, Ba
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
