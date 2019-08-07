@@ -102,7 +102,7 @@ echo "deb $deb_local_mirror $deb_release main contrib non-free rpi
 
 echo "blacklist i2c-bcm2708" > $rootfs/etc/modprobe.d/raspi-blacklist.conf
 
-echo "dwc_otg.lpm_enable=0 console=ttyUSB0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline rootwait" > boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=ttyS0,115200 console=tty1 kgdboc=ttyUSB0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline fsck.repair=yes net.ifnames=0 biosdevname=0 noswap rootwait" > boot/cmdline.txt
 
 rm -f $rootfs/etc/fstab
 cat > "$rootfs/etc/fstab" <<'EOF'
@@ -518,7 +518,7 @@ sleep 2
 ping -c 4 apt.homegear.eu 1>/dev/null 2>/dev/null
 if [ $? -ne 0 ]; then
     dialog --no-cancel --stdout --title "No internet" --no-tags --pause "Your device doesn't seem to have a working internet connection. Rebooting in 10 seconds..." 10 50 10
-    poweroff
+    reboot
 fi
 
 mount -o remount,rw /
@@ -526,6 +526,31 @@ mount -o remount,rw /boot
 
 export NCURSES_NO_UTF8_ACS=1
 export DIALOG_OUTPUT=1
+
+# Todo: Change this check to polling the microcontroller once possible
+hardwareRevision=$(cat /proc/cpuinfo | grep Revision | cut -d ':' -f 2 | xargs)
+if [ ${#hardwareRevision} -eq 6 ]; then
+    hardwareRevision=${hardwareRevision:3:2}
+
+    if [ "$hardwareRevision" == "10" ] || [ "$hardwareRevision" == "0a" ]; then
+        # Settings for compute module 3+ and compute module 3
+        echo "" >> /boot/config.txt
+        echo "# UART1 is not working without constant core frequency" >> /boot/config.txt
+        echo "core_freq=400" >> /boot/config.txt
+        echo "# Reduce CPU speed of HG Pro Core => reduce temperature" >> /boot/config.txt
+        echo "arm_freq=400" >> /boot/config.txt
+        echo "# Check if really necessary for UART1 to work" >> /boot/config.txt
+        echo "force_turbo=1" >> /boot/config.txt
+        echo "" >> /boot/config.txt
+        echo "# GPIOs, welche am LAN-Chip hängen" >> /boot/config.txt
+        echo "gpio=12=op,dh" >> /boot/config.txt
+        echo "gpio=44=op,dh" >> /boot/config.txt
+        echo "" >> /boot/config.txt
+        echo "dtoverlay=bcm2710-rpi-cm3" >> /boot/config.txt
+        echo "dtoverlay=uart0" >> /boot/config.txt
+        echo "dtoverlay=uart1,txd1_pin=40,rxd1_pin=41" >> /boot/config.txt
+    fi
+fi
 
 MAC="homegearpi-""$( ifconfig | grep -m 1 ether | sed "s/^.*ether [0-9a-f:]\{9\}\([0-9a-f:]*\) .*$/\1/;s/:/-/g" )"
 echo "$MAC" > "/etc/hostname"
@@ -543,6 +568,10 @@ rm -f /setupPartitions.sh
 
 service ntp stop
 ntpdate pool.ntp.org | dialog --title "Date" --progressbox "Waiting for NTP to set date." 10 50
+if [ $? -ne 0 ]; then
+    dialog --no-cancel --stdout --title "No internet" --no-tags --pause "Could not set date. Rebooting in 10 seconds..." 10 50 10
+    reboot
+fi
 service ntp start
 
 password1=""
@@ -672,11 +701,11 @@ echo \"\"
 echo \"* To change data on the root partition (e. g. to update the system),\"
 echo \"  enter:\"
 echo \"\"
-echo \"  mount -o remount,rw /\"
+echo \"  rw\"
 echo \"\"
 echo \"  When you are done, execute\"
 echo \"\"
-echo \"  mount -o remount,ro /\"
+echo \"  ro\"
 echo \"\"
 echo \"  to make the root partition readonly again.\"
 echo \"* You can store data on \\\"/data\\\". It is recommended to only backup\"
@@ -698,7 +727,22 @@ fi
 if [ -d \"\$HOME/bin\" ] ; then
     PATH=\"\$HOME/bin:\$PATH\"
 fi" > home/pi/.bash_profile
+cat home/pi/.bash_profile > root/.bash_profile
 #End bash profile
+
+cat >> "$rootfs/etc/bash.bashrc" <<-'EOF'
+# set variable identifying the filesystem you work in (used in the prompt below)
+set_bash_prompt(){
+    fs_mode=$(mount | sed -n -e "s/^\/dev\/.* on \/ .*(\(r[w|o]\).*/\1/p")
+    PS1='\[\033[01;32m\]\u@\h${fs_mode:+($fs_mode)}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+}
+ 
+alias ro='mount -o remount,ro / ; mount -o remount,ro /boot'
+alias rw='mount -o remount,rw / ; mount -o remount,rw /boot'
+ 
+# setup fancy prompt"
+PROMPT_COMMAND=set_bash_prompt
+EOF
 
 echo "#!/bin/bash
 apt-get clean
