@@ -29,7 +29,6 @@
 */
 
 #include "GD/GD.h"
-#include "Monitor.h"
 #include "CLI/CliClient.h"
 #include "ScriptEngine/ScriptEngineClient.h"
 #include "Node-BLUE/NodeBlueClient.h"
@@ -61,16 +60,11 @@
 
 using namespace Homegear;
 
-void startMainProcess();
 void startUp();
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-Monitor _monitor;
 std::mutex _shuttingDownMutex;
-bool _fork = false;
-std::atomic_bool _monitorProcess;
-pid_t _mainProcessId = 0;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
 std::atomic_bool _startUpComplete;
@@ -78,7 +72,6 @@ std::atomic_bool _shutdownQueued;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 std::thread _signalHandlerThread;
-int32_t _processManagerCallbackHandlerId = -1;
 
 void exitHomegear(int exitCode)
 {
@@ -92,7 +85,6 @@ void exitHomegear(int exitCode)
 	}
     if(GD::familyController) GD::familyController->dispose();
     if(GD::licensingController) GD::licensingController->dispose();
-    _monitor.stop();
     exit(exitCode);
 }
 
@@ -150,55 +142,10 @@ void stopRPCServers(bool dispose)
 	//Don't clear map!!! Server is still accessed i. e. by the event handler!
 }
 
-void sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped)
-{
-	try
-	{
-        GD::out.printInfo("Info: Process with id " + std::to_string(pid) + " ended.");
-        if(pid == _mainProcessId)
-        {
-            _mainProcessId = 0;
-            bool stop = false;
-            if(signal != -1)
-            {
-                if(signal == SIGTERM || signal == SIGINT || signal == SIGQUIT || (signal == SIGKILL && !_monitor.killedProcess())) stop = true;
-                if(signal == SIGKILL && !_monitor.killedProcess()) GD::out.printWarning("Warning: SIGKILL (signal 9) used to stop Homegear. Please shutdown Homegear properly to avoid database corruption.");
-                if(coreDumped) GD::out.printError("Error: Core was dumped.");
-            }
-            else stop = true;
-            if(stop)
-            {
-                GD::out.printInfo("Info: Homegear exited with exit code " + std::to_string(exitCode) + ". Stopping monitor process.");
-                exit(0);
-            }
-
-            GD::out.printError("Homegear was terminated. Restarting (1)...");
-            _monitor.suspend();
-            _fork = true;
-        }
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void terminateHomegear(int signalNumber)
 {
     try
     {
-        if(_monitorProcess)
-        {
-            GD::out.printMessage("Info: Redirecting signal to child process...");
-            if(_mainProcessId != 0) kill(_mainProcessId, SIGTERM);
-            else _exit(0);
-            return;
-        }
-
         _shuttingDownMutex.lock();
         if(!_startUpComplete)
         {
@@ -267,10 +214,8 @@ void terminateHomegear(int signalNumber)
         GD::out.printMessage("(Shutdown) => Disposing licensing modules");
         if(GD::licensingController) GD::licensingController->dispose();
         GD::bl->fileDescriptorManager.dispose();
-        _monitor.stop();
 
         BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
-        BaseLib::ProcessManager::unregisterCallbackHandler(_processManagerCallbackHandlerId);
 
         GD::out.printMessage("(Shutdown) => Shutdown complete.");
 
@@ -392,13 +337,6 @@ void signalHandlerThread()
             }
             else if(signalNumber == SIGHUP)
             {
-                if(_monitorProcess)
-                {
-                    GD::out.printMessage("Info: Redirecting signal to child process...");
-                    if(_mainProcessId != 0) kill(_mainProcessId, SIGHUP);
-                    return;
-                }
-
                 GD::out.printMessage("Info: SIGHUP received...");
                 _shuttingDownMutex.lock();
                 GD::out.printMessage("Info: Reloading...");
@@ -603,52 +541,6 @@ void printHelp()
 	std::cout << "-v                  Print program version" << std::endl;
 }
 
-void startMainProcess()
-{
-	try
-	{
-		_monitor.stop();
-		_fork = false;
-		_monitorProcess = false;
-		_monitor.init();
-
-		pid_t pid, sid;
-		pid = fork();
-		if(pid < 0)
-		{
-			exitHomegear(1);
-		}
-		else if(pid > 0)
-		{
-			_monitorProcess = true;
-			_mainProcessId = pid;
-			_monitor.prepareParent();
-		}
-		else
-		{
-			//Set process permission
-			umask(S_IWGRP | S_IWOTH);
-
-			//Set child processe's id
-			sid = setsid();
-			if(sid < 0)
-			{
-				exitHomegear(1);
-			}
-
-			_monitor.prepareChild();
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void startDaemon()
 {
 	try
@@ -675,8 +567,6 @@ void startDaemon()
 		}
 
 		close(STDIN_FILENO);
-
-		startMainProcess();
 	}
 	catch(const std::exception& ex)
     {
@@ -731,7 +621,6 @@ void startUp()
 
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager); //Needs to be called before starting any threads
         GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
-        _processManagerCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(sigchildHandler, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 
     	if(_startAsDaemon || _nonInteractive)
 		{
@@ -751,20 +640,6 @@ void startUp()
     	GD::out.printMessage(std::string("Git branch of libhomegear-base:     ") + GITBRANCHBASE);
     	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
     	GD::out.printMessage(std::string("Git branch of Homegear:             ") + GITBRANCHHOMEGEAR);
-
-    	if(_monitorProcess)
-    	{
-    		while(_monitorProcess)
-    		{
-    			std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-    			if(_fork)
-    			{
-    				GD::out.printError("Homegear was terminated. Restarting (2)...");
-    				startMainProcess();
-    			}
-    			_monitor.checkHealth(_mainProcessId);
-    		}
-    	}
 
         GD::out.printMessage("Determining maximum thread count...");
         try
@@ -1227,7 +1102,6 @@ int main(int argc, char* argv[])
     {
 		_startUpComplete = false;
 		_shutdownQueued = false;
-		_monitorProcess = false;
 
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));

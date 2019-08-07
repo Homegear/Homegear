@@ -634,5 +634,117 @@
 		"de-DE": "Beschattung - Markise - Position"
 	},
 	"uiRef": 502000
+},
+{
+	"id": 600000,
+	"translations": {
+		"en-US": "window", 
+		"de-DE": "Fenster"
+	},
+	"ui": {
+		"simpleCreationInfo": [
+			{
+				"element": "Base.windowButtonsUpDown",
+				"roleIdsIn": [[600001, 600002]],
+				"roleIdsOut": [[600001, 600002]],
+				"metadata": {"l2_action": {"control": 0, "input": 0}}
+			}
+		],
+
+        "icon": "rolladen1",
+        "invokeOutputs": [
+            {
+                "roleId": 501001,
+                "value": false,
+                "buttonText": "Zentral auf"
+            },
+            {
+                "roleId": 501002,
+                "value": true,
+                "buttonText": "Zentral ab"
+            }
+        ],
+        "translations": {
+           "de-DE": {
+             "falseCount": "eingefahren",
+             "trueCount": "ausgefahren"
+           },
+           "en-US": {
+             "falseCount": "retracted",
+             "trueCount": "extended"
+           }
+        },
+        "rolesInclude": [
+            {
+                "aggregationType": 1,
+                "roles": [
+                    501001,
+                    502002
+                ]
+            }
+        ]
+    }
+},
+{
+	"id": 600001,
+	"translations": {
+		"en-US": "window - up", 
+		"de-DE": "Fenster - hoch"
+	},
+	"uiRef": 600000,
+	"ui": {
+		"translations": {
+	       "de-DE": {
+	         "0": "Hoch"
+	       },
+	       "en-US": {
+	         "0": "Up"
+	       }
+	    }
+	}
+},
+{
+	"id": 600002,
+	"translations": {
+		"en-US": "window - down", 
+		"de-DE": "Fenster - runter"
+	},
+	"uiRef": 600000,
+	"ui": {
+	    "translations": {
+	       "de-DE": {
+	         "0": "Runter"
+	       },
+	       "en-US": {
+	         "0": "Down"
+	       }
+	    }
+    }
+},
+{
+	"id": 600003,
+	"translations": {
+		"en-US": "window - stop", 
+		"de-DE": "Fenster - Stopp"
+	},
+	"uiRef": 600000,
+	"ui": {
+        "translations": {
+           "de-DE": {
+             "0": "Stopp"
+           },
+           "en-US": {
+             "0": "Stop"
+           }
+        }
+    }
+},
+{
+	"id": 600004,
+	"translations": {
+		"en-US": "window - position", 
+		"de-DE": "Fenster - Position"
+	},
+	"uiRef": 600000
 }
 ]
