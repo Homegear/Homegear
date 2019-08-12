@@ -187,7 +187,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                         //Role not in channel
                         size_t roleCount = 0;
 
-                        for(auto& channelIterator2 : *peerIdIterator->second->structValue)
+                        for(auto& channelIterator2 : *variables->structValue)
                         {
                             if(channelIterator2.second->arrayValue->empty()) continue;
 
