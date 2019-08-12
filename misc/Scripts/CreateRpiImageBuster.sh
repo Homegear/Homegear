@@ -158,7 +158,7 @@ wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 apt-key add - < raspberrypi.gpg.key
 rm raspberrypi.gpg.key
 apt-get update
-apt-get -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntp ntpdate resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt-get -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntpdate resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt-get -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 # Install bootloader and kernel
@@ -181,10 +181,12 @@ fi
 echo "pi ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 dpkg-reconfigure locales
 service ssh stop
-service ntp stop
+
 systemctl disable serial-getty@ttyAMA0.service
 systemctl disable serial-getty@serial0.service
 systemctl disable serial-getty@ttyS0.service
+
+systemctl enable systemd-timesyncd
 
 rm -rf /var/log/homegear/*
 EOF
@@ -248,7 +250,7 @@ EOF
 Description=setup-tmpfs
 DefaultDependencies=no
 After=-.mount run.mount
-Before=systemd-random-seed.service
+Before=systemd-random-seed.service systemd-timesyncd.service
 
 [Service]
 Type=oneshot
@@ -566,13 +568,11 @@ if [ -f /partstageone ] || [ -f /partstagetwo ]; then
 fi
 rm -f /setupPartitions.sh
 
-service ntp stop
 ntpdate pool.ntp.org | dialog --title "Date" --progressbox "Waiting for NTP to set date." 10 50
 if [ $? -ne 0 ]; then
     dialog --no-cancel --stdout --title "No internet" --no-tags --pause "Could not set date. Rebooting in 10 seconds..." 10 50 10
     reboot
 fi
-service ntp start
 
 password1=""
 password2=""

@@ -136,6 +136,8 @@ public:
 
 	BaseLib::PVariable deleteRoom(uint64_t roomId) override;
 
+    std::string getRoomName(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId);
+
 	BaseLib::PVariable getRoomMetadata(uint64_t roomId) override;
 
 	BaseLib::PVariable getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;

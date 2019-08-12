@@ -1691,6 +1691,34 @@ BaseLib::PVariable DatabaseController::deleteRoom(uint64_t roomId)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+std::string DatabaseController::getRoomName(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomId));
+        auto rows = _db.executeCommand("SELECT translations FROM rooms WHERE id=?", data);
+
+        if(rows->empty()) return "";
+
+        auto translations = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+        auto language = clientInfo->language;
+        if(language.empty()) language = "en-US";
+
+        auto translationsIterator = translations->structValue->find(language);
+        if(translationsIterator != translations->structValue->end()) return translationsIterator->second->stringValue;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
+}
+
 BaseLib::PVariable DatabaseController::getRoomMetadata(uint64_t roomId)
 {
     try
