@@ -71,6 +71,7 @@ std::atomic_bool _startUpComplete;
 std::atomic_bool _shutdownQueued;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
+std::atomic_bool _stopSignalHandlerThread{true};
 std::thread _signalHandlerThread;
 
 void exitHomegear(int exitCode)
@@ -85,6 +86,13 @@ void exitHomegear(int exitCode)
 	}
     if(GD::familyController) GD::familyController->dispose();
     if(GD::licensingController) GD::licensingController->dispose();
+    BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
+    if(!_stopSignalHandlerThread) //_stopSignalHandlerThread is set to false directly before starting the thread.
+    {
+        _stopSignalHandlerThread = true;
+        kill(getpid(), SIGTERM);
+    }
+    GD::bl->threadManager.join(_signalHandlerThread);
     exit(exitCode);
 }
 
@@ -326,13 +334,14 @@ void signalHandlerThread()
     sigaddset(&set, SIGTTIN);
     sigaddset(&set, SIGTTOU);
 
-    while(true)
+    while(!_stopSignalHandlerThread)
     {
         try
         {
             sigwait(&set, &signalNumber);
             if(signalNumber == SIGTERM || signalNumber == SIGINT)
             {
+                if(_stopSignalHandlerThread) return; //When exit is requested in exitHomegear()
                 terminateHomegear(signalNumber);
             }
             else if(signalNumber == SIGHUP)
@@ -582,12 +591,6 @@ void startUp()
 {
 	try
 	{
-		if((chdir(GD::bl->settings.workingDirectory().c_str())) < 0)
-		{
-			GD::out.printError("Could not change working directory to " + GD::bl->settings.workingDirectory() + ".");
-			exitHomegear(1);
-		}
-
         {
             sigset_t set{};
             sigemptyset(&set);
@@ -620,6 +623,7 @@ void startUp()
         initGnuTls();
 
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager); //Needs to be called before starting any threads
+        _stopSignalHandlerThread = false;
         GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
 
     	if(_startAsDaemon || _nonInteractive)
@@ -667,6 +671,50 @@ void startUp()
             }
         }
         GD::bl->setStartTime(BaseLib::HelperFunctions::getTime());
+
+        if(!GD::bl->settings.waitForIp4OnInterface().empty())
+        {
+            std::string ipAddress;
+            while(ipAddress.empty())
+            {
+                try
+                {
+                    ipAddress = BaseLib::Net::getMyIpAddress(GD::bl->settings.waitForIp4OnInterface());
+                }
+                catch(const BaseLib::NetException& ex)
+                {
+                    GD::out.printDebug("Debug: " + std::string(ex.what()));
+                }
+                if(_shutdownQueued) exitHomegear(1);
+                if(ipAddress.empty())
+                {
+                    GD::out.printWarning("Warning: " + GD::bl->settings.waitForIp4OnInterface() + " has no IPv4 address assigned yet. Waiting...");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+                }
+            }
+        }
+
+        if(!GD::bl->settings.waitForIp6OnInterface().empty())
+        {
+            std::string ipAddress;
+            while(ipAddress.empty())
+            {
+                try
+                {
+                    ipAddress = BaseLib::Net::getMyIp6Address(GD::bl->settings.waitForIp6OnInterface());
+                }
+                catch(const BaseLib::NetException& ex)
+                {
+                    GD::out.printDebug("Debug: " + std::string(ex.what()));
+                }
+                if(_shutdownQueued) exitHomegear(1);
+                if(ipAddress.empty())
+                {
+                    GD::out.printWarning("Warning: " + GD::bl->settings.waitForIp6OnInterface() + " has no IPv6 address assigned yet. Waiting...");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+                }
+            }
+        }
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.socketPath()))
 		{
@@ -1567,7 +1615,7 @@ int main(int argc, char* argv[])
 			if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
 			{
 				GD::out.printCritical("Critical: You only provided a user OR a group for Homegear to run as. Please specify both.");
-				exit(1);
+                exitHomegear(1);
 			}
 			GD::bl->userId = GD::bl->hf.userId(GD::runAsUser);
 			GD::bl->groupId = GD::bl->hf.groupId(GD::runAsGroup);
