@@ -613,7 +613,7 @@ void UiController::addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, co
             auto description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
             if(description->errorStruct)
             {
-                GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + description->structValue->at("faultString")->stringValue);
+                GD::out.printWarning("Warning: Could not get variable description for UI element " + uiElement->elementId + " with ID " + std::to_string(uiElement->databaseId) + ": " + description->structValue->at("faultString")->stringValue + ". Please set the log level to 4 to see the failed RPC call.");
                 continue;
             }
 
