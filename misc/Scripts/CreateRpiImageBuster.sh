@@ -158,7 +158,7 @@ wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 apt-key add - < raspberrypi.gpg.key
 rm raspberrypi.gpg.key
 apt-get update
-apt-get -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntpdate resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt-get -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntpdate fake-hwclock resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt-get -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 # Install bootloader and kernel
@@ -179,6 +179,7 @@ if [ "0$result" -eq "0" ]; then
     usermod -a -G spi homegear 2>/dev/null
 fi
 echo "pi ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+echo "FILE=/data/fake-hwclock.data" >> /etc/default/fake-hwclock
 dpkg-reconfigure locales
 service ssh stop
 
@@ -197,6 +198,10 @@ rm -f $rootfs/third-stage
 mkdir -p $rootfs/lib/systemd/scripts
 cat > "$rootfs/lib/systemd/scripts/setup-tmpfs.sh" <<'EOF'
 #!/bin/bash
+
+if [ ! -z /data/fake-hwclock.data ]; then
+    date -u -s "$(cat /data/fake-hwclock.data)"
+fi
 
 modprobe zram num_devices=3
 

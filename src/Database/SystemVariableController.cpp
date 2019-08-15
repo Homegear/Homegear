@@ -487,6 +487,85 @@ BaseLib::PVariable SystemVariableController::getRoles(std::string& variableId)
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable SystemVariableController::getRolesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls)
+{
+    try
+    {
+        auto rows = GD::bl->db->getSystemVariablesInRoom(roomId);
+        if(!rows) return BaseLib::Variable::createError(-1, "Could not read from database.");
+
+        BaseLib::PVariable systemVariableStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        if(rows->empty()) return systemVariableStruct;
+        for(auto i = rows->begin(); i != rows->end(); ++i)
+        {
+            if(i->second.size() < 3) continue;
+
+            BaseLib::Database::PSystemVariable systemVariable;
+
+            {
+                std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+                auto systemVariableIterator = _systemVariables.find(i->second.at(0)->textValue);
+                if(systemVariableIterator != _systemVariables.end()) systemVariable = systemVariableIterator->second;
+            }
+
+            if(!systemVariable)
+            {
+                systemVariable = std::make_shared<BaseLib::Database::SystemVariable>();
+                systemVariable->name = i->second.at(0)->textValue;
+                systemVariable->value = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
+                systemVariable->room = roomId;
+
+                std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(2)->textValue, ',');
+                for(auto& categoryString : categoryStrings)
+                {
+                    uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
+                    if(category != 0) systemVariable->categories.emplace(category);
+                }
+
+                std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(3)->textValue, ',');
+                for(auto& roleString : roleStrings)
+                {
+                    uint64_t role = BaseLib::Math::getUnsignedNumber64(roleString);
+                    if(role != 0) systemVariable->roles.emplace(role);
+                }
+
+                systemVariable->flags = (int32_t)i->second.at(4)->intValue;
+
+                std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
+                _systemVariables.emplace(systemVariable->name, systemVariable);
+            }
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
+
+            if(systemVariable->flags != -1 && (systemVariable->flags & 2))
+            {
+                auto& source = clientInfo->initInterfaceId;
+                if(source != "homegear" && source != "scriptEngine" && source != "ipcServer" && source != "nodeBlue")
+                {
+                    continue;
+                }
+            }
+
+            if(systemVariable->room != roomId || systemVariable->roles.empty()) continue;
+
+            auto roles = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            roles->arrayValue->reserve(systemVariable->roles.size());
+            for(auto roleId : systemVariable->roles)
+            {
+                roles->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
+            }
+            systemVariableStruct->structValue->emplace(systemVariable->name, roles);
+        }
+
+        return systemVariableStruct;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::set<uint64_t> SystemVariableController::getRolesInternal(std::string& variableId)
 {
     try

@@ -275,6 +275,8 @@ RpcServer::RpcServer()
         _rpcMethods->emplace("createRole", std::make_shared<RPCCreateRole>());
         _rpcMethods->emplace("deleteRole", std::make_shared<RPCDeleteRole>());
         _rpcMethods->emplace("getRoles", std::make_shared<RPCGetRoles>());
+        _rpcMethods->emplace("getRolesInDevice", std::make_shared<RPCGetRolesInDevice>());
+        _rpcMethods->emplace("getRolesInRoom", std::make_shared<RPCGetRolesInRoom>());
         _rpcMethods->emplace("getRoleMetadata", std::make_shared<RPCGetRoleMetadata>());
         _rpcMethods->emplace("getVariablesInRole", std::make_shared<RPCGetVariablesInRole>());
         _rpcMethods->emplace("removeRoleFromVariable", std::make_shared<RPCRemoveRoleFromVariable>());

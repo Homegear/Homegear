@@ -354,73 +354,7 @@ void DatabaseController::initializeDatabase()
         }
         //}}}
 
-        //{{{ Create default roles
-        {
-            auto result = _db.executeCommand("SELECT count(*) FROM roles");
-            if(!result->empty() && result->begin()->second.begin()->second->intValue == 0)
-            {
-                std::string defaultRolesFile = GD::bl->settings.dataPath() + "defaultRoles.json";
-                if(GD::bl->io.fileExists(defaultRolesFile))
-                {
-                    auto rawRoles = GD::bl->io.getFileContent(defaultRolesFile);
-                    if(!BaseLib::HelperFunctions::trim(rawRoles).empty())
-                    {
-                        BaseLib::Rpc::JsonDecoder jsonDecoder(GD::bl.get());
-                        BaseLib::PVariable roles;
-                        try
-                        {
-                            roles = jsonDecoder.decode(rawRoles);
-                            for(auto& roleEntry : *roles->arrayValue)
-                            {
-                                auto idIterator = roleEntry->structValue->find("id");
-                                auto translationsIterator = roleEntry->structValue->find("translations");
-                                if(idIterator == roleEntry->structValue->end() || translationsIterator == roleEntry->structValue->end()) continue;
-
-                                int64_t id = idIterator->second->integerValue64;
-                                if(id <= 0) continue;
-
-                                auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-
-                                auto addVariablesIterator = roleEntry->structValue->find("addVariables");
-                                if(addVariablesIterator != roleEntry->structValue->end())
-                                {
-                                    metadata->structValue->emplace("addVariables", addVariablesIterator->second);
-                                }
-
-                                auto uiIterator = roleEntry->structValue->find("ui");
-                                if(uiIterator != roleEntry->structValue->end())
-                                {
-                                    metadata->structValue->emplace("ui", uiIterator->second);
-                                }
-
-                                auto uiRefIterator = roleEntry->structValue->find("uiRef");
-                                if(uiRefIterator != roleEntry->structValue->end())
-                                {
-                                    metadata->structValue->emplace("uiRef", uiRefIterator->second);
-                                }
-
-                                auto metadataIterator = roleEntry->structValue->find("metadata");
-                                if(metadataIterator != roleEntry->structValue->end())
-                                {
-                                    for(auto& metadataEntry : *metadataIterator->second->structValue)
-                                    {
-                                        if(metadataEntry.first == "addVariables" || metadataEntry.first == "ui") continue;
-                                        metadata->structValue->emplace(metadataEntry.first, metadataEntry.second);
-                                    }
-                                }
-
-                                createRoleInternal(id, translationsIterator->second, metadata);
-                            }
-                        }
-                        catch(std::exception& ex)
-                        {
-                            GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-                        }
-                    }
-                }
-            }
-        }
-        //}}}
+        createDefaultRoles();
 
         BaseLib::Database::DataRow data;
         data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
@@ -2104,6 +2038,80 @@ BaseLib::PVariable DatabaseController::updateCategory(uint64_t categoryId, BaseL
 //}}}
 
 //{{{ Roles
+void DatabaseController::createDefaultRoles()
+{
+    try
+    {
+        auto result = _db.executeCommand("SELECT count(*) FROM roles");
+        if(!result->empty() && result->begin()->second.begin()->second->intValue == 0)
+        {
+            std::string defaultRolesFile = GD::bl->settings.dataPath() + "defaultRoles.json";
+            if(GD::bl->io.fileExists(defaultRolesFile))
+            {
+                auto rawRoles = GD::bl->io.getFileContent(defaultRolesFile);
+                if(!BaseLib::HelperFunctions::trim(rawRoles).empty())
+                {
+                    BaseLib::Rpc::JsonDecoder jsonDecoder(GD::bl.get());
+                    BaseLib::PVariable roles;
+                    try
+                    {
+                        roles = jsonDecoder.decode(rawRoles);
+                        for(auto& roleEntry : *roles->arrayValue)
+                        {
+                            auto idIterator = roleEntry->structValue->find("id");
+                            auto translationsIterator = roleEntry->structValue->find("translations");
+                            if(idIterator == roleEntry->structValue->end() || translationsIterator == roleEntry->structValue->end()) continue;
+
+                            int64_t id = idIterator->second->integerValue64;
+                            if(id <= 0) continue;
+
+                            auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                            auto addVariablesIterator = roleEntry->structValue->find("addVariables");
+                            if(addVariablesIterator != roleEntry->structValue->end())
+                            {
+                                metadata->structValue->emplace("addVariables", addVariablesIterator->second);
+                            }
+
+                            auto uiIterator = roleEntry->structValue->find("ui");
+                            if(uiIterator != roleEntry->structValue->end())
+                            {
+                                metadata->structValue->emplace("ui", uiIterator->second);
+                            }
+
+                            auto uiRefIterator = roleEntry->structValue->find("uiRef");
+                            if(uiRefIterator != roleEntry->structValue->end())
+                            {
+                                metadata->structValue->emplace("uiRef", uiRefIterator->second);
+                            }
+
+                            auto metadataIterator = roleEntry->structValue->find("metadata");
+                            if(metadataIterator != roleEntry->structValue->end())
+                            {
+                                for(auto& metadataEntry : *metadataIterator->second->structValue)
+                                {
+                                    if(metadataEntry.first == "addVariables" || metadataEntry.first == "ui") continue;
+                                    metadata->structValue->emplace(metadataEntry.first, metadataEntry.second);
+                                }
+                            }
+
+                            createRoleInternal(id, translationsIterator->second, metadata);
+                        }
+                    }
+                    catch(std::exception& ex)
+                    {
+                        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+                    }
+                }
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
 void DatabaseController::createRoleInternal(uint64_t roleId, const BaseLib::PVariable& translations, const BaseLib::PVariable& metadata)
 {
     try
@@ -2124,10 +2132,6 @@ void DatabaseController::createRoleInternal(uint64_t roleId, const BaseLib::PVar
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -2177,11 +2181,23 @@ BaseLib::PVariable DatabaseController::deleteRole(uint64_t roleId)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void DatabaseController::deleteAllRoles()
+{
+    try
+    {
+        _db.executeCommand("DROP INDEX rolesIndex");
+        _db.executeCommand("DROP TABLE roles");
+
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS roles (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS rolesIndex ON roles (id)");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 BaseLib::PVariable DatabaseController::getRoles(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls)

@@ -1080,6 +1080,30 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCGetRolesInDevice : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCGetRolesInDevice()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCGetRolesInRoom : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCGetRolesInRoom()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCGetRoleMetadata : public BaseLib::Rpc::RpcMethod
 {
 public:

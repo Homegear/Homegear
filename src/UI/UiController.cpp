@@ -114,7 +114,7 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& uiInfo, const BaseLib::PVariable& variable, bool deviceOnly, BaseLib::PVariable& inputPeers, BaseLib::PVariable& outputPeers)
+BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& uiInfo, const BaseLib::PVariable& variable, uint64_t roomId, BaseLib::PVariable& inputPeers, BaseLib::PVariable& outputPeers)
 {
     try
     {
@@ -201,6 +201,23 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                         }
 
                         if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role exists multiple times in device. Simple UI element creation is not possible.");
+
+                        if(roleCount == 0)
+                        {
+                            //Role not in device, try to find role in room
+                            requestParameters->arrayValue->resize(1);
+                            requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
+                            std::string methodName = "getRolesInRoom";
+                            auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+                            if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
+
+
+                        }
+
+                        if(roleCount == 0)
+                        {
+                            return BaseLib::Variable::createError(-1, "Required role \"" + std::to_string(roleId) + "\" not found in device or room. Simple UI element creation is not possible.");
+                        }
                     }
                 }
                 inputPeers->arrayValue->emplace_back(std::move(outerArray));
@@ -252,6 +269,17 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                         }
 
                         if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role exists multiple times in device. Simple UI element creation is not possible.");
+
+                        if(roleCount == 0)
+                        {
+                            //Role not in device, try to find role in room
+                            //Todo: Implement
+                        }
+
+                        if(roleCount == 0)
+                        {
+                            return BaseLib::Variable::createError(-1, "Required role \"" + std::to_string(roleId) + "\" not found in device or room. Simple UI element creation is not possible.");
+                        }
                     }
                 }
                 outputPeers->arrayValue->emplace_back(std::move(outerArray));
@@ -362,7 +390,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
             bool found = false;
             for(auto& definition : *uiInfo->arrayValue)
             {
-                auto result = findRoleVariables(clientInfo, definition, variable, false, inputPeers, outputPeers);
+                auto result = findRoleVariables(clientInfo, definition, variable, roomId, inputPeers, outputPeers);
                 if(!result->errorStruct)
                 {
                     found = true;
@@ -376,7 +404,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
         }
         else if(uiInfo->type == BaseLib::VariableType::tStruct)
         {
-            auto result = findRoleVariables(clientInfo, uiInfo, variable, false, inputPeers, outputPeers);
+            auto result = findRoleVariables(clientInfo, uiInfo, variable, roomId, inputPeers, outputPeers);
             if(result->errorStruct) return result;
         }
         else return BaseLib::Variable::createError(-1, "UI definition has unknown type.");

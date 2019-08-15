@@ -56,6 +56,8 @@ public:
 
     BaseLib::PVariable getRoles(std::string& variableId);
 
+    BaseLib::PVariable getRolesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
+
     std::set<uint64_t> getRolesInternal(std::string& variableId);
 
     BaseLib::PVariable getRoom(std::string& variableId);
