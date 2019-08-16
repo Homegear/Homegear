@@ -3986,7 +3986,7 @@ BaseLib::PVariable RPCGetRoles::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         if(!parameters->empty())
         {
             ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString})
                                                                                                                      }));
             if(error != ParameterError::Enum::noError) return getError(error);
         }
