@@ -601,6 +601,7 @@ void ScriptEngineServer::processKilled(pid_t pid, int exitCode, int signal, bool
                 GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, -1, exitCode);
             }
         }
+        else _out.printDebug("Debug: No matching process found for PID " + std::to_string(pid) + ".");
     }
     catch(const std::exception& ex)
     {
