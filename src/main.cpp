@@ -339,6 +339,7 @@ void signalHandlerThread()
         try
         {
             sigwait(&set, &signalNumber);
+            if(GD::bl->settings.devLog()) GD::out.printDebug("Debug: Signal " + std::to_string(signalNumber) + " received in main.cpp.");
             if(signalNumber == SIGTERM || signalNumber == SIGINT)
             {
                 if(_stopSignalHandlerThread) return; //When exit is requested in exitHomegear()

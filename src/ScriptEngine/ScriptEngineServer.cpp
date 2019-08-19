@@ -572,8 +572,6 @@ void ScriptEngineServer::processKilled(pid_t pid, int exitCode, int signal, bool
 {
     try
     {
-        if(GD::bl->settings.devLog()) _out.printDebug("Debug: Calling processKilled() for PID " + std::to_string(pid) + ".");
-
         std::shared_ptr<ScriptEngineProcess> process;
 
         {
@@ -604,9 +602,6 @@ void ScriptEngineServer::processKilled(pid_t pid, int exitCode, int signal, bool
                 GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, -1, exitCode);
             }
         }
-        else _out.printDebug("Debug: No matching process found for PID " + std::to_string(pid) + ".");
-
-        if(GD::bl->settings.devLog()) _out.printDebug("Debug: Exiting processKilled() for PID " + std::to_string(pid) + ".");
     }
     catch(const std::exception& ex)
     {

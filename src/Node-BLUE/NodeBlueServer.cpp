@@ -605,8 +605,6 @@ void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool cor
 {
 	try
 	{
-        if(GD::bl->settings.devLog()) _out.printDebug("Debug: Calling processKilled() for PID " + std::to_string(pid) + ".");
-
 		std::shared_ptr<NodeBlueProcess> process;
 
 		{
@@ -639,9 +637,6 @@ void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool cor
 				GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
 			}
 		}
-        else _out.printDebug("Debug: No matching process found for PID " + std::to_string(pid) + ".");
-
-        if(GD::bl->settings.devLog()) _out.printDebug("Debug: Exiting processKilled() for PID " + std::to_string(pid) + ".");
 	}
 	catch(const std::exception& ex)
 	{
