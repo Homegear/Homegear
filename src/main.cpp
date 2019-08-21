@@ -73,6 +73,7 @@ bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 std::atomic_bool _stopSignalHandlerThread{true};
 std::thread _signalHandlerThread;
+std::atomic_bool _stopMain{false};
 
 void exitHomegear(int exitCode)
 {
@@ -237,7 +238,7 @@ void terminateHomegear(int signalNumber)
         gcry_control(GCRYCTL_TERM_SECMEM);
         gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 
-        _exit(0);
+        _stopMain = true;
     }
     catch(const std::exception& ex)
     {
@@ -1133,15 +1134,11 @@ void startUp()
 			GD::out.printError("Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
 		}
 
-        while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        while(!_stopMain) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1655,10 +1652,6 @@ int main(int argc, char* argv[])
     catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	terminateHomegear(SIGTERM);
 
