@@ -92,6 +92,7 @@ void exitHomegear(int exitCode)
     {
         _stopSignalHandlerThread = true;
         kill(getpid(), SIGTERM);
+        while(!_stopMain) { std::this_thread::sleep_for(std::chrono::milliseconds(100));}
     }
     GD::bl->threadManager.join(_signalHandlerThread);
     exit(exitCode);
@@ -1652,8 +1653,5 @@ int main(int argc, char* argv[])
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	terminateHomegear(SIGTERM);
-
-    GD::bl->threadManager.join(_signalHandlerThread);
-    return 1;
+    _exit(1);
 }

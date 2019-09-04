@@ -224,6 +224,7 @@
                 "max": 30.0,
                 "default": 21.0,
                 "roles": [
+                    201000,
                     201004
                 ]
             },
@@ -234,6 +235,7 @@
                 "max": 30.0,
                 "default": 18.0,
                 "roles": [
+                    201000,
                     201005
                 ]
             },
@@ -244,6 +246,7 @@
                 "max": 30.0,
                 "default": 5.0,
                 "roles": [
+                    201000,
                     201006
                 ]
             },
@@ -258,39 +261,76 @@
                     "eco"
                 ],
                 "roles": [
+                    201000,
                     201003
                 ]
             }
         ],
         "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.heatingIsStateSliderMode",
-                "roleIdsIn": [
-                    [
-                        201001
+            "simpleCreationInfo": [
+                {
+                    "element": "Base.heatingIsStateSliderMode",
+                    "roleIdsIn": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ]
                     ],
-                    [
-                        201002
+                    "roleIdsOut": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ]
                     ],
-                    [
-                        201003
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        201001
+                    "metadata": {
+                        "l2_only": true
+                    }
+                },
+                {
+                    "element": "Base.heatingIsStateSliderModeWindow",
+                    "roleIdsIn": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ],
+                        [
+                            301002
+                        ]
                     ],
-                    [
-                        201002
+                    "roleIdsOut": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ],
+                        [
+                            301002
+                        ]
                     ],
-                    [
-                        201003
-                    ]
-                ],
-                "metadata": {
-                    "l2_only": true
+                    "metadata": {
+                        "l2_only": true
+                    }
                 }
-            },
+            ],
             "translations": {
                 "de-DE": {
                     "0": "Soll"
