@@ -24,10 +24,7 @@
                     [
                         100001
                     ]
-                ],
-                "metadata": {
-                    "l2_only": true
-                }
+                ]
             },
             "icon": "light_on_1",
             "invokeOutputs": [
@@ -66,10 +63,7 @@
                     [
                         101000
                     ]
-                ],
-                "metadata": {
-                    "l2_only": true
-                }
+                ]
             },
             "icon": "light_dim_1",
             "invokeOutputs": [
@@ -291,10 +285,7 @@
                         [
                             201003
                         ]
-                    ],
-                    "metadata": {
-                        "l2_only": true
-                    }
+                    ]
                 },
                 {
                     "element": "Base.heatingIsStateSliderModeWindow",
@@ -325,10 +316,7 @@
                         [
                             301002
                         ]
-                    ],
-                    "metadata": {
-                        "l2_only": true
-                    }
+                    ]
                 }
             ],
             "translations": {
@@ -465,10 +453,7 @@
                     [
                         301002
                     ]
-                ],
-                "metadata": {
-                    "l2_only": true
-                }
+                ]
             },
             "icon": "window_1",
             "translations": {
@@ -503,12 +488,9 @@
                     [
                         301003
                     ]
-                ],
-                "metadata": {
-                    "l2_only": true
-                }
+                ]
             },
-            "icon": "lock_1",
+            "icon": "door-handle_1",
             "translations": {
                 "de-DE": {
                     "0": "verriegelt",
@@ -546,10 +528,7 @@
                     [
                         400001
                     ]
-                ],
-                "metadata": {
-                    "l2_only": true
-                }
+                ]
             },
             "icon": "socket_1",
             "invokeOutputs": [
@@ -606,13 +585,7 @@
                         [
                             501004
                         ]
-                    ],
-                    "metadata": {
-                        "l2_action": {
-                            "control": 0,
-                            "input": 0
-                        }
-                    }
+                    ]
                 },
                 {
                     "element": "Base.shadingButtonsUpDown",
@@ -627,13 +600,7 @@
                             501001,
                             501002
                         ]
-                    ],
-                    "metadata": {
-                        "l2_action": {
-                            "control": 0,
-                            "input": 0
-                        }
-                    }
+                    ]
                 }
             ],
             "icon": "blind_1",
@@ -761,13 +728,7 @@
                         [
                             502004
                         ]
-                    ],
-                    "metadata": {
-                        "l2_action": {
-                            "control": 0,
-                            "input": 0
-                        }
-                    }
+                    ]
                 },
                 {
                     "element": "Base.shadingButtonsUpDown",
@@ -780,13 +741,7 @@
                         [
                             502001
                         ]
-                    ],
-                    "metadata": {
-                        "l2_action": {
-                            "control": 0,
-                            "input": 0
-                        }
-                    }
+                    ]
                 }
             ],
             "icon": "awning_1",
@@ -905,16 +860,10 @@
                             600001,
                             600002
                         ]
-                    ],
-                    "metadata": {
-                        "l2_action": {
-                            "control": 0,
-                            "input": 0
-                        }
-                    }
+                    ]
                 }
             ],
-            "icon": "window_1",
+            "icon": "window_2",
             "invokeOutputs": [
                 {
                     "roleId": 600001,
