@@ -572,12 +572,26 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv Homegear-Z-Wave-${1}* homegear-zwave-${1}
 
+	wget --https-only https://gitit.de/api/v4/projects/136/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv Homegear-Zigbee-${1}* homegear-zigbee-${1}
+
 	wget --https-only https://gitit.de/api/v4/projects/105/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-WebSSH-${1}* homegear-webssh-${1}
+
+	wget --https-only https://gitit.de/api/v4/projects/142/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-dc-connector-${1}* homegear-dc-connector-${1}
 fi
 
 createPackage libhomegear-base $1 libhomegear-base 0
@@ -679,7 +693,9 @@ if [[ -n $2 ]]; then
 	createPackage homegear-rs2w $1 homegear-rs2w 1
 	createPackage homegear-mbus $1 homegear-mbus 1
 	createPackage homegear-zwave $1 homegear-zwave 1
+	createPackage homegear-zigbee $1 homegear-zigbee 1
 	createPackage homegear-webssh $1 homegear-webssh 1
+	createPackage homegear-dc-connector $1 homegear-dc-connector 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -757,7 +773,9 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-rs2w
 	cleanUp2 homegear-mbus
 	cleanUp2 homegear-zwave
+	cleanUp2 homegear-zigbee
 	cleanUp2 homegear-webssh
+	cleanUp2 homegear-dc-connector
 fi
 EOF
 echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f python3-homegear.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-ccu.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb && test -f homegear-ui.deb; then
@@ -794,7 +812,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	fi
 
 	if [[ -n \$1 ]]; then
-		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-webssh.deb; then
+		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-zigbee.deb || test ! -f homegear-webssh.deb || test ! -f homegear-dc-connector.deb; then
 			echo \"Error: Some or all packages from gitit.de could not be created.\"
 			exit 1
 		fi
@@ -814,7 +832,9 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-rs2w.deb homegear-rs2w_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-mbus.deb homegear-mbus_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-zwave.deb homegear-zwave_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-zigbee.deb homegear-zigbee_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-webssh.deb homegear-webssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-dc-connector.deb homegear-dc-connector_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
 		if [ \"\$distributionVersion\" != \"jessie\" ]; then
 			if test ! -f homegear-beckhoff.deb; then
@@ -850,7 +870,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	fi
 
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
@@ -888,7 +908,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	fi
 
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-webssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
