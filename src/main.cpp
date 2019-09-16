@@ -79,6 +79,7 @@ void exitHomegear(int exitCode)
 {
 	if(GD::eventHandler) GD::eventHandler->dispose();
 	if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+    if(GD::bl->hgdc) GD::bl->hgdc->stop();
 	if(GD::bl->db)
 	{
 		//Finish database operations before closing modules, otherwise SEGFAULT
@@ -212,6 +213,12 @@ void terminateHomegear(int signalNumber)
         if(GD::familyController) GD::familyController->save(false);
         GD::out.printMessage("(Shutdown) => Disposing device families");
         if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+        if(GD::bl->hgdc)
+        {
+            GD::out.printMessage("(Shutdown) => Disposing Homegear Daisy Chain client...");
+            GD::bl->hgdc->stop();
+            GD::bl->hgdc.reset();
+        }
         GD::out.printMessage("(Shutdown) => Disposing database");
         if(GD::bl->db)
         {
@@ -1049,6 +1056,14 @@ void startUp()
 
         GD::out.printInfo("Loading licensing controller data...");
         GD::licensingController->load();
+
+        if(GD::bl->settings.enableHgdc())
+        {
+            GD::out.printInfo("Initializing Homegear Daisy Chain client...");
+            GD::bl->hgdc = std::make_shared<BaseLib::Hgdc>(GD::bl.get(), GD::bl->settings.hgdcPort());
+            GD::out.printInfo("Starting Homegear Daisy Chain client...");
+            GD::bl->hgdc->start();
+        }
 
         GD::out.printInfo("Loading devices...");
         if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
