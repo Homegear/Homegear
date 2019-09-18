@@ -554,7 +554,7 @@ if [ ${#hardwareRevision} -eq 6 ]; then
         echo "gpio=44=op,dh" >> /boot/config.txt
         echo "" >> /boot/config.txt
         echo "dtoverlay=bcm2710-rpi-cm3" >> /boot/config.txt
-        echo "dtoverlay=uart0" >> /boot/config.txt
+        echo "dtoverlay=uart0,txd0_pin=32,rxd0_pin=33,pin_func=7" >> /boot/config.txt
         echo "dtoverlay=uart1,txd1_pin=40,rxd1_pin=41" >> /boot/config.txt
     fi
 fi

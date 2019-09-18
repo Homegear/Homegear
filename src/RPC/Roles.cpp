@@ -72,12 +72,24 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
 
         //{{{ Get variables in role filtered by room
             std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>> variables;
-            for(auto& role : *roles)
+            for(auto& roleStruct : *roles)
             {
-                if(!GD::bl->db->roleExists((uint64_t)role->integerValue64)) return BaseLib::Variable::createError(-1, "At least one role ID is unknown.");
+                uint64_t roleId = 0;
+                BaseLib::RoleDirection direction = BaseLib::RoleDirection::input;
+                if(roleStruct->type == BaseLib::VariableType::tInteger64) roleId = roleStruct->integerValue64;
+                else
+                {
+                    auto idIterator = roleStruct->structValue->find("id");
+                    if(idIterator == roleStruct->structValue->end()) return BaseLib::Variable::createError(-1, "Invalid role struct.");
+                    roleId = idIterator->second->integerValue64;
 
-                BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                requestParameters->arrayValue->push_back(role);
+                    auto directionIterator = roleStruct->structValue->find("direction");
+                    if(directionIterator != roleStruct->structValue->end()) direction = (BaseLib::RoleDirection)directionIterator->second->integerValue64;
+                }
+                if(!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "At least one role ID is unknown.");
+
+                auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
                 std::string methodName = "getVariablesInRole";
                 auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                 if(result->errorStruct) continue;
@@ -86,11 +98,21 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
                 {
                     for(auto& channelStructElement : *peerStructElement.second->structValue)
                     {
-                        for(auto& variableElement : *channelStructElement.second->arrayValue)
+                        for(auto& variableElement : *channelStructElement.second->structValue)
                         {
+                            auto directionIterator = variableElement.second->structValue->find("direction");
+                            if(directionIterator != variableElement.second->structValue->end())
+                            {
+                                if((direction == BaseLib::RoleDirection::input && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::output) ||
+                                        (direction == BaseLib::RoleDirection::output && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::input))
+                                {
+                                    continue;
+                                }
+                            }
+
                             uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
                             int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
-                            std::string variable = variableElement->stringValue;
+                            std::string variable = variableElement.first;
 
                             if(roomId != 0) //Check if role variable is in room
                             {
