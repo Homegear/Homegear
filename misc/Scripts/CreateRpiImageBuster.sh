@@ -742,12 +742,20 @@ set_bash_prompt(){
     PS1='\[\033[01;32m\]\u@\h${fs_mode:+($fs_mode)}\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 }
  
-alias ro='mount -o remount,ro / ; mount -o remount,ro /boot'
-alias rw='mount -o remount,rw / ; mount -o remount,rw /boot'
- 
 # setup fancy prompt"
 PROMPT_COMMAND=set_bash_prompt
 EOF
+
+cat >> "$rootfs/usr/bin/ro" <<-'EOF'
+#/bin/bash
+mount -o remount,ro /; mount -o remount,ro /boot
+EOF
+cat >> "$rootfs/usr/bin/rw" <<-'EOF'
+#!/bin/bash
+mount -o remount,rw /; mount -o remount,rw /boot
+EOF
+chmod 755 $rootfs/usr/bin/ro
+chmod 755 $rootfs/usr/bin/rw
 
 echo "#!/bin/bash
 apt-get clean

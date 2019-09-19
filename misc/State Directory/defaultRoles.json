@@ -425,12 +425,12 @@
             "icon": "door_open_2",
             "translations": {
                 "de-DE": {
-                    "0": "geschlossen",
-                    "1": "offen"
+                    "0": "geöffnet",
+                    "1": "geschlossen"
                 },
                 "en-US": {
-                    "0": "closed",
-                    "1": "opened"
+                    "0": "opened",
+                    "1": "closed"
                 }
             }
         }
@@ -458,14 +458,12 @@
             "icon": "window_1",
             "translations": {
                 "de-DE": {
-                    "0": "geschlossen",
-                    "1": "geöffnet",
-                    "2": "gekippt"
+                    "0": "geöffnet",
+                    "1": "geschlossen"
                 },
                 "en-US": {
-                    "0": "closed",
-                    "1": "opened",
-                    "2": "Tilted"
+                    "0": "opened",
+                    "1": "closed"
                 }
             }
         }
@@ -493,12 +491,12 @@
             "icon": "door-handle_1",
             "translations": {
                 "de-DE": {
-                    "0": "verriegelt",
-                    "1": "unverriegelt"
+                    "0": "unverriegelt",
+                    "1": "verriegelt"
                 },
                 "en-US": {
-                    "0": "locked",
-                    "1": "unlocked"
+                    "0": "unlocked",
+                    "1": "locked"
                 }
             }
         }

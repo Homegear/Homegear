@@ -4565,7 +4565,7 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
         if(parameters->size() == 1 || parameters->at(1)->integerValue64 == 0)
         {
             auto systemVariables = GD::systemVariableController->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
-            if(!systemVariables->arrayValue->empty())
+            if(!systemVariables->structValue->empty())
             {
                 auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 channelStruct->structValue->emplace("-1", std::move(systemVariables));

@@ -2043,7 +2043,7 @@ void DatabaseController::createDefaultRoles()
     try
     {
         auto result = _db.executeCommand("SELECT count(*) FROM roles");
-        if(!result->empty() && result->begin()->second.begin()->second->intValue == 0)
+        if((!result->empty() && result->begin()->second.begin()->second->intValue == 0) || GD::bl->settings.reloadRolesOnStartup())
         {
             std::string defaultRolesFile = GD::bl->settings.dataPath() + "defaultRoles.json";
             if(GD::bl->io.fileExists(defaultRolesFile))
@@ -2056,6 +2056,10 @@ void DatabaseController::createDefaultRoles()
                     try
                     {
                         roles = jsonDecoder.decode(rawRoles);
+
+                        //Make sure, file exists and JSON is valid before deleting old roles
+                        _db.executeCommand("DELETE FROM roles");
+
                         for(auto& roleEntry : *roles->arrayValue)
                         {
                             auto idIterator = roleEntry->structValue->find("id");
