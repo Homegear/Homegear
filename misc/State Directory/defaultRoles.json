@@ -33,6 +33,10 @@
                     "buttonText": "Zentral aus"
                 }
             ],
+            "label": {
+                "en-US": "Lighting",
+                "de-DE": "Beleuchtung"
+            },
             "translations": {
                 "de-DE": {
                     "0": "aus",
@@ -165,6 +169,10 @@
                     "buttonText": "Zentral Spar"
                 }
             ],
+            "label": {
+                "en-US": "Heating",
+                "de-DE": "Heizung"
+            },
             "translations": {
                 "de-DE": {
                     "0": "Frostschutz",
@@ -456,6 +464,10 @@
                 ]
             },
             "icon": "window_1",
+            "label": {
+                "en-US": "Windows",
+                "de-DE": "Fenster"
+            },
             "translations": {
                 "de-DE": {
                     "0": "geöffnet",
@@ -489,6 +501,10 @@
                 ]
             },
             "icon": "door-handle_1",
+            "label": {
+                "en-US": "Doors",
+                "de-DE": "Türen"
+            },
             "translations": {
                 "de-DE": {
                     "0": "unverriegelt",
@@ -535,6 +551,10 @@
                     "buttonText": "Zentral aus"
                 }
             ],
+            "label": {
+                "en-US": "Sockets",
+                "de-DE": "Steckdosen"
+            },
             "translations": {
                 "de-DE": {
                     "0": "aus",
@@ -614,6 +634,10 @@
                     "buttonText": "Zentral ab"
                 }
             ],
+            "label": {
+                "en-US": "Shading",
+                "de-DE": "Beschattung"
+            },
             "translations": {
                 "de-DE": {
                     "falseCount": "eingefahren",
