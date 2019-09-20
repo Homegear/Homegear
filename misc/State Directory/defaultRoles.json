@@ -899,12 +899,12 @@
             ],
             "translations": {
                 "de-DE": {
-                    "falseCount": "eingefahren",
-                    "trueCount": "ausgefahren"
+                    "falseCount": "geöffnet",
+                    "trueCount": "geschlossen"
                 },
                 "en-US": {
-                    "falseCount": "retracted",
-                    "trueCount": "extended"
+                    "falseCount": "open",
+                    "trueCount": "closed"
                 }
             },
             "rolesInclude": [
