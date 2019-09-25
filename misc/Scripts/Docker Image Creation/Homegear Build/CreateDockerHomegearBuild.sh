@@ -155,7 +155,8 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https curl
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
+DEBIAN_FRONTEND=noninteractive chroot $rootfs 
 
 echo "deb https://homegear.eu/packages/$dist/ $distver/" > $rootfs/etc/apt/sources.list.d/homegear.list
 
@@ -177,7 +178,7 @@ if [ "$distver" != "buster" ] || [ "$arch" == "i386" ]; then
 fi
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip ca-certificates binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libpython3-dev python3-all python3-setuptools
 
 if [ "$distver" == "buster" ] && [ "$arch" != "i386" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install npm
