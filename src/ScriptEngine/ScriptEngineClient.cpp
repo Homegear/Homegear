@@ -1024,6 +1024,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 BaseLib::Base64::encode(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}, globals->token);
                 std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
                 phpEvents->setPeerId(static_cast<uint64_t>(scriptInfo->peerId));
+                if(type == ScriptInfo::ScriptType::statefulNode) phpEvents->setNodeId(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
                 std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
                 PhpEvents::eventsMap.emplace(id, phpEvents);
             }
