@@ -199,8 +199,13 @@ void terminateHomegear(int signalNumber)
         GD::rpcServers.clear();
         GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
         if(GD::rpcClient) GD::rpcClient->dispose();
-        GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
+        GD::out.printInfo( "(Shutdown) => Closing physical interfaces...");
         if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
+        if(GD::bl->hgdc)
+        {
+            GD::out.printInfo("(Shutdown) => Stopping Homegear Daisy Chain client...");
+            if(GD::bl->hgdc) GD::bl->hgdc->stop();
+        }
         GD::out.printInfo("(Shutdown) => Stopping IPC server...");
         if(GD::ipcServer) GD::ipcServer->stop();
         if(GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
@@ -216,7 +221,6 @@ void terminateHomegear(int signalNumber)
         if(GD::bl->hgdc)
         {
             GD::out.printMessage("(Shutdown) => Disposing Homegear Daisy Chain client...");
-            GD::bl->hgdc->stop();
             GD::bl->hgdc.reset();
         }
         GD::out.printMessage("(Shutdown) => Disposing database");
