@@ -800,7 +800,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
     }
 }
 
-void RpcServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPC(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1102,7 +1102,7 @@ std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t c
     return header;
 }
 
-void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1137,7 +1137,7 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
     }
 }
 
-void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::packetReceived(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
