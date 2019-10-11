@@ -328,6 +328,17 @@ cat > "$rootfs/etc/logrotate.d/rsyslog" <<'EOF'
 }
 EOF
 
+cat > "$rootfs/etc/cron.d/restart-ntp" <<'EOF'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+# Some services like the homegear-dc-connector set the system time.
+# After that ntp is not updating the time anymore. To make it work
+# again, it needs to be restartet. We are doing this from a cron
+# job as a workaround.
+
+7 * * * * root systemctl restart ntp
+EOF
+
 cat > "$rootfs/fourth-stage" <<'EOF'
 rm -Rf /tmp
 ln -s /var/tmp /tmp

@@ -1326,7 +1326,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket)
 		}
 		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+		bool bound = (bind(_serverFileDescriptor->descriptor.load(), (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);

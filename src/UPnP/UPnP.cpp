@@ -516,7 +516,7 @@ std::shared_ptr<BaseLib::FileDescriptor> UPnP::getSocketDescriptor()
 		localSock.sin_port = htons(1900);
 		localSock.sin_addr.s_addr = inet_addr("239.255.255.250");
 
-		if(bind(socketDescriptor->descriptor, (struct sockaddr*) &localSock, sizeof(localSock)) == -1)
+		if(bind(socketDescriptor->descriptor.load(), (struct sockaddr*) &localSock, sizeof(localSock)) == -1)
 		{
 			_out.printError("Error: Binding to address " + _address + " failed: " + std::string(strerror(errno)));
 			GD::bl->fileDescriptorManager.close(socketDescriptor);

@@ -1958,7 +1958,7 @@ void RpcServer::getSocketDescriptor()
                 if(fcntl(_serverFileDescriptor->descriptor, F_SETFL, fcntl(_serverFileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0) throw BaseLib::Exception("Error: Could not set socket options.");
             }
             if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw BaseLib::Exception("Error: Could not set socket options.");
-            if(bind(_serverFileDescriptor->descriptor, info->ai_addr, info->ai_addrlen) == -1)
+            if(bind(_serverFileDescriptor->descriptor.load(), info->ai_addr, info->ai_addrlen) == -1)
             {
                 error = errno;
                 continue;
