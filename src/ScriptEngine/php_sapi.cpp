@@ -579,7 +579,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
         BaseLib::Http* http = &SEG(http);
         BaseLib::ScriptEngine::PScriptInfo& scriptInfo = SEG(scriptInfo);
         if(!http || !scriptInfo) return;
-        BaseLib::Http::Header& header = http->getHeader();
+        const BaseLib::Http::Header& header = http->getHeader();
         BaseLib::Rpc::ServerInfo::Info* server = (BaseLib::Rpc::ServerInfo::Info*)SG(server_context);
         zval value;
 
