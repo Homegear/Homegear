@@ -1119,6 +1119,13 @@ void NodeBlueServer::startFlows()
 				continue;
 			}
 
+            auto dIterator = element->structValue->find("d");
+            if(dIterator != element->structValue->end() && (dIterator->second->booleanValue || dIterator->second->stringValue == "true"))
+            {
+                GD::out.printDebug("Debug: Ignoring disabled node: " + idIterator->second->stringValue);
+                continue;
+            }
+
 			auto typeIterator = element->structValue->find("type");
 			if(typeIterator == element->structValue->end()) continue;
 			else if(typeIterator->second->stringValue == "comment") continue;
@@ -1721,7 +1728,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			_jsonEncoder->encode(responseJson, contentString);
 			responseEncoding = "application/json";
 		}
-		else if(path == "node-blue/settings" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js")
+		else if(path == "node-blue/settings" || path == "node-blue/theme" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js")
 		{
 			if(!sessionValid) return "unauthorized";
 			path = _webroot + "static/" + path.substr(10);
@@ -1780,6 +1787,55 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 				if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			}
 		}
+        else if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 || path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0)
+        {
+            if(!sessionValid) return "unauthorized";
+            std::string libraryPath;
+            if(path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) libraryPath = _bl->settings.nodeBlueDataPath() + "examples/";
+            else libraryPath = _bl->settings.nodeBlueDataPath() + "library/";
+
+            if(!BaseLib::Io::directoryExists(libraryPath))
+            {
+                if(!BaseLib::Io::createDirectory(libraryPath, S_IRWXU | S_IRWXG)) return "";
+            }
+            if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 && path.size() > 30) libraryPath += path.substr(30);
+            else if(path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0 && path.size() > 35) libraryPath += path.substr(35);
+
+            bool isDirectory = false;
+            if(BaseLib::Io::isDirectory(libraryPath, isDirectory) == -1) return "";
+
+            if(!isDirectory)
+            {
+                contentString = BaseLib::Io::getFileContent(libraryPath);
+            }
+            else
+            {
+                BaseLib::Io io;
+                io.init(_bl);
+
+                responseEncoding = "application/json";
+
+                auto directories = io.getDirectories(libraryPath);
+                auto files = io.getFiles(libraryPath, false);
+
+                auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                responseJson->arrayValue->reserve(directories.size() + files.size());
+
+                for(auto& directory : directories)
+                {
+                    responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
+                }
+
+                for(auto& file : files)
+                {
+                    auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
+                    responseJson->arrayValue->push_back(fileEntry);
+                }
+
+                _jsonEncoder->encode(responseJson, contentString);
+            }
+        }
 		else if(path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php")
 		{
 			path = _webroot + path.substr(10);
@@ -1879,10 +1935,39 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
             if(result->errorStruct)
             {
                 _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
-                return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+                return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
             }
 
-            return "{\"result\":\"success\",\"commandStatusId\":" + std::to_string(result->integerValue64) + "}";
+            return R"({"result":"success","commandStatusId":)" + std::to_string(result->integerValue64) + "}";
+        }
+        else if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 && !http.getContent().empty())
+        {
+            if(!sessionValid) return "unauthorized";
+            std::string libraryDirectory = _bl->settings.nodeBlueDataPath() + "library/";
+            if(!BaseLib::Io::directoryExists(libraryDirectory))
+            {
+                if(!BaseLib::Io::createDirectory(libraryDirectory, S_IRWXU | S_IRWXG)) return "";
+            }
+
+            auto subdirectories = path.substr(30);
+            auto subdirectoryParts = BaseLib::HelperFunctions::splitAll(subdirectories, '/');
+            if(subdirectoryParts.empty()) return "";
+
+            for(int32_t i = 0; i < (signed)subdirectoryParts.size() - 1; i++)
+            {
+                libraryDirectory += subdirectoryParts.at(i) + '/';
+                if(!BaseLib::Io::directoryExists(libraryDirectory))
+                {
+                    if(!BaseLib::Io::createDirectory(libraryDirectory, S_IRWXU | S_IRWXG)) return "";
+                }
+            }
+
+            auto filepath = libraryDirectory + subdirectoryParts.back();
+
+            BaseLib::Io::writeFile(filepath, http.getContent(), http.getContentSize());
+
+            responseEncoding = "application/json";
+            return R"({"result":"success"})";
         }
 	}
 	catch(const std::exception& ex)

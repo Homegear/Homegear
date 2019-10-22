@@ -1671,8 +1671,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     !_info->jsonrpcServer ||
                                     http.getHeader().method != "POST" ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
-                                    http.getHeader().path == "/node-blue/flows" ||
-                                    http.getHeader().path == "/node-blue/nodes" ||
+                                    http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ))

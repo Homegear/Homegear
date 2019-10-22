@@ -217,7 +217,7 @@ mount /dev/zram0 /var/log
 mount /dev/zram1 /var/lib/homegear/db
 mount /dev/zram2 /var/tmp
 
-chmod 777 /var/log
+chmod 775 /var/log
 chmod 770 /var/lib/homegear/db
 chown homegear:homegear /var/lib/homegear/db
 chmod 777 /var/tmp
@@ -286,6 +286,13 @@ include /etc/logrotate.d
     create 0660 root utmp
     rotate 0
 }
+EOF
+
+cat > "$rootfs/etc/cron.daily/logrotate" <<'EOF'
+#!/bin/sh
+
+test -x /usr/sbin/logrotate || exit 0
+/usr/sbin/logrotate -s /data/logrotate-status /etc/logrotate.conf
 EOF
 
 cat > "$rootfs/etc/logrotate.d/rsyslog" <<'EOF'

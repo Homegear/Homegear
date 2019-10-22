@@ -38,7 +38,10 @@
             "logic" : "Logik",
             "database" : "Datenbank",
             "parsers" : "Parser",
-            "time" : "Zeit"
+            "time" : "Zeit",
+            "homegear": "Homegear",
+            "io": "IO",
+            "network": "Netzwerk"
         },
         "editor": {
             "times": {
