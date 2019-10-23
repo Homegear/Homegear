@@ -1735,11 +1735,17 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if(path == "node-blue/settings/user")
+		else if(path.compare(0, 23, "node-blue/settings/user") == 0)
 		{
 			if(!sessionValid) return "unauthorized";
-			path = _webroot + "static/" + path.substr(19);
-			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+
+			auto settingsPath = _bl->settings.nodeBlueDataPath() + "userSettings.json";
+			if(BaseLib::Io::fileExists(settingsPath)) contentString = GD::bl->io.getFileContent(settingsPath);
+			else
+            {
+                path = _webroot + "static/" + path.substr(19);
+                if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+            }
 			responseEncoding = "application/json";
 		}
 		else if(path == "node-blue/nodes")
@@ -1939,6 +1945,16 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
             }
 
             return R"({"result":"success","commandStatusId":)" + std::to_string(result->integerValue64) + "}";
+        }
+        else if(path == "node-blue/settings/user")
+        {
+            if(!sessionValid) return "unauthorized";
+
+            auto settingsPath = _bl->settings.nodeBlueDataPath() + "userSettings.json";
+            BaseLib::Io::writeFile(settingsPath, http.getContent(), http.getContentSize());
+
+            responseEncoding = "application/json";
+            return R"({"result":"success"})";
         }
         else if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 && !http.getContent().empty())
         {

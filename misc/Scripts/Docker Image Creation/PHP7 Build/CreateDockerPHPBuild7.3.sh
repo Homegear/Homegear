@@ -261,6 +261,9 @@ if test ! -f ext_skel.in; then
 fi
 git clone https://github.com/krakjoe/pthreads.git pthreads
 git clone https://github.com/krakjoe/parallel.git parallel
+cd parallel
+git checkout release
+cd ..
 # Add Homegear to allowed OPcode cache modules
 sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
 cd ..
