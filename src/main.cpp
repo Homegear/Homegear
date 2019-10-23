@@ -550,7 +550,7 @@ void printHelp()
 	std::cout << "-h                  Show this help" << std::endl;
 	std::cout << "-u                  Run as user" << std::endl;
 	std::cout << "-g                  Run as group" << std::endl;
-	std::cout << "-c <path>           Specify path to config file" << std::endl;
+	std::cout << "-c <path>           Specify path to config directory" << std::endl;
 	std::cout << "-d                  Run as daemon" << std::endl;
 	std::cout << "-p <pid path>       Specify path to process id file" << std::endl;
 	std::cout << "-s <user> <group>   Set GPIO settings and necessary permissions for all defined physical devices" << std::endl;
