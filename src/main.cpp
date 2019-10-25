@@ -1144,6 +1144,7 @@ void startUp()
 		{
 			_shuttingDownMutex.unlock();
 			terminateHomegear(SIGTERM);
+			return;
 		}
 		_shuttingDownMutex.unlock();
 
