@@ -47,7 +47,6 @@ $i18n = json_decode(json_encode($i18n), false);
 
   <title>Node-BLUE</title>
 
-  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
   <style>
 body {
   width: 100%;
