@@ -85,7 +85,20 @@ input.inputbottom {
 }
 
 .alert {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
   margin-bottom: 5px;
+  padding: 8px 35px 8px 14px;
+  text-shadow: 0 1px 0
+  rgba(255,255,255,0.5);
+  border: 1px solid #fbeed5;
+  border-radius: 4px;
+}
+
+.alert-danger, .alert-error {
+  color: #b94a48;
+  background-color: #f2dede;
+  border-color: #eed3d7;
 }
 
 button {
