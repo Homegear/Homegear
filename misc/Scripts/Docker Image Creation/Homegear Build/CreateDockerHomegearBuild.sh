@@ -463,29 +463,35 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget --https-only https://github.com/Homegear/binrpc-client/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 if [[ -n $2 ]]; then
-	wget --https-only https://gitit.de/api/v4/projects/100/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/2/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-AdminUI-${1}* Homegear-AdminUI-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/17/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/11/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-easy-licensing-master* homegear-easy-licensing-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/57/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/10/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-licensing-master* homegear-licensing-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/67/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/6/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
@@ -493,7 +499,7 @@ if [[ -n $2 ]]; then
 	mv homegear-nodes-extra-master* homegear-nodes-extra-${1}
 
 	if [ "$distributionVersion" != "jessie" ]; then
-		wget --https-only https://gitit.de/api/v4/projects/75/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+		wget --https-only https://gitit.de/api/v4/projects/3/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 		[ $? -ne 0 ] && exit 1
 		unzip ${1}.zip
 		[ $? -ne 0 ] && exit 1
@@ -501,14 +507,14 @@ if [[ -n $2 ]]; then
 		mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
 	fi
 
-	wget --https-only https://gitit.de/api/v4/projects/73/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/1/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-KNX-${1}* Homegear-KNX-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/74/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/14/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
@@ -524,70 +530,70 @@ if [[ -n $2 ]]; then
 	rm -Rf Homegear-EnOcean-XML-master master.zip
 	cd ../../..
 
-	wget --https-only https://gitit.de/api/v4/projects/15/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/9/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-easycam-master* homegear-easycam-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/28/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/7/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-easyled-master* homegear-easyled-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/55/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/8/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-easyled2-master* homegear-easyled2-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/72/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/21/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-rsl-master* homegear-rsl-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/62/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+	wget --https-only https://gitit.de/api/v4/projects/20/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 	[ $? -ne 0 ] && exit 1
 	unzip master.zip
 	[ $? -ne 0 ] && exit 1
 	rm master.zip
 	mv homegear-rs2w-master* homegear-rs2w-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/84/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/15/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-M-Bus-${1}* homegear-mbus-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/77/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/4/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-Z-Wave-${1}* homegear-zwave-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/136/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/5/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-Zigbee-${1}* homegear-zigbee-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/105/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/13/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv Homegear-WebSSH-${1}* homegear-webssh-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/142/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	wget --https-only https://gitit.de/api/v4/projects/29/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
@@ -650,6 +656,7 @@ createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
 createPackage homegear-management $1 homegear-management 0
 createPackageWithoutAutomake homegear-ui $1 homegear-ui
+createPackage binrpc-client $1 binrpc 0
 
 if [[ -n $2 ]]; then
 	sha256=`sha256sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
@@ -755,6 +762,7 @@ cleanUp homegear-influxdb
 cleanUp homegear-gateway
 cleanUp homegear-management
 cleanUp homegear-ui
+cleanUp binrpc
 if [[ -n $1 ]]; then
 	cleanUp homegear-adminui
 
@@ -779,7 +787,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-dc-connector
 fi
 EOF
-echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f python3-homegear.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-ccu.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb && test -f homegear-ui.deb; then
+echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f libhomegear-ipc.deb && test -f python3-homegear.deb && test -f homegear.deb && test -f homegear-nodes-core.deb && test -f homegear-homematicbidcos.deb && test -f homegear-homematicwired.deb && test -f homegear-insteon.deb && test -f homegear-max.deb && test -f homegear-philipshue.deb && test -f homegear-sonos.deb && test -f homegear-kodi.deb && test -f homegear-ipcam.deb && test -f homegear-intertechno.deb && test -f homegear-nanoleaf.deb && test -f homegear-ccu.deb && test -f homegear-influxdb.deb && test -f homegear-gateway.deb && test -f homegear-management.deb && test -f homegear-ui.deb && test -f binrpc.deb; then
 	isodate=\`date +%Y%m%d\`
 	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -802,6 +810,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-ui.deb homegear-ui_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv binrpc.deb binrpc_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
 	if [ \"\$distributionVersion\" != \"jessie\" ] && [ \"\$distributionVersion\" != \"xenial\" ]; then
 		if test ! -f homegear-velux-klf200.deb; then
@@ -862,7 +871,7 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb; then
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
 		if test ! -f homegear-velux-klf200_*.deb; then
 			echo "Error: Some or all packages from GitHub could not be created."
@@ -900,7 +909,7 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb; then
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
 		if test ! -f homegear-velux-klf200_*.deb; then
 			echo "Error: Some or all packages from GitHub could not be created."
