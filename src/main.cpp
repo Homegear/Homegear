@@ -64,16 +64,16 @@ void startUp();
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-std::mutex _shuttingDownMutex;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
 std::atomic_bool _startUpComplete;
-std::atomic_bool _shutdownQueued;
 bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
-std::atomic_bool _stopSignalHandlerThread{true};
 std::thread _signalHandlerThread;
-std::atomic_bool _stopMain{false};
+bool _stopHomegear = false;
+int _signalNumber = -1;
+std::mutex _stopHomegearMutex;
+std::condition_variable _stopHomegearConditionVariable;
 
 void exitHomegear(int exitCode)
 {
@@ -88,14 +88,6 @@ void exitHomegear(int exitCode)
 	}
     if(GD::familyController) GD::familyController->dispose();
     if(GD::licensingController) GD::licensingController->dispose();
-    BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
-    if(!_stopSignalHandlerThread) //_stopSignalHandlerThread is set to false directly before starting the thread.
-    {
-        _stopSignalHandlerThread = true;
-        kill(getpid(), SIGTERM);
-        while(!_stopMain) { std::this_thread::sleep_for(std::chrono::milliseconds(100));}
-    }
-    GD::bl->threadManager.join(_signalHandlerThread);
     exit(exitCode);
 }
 
@@ -157,22 +149,8 @@ void terminateHomegear(int signalNumber)
 {
     try
     {
-        _shuttingDownMutex.lock();
-        if(!_startUpComplete)
-        {
-            GD::out.printMessage("Info: Startup is not complete yet. Queueing shutdown.");
-            _shutdownQueued = true;
-            _shuttingDownMutex.unlock();
-            return;
-        }
-        if(GD::bl->shuttingDown)
-        {
-            _shuttingDownMutex.unlock();
-            return;
-        }
         GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
         GD::bl->shuttingDown = true;
-        _shuttingDownMutex.unlock();
 
         if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
         if(GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
@@ -250,7 +228,6 @@ void terminateHomegear(int signalNumber)
         gcry_control(GCRYCTL_TERM_SECMEM);
         gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 
-        _stopMain = true;
         return;
     }
     catch(const std::exception& ex)
@@ -326,8 +303,8 @@ void reloadHomegear()
 
 void signalHandlerThread()
 {
-    sigset_t set{};
     int signalNumber = -1;
+    sigset_t set{};
     sigemptyset(&set);
     sigaddset(&set, SIGHUP);
     sigaddset(&set, SIGTERM);
@@ -344,31 +321,28 @@ void signalHandlerThread()
     sigaddset(&set, SIGTTIN);
     sigaddset(&set, SIGTTOU);
 
-    while(!_stopSignalHandlerThread)
+    while(!_stopHomegear)
     {
         try
         {
-            sigwait(&set, &signalNumber);
+            if(sigwait(&set, &signalNumber) != 0)
+            {
+                GD::out.printError("Error calling sigwait. Killing myself.");
+                raise(SIGKILL);
+            }
             if(GD::bl->settings.devLog()) GD::out.printDebug("Debug: Signal " + std::to_string(signalNumber) + " received in main.cpp.");
             if(signalNumber == SIGTERM || signalNumber == SIGINT)
             {
-                if(_stopSignalHandlerThread) return; //When exit is requested in exitHomegear()
-                terminateHomegear(signalNumber);
+                std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
+                _stopHomegear = true;
+                _signalNumber = signalNumber;
+                stopHomegearGuard.unlock();
+                _stopHomegearConditionVariable.notify_all();
                 return;
             }
             else if(signalNumber == SIGHUP)
             {
-                GD::out.printMessage("Info: SIGHUP received...");
-                _shuttingDownMutex.lock();
-                GD::out.printMessage("Info: Reloading...");
-                if(!_startUpComplete)
-                {
-                    _shuttingDownMutex.unlock();
-                    GD::out.printError("Error: Cannot reload. Startup is not completed.");
-                    return;
-                }
-                _startUpComplete = false;
-                _shuttingDownMutex.unlock();
+                GD::out.printMessage("Info: SIGHUP received. Reloading...");
 
                 reloadHomegear();
 
@@ -385,22 +359,13 @@ void signalHandlerThread()
                     }
                 }
 
-                _shuttingDownMutex.lock();
-                _startUpComplete = true;
-                if(_shutdownQueued)
-                {
-                    _shuttingDownMutex.unlock();
-                    terminateHomegear(SIGTERM);
-                    return;
-                }
-                _shuttingDownMutex.unlock();
                 GD::out.printInfo("Info: Reload complete.");
             }
             else
             {
                 if(!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
-                signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
-                kill(getpid(), signalNumber); //Generate core dump
+                pthread_sigmask(SIG_SETMASK, &BaseLib::SharedObjects::defaultSignalMask, nullptr);
+                raise(signalNumber); //Raise same signal again using the default action.
             }
         }
         catch(const std::exception& ex)
@@ -603,26 +568,6 @@ void startUp()
 {
 	try
 	{
-        {
-            sigset_t set{};
-            sigemptyset(&set);
-            sigaddset(&set, SIGHUP);
-            sigaddset(&set, SIGTERM);
-            sigaddset(&set, SIGINT);
-            sigaddset(&set, SIGABRT);
-            sigaddset(&set, SIGSEGV);
-            sigaddset(&set, SIGQUIT);
-            sigaddset(&set, SIGILL);
-            sigaddset(&set, SIGFPE);
-            sigaddset(&set, SIGALRM);
-            sigaddset(&set, SIGUSR1);
-            sigaddset(&set, SIGUSR2);
-            sigaddset(&set, SIGTSTP);
-            sigaddset(&set, SIGTTIN);
-            sigaddset(&set, SIGTTOU);
-            sigprocmask(SIG_BLOCK, &set, nullptr);
-        }
-
         if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
 
         //Use sigaction over signal because of different behavior in Linux and BSD
@@ -633,10 +578,6 @@ void startUp()
         setLimits();
 
         initGnuTls();
-
-        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager); //Needs to be called before starting any threads
-        _stopSignalHandlerThread = false;
-        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
 
     	if(_startAsDaemon || _nonInteractive)
 		{
@@ -677,7 +618,6 @@ void startUp()
         {
             while(BaseLib::HelperFunctions::getTime() < 1000000000000)
             {
-                if(_shutdownQueued) exitHomegear(1);
                 GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(10000));
             }
@@ -697,7 +637,6 @@ void startUp()
                 {
                     GD::out.printDebug("Debug: " + std::string(ex.what()));
                 }
-                if(_shutdownQueued) exitHomegear(1);
                 if(ipAddress.empty())
                 {
                     GD::out.printWarning("Warning: " + GD::bl->settings.waitForIp4OnInterface() + " has no IPv4 address assigned yet. Waiting...");
@@ -719,7 +658,6 @@ void startUp()
                 {
                     GD::out.printDebug("Debug: " + std::string(ex.what()));
                 }
-                if(_shutdownQueued) exitHomegear(1);
                 if(ipAddress.empty())
                 {
                     GD::out.printWarning("Warning: " + GD::bl->settings.waitForIp6OnInterface() + " has no IPv6 address assigned yet. Waiting...");
@@ -871,14 +809,12 @@ void startUp()
             }
             catch(const BaseLib::NetException& ex)
             {
-                if(_shutdownQueued) exitHomegear(1);
                 GD::out.printError("Error binding RPC servers (1): " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
             }
             catch(const BaseLib::SocketOperationException& ex)
             {
-                if(_shutdownQueued) exitHomegear(1);
                 GD::out.printError("Error binding RPC servers (2): " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
@@ -1112,6 +1048,9 @@ void startUp()
 			}
 		}
 
+        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
+        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
+
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
         //Wait for all interfaces to connect before setting booting to false
@@ -1138,22 +1077,18 @@ void startUp()
         GD::bl->booting = false;
         GD::familyController->homegearStarted();
 
-        _shuttingDownMutex.lock();
-		_startUpComplete = true;
-		if(_shutdownQueued)
-		{
-			_shuttingDownMutex.unlock();
-			terminateHomegear(SIGTERM);
-			return;
-		}
-		_shuttingDownMutex.unlock();
-
 		if(BaseLib::Io::fileExists(GD::bl->settings.workingDirectory() + "core"))
 		{
 			GD::out.printError("Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
 		}
 
-        while(!_stopMain) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        while(!_stopHomegear)
+        {
+            std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
+            _stopHomegearConditionVariable.wait(stopHomegearGuard);
+        }
+
+        terminateHomegear(_signalNumber);
 	}
 	catch(const std::exception& ex)
     {
@@ -1166,12 +1101,10 @@ int main(int argc, char* argv[])
 	try
     {
 		_startUpComplete = false;
-		_shutdownQueued = false;
 
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::SharedObjects());
-    	GD::out.init(GD::bl.get());
 
 		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
 		else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
@@ -1623,6 +1556,32 @@ int main(int argc, char* argv[])
     	}
 
     	if(!isatty(STDIN_FILENO)) _nonInteractive = true;
+
+        {
+            //Block the signals below during start up
+            //Needs to be called after initialization of GD::bl as GD::bl reads the current (default) signal mask.
+            sigset_t set{};
+            sigemptyset(&set);
+            sigaddset(&set, SIGHUP);
+            sigaddset(&set, SIGTERM);
+            sigaddset(&set, SIGINT);
+            sigaddset(&set, SIGABRT);
+            sigaddset(&set, SIGSEGV);
+            sigaddset(&set, SIGQUIT);
+            sigaddset(&set, SIGILL);
+            sigaddset(&set, SIGFPE);
+            sigaddset(&set, SIGALRM);
+            sigaddset(&set, SIGUSR1);
+            sigaddset(&set, SIGUSR2);
+            sigaddset(&set, SIGTSTP);
+            sigaddset(&set, SIGTTIN);
+            sigaddset(&set, SIGTTOU);
+            if(pthread_sigmask(SIG_BLOCK, &set, nullptr) < 0)
+            {
+                std::cerr << "SIG_BLOCK error." << std::endl;
+                exit(1);
+            }
+        }
 
     	// {{{ Load settings
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
