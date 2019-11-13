@@ -384,24 +384,6 @@ void errorCallback(int32_t level, std::string message)
 	if(GD::rpcClient) GD::rpcClient->broadcastError(level, message);
 }
 
-int32_t getIntInput()
-{
-	std::string input;
-	std::cin >> input;
-	int32_t intInput = -1;
-	try	{ intInput = std::stoll(input); } catch(...) {}
-    return intInput;
-}
-
-int32_t getHexInput()
-{
-	std::string input;
-	std::cin >> input;
-	int32_t intInput = -1;
-	try	{ intInput = std::stoll(input, 0, 16); } catch(...) {}
-    return intInput;
-}
-
 void getExecutablePath(int argc, char* argv[])
 {
 	char path[1024];
@@ -436,7 +418,7 @@ void getExecutablePath(int argc, char* argv[])
 	}
 	if((unsigned)length > sizeof(path))
 	{
-		std::cerr << "The path to the homegear binary is in has more than 1024 characters." << std::endl;
+		std::cerr << "The path to the Homegear binary is in has more than 1024 characters." << std::endl;
 		exit(1);
 	}
 	path[length] = '\0';
@@ -453,7 +435,7 @@ void getExecutablePath(int argc, char* argv[])
 
 void initGnuTls()
 {
-	// {{{ Init gcrypt and GnuTLS
+	// {{{ Init Libgcrypt and GnuTLS
 		gcry_error_t gcryResult;
 		if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
 		{

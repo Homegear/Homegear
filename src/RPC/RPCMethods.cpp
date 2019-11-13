@@ -5192,6 +5192,48 @@ BaseLib::PVariable RPCInvokeFamilyMethod::invoke(BaseLib::PRpcClientInfo clientI
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCLifetick::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("lifetick")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+
+        if(!GD::rpcClient->lifetick())
+        {
+            GD::out.printCritical("Critical: RPC client lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        for(auto& server : GD::rpcServers)
+        {
+            if(!server.second->lifetick())
+            {
+                GD::out.printCritical("Critical: RPC Server lifetick (Port " + std::to_string(server.second->getInfo()->port) + "): Failed");
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+        }
+
+        if(!GD::familyController->lifetick())
+        {
+            GD::out.printCritical("Critical: Device families lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCListBidcosInterfaces::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try

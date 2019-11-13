@@ -85,14 +85,14 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
-			else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
-			else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
+			else if(path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+			else if(path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
 			else
 			{
 				getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
@@ -138,30 +138,30 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 
 			if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
 			{
-				if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+				if(!BaseLib::Io::fileExists(GD::bl->settings.uiPath() + path.substr(3)))
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 					{
 						http.setRedirectUrl('/' + path);
 						http.setRedirectQueryString(http.getHeader().args);
 						http.setRedirectStatus(200);
 
-						if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+						if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
 						else path = "ui/index.hgs";
 					}
 				}
 			}
 			else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
 			{
-				if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+				if(!BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
 					{
 						http.setRedirectUrl('/' + path);
 						http.setRedirectQueryString(http.getHeader().args);
 						http.setRedirectStatus(200);
 
-						if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+						if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
 						else path = "admin/index.hgs";
 					}
 				}
@@ -179,23 +179,35 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+                if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    return;
+                }
 			}
 			else if(path == "node-blue/signin.php")
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+				if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    return;
+                }
 			}
 			else if(path.compare(0, 6, "admin/") == 0)
 			{
 				if(path == "admin/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php"))
 					{
 						fullPath = GD::bl->settings.adminUiPath() + "index.php";
 						relativePath += "index.php";
 						ending = "php";
 					}
-					else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+					else if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
 					{
 						fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
 						relativePath += "index.hgs";
@@ -215,13 +227,13 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			{
 				if(path == "ui/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.php";
 						relativePath += "index.php";
 						ending = "php";
 					}
-					else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+					else if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.hgs";
 						relativePath += "index.hgs";
@@ -366,12 +378,12 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
-			else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
-			else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
+			else if(path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+			else if(path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
 			else
 			{
 				getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
@@ -413,30 +425,30 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 #ifndef NO_SCRIPTENGINE
 		if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
 		{
-			if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+			if(!BaseLib::Io::fileExists(GD::bl->settings.uiPath() + path.substr(3)))
 			{
-				if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+				if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 				{
 					http.setRedirectUrl('/' + path);
 					http.setRedirectQueryString(http.getHeader().args);
 					http.setRedirectStatus(200);
 
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
 					else path = "ui/index.hgs";
 				}
 			}
 		}
 		else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
 		{
-			if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+			if(!BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
 			{
-				if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+				if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
 				{
 					http.setRedirectUrl('/' + path);
 					http.setRedirectQueryString(http.getHeader().args);
 					http.setRedirectStatus(200);
 
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
 					else path = "admin/index.hgs";
 				}
 			}
@@ -452,18 +464,30 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+                if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    return;
+                }
 			}
 			else if(path == "node-blue/signin.php")
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+                if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    return;
+                }
 			}
 			else if(path.compare(0, 6, "admin/") == 0)
 			{
 				if(path == "admin/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
-					else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
+					else if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
 					else
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
@@ -478,12 +502,12 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 			{
 				if(path == "ui/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.php";
 						relativePath += "index.php";
 					}
-					else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+					else if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.hgs";
 						relativePath += "index.hgs";

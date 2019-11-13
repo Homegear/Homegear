@@ -126,6 +126,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion()));
     _rpcMethods.emplace("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit()));
     _rpcMethods.emplace("invokeFamilyMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInvokeFamilyMethod()));
+    _rpcMethods.emplace("lifetick", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLifetick()));
     _rpcMethods.emplace("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces()));
     _rpcMethods.emplace("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers()));
     _rpcMethods.emplace("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices()));
@@ -1835,22 +1836,22 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         if(scriptType == ScriptInfo::ScriptType::cli)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-                    BaseLib::PVariable(new BaseLib::Variable((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->script),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->arguments),
+                    std::make_shared<BaseLib::Variable>((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput)}));
         }
         else if(scriptType == ScriptInfo::ScriptType::web)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->contentPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->contentPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
                     scriptInfo->http.serialize(),
                     scriptInfo->serverInfo->serialize(),
                     scriptInfo->clientInfo->serialize()}));
@@ -1858,13 +1859,13 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         else if(scriptType == ScriptInfo::ScriptType::device || scriptType == ScriptInfo::ScriptType::device2)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->script),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->arguments),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->peerId)}));
 
             if(scriptType == ScriptInfo::ScriptType::device2)
             {
@@ -1876,23 +1877,23 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         else if(scriptType == ScriptInfo::ScriptType::simpleNode)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
                     scriptInfo->nodeInfo,
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->inputPort),
                     scriptInfo->message}));
         }
         else if(scriptType == ScriptInfo::ScriptType::statefulNode)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
                     scriptInfo->nodeInfo,
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->maxThreadCount)}));
 
             {
                 std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);

@@ -1403,6 +1403,17 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCLifetick : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCLifetick()
+    {
+        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>());
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCListBidcosInterfaces : public BaseLib::Rpc::RpcMethod
 {
 public:

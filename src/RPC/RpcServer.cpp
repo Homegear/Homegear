@@ -203,6 +203,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("getVersion", std::make_shared<RPCGetVersion>());
     _rpcMethods->emplace("init", std::make_shared<RPCInit>());
     _rpcMethods->emplace("invokeFamilyMethod", std::make_shared<RPCInvokeFamilyMethod>());
+    _rpcMethods->emplace("lifetick", std::make_shared<RPCLifetick>());
     _rpcMethods->emplace("listBidcosInterfaces", std::make_shared<RPCListBidcosInterfaces>());
     _rpcMethods->emplace("listClientServers", std::make_shared<RPCListClientServers>());
     _rpcMethods->emplace("listDevices", std::make_shared<RPCListDevices>());

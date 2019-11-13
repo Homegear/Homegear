@@ -1118,7 +1118,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 			int32_t exitCode = 0;
 			try
 			{
-
 				if(!GD::rpcClient->lifetick())
 				{
 					stringStream << "RPC Client: Failed" << std::endl;

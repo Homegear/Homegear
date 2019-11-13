@@ -109,7 +109,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 {
     try
     {
-        BaseLib::PArray eventData(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))})))});
+        BaseLib::PArray eventData(new BaseLib::Array{std::make_shared<BaseLib::Variable>(0), std::make_shared<BaseLib::Variable>(-1), std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(std::string("DISPOSING"))})), std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(true)}))});
 
         GD::bl->shuttingDown = true;
         if(broadcastShutdown) broadcastEvent(eventData);
@@ -1529,7 +1529,7 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
         if(_maintenanceThread.joinable()) _maintenanceThread.join();
         _maintenanceThread = std::thread(&ScriptEngineClient::dispose, this, true);
 
-        return BaseLib::PVariable(new BaseLib::Variable());
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {
