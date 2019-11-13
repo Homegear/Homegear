@@ -259,6 +259,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
     //}}}
 
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getHomegearPid", std::bind(&IpcServer::getHomegearPid, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("setPid", std::bind(&IpcServer::setPid, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getClientId", std::bind(&IpcServer::getClientId, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("registerRpcMethod", std::bind(&IpcServer::registerRpcMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -1375,6 +1376,25 @@ std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> IpcSer
 }
 
 // {{{ RPC methods
+BaseLib::PVariable IpcServer::getHomegearPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(!parameters->empty()) return BaseLib::Variable::createError(-1, "Method expects no parameters.");
+
+        return std::make_shared<BaseLib::Variable>(getpid());
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable IpcServer::setPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters)
 {
     try
