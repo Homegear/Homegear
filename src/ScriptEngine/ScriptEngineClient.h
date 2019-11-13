@@ -241,6 +241,12 @@ private:
     BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
 
     /**
+     * Checks if everything is working.
+     * @param parameters Irrelevant for this method.
+     */
+    BaseLib::PVariable lifetick(BaseLib::PArray& parameters);
+
+    /**
      * Executes a new script.
      * @param parameters The parameters depend on the script type. See source code.
      */

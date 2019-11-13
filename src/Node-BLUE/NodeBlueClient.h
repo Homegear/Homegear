@@ -246,6 +246,12 @@ private:
 	Flows::PVariable shutdown(Flows::PArray& parameters);
 
 	/**
+	 * Checks if everything is working.
+	 * @param parameters Irrelevant for this method.
+	 */
+	Flows::PVariable lifetick(Flows::PArray& parameters);
+
+	/**
      * Starts a new flow.
      * @param parameters
      */

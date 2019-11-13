@@ -74,6 +74,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("devTest", std::bind(&ScriptEngineClient::devTest, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("lifetick", std::bind(&ScriptEngineClient::lifetick, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
@@ -1530,6 +1531,32 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
         _maintenanceThread = std::thread(&ScriptEngineClient::dispose, this, true);
 
         return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::lifetick(BaseLib::PArray& parameters)
+{
+    try
+    {
+        for(int32_t i = 0; i < _queueCount; i++)
+        {
+            if(queueSize(i) > 1000)
+            {
+                _out.printError("Error in lifetick: More than 1000 items are queued in queue number " + std::to_string(i));
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
     }
     catch(const std::exception& ex)
     {

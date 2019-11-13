@@ -5221,6 +5221,24 @@ BaseLib::PVariable RPCLifetick::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
             return std::make_shared<BaseLib::Variable>(false);
         }
 
+        if(!GD::scriptEngineServer->lifetick())
+        {
+            GD::out.printCritical("Critical: Script engine server lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        if(!GD::nodeBlueServer->lifetick())
+        {
+            GD::out.printCritical("Critical: Node-BLUE server lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        if(!GD::ipcServer->lifetick())
+        {
+            GD::out.printCritical("Critical: IPC server lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
         return std::make_shared<BaseLib::Variable>(true);
     }
     catch(const std::exception& ex)

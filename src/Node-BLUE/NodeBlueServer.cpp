@@ -305,6 +305,23 @@ bool NodeBlueServer::lifetick()
                 return false;
             }
         }
+
+        std::vector<PNodeBlueClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto result = sendRequest(*i, "lifetick", std::make_shared<BaseLib::Array>(), true);
+            if(result->errorStruct || !result->booleanValue) return false;
+        }
+
         return true;
     }
     catch(const std::exception& ex)
@@ -2552,7 +2569,7 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 	return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{

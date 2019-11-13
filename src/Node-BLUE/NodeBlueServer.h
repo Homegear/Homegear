@@ -199,7 +199,7 @@ private:
 
 	BaseLib::PVariable send(PNodeBlueClientData& clientData, std::vector<char>& data);
 
-	BaseLib::PVariable sendRequest(PNodeBlueClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
+	BaseLib::PVariable sendRequest(PNodeBlueClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait);
 
 	void sendResponse(PNodeBlueClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 
