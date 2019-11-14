@@ -903,12 +903,29 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 		std::string thisSubflowId = subflowNode->structValue->at("id")->stringValue;
 		std::string subflowIdPrefix = thisSubflowId + ':';
 		std::string subflowId = subflowNode->structValue->at("type")->stringValue.substr(8);
+
 		auto subflowInfoIterator = subflowInfos.find(subflowId);
 		if(subflowInfoIterator == subflowInfos.end())
 		{
 			GD::out.printError("Error: Could not find subflow info with for subflow with id " + subflowId);
 			return std::set<std::string>();
 		}
+
+        auto environmentVariablesIterator = subflowNode->structValue->find("env");
+		auto defaultEnvironmentVariables = subflowInfoIterator->second->structValue->find("env");
+
+		BaseLib::PVariable environmentVariables = (environmentVariablesIterator != subflowNode->structValue->end() ? environmentVariablesIterator->second : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+        if(defaultEnvironmentVariables != subflowInfoIterator->second->structValue->end())
+        {
+            for(auto& entry : *defaultEnvironmentVariables->second->structValue)
+            {
+                if(environmentVariables->structValue->find(entry.first) == environmentVariables->structValue->end())
+                {
+                    environmentVariables->structValue->emplace(entry);
+                }
+            }
+        }
 
 		//Copy subflow, prefix all subflow node IDs and wires with subflow ID and identify subsubflows
 		std::unordered_map<std::string, BaseLib::PVariable> subflow;
@@ -918,6 +935,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 			BaseLib::PVariable subflowNode = std::make_shared<BaseLib::Variable>();
 			*subflowNode = *subflowElement.second;
 			subflowNode->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode->structValue->at("id")->stringValue;
+			subflowNode->structValue->emplace("env", environmentVariables);
 			allNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
 			flowNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
 
