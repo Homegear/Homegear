@@ -66,8 +66,6 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
-std::atomic_bool _startUpComplete;
-bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 std::thread _signalHandlerThread;
 bool _stopHomegear = false;
@@ -158,7 +156,6 @@ void terminateHomegear(int signalNumber)
         if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
     #endif
         if(GD::familyController) GD::familyController->homegearShuttingDown();
-        _disposing = true;
         if(GD::bl->settings.enableUPnP())
         {
             GD::out.printInfo("Stopping UPnP server...");
@@ -363,7 +360,7 @@ void signalHandlerThread()
             }
             else
             {
-                if(!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
+                GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
                 pthread_sigmask(SIG_SETMASK, &BaseLib::SharedObjects::defaultSignalMask, nullptr);
                 raise(signalNumber); //Raise same signal again using the default action.
             }
@@ -1082,8 +1079,6 @@ int main(int argc, char* argv[])
 {
 	try
     {
-		_startUpComplete = false;
-
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::SharedObjects());

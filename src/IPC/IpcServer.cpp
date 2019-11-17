@@ -1157,7 +1157,15 @@ void IpcServer::mainThread()
 				socklen_t addressSize = sizeof(addressSize);
 				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr*) &clientAddress, &addressSize));
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
-				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
+
+				int32_t clientId = -1;
+
+				{
+                    std::lock_guard<std::mutex> stateGuard(_stateMutex);
+                    clientId = _currentClientId++;
+                }
+
+				_out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientId) + ", file descriptor ID: " + std::to_string(clientFileDescriptor->id));
 
 				if(_clients.size() > GD::bl->settings.ipcServerMaxConnections())
 				{
@@ -1177,7 +1185,7 @@ void IpcServer::mainThread()
 					continue;
 				}
 				PIpcClientData clientData = std::make_shared<IpcClientData>(clientFileDescriptor);
-				clientData->id = _currentClientId++;
+				clientData->id = clientId;
 				_clients.emplace(clientData->id, clientData);
 				continue;
 			}
@@ -1223,7 +1231,7 @@ void IpcServer::readClient(PIpcClientData& clientData)
 		bytesRead = read(clientData->fileDescriptor->descriptor, clientData->buffer.data(), clientData->buffer.size());
 		if(bytesRead <= 0) //read returns 0, when connection is disrupted.
 		{
-			_out.printInfo("Info: Connection to IPC server's client number " + std::to_string(clientData->fileDescriptor->id) + " closed.");
+			_out.printInfo("Info: Connection to IPC server's client number " + std::to_string(clientData->id) + " closed.");
 			closeClientConnection(clientData);
 			return;
 		}
