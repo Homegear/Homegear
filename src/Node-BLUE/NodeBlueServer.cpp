@@ -911,21 +911,116 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 			return std::set<std::string>();
 		}
 
+		//{{{ Get environment variables
         auto environmentVariablesIterator = subflowNode->structValue->find("env");
 		auto defaultEnvironmentVariables = subflowInfoIterator->second->structValue->find("env");
 
-		BaseLib::PVariable environmentVariables = (environmentVariablesIterator != subflowNode->structValue->end() ? environmentVariablesIterator->second : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
-
-        if(defaultEnvironmentVariables != subflowInfoIterator->second->structValue->end())
+		BaseLib::PVariable environmentVariables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        if(environmentVariablesIterator != subflowNode->structValue->end())
         {
-            for(auto& entry : *defaultEnvironmentVariables->second->structValue)
+            for(auto& entry : *environmentVariablesIterator->second->arrayValue)
             {
-                if(environmentVariables->structValue->find(entry.first) == environmentVariables->structValue->end())
+                auto nameIterator = entry->structValue->find("name");
+                auto valueIterator = entry->structValue->find("value");
+                auto typeIterator = entry->structValue->find("type");
+                if(nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end())
                 {
-                    environmentVariables->structValue->emplace(entry);
+                    if(typeIterator->second->stringValue == "bool")
+                    {
+                        valueIterator->second->type = BaseLib::VariableType::tBoolean;
+                        valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
+                    }
+                    else if(typeIterator->second->stringValue == "float")
+                    {
+                        valueIterator->second->type = BaseLib::VariableType::tFloat;
+                        valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
+                    }
+                    else if(typeIterator->second->stringValue == "int")
+                    {
+                        valueIterator->second->type = BaseLib::VariableType::tInteger64;
+                        valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
+                    }
+                    else if(typeIterator->second->stringValue == "array")
+                    {
+                        try
+                        {
+                            valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                        }
+                        catch(const std::exception&)
+                        {
+                        }
+                        valueIterator->second->type = BaseLib::VariableType::tArray;
+                    }
+                    else if(typeIterator->second->stringValue == "struct")
+                    {
+                        try
+                        {
+                            valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                        }
+                        catch(const std::exception&)
+                        {
+                        }
+                        valueIterator->second->type = BaseLib::VariableType::tStruct;
+                    }
+                    environmentVariables->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
                 }
             }
         }
+
+        if(defaultEnvironmentVariables != subflowInfoIterator->second->structValue->end())
+        {
+            for(auto& entry : *defaultEnvironmentVariables->second->arrayValue)
+            {
+                auto nameIterator = entry->structValue->find("name");
+                auto valueIterator = entry->structValue->find("value");
+                auto typeIterator = entry->structValue->find("type");
+                if(nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end())
+                {
+                    if(environmentVariables->structValue->find(nameIterator->second->stringValue) == environmentVariables->structValue->end())
+                    {
+                        if(typeIterator->second->stringValue == "bool")
+                        {
+                            valueIterator->second->type = BaseLib::VariableType::tBoolean;
+                            valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
+                        }
+                        else if(typeIterator->second->stringValue == "float")
+                        {
+                            valueIterator->second->type = BaseLib::VariableType::tFloat;
+                            valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
+                        }
+                        else if(typeIterator->second->stringValue == "int")
+                        {
+                            valueIterator->second->type = BaseLib::VariableType::tInteger64;
+                            valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
+                        }
+                        else if(typeIterator->second->stringValue == "array")
+                        {
+                            try
+                            {
+                                valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                            }
+                            catch(const std::exception&)
+                            {
+                            }
+                            valueIterator->second->type = BaseLib::VariableType::tArray;
+                        }
+                        else if(typeIterator->second->stringValue == "struct")
+                        {
+                            try
+                            {
+                                valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                            }
+                            catch(const std::exception&)
+                            {
+                            }
+                            valueIterator->second->type = BaseLib::VariableType::tStruct;
+                        }
+                        environmentVariables->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
+                    }
+                }
+            }
+        }
+        //}}}
 
 		//Copy subflow, prefix all subflow node IDs and wires with subflow ID and identify subsubflows
 		std::unordered_map<std::string, BaseLib::PVariable> subflow;
