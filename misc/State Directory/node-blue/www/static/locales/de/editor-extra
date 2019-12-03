@@ -14,7 +14,7 @@
             "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
         },
         "errors": {
-             "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Für weitere Informationen schauen Sie ins Fehlerlog.</p>",
+             "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Häufigster Grund ist die Überschreitung der maximal erlaubten Knotenzahl. Für weitere Informationen schauen Sie ins Fehlerlog.</p>",
              "loadCatalogManagementError": "<p>Systemarchitektur konnte nicht ermittelt werden. Ist homegear-management installiert?</p>"
         }
     },

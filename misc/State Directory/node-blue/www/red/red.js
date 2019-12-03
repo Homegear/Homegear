@@ -30392,7 +30392,8 @@ RED.subflow = (function() {
         toolbar.empty();
 
         // Edit properties
-        $('<a class="button" id="red-ui-subflow-edit" href="#" data-i18n="[append]subflow.editSubflowProperties"><i class="fa fa-pencil"></i> </a>').appendTo(toolbar);
+        // Hide edit button as this is not implemented in Homegear
+        $('<a class="button" style="display: none" id="red-ui-subflow-edit" href="#" data-i18n="[append]subflow.editSubflowProperties"><i class="fa fa-pencil"></i> </a>').appendTo(toolbar);
 
         // Inputs
         $('<span style="margin-left: 5px;" data-i18n="subflow.input"></span> <div id="red-ui-subflow-input" style="display: inline-block;" class="button-group spinner-group">'+
@@ -30950,7 +30951,7 @@ RED.subflow = (function() {
                             class: "node-input-env-value",
                             type: "text",
                         }).attr("autocomplete","disable").appendTo(envRow)
-                        valueField.typedInput({default:'string',types:['bool','int','float','string','array','struct']});
+                        valueField.typedInput({default:'str',types:['str','num','bool','json','bin','env']});
                         valueField.typedInput('type', opt.parent?(opt.type||opt.parent.type):opt.type);
                         valueField.typedInput('value', opt.parent?((opt.value !== undefined)?opt.value:opt.parent.value):opt.value);
                     // }
@@ -30982,7 +30983,7 @@ RED.subflow = (function() {
                             icon: "",
                             label: {},
                             type: "input",
-                            opts: {types:['bool','int','float','string','array','struct']}
+                            opts: {types:['str','num','bool','json','bin','env']}
                         }
                         opt.ui.label = opt.ui.label || {};
                         opt.ui.type = opt.ui.type || "input";
@@ -31075,7 +31076,7 @@ RED.subflow = (function() {
          $('<div><i class="red-ui-editableList-item-handle fa fa-bars"></i></div>').appendTo(row);
 
          var typeOptions = {
-             'input': {types:['bool','int','float','string','array','struct']},
+             'input': {types:['str','num','bool','json','bin','env']},
              'select': {opts:[]},
              'spinner': {}
          };
@@ -31155,14 +31156,14 @@ RED.subflow = (function() {
                  {
                      value:"input",
                      label:RED._("editor.inputs.input"), icon:"fa fa-i-cursor",showLabel:false,multiple:true,options:[
-                         {value:"string",label:RED._("editor.types.string"),icon:"red/images/typedInput/az.svg"},
-                         {value:"int",label:RED._("editor.types.int"),icon:"red/images/typedInput/09.svg"},
-                         {value:"float",label:RED._("editor.types.float"),icon:"red/images/typedInput/09.svg"},
+                         {value:"str",label:RED._("editor.types.str"),icon:"red/images/typedInput/az.svg"},
+                         {value:"num",label:RED._("editor.types.num"),icon:"red/images/typedInput/09.svg"},
                          {value:"bool",label:RED._("editor.types.bool"),icon:"red/images/typedInput/bool.svg"},
-                         {value:"array",label:RED._("editor.types.array"),icon:"red/images/typedInput/array.svg"},
-                         {value:"struct",label:RED._("editor.types.struct"),icon:"red/images/typedInput/json.svg"}
+                         {value:"json",label:RED._("editor.types.json"),icon:"red/images/typedInput/json.svg"},
+                         {value: "bin",label: RED._("editor.types.bin"),icon: "red/images/typedInput/bin.svg"},
+                         {value: "env",label: RED._("editor.types.env"),icon: "red/images/typedInput/env.svg"}
                      ],
-                     default: ['bool','int','float','string','array','struct'],
+                     default: ['str','num','bool','json','bin','env'],
                      valueLabel: function(container,value) {
                          container.css("padding",0);
                          var innerContainer = $('<div>').css({
@@ -31407,21 +31408,21 @@ RED.subflow = (function() {
                     valueField.typedInput('types',ui.opts.types);
                     break;
                 case 'select':
-                   valueField.typedInput('types',['string']);
+                   valueField.typedInput('types',['str']);
                    break;
                  case 'checkbox':
                     valueField.typedInput('types',['bool']);
                     break;
                 case 'spinner':
-                    valueField.typedInput('types',['int'])
+                    valueField.typedInput('types',['num'])
                     break;
                 default:
-                    valueField.typedInput('types',['bool','int','float','string','array','struct'])
+                    valueField.typedInput('types',['str','num','bool','json','bin','env'])
              }
              if (ui.type === 'checkbox') {
                  valueField.typedInput('type','bool');
              } else if (ui.type === 'spinner') {
-                 valueField.typedInput('type','int');
+                 valueField.typedInput('type','num');
              }
              if (ui.type !== 'checkbox') {
                  checkbox = null;
@@ -31447,7 +31448,7 @@ RED.subflow = (function() {
         ui.label = ui.label||{};
         if (!ui.type) {
             ui.type = "input";
-            ui.opts = {types:['bool','int','float','string','array','struct']}
+            ui.opts = {types:['str','num','bool','json','bin','env']}
         } else {
             if (!ui.opts) {
                 ui.opts = (ui.type === "select") ? {opts:[]} : {};
@@ -31612,7 +31613,7 @@ RED.subflow = (function() {
                             }
                             switch (ui.type) {
                                 case "input":
-                                    if (JSON.stringify(ui.opts) === JSON.stringify({types:['bool','int','float','string','array','struct']})) {
+                                    if (JSON.stringify(ui.opts) === JSON.stringify({types:['str','num','bool','json','bin','env']})) {
                                         // This is the default input config. Delete it as it will
                                         // be applied automatically
                                         delete ui.type;
@@ -31699,7 +31700,7 @@ RED.subflow = (function() {
             var ui = data.ui || {};
             if (!ui.type) {
                 ui.type = "input";
-                ui.opts = {types:['bool','int','float','string','array','struct']}
+                ui.opts = {types:['str','num','bool','json','bin','env']}
             } else {
                 ui.opts = ui.opts || {};
             }
@@ -31713,16 +31714,16 @@ RED.subflow = (function() {
                             item.type = input.typedInput('type');
                         } else {
                             item.value = input.val();
-                            item.type = 'string';
+                            item.type = 'str';
                         }
                         break;
                     case "spinner":
                         item.value = input.val();
-                        item.type = 'int';
+                        item.type = 'num';
                         break;
                     case "select":
                         item.value = input.val();
-                        item.type = 'string';
+                        item.type = 'str';
                         break;
                     case "checkbox":
                         item.type = 'bool';
