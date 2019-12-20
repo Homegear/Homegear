@@ -1760,7 +1760,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
             }
         }
 
-        timeval timeout;
+        timeval timeout{};
         timeout.tv_sec = 0;
         timeout.tv_usec = 100000;
         fd_set readFileDescriptor;
