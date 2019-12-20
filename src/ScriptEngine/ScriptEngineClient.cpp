@@ -409,7 +409,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
                 if(localMethodIterator == _localRpcMethods.end())
                 {
                     _out.printError("Warning: RPC method not found: " + queueEntry->methodName);
-                    BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
+                    BaseLib::PVariable error = BaseLib::Variable::createError(-32601, "Requested method not found in script engine client.");
                     if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
                     return;
                 }
