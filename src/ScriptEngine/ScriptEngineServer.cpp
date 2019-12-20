@@ -3202,11 +3202,10 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineCli
     {
         if(GD::nodeBlueServer)
         {
-            if(parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");
+            if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");
             if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
             if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
             if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");
-            if(parameters->at(3)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type boolean.");
 
             return GD::nodeBlueServer->executePhpNodeBaseMethod(parameters);
         }
