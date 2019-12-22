@@ -46,7 +46,7 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
 		do
 		{
 			$event = $events->poll();
-			if($event && $event->source == 'eventHomegearChannel')
+			if($event && $event->source == 'eventHomegearChannelPeer'.$peerId)
 			{
 				$events->addChannel($homegearChannel);
 				if($event->type == Event\Type::Read)
@@ -182,7 +182,7 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 				$event = $events->poll();
 				if($event)
 				{
-					if($event->source == 'mainHomegearChannel')
+					if($event->source == 'mainHomegearChannelPeer'.$peerId)
 					{
 						$events->addChannel($homegearChannel);
 						if($event->type == Event\Type::Read)
@@ -194,7 +194,7 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 						}
 						else if($event->type == Event\Type::Close) return true; //Stop
 					}
-					else if($event->source == 'eventChannel')
+					else if($event->source == 'eventChannelPeer'.$peerId)
 					{
 						$events->addChannel($eventChannel);
 						if($event->type == Event\Type::Read)
@@ -256,9 +256,9 @@ class HomegearDevice extends HomegearDeviceBase
 		$this->mainRuntime = new Runtime();
 		$this->eventRuntime = new Runtime();
 
-		$this->mainHomegearChannel = Channel::make('mainHomegearChannel', Channel::Infinite);
-		$this->eventHomegearChannel = Channel::make('eventHomegearChannel', Channel::Infinite);
-		$this->eventChannel = Channel::make('eventChannel', Channel::Infinite);
+		$this->mainHomegearChannel = Channel::make('mainHomegearChannelPeer'.this->peerId, Channel::Infinite);
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.this->peerId, Channel::Infinite);
+		$this->eventChannel = Channel::make('eventChannelPeer'.this->peerId, Channel::Infinite);
 
 		global $mainThread;
 		$this->mainFuture = $this->mainRuntime->run($mainThread, [$this->hg->getScriptId(), $this->peerId, $this->mainHomegearChannel, $this->eventChannel]);
