@@ -18,6 +18,16 @@
              "loadCatalogManagementError": "<p>Could not get system architecture. Is homegear-management installed?</p>"
         }
     },
+    "editor": {
+        "types": {
+            "string": "string",
+            "int": "integer",
+            "float": "float",
+            "bool": "bool",
+            "array": "array",
+            "struct": "struct"
+        }
+    },
     "palette" : {
         "editor": {
             "confirm": {
