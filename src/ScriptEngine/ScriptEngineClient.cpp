@@ -1176,6 +1176,13 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
                         if(!nodeInfo->response->booleanValue) stop = true;
                     }
                     else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
+                    else if(nodeInfo->methodName == "stop")
+                    {
+                        //Cause `pollEvent()` to return
+                        std::lock_guard<std::mutex> eventMapGuard(PhpEvents::eventsMapMutex);
+                        auto event = PhpEvents::eventsMap.find(id);
+                        if(event != PhpEvents::eventsMap.end()) event->second->stop();
+                    }
                     else if(nodeInfo->methodName == "waitForStop")
                     {
                         _nodesStopped = true;
@@ -1263,6 +1270,13 @@ void ScriptEngineClient::runDevice(int32_t id, PScriptInfo scriptInfo)
                     if(!deviceInfo->response->booleanValue) stop = true;
                 }
                 else if(deviceInfo->methodName == "start" && !deviceInfo->response->booleanValue) stop = true;
+                else if(deviceInfo->methodName == "stop")
+                {
+                    //Cause `pollEvent()` to return
+                    std::lock_guard<std::mutex> eventMapGuard(PhpEvents::eventsMapMutex);
+                    auto event = PhpEvents::eventsMap.find(id);
+                    if(event != PhpEvents::eventsMap.end()) event->second->stop();
+                }
                 else if(deviceInfo->methodName == "waitForStop")
                 {
                     stop = true;
