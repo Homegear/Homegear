@@ -22134,8 +22134,22 @@ RED.palette.editor = (function() {
         })
 
         RED.actions.add("core:manage-palette",function() {
+            RED.comms.homegear().invoke("managementGetNodePackages", function(message) {
+                var nodesFromPackages = message.result;
+                for (var entry in nodeEntries) {
+                    if (nodeEntries.hasOwnProperty(entry)) {
+                        for(var set in nodeEntries[entry].info.sets) {
+                            if (nodeEntries[entry].info.sets.hasOwnProperty(set)) {
+                                if(nodesFromPackages.hasOwnProperty(nodeEntries[entry].info.sets[set].id)) {
+                                    nodeEntries[entry].info.package = nodesFromPackages[nodeEntries[entry].info.sets[set].id];
+                                }
+                            }
+                        }
+                    }
+                }
                 RED.userSettings.show('palette');
             });
+        });
 
         RED.events.on('registry:module-updated', function(ns) {
             refreshNodeModule(ns.module);
@@ -22321,7 +22335,7 @@ RED.palette.editor = (function() {
                             refreshNodeModuleList();
                         });
                     })
-                    if (!entry.local) {
+                    if (!entry.local || !entry.hasOwnProperty('package')) {
                         removeButton.hide();
                     }
                     //var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.disableall')).appendTo(buttonGroup);
@@ -31931,6 +31945,7 @@ RED.userSettings = (function() {
     var viewSettings = [
         {
             options: [
+                //Language is set through admin UI.
                 //{setting:"editor-language",local: true, label:"menu.label.view.language",options:function(done){ done([{val:'',text:RED._('menu.label.view.browserDefault')}].concat(RED.settings.theme("languages").map(localeToName).sort(compText))) }},
             ]
         },{

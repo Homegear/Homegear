@@ -86,7 +86,6 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 		{
 			if($secondsWaited >= $interval)
 			{
-				$hg->log(2, "Do something");
 				$secondsWaited = 0;
 
 				$config = $hg->getParamset($peerId, 0, "MASTER");
