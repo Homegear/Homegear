@@ -260,10 +260,12 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
             _internalMessages.clear();
         }
 
-        {
+        // We don't reset _inputValues. This keeps old nodes in the array but you can still request history data for all
+        // nodes that still exist which outweighs this problem.
+        /*{
             std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
             _inputValues.clear();
-        }
+        }*/
 
         _out.printMessage("Reinitializing...");
 
