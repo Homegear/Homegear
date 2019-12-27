@@ -9,190 +9,236 @@
 		<startType>permanent</startType>
 		<script2>
 <![CDATA[<?php
-/**
- * Class to share data between the main script and the event thread.
- */
-class SharedData extends Threaded
+use parallel\{Channel,Runtime,Events,Events\Event};
+
+$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel, Channel $eventChannel)
 {
-    public $scriptId = 0;
-    public $peerId = 0;
-    public $interval = 60;
-    public $stop = false;
-    public $eventThread = NULL;
+	$hg = new \Homegear\Homegear();
 
-    public function run() {}
-}
-
-class EventThread extends Thread
-{
-    private $sharedData;
-
-	public function __construct($sharedData)
+	if($hg->registerThread($scriptId) === false)
 	{
-		$this->sharedData = $sharedData;
+		$hg->log(2, 'Could not register thread.');
+		return false;
 	}
 
-	public function run()
+	$hg->subscribePeer($peerId);
+
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->setBlocking(false);
+
+	while(true)
 	{
-		$hg = new \Homegear\Homegear();
-		if($hg->registerThread($this->sharedData->scriptId) === false)
+		$result = $hg->pollEvent();
+		if($result["TYPE"] == "event" && $result["PEERID"] == $peerId)
 		{
-			$hg->log(2, "Could not register thread.");
-			return;
-		}
-		$hg->subscribePeer($this->sharedData->peerId);
-		while(!$this->sharedData->stop)
-		{
-			$result = $hg->pollEvent();
-			if($result["TYPE"] == "event" && $result["PEERID"] == $this->sharedData->peerId)
+			if($result["VARIABLE"] == "REQUEST")
 			{
-				if($result["VARIABLE"] == "REQUEST")
+				$eventChannel->send(['name' => 'request', 'value' => true]);
+			}
+		}
+		else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
+		{
+			$eventChannel->send(['name' => 'updateDevice', 'value' => true]);
+		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event && $event->source == 'eventHomegearChannelPeer'.$peerId)
+			{
+				$events->addChannel($homegearChannel);
+				if($event->type == Event\Type::Read)
 				{
-					$this->sharedData->interval = 0;
-					$this->synchronized(function($thread){ $thread->notify(); }, $this);
+					if(is_array($event->value) && count($event->value) > 0)
+					{
+						if($event->value['name'] == 'stop') return true; //Stop
+					}
+				}
+				else if($event->type == Event\Type::Close) return true; //Stop
+			}
+		}
+		while($event);
+	}
+};
+
+$mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, Channel $eventChannel)
+{
+	$hg = new \Homegear\Homegear();
+
+	if($hg->registerThread($scriptId) === false)
+	{
+		$hg->log(2, 'Could not register thread.');
+		return false;
+	}
+
+	$interval = 60;
+	$secondsWaited = 0;
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->addChannel($eventChannel);
+	$events->setTimeout(1000000);
+
+	while(true)
+	{
+		try
+		{
+			if($secondsWaited >= $interval)
+			{
+				$secondsWaited = 0;
+
+				$config = $hg->getParamset($peerId, 0, "MASTER");
+			    if(!array_key_exists("LANGUAGE_CODE", $config) || !array_key_exists("CITY_ID", $config))
+			    {
+			    	$hg->log(2, "Error: Peer does not seem to be an OpenWeatherMap device.");
+			    	continue;
+			    }
+			    if($config["API_KEY"] == "")
+			    {
+			    	$hg->log(2, "Warning: No API key set.");
+			    	continue;
+			    }
+
+			    $interval = $config["REQUEST_INTERVAL"];
+			    if($interval < 60) $interval = 60;
+			    else if($interval >86400) $interval = 86400;
+
+			    $url = "http://api.openweathermap.org/data/2.5/weather?id=".$config["CITY_ID"]."&units=metric&cnt=7&lang=".$config["LANGUAGE_CODE"]."&APPID=".$config["API_KEY"];
+			    for($i = 0; $i < 3; $i++)
+			    {
+				    $json = @file_get_contents($url);
+				    if($json) break;
+				}
+				if(!$json)
+			    {
+			        $hg->log(3, "Warning: Response from openweathermap.org is empty.");
+			        continue;
+			    }
+			    $data = json_decode($json, true);
+			    if(!$data || count($data) == 0)
+			    {
+			    	$hg->log(3, "Warning: Response from openweathermap.org is empty.");
+			        continue;
+			    }
+			    if($data["cod"] != "404")
+			    {
+			    	$hg->setValue($peerId, 1, "LAST_DATA", time());
+			        $hg->setValue($peerId, 1, "CITY_LONGITUDE", (double)$data["coord"]["lon"]);
+			        $hg->setValue($peerId, 1, "CITY_LATITUDE", (double)$data["coord"]["lat"]);
+			        $hg->setValue($peerId, 1, "SUNRISE", (integer)$data["sys"]["sunrise"]);
+			        $hg->setValue($peerId, 1, "SUNSET", (integer)$data["sys"]["sunset"]);
+			        if(array_key_exists("weather", $data) && count($data["weather"]) > 0)
+			        {
+			            $hg->setValue($peerId, 1, "WEATHER", (string)$data["weather"][0]["main"]);
+			            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", (string)$data["weather"][0]["description"]);
+			            $hg->setValue($peerId, 1, "WEATHER_ICON", (string)$data["weather"][0]["icon"]);
+			            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "http://openweathermap.org/img/w/".$data["weather"][0]["icon"].".png");
+			        }
+			        else
+			        {
+			            $hg->setValue($peerId, 1, "WEATHER", "");
+			            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
+			            $hg->setValue($peerId, 1, "WEATHER_ICON", "");
+			            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
+			        }
+			        $hg->setValue($peerId, 1, "TEMPERATURE", (double)$data["main"]["temp"]);
+			        $hg->setValue($peerId, 1, "HUMIDITY", (integer)$data["main"]["humidity"]);
+			        $hg->setValue($peerId, 1, "PRESSURE", (double)$data["main"]["pressure"]);
+			        $hg->setValue($peerId, 1, "WIND_SPEED", (double)$data["wind"]["speed"]);
+			        $hg->setValue($peerId, 1, "WIND_GUST", array_key_exists("gust", $data["wind"]) ? (double)$data["wind"]["gust"] : 0.0);
+			        $hg->setValue($peerId, 1, "WIND_DIRECTION", array_key_exists("deg", $data["wind"]) ? (double)$data["wind"]["deg"] : 0.0);
+			        $hg->setValue($peerId, 1, "RAIN_3H", array_key_exists("rain", $data) && array_key_exists("3h", $data["rain"]) ? (double)$data["rain"]["3h"] : 0.0);
+			        $hg->setValue($peerId, 1, "SNOW_3H", array_key_exists("snow", $data) && array_key_exists("3h", $data["snow"]) ? (double)$data["snow"]["3h"] : 0.0);
+			        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", (integer)$data["clouds"]["all"]);
+			    }
+			    else
+			    {
+			    	$hg->log(2, "Error: City or country not found.");
+			        $hg->setValue($peerId, 1, "CITY_LONGITUDE", 0.0);
+			        $hg->setValue($peerId, 1, "CITY_LATITUDE", 0.0);
+			        $hg->setValue($peerId, 1, "SUNRISE", 0);
+			        $hg->setValue($peerId, 1, "SUNSET", 0);
+			        $hg->setValue($peerId, 1, "WEATHER", "");
+			        $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
+			        $hg->setValue($peerId, 1, "WEATHER_ICON", "");
+			        $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
+			        $hg->setValue($peerId, 1, "TEMPERATURE", 0.0);
+			        $hg->setValue($peerId, 1, "HUMIDITY", 0);
+			        $hg->setValue($peerId, 1, "PRESSURE", 0.0);
+			        $hg->setValue($peerId, 1, "WIND_SPEED", 0.0);
+			        $hg->setValue($peerId, 1, "WIND_GUST", 0.0);
+			        $hg->setValue($peerId, 1, "WIND_DIRECTION", 0.0);
+			        $hg->setValue($peerId, 1, "RAIN_3H", 0.0);
+			        $hg->setValue($peerId, 1, "SNOW_3H", 0.0);
+			        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", 0);
+			    }
+			}
+
+			$event = NULL;
+			do
+			{
+				$event = $events->poll();
+				if($event)
+				{
+					if($event->source == 'mainHomegearChannelPeer'.$peerId)
+					{
+						$events->addChannel($homegearChannel);
+						if($event->type == Event\Type::Read)
+						{
+							if(is_array($event->value) && count($event->value) > 0)
+							{
+								if($event->value['name'] == 'stop') return true; //Stop
+							}
+						}
+						else if($event->type == Event\Type::Close) return true; //Stop
+					}
+					else if($event->source == 'eventChannelPeer'.$peerId)
+					{
+						$events->addChannel($eventChannel);
+						if($event->type == Event\Type::Read)
+						{
+							if(is_array($event->value) && count($event->value) > 0)
+							{
+								if($event->value['name'] == 'updateDevice' || $event->value['name'] == 'request') 
+								{
+									$secondsWaited = $interval;
+									break;
+								}
+							}
+						}
+					}
 				}
 			}
-			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $this->sharedData->peerId)
-			{
-				$this->sharedData->interval = 0;
-				$this->synchronized(function($thread){ $thread->notify(); }, $this);
-			}
+			while($event);
 		}
-	}
-}
-
-class MainThread extends Thread
-{
-	private $sharedData;
-
-	public function __construct($sharedData)
-	{
-		$this->sharedData = $sharedData;
-	}
-
-	public function run()
-	{
-		$hg = new \Homegear\Homegear();
-		if($hg->registerThread($this->sharedData->scriptId) === false)
+		catch(Events\Error\Timeout $ex)
 		{
-			$hg->log(2, "Could not register thread.");
-			return;
-		}
-		while(!$this->sharedData->stop)
-		{
-			$config = $hg->getParamset($this->sharedData->peerId, 0, "MASTER");
-		    if(!array_key_exists("LANGUAGE_CODE", $config) || !array_key_exists("CITY_ID", $config))
-		    {
-		    	$hg->log(2, "Error: Peer does not seem to be an OpenWeatherMap device.");
-		    	$this->sharedData->eventThread->synchronized(function($thread){ $thread->wait(5000000); }, $this->sharedData->eventThread);
-		    	continue;
-		    }
-		    if($config["API_KEY"] == "")
-		    {
-		    	$hg->log(2, "Warning: No API key set.");
-		    	$this->sharedData->eventThread->synchronized(function($thread){ $thread->wait(5000000); }, $this->sharedData->eventThread);
-		    	continue;
-		    }
-
-		    $this->sharedData->interval = $config["REQUEST_INTERVAL"];
-		    if($this->sharedData->interval < 60) $this->sharedData->interval = 60;
-
-		    $url = "http://api.openweathermap.org/data/2.5/weather?id=".$config["CITY_ID"]."&units=metric&cnt=7&lang=".$config["LANGUAGE_CODE"]."&APPID=".$config["API_KEY"];
-		    for($i = 0; $i < 3; $i++)
-		    {
-			    $json = @file_get_contents($url);
-			    if($json) break;
-			}
-			if(!$json)
-		    {
-		        $hg->log(3, "Warning: Response from openweathermap.org is empty.");
-				$this->sharedData->eventThread->synchronized(function($thread){ $thread->wait(10000000); }, $this->sharedData->eventThread);
-		        continue;
-		    }
-		    $data = json_decode($json, true);
-		    if(!$data || count($data) == 0)
-		    {
-		    	$hg->log(3, "Warning: Response from openweathermap.org is empty.");
-				$this->sharedData->eventThread->synchronized(function($thread){ $thread->wait(10000000); }, $this->sharedData->eventThread);
-		        continue;
-		    }
-		    if($data["cod"] != "404")
-		    {
-		    	$hg->setValue($this->sharedData->peerId, 1, "LAST_DATA", time());
-		        $hg->setValue($this->sharedData->peerId, 1, "CITY_LONGITUDE", (double)$data["coord"]["lon"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "CITY_LATITUDE", (double)$data["coord"]["lat"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "SUNRISE", (integer)$data["sys"]["sunrise"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "SUNSET", (integer)$data["sys"]["sunset"]);
-		        if(array_key_exists("weather", $data) && count($data["weather"]) > 0)
-		        {
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER", (string)$data["weather"][0]["main"]);
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER_DESCRIPTION", (string)$data["weather"][0]["description"]);
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER_ICON", (string)$data["weather"][0]["icon"]);
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER_ICON_URL", "http://openweathermap.org/img/w/".$data["weather"][0]["icon"].".png");
-		        }
-		        else
-		        {
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER", "");
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER_DESCRIPTION", "");
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER_ICON", "");
-		            $hg->setValue($this->sharedData->peerId, 1, "WEATHER_ICON_URL", "");
-		        }
-		        $hg->setValue($this->sharedData->peerId, 1, "TEMPERATURE", (double)$data["main"]["temp"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "HUMIDITY", (integer)$data["main"]["humidity"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "PRESSURE", (double)$data["main"]["pressure"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "WIND_SPEED", (double)$data["wind"]["speed"]);
-		        $hg->setValue($this->sharedData->peerId, 1, "WIND_GUST", array_key_exists("gust", $data["wind"]) ? (double)$data["wind"]["gust"] : 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "WIND_DIRECTION", array_key_exists("deg", $data["wind"]) ? (double)$data["wind"]["deg"] : 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "RAIN_3H", array_key_exists("rain", $data) && array_key_exists("3h", $data["rain"]) ? (double)$data["rain"]["3h"] : 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "SNOW_3H", array_key_exists("snow", $data) && array_key_exists("3h", $data["snow"]) ? (double)$data["snow"]["3h"] : 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "CLOUD_COVERAGE", (integer)$data["clouds"]["all"]);
-		    }
-		    else
-		    {
-		    	$hg->log(2, "Error: City or country not found.");
-		        $hg->setValue($this->sharedData->peerId, 1, "CITY_LONGITUDE", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "CITY_LATITUDE", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "SUNRISE", 0);
-		        $hg->setValue($this->sharedData->peerId, 1, "SUNSET", 0);
-		        $hg->setValue($this->sharedData->peerId, 1, "WEATHER", "");
-		        $hg->setValue($this->sharedData->peerId, 1, "WEATHER_DESCRIPTION", "");
-		        $hg->setValue($this->sharedData->peerId, 1, "WEATHER_ICON", "");
-		        $hg->setValue($this->sharedData->peerId, 1, "WEATHER_ICON_URL", "");
-		        $hg->setValue($this->sharedData->peerId, 1, "TEMPERATURE", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "HUMIDITY", 0);
-		        $hg->setValue($this->sharedData->peerId, 1, "PRESSURE", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "WIND_SPEED", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "WIND_GUST", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "WIND_DIRECTION", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "RAIN_3H", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "SNOW_3H", 0.0);
-		        $hg->setValue($this->sharedData->peerId, 1, "CLOUD_COVERAGE", 0);
-		    }
-
-		    $waited = 0;
-		    while($waited < $this->sharedData->interval && !$this->sharedData->stop)
-		    {
-		    	$this->sharedData->eventThread->synchronized(function($thread){ $thread->wait(1000000); }, $this->sharedData->eventThread);
-		    	$waited += 1;
-		    }
+			$secondsWaited++;
 		}
 	}
-}
+
+	return true;
+};
 
 class HomegearDevice extends HomegearDeviceBase
 {
 	private $hg = NULL;
 	private $peerId = NULL;
-	private $sharedData = NULL;
-	private $mainThread = NULL;
-	private $eventThread = NULL;
+	private $mainRuntime = NULL;
+	private $mainFuture = NULL;
+	private $mainHomegearChannel = NULL; //Channel to pass Homegear events to main thread
+	private $eventRuntime = NULL;
+	private $eventFuture = NULL;
+	private $eventHomegearChannel = NULL; //Channel to pass Homegear events to event thread
+	private $eventChannel = NULL; //Channel to pass events from event thread to main thread
 
-	function __construct()
+	public function __construct()
 	{
 		$this->hg = new \Homegear\Homegear();
 	}
 
-	function __destruct()
+	public function __destruct()
 	{
 		$this->stop();
 		$this->waitForStop();
@@ -206,28 +252,72 @@ class HomegearDevice extends HomegearDeviceBase
 
 	public function start() : bool
 	{
-		$this->sharedData = new SharedData();
-		$this->sharedData->peerId = $this->peerId;
-		$this->sharedData->scriptId = $this->hg->getScriptId();
-		$this->eventThread = new EventThread($this->sharedData);
-		$this->eventThread->start();
-		$this->sharedData->eventThread = $this->eventThread;
-		$this->mainThread = new MainThread($this->sharedData);
-		$this->mainThread->start();
+		$this->mainRuntime = new Runtime();
+		$this->eventRuntime = new Runtime();
+
+		$this->mainHomegearChannel = Channel::make('mainHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventChannel = Channel::make('eventChannelPeer'.$this->peerId, Channel::Infinite);
+
+		global $mainThread;
+		$this->mainFuture = $this->mainRuntime->run($mainThread, [$this->hg->getScriptId(), $this->peerId, $this->mainHomegearChannel, $this->eventChannel]);
+
+		global $eventThread;
+		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel, $this->eventChannel]);
+
 		return true;
 	}
 
 	public function stop()
 	{
-		if($this->eventThread || $this->mainThread) $this->sharedData->stop = true;
+		if($this->eventHomegearChannel) $this->eventHomegearChannel->send(['name' => 'stop', 'value' => true]);
+		if($this->mainHomegearChannel) $this->mainHomegearChannel->send(['name' => 'stop', 'value' => true]);
 	}
 
 	public function waitForStop()
 	{
-		if($this->mainThread) $this->mainThread->join();
-		$this->mainThread = NULL;
-		if($this->eventThread) $this->eventThread->join();
-		$this->eventThread = NULL;
+		if($this->eventFuture)
+		{
+			$this->eventFuture->value();
+			$this->eventFuture = NULL;
+		}
+
+		if($this->mainFuture)
+		{
+			$this->mainFuture->value();
+			$this->mainFuture = NULL;
+		}
+
+		if($this->mainHomegearChannel)
+		{
+			$this->mainHomegearChannel->close();
+			$this->mainHomegearChannel = NULL;
+		}
+
+		if($this->eventHomegearChannel)
+		{
+			$this->eventHomegearChannel->close();
+			$this->eventHomegearChannel = NULL;
+		}
+
+		if($this->eventChannel)
+		{
+			$this->eventChannel->close();
+			$this->eventChannel = NULL;
+		}
+
+
+		if($this->eventRuntime)
+		{
+			$this->eventRuntime->close();
+			$this->eventRuntime = NULL;
+		}
+
+		if($this->mainRuntime)
+		{
+			$this->mainRuntime->close();
+			$this->mainRuntime = NULL;
+		}
 	}
 }
 ]]>

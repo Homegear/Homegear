@@ -136,6 +136,8 @@ public:
 
 	BaseLib::PVariable deleteRoom(uint64_t roomId) override;
 
+    std::string getRoomName(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId);
+
 	BaseLib::PVariable getRoomMetadata(uint64_t roomId) override;
 
 	BaseLib::PVariable getRooms(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;
@@ -164,11 +166,15 @@ public:
 	// }}}
 
     // {{{ Roles
+    void createDefaultRoles();
+
 	void createRoleInternal(uint64_t roleId, const BaseLib::PVariable& translations, const BaseLib::PVariable& metadata);
 
     BaseLib::PVariable createRole(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 
     BaseLib::PVariable deleteRole(uint64_t roleId) override;
+
+    void deleteAllRoles() override;
 
     BaseLib::PVariable getRoles(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;
 

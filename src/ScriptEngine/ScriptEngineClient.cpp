@@ -74,6 +74,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("devTest", std::bind(&ScriptEngineClient::devTest, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("lifetick", std::bind(&ScriptEngineClient::lifetick, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
@@ -109,7 +110,7 @@ void ScriptEngineClient::dispose(bool broadcastShutdown)
 {
     try
     {
-        BaseLib::PArray eventData(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(0)), BaseLib::PVariable(new BaseLib::Variable(-1)), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(std::string("DISPOSING")))}))), BaseLib::PVariable(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(true))})))});
+        BaseLib::PArray eventData(new BaseLib::Array{std::make_shared<BaseLib::Variable>(0), std::make_shared<BaseLib::Variable>(-1), std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(std::string("DISPOSING"))})), std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(true)}))});
 
         GD::bl->shuttingDown = true;
         if(broadcastShutdown) broadcastEvent(eventData);
@@ -408,7 +409,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
                 if(localMethodIterator == _localRpcMethods.end())
                 {
                     _out.printError("Warning: RPC method not found: " + queueEntry->methodName);
-                    BaseLib::PVariable error = BaseLib::Variable::createError(-32601, ": Requested method not found.");
+                    BaseLib::PVariable error = BaseLib::Variable::createError(-32601, "Requested method not found in script engine client.");
                     if(queueEntry->parameters->at(1)->booleanValue) sendResponse(queueEntry->parameters->at(0), error);
                     return;
                 }
@@ -1024,6 +1025,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 BaseLib::Base64::encode(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}, globals->token);
                 std::shared_ptr<PhpEvents> phpEvents = std::make_shared<PhpEvents>(globals->token, globals->outputCallback, globals->rpcCallback);
                 phpEvents->setPeerId(static_cast<uint64_t>(scriptInfo->peerId));
+                if(type == ScriptInfo::ScriptType::statefulNode) phpEvents->setNodeId(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
                 std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
                 PhpEvents::eventsMap.emplace(id, phpEvents);
             }
@@ -1174,6 +1176,13 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo)
                         if(!nodeInfo->response->booleanValue) stop = true;
                     }
                     else if(nodeInfo->methodName == "start" && !nodeInfo->response->booleanValue) stop = true;
+                    else if(nodeInfo->methodName == "stop")
+                    {
+                        //Cause `pollEvent()` to return
+                        std::lock_guard<std::mutex> eventMapGuard(PhpEvents::eventsMapMutex);
+                        auto event = PhpEvents::eventsMap.find(id);
+                        if(event != PhpEvents::eventsMap.end()) event->second->stop();
+                    }
                     else if(nodeInfo->methodName == "waitForStop")
                     {
                         _nodesStopped = true;
@@ -1261,6 +1270,13 @@ void ScriptEngineClient::runDevice(int32_t id, PScriptInfo scriptInfo)
                     if(!deviceInfo->response->booleanValue) stop = true;
                 }
                 else if(deviceInfo->methodName == "start" && !deviceInfo->response->booleanValue) stop = true;
+                else if(deviceInfo->methodName == "stop")
+                {
+                    //Cause `pollEvent()` to return
+                    std::lock_guard<std::mutex> eventMapGuard(PhpEvents::eventsMapMutex);
+                    auto event = PhpEvents::eventsMap.find(id);
+                    if(event != PhpEvents::eventsMap.end()) event->second->stop();
+                }
                 else if(deviceInfo->methodName == "waitForStop")
                 {
                     stop = true;
@@ -1528,7 +1544,33 @@ BaseLib::PVariable ScriptEngineClient::shutdown(BaseLib::PArray& parameters)
         if(_maintenanceThread.joinable()) _maintenanceThread.join();
         _maintenanceThread = std::thread(&ScriptEngineClient::dispose, this, true);
 
-        return BaseLib::PVariable(new BaseLib::Variable());
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::lifetick(BaseLib::PArray& parameters)
+{
+    try
+    {
+        for(int32_t i = 0; i < _queueCount; i++)
+        {
+            if(queueSize(i) > 1000)
+            {
+                _out.printError("Error in lifetick: More than 1000 items are queued in queue number " + std::to_string(i));
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
     }
     catch(const std::exception& ex)
     {

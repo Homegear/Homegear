@@ -64,19 +64,20 @@ void startUp();
 
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
-std::mutex _shuttingDownMutex;
 bool _startAsDaemon = false;
 bool _nonInteractive = false;
-std::atomic_bool _startUpComplete;
-std::atomic_bool _shutdownQueued;
-bool _disposing = false;
 std::shared_ptr<std::function<void(int32_t, std::string)>> _errorCallback;
 std::thread _signalHandlerThread;
+bool _stopHomegear = false;
+int _signalNumber = -1;
+std::mutex _stopHomegearMutex;
+std::condition_variable _stopHomegearConditionVariable;
 
 void exitHomegear(int exitCode)
 {
 	if(GD::eventHandler) GD::eventHandler->dispose();
 	if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+    if(GD::bl->hgdc) GD::bl->hgdc->stop();
 	if(GD::bl->db)
 	{
 		//Finish database operations before closing modules, otherwise SEGFAULT
@@ -146,22 +147,8 @@ void terminateHomegear(int signalNumber)
 {
     try
     {
-        _shuttingDownMutex.lock();
-        if(!_startUpComplete)
-        {
-            GD::out.printMessage("Info: Startup is not complete yet. Queueing shutdown.");
-            _shutdownQueued = true;
-            _shuttingDownMutex.unlock();
-            return;
-        }
-        if(GD::bl->shuttingDown)
-        {
-            _shuttingDownMutex.unlock();
-            return;
-        }
         GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
         GD::bl->shuttingDown = true;
-        _shuttingDownMutex.unlock();
 
         if(GD::ipcServer) GD::ipcServer->homegearShuttingDown();
         if(GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
@@ -169,7 +156,6 @@ void terminateHomegear(int signalNumber)
         if(GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
     #endif
         if(GD::familyController) GD::familyController->homegearShuttingDown();
-        _disposing = true;
         if(GD::bl->settings.enableUPnP())
         {
             GD::out.printInfo("Stopping UPnP server...");
@@ -188,8 +174,13 @@ void terminateHomegear(int signalNumber)
         GD::rpcServers.clear();
         GD::out.printInfo( "(Shutdown) => Stopping RPC client");;
         if(GD::rpcClient) GD::rpcClient->dispose();
-        GD::out.printInfo( "(Shutdown) => Closing physical interfaces");
+        GD::out.printInfo( "(Shutdown) => Closing physical interfaces...");
         if(GD::familyController) GD::familyController->physicalInterfaceStopListening();
+        if(GD::bl->hgdc)
+        {
+            GD::out.printInfo("(Shutdown) => Stopping Homegear Daisy Chain client...");
+            if(GD::bl->hgdc) GD::bl->hgdc->stop();
+        }
         GD::out.printInfo("(Shutdown) => Stopping IPC server...");
         if(GD::ipcServer) GD::ipcServer->stop();
         if(GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
@@ -202,6 +193,11 @@ void terminateHomegear(int signalNumber)
         if(GD::familyController) GD::familyController->save(false);
         GD::out.printMessage("(Shutdown) => Disposing device families");
         if(GD::familyController) GD::familyController->disposeDeviceFamilies();
+        if(GD::bl->hgdc)
+        {
+            GD::out.printMessage("(Shutdown) => Disposing Homegear Daisy Chain client...");
+            GD::bl->hgdc.reset();
+        }
         GD::out.printMessage("(Shutdown) => Disposing database");
         if(GD::bl->db)
         {
@@ -229,15 +225,11 @@ void terminateHomegear(int signalNumber)
         gcry_control(GCRYCTL_TERM_SECMEM);
         gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 
-        _exit(0);
+        return;
     }
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _exit(1);
 }
@@ -308,8 +300,8 @@ void reloadHomegear()
 
 void signalHandlerThread()
 {
-    sigset_t set{};
     int signalNumber = -1;
+    sigset_t set{};
     sigemptyset(&set);
     sigaddset(&set, SIGHUP);
     sigaddset(&set, SIGTERM);
@@ -326,28 +318,28 @@ void signalHandlerThread()
     sigaddset(&set, SIGTTIN);
     sigaddset(&set, SIGTTOU);
 
-    while(true)
+    while(!_stopHomegear)
     {
         try
         {
-            sigwait(&set, &signalNumber);
+            if(sigwait(&set, &signalNumber) != 0)
+            {
+                GD::out.printError("Error calling sigwait. Killing myself.");
+                raise(SIGKILL);
+            }
+            if(GD::bl->settings.devLog()) GD::out.printDebug("Debug: Signal " + std::to_string(signalNumber) + " received in main.cpp.");
             if(signalNumber == SIGTERM || signalNumber == SIGINT)
             {
-                terminateHomegear(signalNumber);
+                std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
+                _stopHomegear = true;
+                _signalNumber = signalNumber;
+                stopHomegearGuard.unlock();
+                _stopHomegearConditionVariable.notify_all();
+                return;
             }
             else if(signalNumber == SIGHUP)
             {
-                GD::out.printMessage("Info: SIGHUP received...");
-                _shuttingDownMutex.lock();
-                GD::out.printMessage("Info: Reloading...");
-                if(!_startUpComplete)
-                {
-                    _shuttingDownMutex.unlock();
-                    GD::out.printError("Error: Cannot reload. Startup is not completed.");
-                    return;
-                }
-                _startUpComplete = false;
-                _shuttingDownMutex.unlock();
+                GD::out.printMessage("Info: SIGHUP received. Reloading...");
 
                 reloadHomegear();
 
@@ -364,22 +356,13 @@ void signalHandlerThread()
                     }
                 }
 
-                _shuttingDownMutex.lock();
-                _startUpComplete = true;
-                if(_shutdownQueued)
-                {
-                    _shuttingDownMutex.unlock();
-                    terminateHomegear(SIGTERM);
-                    return;
-                }
-                _shuttingDownMutex.unlock();
                 GD::out.printInfo("Info: Reload complete.");
             }
             else
             {
-                if(!_disposing) GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
-                signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
-                kill(getpid(), signalNumber); //Generate core dump
+                GD::out.printCritical("Signal " + std::to_string(signalNumber) + " received.");
+                pthread_sigmask(SIG_SETMASK, &BaseLib::SharedObjects::defaultSignalMask, nullptr);
+                raise(signalNumber); //Raise same signal again using the default action.
             }
         }
         catch(const std::exception& ex)
@@ -396,24 +379,6 @@ void signalHandlerThread()
 void errorCallback(int32_t level, std::string message)
 {
 	if(GD::rpcClient) GD::rpcClient->broadcastError(level, message);
-}
-
-int32_t getIntInput()
-{
-	std::string input;
-	std::cin >> input;
-	int32_t intInput = -1;
-	try	{ intInput = std::stoll(input); } catch(...) {}
-    return intInput;
-}
-
-int32_t getHexInput()
-{
-	std::string input;
-	std::cin >> input;
-	int32_t intInput = -1;
-	try	{ intInput = std::stoll(input, 0, 16); } catch(...) {}
-    return intInput;
 }
 
 void getExecutablePath(int argc, char* argv[])
@@ -450,7 +415,7 @@ void getExecutablePath(int argc, char* argv[])
 	}
 	if((unsigned)length > sizeof(path))
 	{
-		std::cerr << "The path to the homegear binary is in has more than 1024 characters." << std::endl;
+		std::cerr << "The path to the Homegear binary is in has more than 1024 characters." << std::endl;
 		exit(1);
 	}
 	path[length] = '\0';
@@ -467,7 +432,7 @@ void getExecutablePath(int argc, char* argv[])
 
 void initGnuTls()
 {
-	// {{{ Init gcrypt and GnuTLS
+	// {{{ Init Libgcrypt and GnuTLS
 		gcry_error_t gcryResult;
 		if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
 		{
@@ -529,7 +494,7 @@ void printHelp()
 	std::cout << "-h                  Show this help" << std::endl;
 	std::cout << "-u                  Run as user" << std::endl;
 	std::cout << "-g                  Run as group" << std::endl;
-	std::cout << "-c <path>           Specify path to config file" << std::endl;
+	std::cout << "-c <path>           Specify path to config directory" << std::endl;
 	std::cout << "-d                  Run as daemon" << std::endl;
 	std::cout << "-p <pid path>       Specify path to process id file" << std::endl;
 	std::cout << "-s <user> <group>   Set GPIO settings and necessary permissions for all defined physical devices" << std::endl;
@@ -582,32 +547,6 @@ void startUp()
 {
 	try
 	{
-		if((chdir(GD::bl->settings.workingDirectory().c_str())) < 0)
-		{
-			GD::out.printError("Could not change working directory to " + GD::bl->settings.workingDirectory() + ".");
-			exitHomegear(1);
-		}
-
-        {
-            sigset_t set{};
-            sigemptyset(&set);
-            sigaddset(&set, SIGHUP);
-            sigaddset(&set, SIGTERM);
-            sigaddset(&set, SIGINT);
-            sigaddset(&set, SIGABRT);
-            sigaddset(&set, SIGSEGV);
-            sigaddset(&set, SIGQUIT);
-            sigaddset(&set, SIGILL);
-            sigaddset(&set, SIGFPE);
-            sigaddset(&set, SIGALRM);
-            sigaddset(&set, SIGUSR1);
-            sigaddset(&set, SIGUSR2);
-            sigaddset(&set, SIGTSTP);
-            sigaddset(&set, SIGTTIN);
-            sigaddset(&set, SIGTTOU);
-            sigprocmask(SIG_BLOCK, &set, nullptr);
-        }
-
         if(GD::bl->settings.memoryDebugging()) mallopt(M_CHECK_ACTION, 3); //Print detailed error message, stack trace, and memory, and abort the program. See: http://man7.org/linux/man-pages/man3/mallopt.3.html
 
         //Use sigaction over signal because of different behavior in Linux and BSD
@@ -618,9 +557,6 @@ void startUp()
         setLimits();
 
         initGnuTls();
-
-        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager); //Needs to be called before starting any threads
-        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
 
     	if(_startAsDaemon || _nonInteractive)
 		{
@@ -661,12 +597,53 @@ void startUp()
         {
             while(BaseLib::HelperFunctions::getTime() < 1000000000000)
             {
-                if(_shutdownQueued) exitHomegear(1);
                 GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(10000));
             }
         }
         GD::bl->setStartTime(BaseLib::HelperFunctions::getTime());
+
+        if(!GD::bl->settings.waitForIp4OnInterface().empty())
+        {
+            std::string ipAddress;
+            while(ipAddress.empty())
+            {
+                try
+                {
+                    ipAddress = BaseLib::Net::getMyIpAddress(GD::bl->settings.waitForIp4OnInterface());
+                }
+                catch(const BaseLib::NetException& ex)
+                {
+                    GD::out.printDebug("Debug: " + std::string(ex.what()));
+                }
+                if(ipAddress.empty())
+                {
+                    GD::out.printWarning("Warning: " + GD::bl->settings.waitForIp4OnInterface() + " has no IPv4 address assigned yet. Waiting...");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+                }
+            }
+        }
+
+        if(!GD::bl->settings.waitForIp6OnInterface().empty())
+        {
+            std::string ipAddress;
+            while(ipAddress.empty())
+            {
+                try
+                {
+                    ipAddress = BaseLib::Net::getMyIp6Address(GD::bl->settings.waitForIp6OnInterface());
+                }
+                catch(const BaseLib::NetException& ex)
+                {
+                    GD::out.printDebug("Debug: " + std::string(ex.what()));
+                }
+                if(ipAddress.empty())
+                {
+                    GD::out.printWarning("Warning: " + GD::bl->settings.waitForIp6OnInterface() + " has no IPv6 address assigned yet. Waiting...");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+                }
+            }
+        }
 
 		if(!GD::bl->io.directoryExists(GD::bl->settings.socketPath()))
 		{
@@ -811,14 +788,12 @@ void startUp()
             }
             catch(const BaseLib::NetException& ex)
             {
-                if(_shutdownQueued) exitHomegear(1);
                 GD::out.printError("Error binding RPC servers (1): " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
             }
             catch(const BaseLib::SocketOperationException& ex)
             {
-                if(_shutdownQueued) exitHomegear(1);
                 GD::out.printError("Error binding RPC servers (2): " + std::string(ex.what()) + " Retrying in 5 seconds...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(5000));
                 continue;
@@ -1001,6 +976,14 @@ void startUp()
         GD::out.printInfo("Loading licensing controller data...");
         GD::licensingController->load();
 
+        if(GD::bl->settings.enableHgdc())
+        {
+            GD::out.printInfo("Initializing Homegear Daisy Chain client...");
+            GD::bl->hgdc = std::make_shared<BaseLib::Hgdc>(GD::bl.get(), GD::bl->settings.hgdcPort());
+            GD::out.printInfo("Starting Homegear Daisy Chain client...");
+            GD::bl->hgdc->start();
+        }
+
         GD::out.printInfo("Loading devices...");
         if(BaseLib::Io::fileExists(GD::configPath + "physicalinterfaces.conf")) GD::out.printWarning("Warning: File physicalinterfaces.conf exists in config directory. Interface configuration has been moved to " + GD::bl->settings.familyConfigPath());
         GD::familyController->load(); //Don't load before database is open!
@@ -1044,6 +1027,9 @@ void startUp()
 			}
 		}
 
+        BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
+        GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
+
         GD::out.printMessage("Startup complete. Waiting for physical interfaces to connect.");
 
         //Wait for all interfaces to connect before setting booting to false
@@ -1070,29 +1056,22 @@ void startUp()
         GD::bl->booting = false;
         GD::familyController->homegearStarted();
 
-        _shuttingDownMutex.lock();
-		_startUpComplete = true;
-		if(_shutdownQueued)
-		{
-			_shuttingDownMutex.unlock();
-			terminateHomegear(SIGTERM);
-		}
-		_shuttingDownMutex.unlock();
-
 		if(BaseLib::Io::fileExists(GD::bl->settings.workingDirectory() + "core"))
 		{
 			GD::out.printError("Error: A core file exists in Homegear's working directory (\"" + GD::bl->settings.workingDirectory() + "core" + "\"). Please send this file to the Homegear team including information about your system (Linux distribution, CPU architecture), the Homegear version, the current log files and information what might've caused the error.");
 		}
 
-        while(true) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        while(!_stopHomegear)
+        {
+            std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
+            _stopHomegearConditionVariable.wait(stopHomegearGuard);
+        }
+
+        terminateHomegear(_signalNumber);
 	}
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1100,13 +1079,9 @@ int main(int argc, char* argv[])
 {
 	try
     {
-		_startUpComplete = false;
-		_shutdownQueued = false;
-
     	getExecutablePath(argc, argv);
     	_errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
     	GD::bl.reset(new BaseLib::SharedObjects());
-    	GD::out.init(GD::bl.get());
 
 		if(BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
 		else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
@@ -1559,6 +1534,32 @@ int main(int argc, char* argv[])
 
     	if(!isatty(STDIN_FILENO)) _nonInteractive = true;
 
+        {
+            //Block the signals below during start up
+            //Needs to be called after initialization of GD::bl as GD::bl reads the current (default) signal mask.
+            sigset_t set{};
+            sigemptyset(&set);
+            sigaddset(&set, SIGHUP);
+            sigaddset(&set, SIGTERM);
+            sigaddset(&set, SIGINT);
+            sigaddset(&set, SIGABRT);
+            sigaddset(&set, SIGSEGV);
+            sigaddset(&set, SIGQUIT);
+            sigaddset(&set, SIGILL);
+            sigaddset(&set, SIGFPE);
+            sigaddset(&set, SIGALRM);
+            sigaddset(&set, SIGUSR1);
+            sigaddset(&set, SIGUSR2);
+            sigaddset(&set, SIGTSTP);
+            sigaddset(&set, SIGTTIN);
+            sigaddset(&set, SIGTTOU);
+            if(pthread_sigmask(SIG_BLOCK, &set, nullptr) < 0)
+            {
+                std::cerr << "SIG_BLOCK error." << std::endl;
+                exit(1);
+            }
+        }
+
     	// {{{ Load settings
 			GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
 			GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
@@ -1567,7 +1568,7 @@ int main(int argc, char* argv[])
 			if((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty()))
 			{
 				GD::out.printCritical("Critical: You only provided a user OR a group for Homegear to run as. Please specify both.");
-				exit(1);
+                exitHomegear(1);
 			}
 			GD::bl->userId = GD::bl->hf.userId(GD::runAsUser);
 			GD::bl->groupId = GD::bl->hf.groupId(GD::runAsGroup);
@@ -1601,17 +1602,12 @@ int main(int argc, char* argv[])
     	if(_startAsDaemon) startDaemon();
     	startUp();
 
+        GD::bl->threadManager.join(_signalHandlerThread);
         return 0;
     }
     catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	terminateHomegear(SIGTERM);
-
-    return 1;
+    _exit(1);
 }

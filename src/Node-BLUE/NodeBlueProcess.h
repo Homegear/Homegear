@@ -55,7 +55,7 @@ private:
 	std::map<int32_t, PFlowInfoServer> _flows;
 	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
 	PNodeBlueClientData _clientData;
-	bool _exited = false;
+	std::atomic_bool _exited{false};
 	std::atomic_uint _nodeThreadCount;
 public:
 	NodeBlueProcess();

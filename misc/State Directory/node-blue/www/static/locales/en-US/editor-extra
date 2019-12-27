@@ -14,8 +14,18 @@
             "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
         },
         "errors": {
-             "flowStartError": "<p>Failed to start flow '__flow__'. Please see the error log for more details.</p>",
+             "flowStartError": "<p>Failed to start flow '__flow__'. Most probable cause are too many nodes on that flow. Please see the error log for more details.</p>",
              "loadCatalogManagementError": "<p>Could not get system architecture. Is homegear-management installed?</p>"
+        }
+    },
+    "editor": {
+        "types": {
+            "string": "string",
+            "int": "integer",
+            "float": "float",
+            "bool": "bool",
+            "array": "array",
+            "struct": "struct"
         }
     },
     "palette" : {

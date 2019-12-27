@@ -67,7 +67,7 @@ public:
 
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 
-	virtual Flows::PVariable invokeLocal(const std::string& methodName, Flows::PArray& parameters);
+	virtual Flows::PVariable invokeLocal(const std::string& methodName, Flows::PArray parameters);
 };
 
 }
