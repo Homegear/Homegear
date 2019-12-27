@@ -255,9 +255,9 @@ class HomegearDevice extends HomegearDeviceBase
 		$this->mainRuntime = new Runtime();
 		$this->eventRuntime = new Runtime();
 
-		$this->mainHomegearChannel = Channel::make('mainHomegearChannelPeer'.this->peerId, Channel::Infinite);
-		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.this->peerId, Channel::Infinite);
-		$this->eventChannel = Channel::make('eventChannelPeer'.this->peerId, Channel::Infinite);
+		$this->mainHomegearChannel = Channel::make('mainHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventChannel = Channel::make('eventChannelPeer'.$this->peerId, Channel::Infinite);
 
 		global $mainThread;
 		$this->mainFuture = $this->mainRuntime->run($mainThread, [$this->hg->getScriptId(), $this->peerId, $this->mainHomegearChannel, $this->eventChannel]);
