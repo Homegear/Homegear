@@ -431,7 +431,7 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-if [ "$distributionVersion" != "jessie" ]; then
+if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
 	wget --https-only https://github.com/Homegear/Homegear-Velux-KLF200/archive/${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
