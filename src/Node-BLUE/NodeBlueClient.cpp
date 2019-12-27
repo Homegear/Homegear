@@ -732,9 +732,9 @@ Flows::PVariable NodeBlueClient::invoke(const std::string& methodName, Flows::PA
 
         int64_t startTime = BaseLib::HelperFunctions::getTime();
         std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-        while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+        while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
         {
-            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 30000) return true;
+            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 10000) return true;
             else return response->finished || _stopped;
         }));
 
