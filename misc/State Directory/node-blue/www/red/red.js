@@ -22666,7 +22666,7 @@ RED.palette.editor = (function() {
                             RED.actions.invoke("core:show-event-log");
                         });
                         RED.eventLog.startEvent(RED._("palette.editor.confirm.button.remove")+" : "+entry.name);
-                        removeNodeModule(entry.name, function(xhr) {
+                        removeNodeModule(entry.package, function(xhr) {
                             spinner.remove();
                             if (xhr) {
                                 if (xhr.responseJSON) {

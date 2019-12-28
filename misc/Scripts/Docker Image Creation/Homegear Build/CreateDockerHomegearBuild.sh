@@ -255,8 +255,11 @@ function createPackage {
 	fi
 	sourcePath=${3}-$version
 	mv ${1}-${2} $sourcePath
+	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
+	[ $? -ne 0 ] && exit 1
 	./bootstrap
+	[ $? -ne 0 ] && exit 1
 	cd ..
 	if [ "$distribution" == "Debian" ]; then
 		sed -i '/\/bin\/sh/a\
@@ -283,11 +286,15 @@ function createPackage {
 
  -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
+	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
+	[ $? -ne 0 ] && exit 1
 	if [ $4 -eq 1 ]; then
 		debuild -j${buildthreads} -us -uc -sd
+		[ $? -ne 0 ] && exit 1
 	else
 		debuild -j${buildthreads} -us -uc
+		[ $? -ne 0 ] && exit 1
 	fi
 	cd ..
 	if [ $4 -eq 1 ]; then
@@ -320,8 +327,11 @@ function createPackageWithoutAutomake {
 
  -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
+	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
+	[ $? -ne 0 ] && exit 1
 	debuild -us -uc
+	[ $? -ne 0 ] && exit 1
 	cd ..
 	rm -Rf $sourcePath
 }
@@ -431,7 +441,7 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-if [ "$distributionVersion" != "jessie" ]; then
+if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
 	wget --https-only https://github.com/Homegear/Homegear-Velux-KLF200/archive/${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
