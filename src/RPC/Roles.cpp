@@ -71,13 +71,25 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
         //}}}
 
         //{{{ Get variables in role filtered by room
-            std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>> variables;
-            for(auto& role : *roles)
+            std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> variables;
+            for(auto& roleStruct : *roles)
             {
-                if(!GD::bl->db->roleExists((uint64_t)role->integerValue64)) return BaseLib::Variable::createError(-1, "At least one role ID is unknown.");
+                uint64_t roleId = 0;
+                BaseLib::RoleDirection direction = BaseLib::RoleDirection::input;
+                if(roleStruct->type == BaseLib::VariableType::tInteger64) roleId = roleStruct->integerValue64;
+                else
+                {
+                    auto idIterator = roleStruct->structValue->find("id");
+                    if(idIterator == roleStruct->structValue->end()) return BaseLib::Variable::createError(-1, "Invalid role struct.");
+                    roleId = idIterator->second->integerValue64;
 
-                BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                requestParameters->arrayValue->push_back(role);
+                    auto directionIterator = roleStruct->structValue->find("direction");
+                    if(directionIterator != roleStruct->structValue->end()) direction = (BaseLib::RoleDirection)directionIterator->second->integerValue64;
+                }
+                if(!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "At least one role ID is unknown.");
+
+                auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
                 std::string methodName = "getVariablesInRole";
                 auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                 if(result->errorStruct) continue;
@@ -86,11 +98,28 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
                 {
                     for(auto& channelStructElement : *peerStructElement.second->structValue)
                     {
-                        for(auto& variableElement : *channelStructElement.second->arrayValue)
+                        for(auto& variableElement : *channelStructElement.second->structValue)
                         {
+                            auto directionIterator = variableElement.second->structValue->find("direction");
+                            if(directionIterator != variableElement.second->structValue->end())
+                            {
+                                if((direction == BaseLib::RoleDirection::input && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::output) ||
+                                        (direction == BaseLib::RoleDirection::output && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::input))
+                                {
+                                    continue;
+                                }
+                            }
+
+                            bool invert = false;
+                            auto invertIterator = variableElement.second->structValue->find("invert");
+                            if(invertIterator != variableElement.second->structValue->end())
+                            {
+                                invert = invertIterator->second->booleanValue;
+                            }
+
                             uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
                             int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
-                            std::string variable = variableElement->stringValue;
+                            std::string variable = variableElement.first;
 
                             if(roomId != 0) //Check if role variable is in room
                             {
@@ -102,7 +131,7 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
                                 if(variableIterator == channelIterator->second.end()) continue;
                             }
 
-                            variables[peerId][channel].emplace(variable);
+                            variables[peerId][channel].emplace_back(std::move(RoleVariableInfo(variable, invert)));
                         }
                     }
                 }
@@ -124,7 +153,7 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>>& variables)
+BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
 {
     try
     {
@@ -141,12 +170,16 @@ BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo& clientInfo, c
                     requestParameters->arrayValue->reserve(3);
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                     std::string methodName = "getValue";
                     auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(result->errorStruct) continue;
                     variableCount++;
-                    bool isTrue = (bool)(*result);
+
+                    bool value = (bool)(*result);
+                    if(variable.invert) value = !value;
+
+                    bool isTrue = value;
                     if(isTrue) trueCount++;
                 }
             }
@@ -165,7 +198,7 @@ BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo& clientInfo, c
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>>& variables)
+BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
 {
     try
     {
@@ -182,12 +215,17 @@ BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInf
                     requestParameters->arrayValue->reserve(3);
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                     std::string methodName = "getValue";
                     auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(result->errorStruct) continue;
                     variableCount++;
-                    if(result->type == BaseLib::VariableType::tBoolean) counts[(int64_t)result->booleanValue]++;
+                    if(result->type == BaseLib::VariableType::tBoolean)
+                    {
+                        bool value = result->booleanValue;
+                        if(variable.invert) value = !value;
+                        counts[(int64_t)value]++;
+                    }
                     else counts[result->integerValue64]++;
                 }
             }
@@ -208,7 +246,7 @@ BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>>& variables)
+BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
 {
     try
     {
@@ -228,7 +266,7 @@ BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo
                         requestParameters->arrayValue->reserve(3);
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                         std::string methodName = "getValue";
                         value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                         if(value->errorStruct) continue;
@@ -242,7 +280,7 @@ BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo
                         requestParameters->arrayValue->reserve(3);
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                         std::string methodName = "getVariableDescription";
                         description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                         if(description->errorStruct) continue;
@@ -251,7 +289,9 @@ BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo
                     bool isMin = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
-                        isMin = (value->booleanValue == false);
+                        bool booleanValue = value->booleanValue;
+                        if(variable.invert) booleanValue = !booleanValue;
+                        isMin = (booleanValue == false);
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
                     {
@@ -282,7 +322,7 @@ BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>>& variables)
+BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
 {
     try
     {
@@ -302,7 +342,7 @@ BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo
                         requestParameters->arrayValue->reserve(3);
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                         std::string methodName = "getValue";
                         value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                         if(value->errorStruct) continue;
@@ -316,7 +356,7 @@ BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo
                         requestParameters->arrayValue->reserve(3);
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                         requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                         std::string methodName = "getVariableDescription";
                         description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                         if(description->errorStruct) continue;
@@ -325,7 +365,9 @@ BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo
                     bool isMax = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
-                        isMax = !value->booleanValue;
+                        bool booleanValue = value->booleanValue;
+                        if(variable.invert) booleanValue = !booleanValue;
+                        isMax = !booleanValue;
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
                     {
@@ -356,7 +398,7 @@ BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>>& variables, const BaseLib::PVariable& aggregationParameters)
+BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables, const BaseLib::PVariable& aggregationParameters)
 {
     try
     {
@@ -382,7 +424,7 @@ BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& cli
                     requestParameters->arrayValue->reserve(3);
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                     std::string methodName = "getValue";
                     auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(value->errorStruct) continue;
@@ -390,13 +432,16 @@ BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& cli
                     bool isBelowThreshold = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
+                        bool booleanValue = value->booleanValue;
+                        if(variable.invert) booleanValue = !booleanValue;
+
                         if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
                         {
-                            isBelowThreshold = ((int64_t)value->booleanValue < threshold->integerValue64);
+                            isBelowThreshold = ((int64_t)booleanValue < threshold->integerValue64);
                         }
                         else if(threshold->type == BaseLib::VariableType::tFloat)
                         {
-                            isBelowThreshold = ((double)value->booleanValue < threshold->floatValue);
+                            isBelowThreshold = ((double)booleanValue < threshold->floatValue);
                         }
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
@@ -442,7 +487,7 @@ BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& cli
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>>& variables, const BaseLib::PVariable& aggregationParameters)
+BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables, const BaseLib::PVariable& aggregationParameters)
 {
     try
     {
@@ -468,7 +513,7 @@ BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo& cli
                     requestParameters->arrayValue->reserve(3);
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
                     std::string methodName = "getValue";
                     auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(value->errorStruct) continue;
@@ -476,13 +521,16 @@ BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo& cli
                     bool isAboveThreshold = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
+                        bool booleanValue = value->booleanValue;
+                        if(variable.invert) booleanValue = !booleanValue;
+
                         if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
                         {
-                            isAboveThreshold = ((int64_t)value->booleanValue > threshold->integerValue64);
+                            isAboveThreshold = ((int64_t)booleanValue > threshold->integerValue64);
                         }
                         else if(threshold->type == BaseLib::VariableType::tFloat)
                         {
-                            isAboveThreshold = ((double)value->booleanValue > threshold->floatValue);
+                            isAboveThreshold = ((double)booleanValue > threshold->floatValue);
                         }
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)

@@ -65,6 +65,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
 
     _localRpcMethods.emplace("reload", std::bind(&NodeBlueClient::reload, this, std::placeholders::_1));
     _localRpcMethods.emplace("shutdown", std::bind(&NodeBlueClient::shutdown, this, std::placeholders::_1));
+    _localRpcMethods.emplace("lifetick", std::bind(&NodeBlueClient::lifetick, this, std::placeholders::_1));
     _localRpcMethods.emplace("startFlow", std::bind(&NodeBlueClient::startFlow, this, std::placeholders::_1));
     _localRpcMethods.emplace("startNodes", std::bind(&NodeBlueClient::startNodes, this, std::placeholders::_1));
     _localRpcMethods.emplace("configNodesStarted", std::bind(&NodeBlueClient::configNodesStarted, this, std::placeholders::_1));
@@ -259,10 +260,12 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
             _internalMessages.clear();
         }
 
-        {
+        // We don't reset _inputValues. This keeps old nodes in the array but you can still request history data for all
+        // nodes that still exist which outweighs this problem.
+        /*{
             std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
             _inputValues.clear();
-        }
+        }*/
 
         _out.printMessage("Reinitializing...");
 
@@ -729,9 +732,9 @@ Flows::PVariable NodeBlueClient::invoke(const std::string& methodName, Flows::PA
 
         int64_t startTime = BaseLib::HelperFunctions::getTime();
         std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-        while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+        while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
         {
-            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 30000) return true;
+            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 10000) return true;
             else return response->finished || _stopped;
         }));
 
@@ -1380,6 +1383,28 @@ Flows::PVariable NodeBlueClient::shutdown(Flows::PArray& parameters)
         _maintenanceThread = std::thread(&NodeBlueClient::dispose, this);
 
         return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::lifetick(Flows::PArray& parameters)
+{
+    try
+    {
+        for(int32_t i = 0; i < _queueCount; i++)
+        {
+            if(queueSize(i) > 1000)
+            {
+                _out.printError("Error in lifetick: More than 1000 items are queued in queue number " + std::to_string(i));
+                return std::make_shared<Flows::Variable>(false);
+            }
+        }
+
+        return std::make_shared<Flows::Variable>(true);
     }
     catch(const std::exception& ex)
     {

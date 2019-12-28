@@ -126,6 +126,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion()));
     _rpcMethods.emplace("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit()));
     _rpcMethods.emplace("invokeFamilyMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInvokeFamilyMethod()));
+    _rpcMethods.emplace("lifetick", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLifetick()));
     _rpcMethods.emplace("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces()));
     _rpcMethods.emplace("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers()));
     _rpcMethods.emplace("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices()));
@@ -236,6 +237,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _rpcMethods.emplace("createRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCreateRole>()));
         _rpcMethods.emplace("deleteRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteRole>()));
         _rpcMethods.emplace("getRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoles>()));
+        _rpcMethods.emplace("getRolesInDevice", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRolesInDevice>()));
+        _rpcMethods.emplace("getRolesInRoom", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRolesInRoom>()));
         _rpcMethods.emplace("getRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoleMetadata>()));
         _rpcMethods.emplace("getVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetVariablesInRole>()));
         _rpcMethods.emplace("removeRoleFromVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromVariable>()));
@@ -338,6 +341,23 @@ bool ScriptEngineServer::lifetick()
                 return false;
             }
         }
+
+        std::vector<PScriptEngineClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto result = sendRequest(*i, "lifetick", std::make_shared<BaseLib::Array>(), true);
+            if(result->errorStruct || !result->booleanValue) return false;
+        }
+
         return true;
     }
     catch(const std::exception& ex)
@@ -590,6 +610,7 @@ void ScriptEngineServer::processKilled(pid_t pid, int exitCode, int signal, bool
             else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
             if(signal != -1 && signal != 15) exitCode = -32500;
+
 
             process->setExited(true);
             process->requestConditionVariable.notify_all();
@@ -1202,7 +1223,7 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait)
 {
     try
     {
@@ -1667,7 +1688,7 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
         }
         strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
         serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-        bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+        bool bound = (bind(_serverFileDescriptor->descriptor.load(), (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
         if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
         {
             GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
@@ -1832,22 +1853,22 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         if(scriptType == ScriptInfo::ScriptType::cli)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-                    BaseLib::PVariable(new BaseLib::Variable((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->script),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->arguments),
+                    std::make_shared<BaseLib::Variable>((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput)}));
         }
         else if(scriptType == ScriptInfo::ScriptType::web)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->contentPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->contentPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
                     scriptInfo->http.serialize(),
                     scriptInfo->serverInfo->serialize(),
                     scriptInfo->clientInfo->serialize()}));
@@ -1855,13 +1876,13 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         else if(scriptType == ScriptInfo::ScriptType::device || scriptType == ScriptInfo::ScriptType::device2)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->script),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->arguments),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->peerId)}));
 
             if(scriptType == ScriptInfo::ScriptType::device2)
             {
@@ -1873,23 +1894,23 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         else if(scriptType == ScriptInfo::ScriptType::simpleNode)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
                     scriptInfo->nodeInfo,
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->inputPort),
                     scriptInfo->message}));
         }
         else if(scriptType == ScriptInfo::ScriptType::statefulNode)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
                     scriptInfo->nodeInfo,
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->maxThreadCount)}));
 
             {
                 std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -3181,7 +3202,7 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineCli
     {
         if(GD::nodeBlueServer)
         {
-            if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+            if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");
             if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
             if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
             if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");

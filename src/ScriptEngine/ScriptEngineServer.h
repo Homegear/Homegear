@@ -196,7 +196,7 @@ private:
 
     BaseLib::PVariable send(PScriptEngineClientData& clientData, std::vector<char>& data);
 
-    BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
+    BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait);
 
     void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 

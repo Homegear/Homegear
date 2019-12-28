@@ -156,6 +156,8 @@ private:
 	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
 
 	// {{{ RPC methods
+    BaseLib::PVariable getHomegearPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
     BaseLib::PVariable setPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 
 	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);

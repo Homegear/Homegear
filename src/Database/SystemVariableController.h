@@ -56,7 +56,9 @@ public:
 
     BaseLib::PVariable getRoles(std::string& variableId);
 
-    std::set<uint64_t> getRolesInternal(std::string& variableId);
+    BaseLib::PVariable getRolesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
+
+    std::unordered_map<uint64_t, BaseLib::Role> getRolesInternal(std::string& variableId);
 
     BaseLib::PVariable getRoom(std::string& variableId);
 
@@ -88,7 +90,7 @@ public:
 
     BaseLib::PVariable setCategories(std::string& variableId, std::set<uint64_t>& categories);
 
-    BaseLib::PVariable setRoles(std::string& variableId, std::set<uint64_t>& roles);
+    BaseLib::PVariable setRoles(std::string& variableId, std::unordered_map<uint64_t, BaseLib::Role>& roles);
 
     BaseLib::PVariable setRoom(std::string& variableId, uint64_t room);
 

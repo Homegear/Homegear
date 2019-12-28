@@ -491,7 +491,7 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
                 std::string value = parameters->at(4)->arrayValue->at(i)->print(false, false, true);
                 BaseLib::HelperFunctions::trim(value);
 
-                standardOutput("ID >>" + (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) + "<<, channel >>" + std::to_string(parameters->at(2)->integerValue) + "<<, variable >>" + parameters->at(3)->arrayValue->at(i)->stringValue + "<<, source >>" + parameters->at(0)->stringValue + "<<, value >>" + value + "<<\n");
+                standardOutput(BaseLib::HelperFunctions::getTimeString() + ": ID >>" + (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) + "<<, channel >>" + std::to_string(parameters->at(2)->integerValue) + "<<, variable >>" + parameters->at(3)->arrayValue->at(i)->stringValue + "<<, source >>" + parameters->at(0)->stringValue + "<<, value >>" + value + "<<\n");
             }
         }
 

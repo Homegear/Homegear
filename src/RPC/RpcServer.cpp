@@ -203,6 +203,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("getVersion", std::make_shared<RPCGetVersion>());
     _rpcMethods->emplace("init", std::make_shared<RPCInit>());
     _rpcMethods->emplace("invokeFamilyMethod", std::make_shared<RPCInvokeFamilyMethod>());
+    _rpcMethods->emplace("lifetick", std::make_shared<RPCLifetick>());
     _rpcMethods->emplace("listBidcosInterfaces", std::make_shared<RPCListBidcosInterfaces>());
     _rpcMethods->emplace("listClientServers", std::make_shared<RPCListClientServers>());
     _rpcMethods->emplace("listDevices", std::make_shared<RPCListDevices>());
@@ -275,6 +276,8 @@ RpcServer::RpcServer()
         _rpcMethods->emplace("createRole", std::make_shared<RPCCreateRole>());
         _rpcMethods->emplace("deleteRole", std::make_shared<RPCDeleteRole>());
         _rpcMethods->emplace("getRoles", std::make_shared<RPCGetRoles>());
+        _rpcMethods->emplace("getRolesInDevice", std::make_shared<RPCGetRolesInDevice>());
+        _rpcMethods->emplace("getRolesInRoom", std::make_shared<RPCGetRolesInRoom>());
         _rpcMethods->emplace("getRoleMetadata", std::make_shared<RPCGetRoleMetadata>());
         _rpcMethods->emplace("getVariablesInRole", std::make_shared<RPCGetVariablesInRole>());
         _rpcMethods->emplace("removeRoleFromVariable", std::make_shared<RPCRemoveRoleFromVariable>());
@@ -798,7 +801,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
     }
 }
 
-void RpcServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPC(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1100,7 +1103,7 @@ std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t c
     return header;
 }
 
-void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1135,7 +1138,7 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
     }
 }
 
-void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::packetReceived(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1669,8 +1672,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     !_info->jsonrpcServer ||
                                     http.getHeader().method != "POST" ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
-                                    http.getHeader().path == "/node-blue/flows" ||
-                                    http.getHeader().path == "/node-blue/nodes" ||
+                                    http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ))
@@ -1758,7 +1760,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
             }
         }
 
-        timeval timeout;
+        timeval timeout{};
         timeout.tv_sec = 0;
         timeout.tv_usec = 100000;
         fd_set readFileDescriptor;
@@ -1956,7 +1958,7 @@ void RpcServer::getSocketDescriptor()
                 if(fcntl(_serverFileDescriptor->descriptor, F_SETFL, fcntl(_serverFileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0) throw BaseLib::Exception("Error: Could not set socket options.");
             }
             if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw BaseLib::Exception("Error: Could not set socket options.");
-            if(bind(_serverFileDescriptor->descriptor, info->ai_addr, info->ai_addrlen) == -1)
+            if(bind(_serverFileDescriptor->descriptor.load(), info->ai_addr, info->ai_addrlen) == -1)
             {
                 error = errno;
                 continue;

@@ -579,7 +579,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
         BaseLib::Http* http = &SEG(http);
         BaseLib::ScriptEngine::PScriptInfo& scriptInfo = SEG(scriptInfo);
         if(!http || !scriptInfo) return;
-        BaseLib::Http::Header& header = http->getHeader();
+        const BaseLib::Http::Header& header = http->getHeader();
         BaseLib::Rpc::ServerInfo::Info* server = (BaseLib::Rpc::ServerInfo::Info*)SG(server_context);
         zval value;
 
@@ -687,7 +687,7 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 {
     if(SEG(id) == 0)
     {
-        zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
+        zend_throw_exception(homegear_exception_class_entry, "Script ID is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
         RETURN_FALSE
     }
     if(!SEG(rpcCallback)) RETURN_FALSE;
@@ -773,6 +773,7 @@ ZEND_FUNCTION(hg_register_thread)
     SEG(rpcCallback) = phpEvents->getRpcCallback();
     SEG(logLevel) = phpEvents->getLogLevel();
     SEG(peerId) = phpEvents->getPeerId();
+    SEG(nodeId) = phpEvents->getNodeId();
     RETURN_TRUE
 }
 

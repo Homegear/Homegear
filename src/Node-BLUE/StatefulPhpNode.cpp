@@ -260,7 +260,7 @@ void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PV
 	}
 }
 
-Flows::PVariable StatefulPhpNode::invokeLocal(const std::string& methodName, Flows::PArray& innerParameters)
+Flows::PVariable StatefulPhpNode::invokeLocal(const std::string& methodName, Flows::PArray innerParameters)
 {
 	try
 	{
@@ -278,7 +278,7 @@ Flows::PVariable StatefulPhpNode::invokeLocal(const std::string& methodName, Flo
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	return Flows::Variable::createError(-32601, ": Requested method not found.");
+	return Flows::Variable::createError(-32601, "Requested method not found.");
 }
 
 }
