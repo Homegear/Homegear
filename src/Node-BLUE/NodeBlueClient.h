@@ -161,6 +161,8 @@ private:
 
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
+    std::mutex _eventSubscriptionsMutex;
+	std::set<std::string> _eventSubscriptions;
 
 	std::mutex _flowSubscriptionsMutex;
 	std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
@@ -209,6 +211,10 @@ private:
 	void subscribeGlobal(const std::string& nodeId);
 
 	void unsubscribeGlobal(const std::string& nodeId);
+
+    void subscribeHomegearEvents(const std::string& nodeId);
+
+    void unsubscribeHomegearEvents(const std::string& nodeId);
 
 	void queueOutput(const std::string& nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
