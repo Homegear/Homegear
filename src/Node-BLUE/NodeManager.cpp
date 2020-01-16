@@ -251,7 +251,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
 				std::string path = localePath + file;
 				try
 				{
-				    if(file.compare(file.size() - 5, 5, ".html") == 0) continue;
+				    if(file.size() > 5 && file.compare(file.size() - 5, 5, ".html") == 0) continue;
 
 					std::string content = BaseLib::Io::getFileContent(path);
 					BaseLib::HelperFunctions::trim(content);
@@ -259,7 +259,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
 					if(json->structValue->empty() || json->structValue->begin()->second->structValue->empty()) continue;
 
 					auto htmlPath = path;
-					if(htmlPath.compare(file.size() - 5, 5, ".json") == 0) htmlPath = htmlPath.substr(0, htmlPath.size() - 5);
+					if(htmlPath.size() > 5 && htmlPath.compare(htmlPath.size() - 5, 5, ".json") == 0) htmlPath = htmlPath.substr(0, htmlPath.size() - 5);
 					htmlPath.append(".help.html");
 					if(BaseLib::Io::fileExists(htmlPath))
                     {
