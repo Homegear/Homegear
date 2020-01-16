@@ -251,16 +251,19 @@ std::string NodeManager::getNodeLocales(std::string& language)
 				std::string path = localePath + file;
 				try
 				{
-				    if(file.find('.') != std::string::npos) continue;
+				    if(file.compare(file.size() - 5, 5, ".html") == 0) continue;
 
 					std::string content = BaseLib::Io::getFileContent(path);
 					BaseLib::HelperFunctions::trim(content);
 					BaseLib::PVariable json = jsonDecoder->decode(content); //Check for JSON errors
 					if(json->structValue->empty() || json->structValue->begin()->second->structValue->empty()) continue;
 
-					if(BaseLib::Io::fileExists(path + ".help.html"))
+					auto htmlPath = path;
+					if(htmlPath.compare(file.size() - 5, 5, ".json") == 0) htmlPath = htmlPath.substr(0, htmlPath.size() - 5);
+					htmlPath.append(".help.html");
+					if(BaseLib::Io::fileExists(htmlPath))
                     {
-					    std::string help = BaseLib::Io::getFileContent(path + ".help.html");
+					    std::string help = BaseLib::Io::getFileContent(htmlPath);
 					    json->structValue->begin()->second->structValue->begin()->second->structValue->emplace("help", std::make_shared<BaseLib::Variable>(help));
 					    BaseLib::Rpc::JsonEncoder::encode(json, content);
                     }
