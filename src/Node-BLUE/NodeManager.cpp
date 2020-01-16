@@ -243,7 +243,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
 		for(auto& directory : directories)
 		{
 			std::string localePath = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/locales/" + language + "/";
-			if(!GD::bl->io.directoryExists(localePath)) continue;
+			if(!BaseLib::Io::directoryExists(localePath)) continue;
 			std::vector<std::string> files = GD::bl->io.getFiles(localePath);
 			if(files.empty()) continue;
 			for(auto& file : files)
@@ -251,10 +251,20 @@ std::string NodeManager::getNodeLocales(std::string& language)
 				std::string path = localePath + file;
 				try
 				{
-					std::string content = GD::bl->io.getFileContent(path);
+				    if(file.find('.') != std::string::npos) continue;
+
+					std::string content = BaseLib::Io::getFileContent(path);
 					BaseLib::HelperFunctions::trim(content);
 					BaseLib::PVariable json = jsonDecoder->decode(content); //Check for JSON errors
-					if(json->structValue->empty()) continue;
+					if(json->structValue->empty() || json->structValue->begin()->second->structValue->empty()) continue;
+
+					if(BaseLib::Io::fileExists(path + ".help"))
+                    {
+					    std::string help = BaseLib::Io::getFileContent(path + ".help");
+					    json->structValue->begin()->second->structValue->begin()->second->structValue->emplace("help", std::make_shared<BaseLib::Variable>(help));
+					    BaseLib::Rpc::JsonEncoder::encode(json, content);
+                    }
+
 					if(locales.size() + content.size() > locales.capacity()) locales.reserve(locales.capacity() + content.size() + 8192);
 					if(!firstFile) locales += ",";
 					else firstFile = false;
