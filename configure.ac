@@ -77,13 +77,14 @@ AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`./getGitCommitHomegear.sh`], [Defin
 AC_DEFINE_UNQUOTED([GITBRANCHBASE], [`./getGitBranchBase.sh`], [Define git branch of libhomegear-base])
 AC_DEFINE_UNQUOTED([GITBRANCHHOMEGEAR], [`./getGitBranchHomegear.sh`], [Define git branch of Homegear])
 
-#AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
-#AS_IF([test "x$with_scriptengine" = "xno"], [
-#	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
-#	], [
-#	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
-#	AC_DEFINE(SCRIPTENGINE, [], [Enables compilation of the PHP script engine])
-#	])
+AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
+AS_IF([test "x$with_scriptengine" = "xno"], [
+	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
+	AC_DEFINE(NO_SCRIPTENGINE, [], [Disables compilation of the PHP script engine])
+	], [
+	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
+	AC_DEFINE(SCRIPTENGINE, [], [Enables compilation of the PHP script engine])
+	])
 
 AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
 AS_IF([test "x$with_eventhandler" != "xno"], [

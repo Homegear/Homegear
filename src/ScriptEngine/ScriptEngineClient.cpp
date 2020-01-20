@@ -28,9 +28,10 @@
  * files in the program, then also delete it here.
 */
 
+#include "ScriptEngineClient.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "ScriptEngineClient.h"
 #include "PhpVariableConverter.h"
 #include "php_config_fixes.h"
 #include "../GD/GD.h"

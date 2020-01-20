@@ -31,6 +31,8 @@
 #ifndef PHPEVENTS_H_
 #define PHPEVENTS_H_
 
+#include "../../config.h"
+
 #ifndef NO_SCRIPTENGINE
 
 namespace Homegear

@@ -31,6 +31,8 @@
 #ifndef STATEFULPHPNODE_H_
 #define STATEFULPHPNODE_H_
 
+#include "../../config.h"
+
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-node/INode.h>

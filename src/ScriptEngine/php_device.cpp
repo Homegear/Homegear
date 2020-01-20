@@ -28,11 +28,12 @@
  * files in the program, then also delete it here.
 */
 
+#include "php_config_fixes.h"
+#include "php_device.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "php_config_fixes.h"
 #include "../GD/GD.h"
-#include "php_device.h"
 #include "PhpVariableConverter.h"
 
 #define SEG(v) php_homegear_get_globals()->v

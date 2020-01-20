@@ -28,9 +28,10 @@
  * files in the program, then also delete it here.
 */
 
+#include "ScriptEngineServer.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "ScriptEngineServer.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>

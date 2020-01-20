@@ -29,7 +29,7 @@ else
 homegear_LDADD += -ldl
 endif
 
-#if WITH_SCRIPTENGINE
+if WITH_SCRIPTENGINE
 noinst_LIBRARIES = libscriptengine.a
 libscriptengine_a_SOURCES = ScriptEngine/php_homegear_globals.cpp ScriptEngine/php_device.cpp ScriptEngine/php_node.cpp ScriptEngine/php_sapi.cpp ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
 homegear_LDADD += libscriptengine.a
@@ -39,4 +39,4 @@ libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-h
 else
 libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend -I/usr/include/php7-homegear/php -I/usr/include/php7-homegear/php/main -I/usr/include/php7-homegear/php/sapi -I/usr/include/php7-homegear/php/TSRM -I/usr/include/php7-homegear/php/Zend
 endif
-#endif
+endif

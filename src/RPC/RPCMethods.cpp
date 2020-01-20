@@ -32,6 +32,9 @@
 #include "RPCMethods.h"
 #include "../GD/GD.h"
 #include "Roles.h"
+
+#include <sys/stat.h>
+
 #ifdef BSDSYSTEM
 #include <sys/wait.h>
 #endif
@@ -5221,11 +5224,13 @@ BaseLib::PVariable RPCLifetick::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
             return std::make_shared<BaseLib::Variable>(false);
         }
 
+#ifndef NO_SCRIPTENGINE
         if(!GD::scriptEngineServer->lifetick())
         {
             GD::out.printCritical("Critical: Script engine server lifetick failed.");
             return std::make_shared<BaseLib::Variable>(false);
         }
+#endif
 
         if(!GD::nodeBlueServer->lifetick())
         {

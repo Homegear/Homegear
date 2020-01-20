@@ -33,6 +33,8 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
+#include <sys/stat.h>
+
 namespace Homegear
 {
 

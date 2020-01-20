@@ -28,9 +28,10 @@
  * files in the program, then also delete it here.
 */
 
+#include "ScriptEngineProcess.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "ScriptEngineProcess.h"
 #include "../GD/GD.h"
 
 #include <homegear-base/Encoding/GZip.h>

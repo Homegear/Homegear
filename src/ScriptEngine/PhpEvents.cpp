@@ -27,10 +27,11 @@
 * files in the program, then also delete it here.
 */
 
+#include "PhpEvents.h"
+
 #ifndef NO_SCRIPTENGINE
 
 #include "../GD/GD.h"
-#include "PhpEvents.h"
 
 namespace Homegear
 {

@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_PHP_SAPI_H_
 #define HOMEGEAR_PHP_SAPI_H_
 
+#include "../../config.h"
+
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-base/BaseLib.h>

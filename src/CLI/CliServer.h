@@ -31,6 +31,7 @@
 #ifndef CLISERVER_H_
 #define CLISERVER_H_
 
+#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 #include "../User/User.h"
 
@@ -71,9 +72,11 @@ private:
 	std::mutex _waitMutex;
 	std::condition_variable _waitConditionVariable;
 
+#ifndef NO_SCRIPTENGINE
 	void scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode);
 
 	void scriptOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& output, bool error);
+#endif
 
 	std::string userCommand(std::string& command);
 

@@ -31,6 +31,7 @@
 #ifndef RPCMETHODS_H_
 #define RPCMETHODS_H_
 
+#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 
 #include <vector>

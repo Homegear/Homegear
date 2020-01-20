@@ -28,13 +28,13 @@
  * files in the program, then also delete it here.
 */
 
+#include "php_config_fixes.h"
+#include "php_sapi.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "php_config_fixes.h"
 #include "../GD/GD.h"
-#include "php_sapi.h"
 #include "PhpVariableConverter.h"
-#include "../../config.h"
 
 #ifdef I2CSUPPORT
 #include <linux/i2c-dev.h>
