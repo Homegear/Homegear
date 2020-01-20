@@ -1,5 +1,3 @@
-#include "../../config.h"
-
 #ifndef NO_SCRIPTENGINE
 
 #include <math.h>

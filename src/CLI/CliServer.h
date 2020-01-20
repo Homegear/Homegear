@@ -31,7 +31,6 @@
 #ifndef CLISERVER_H_
 #define CLISERVER_H_
 
-#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 #include "../User/User.h"
 

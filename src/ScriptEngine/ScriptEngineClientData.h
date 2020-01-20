@@ -31,10 +31,9 @@
 #ifndef SCRIPTENGINECLIENTDATA_H_
 #define SCRIPTENGINECLIENTDATA_H_
 
-#include "ScriptEngineResponse.h"
-
 #ifndef NO_SCRIPTENGINE
 
+#include "ScriptEngineResponse.h"
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear

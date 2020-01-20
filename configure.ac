@@ -80,20 +80,22 @@ AC_DEFINE_UNQUOTED([GITBRANCHHOMEGEAR], [`./getGitBranchHomegear.sh`], [Define g
 AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
 AS_IF([test "x$with_scriptengine" = "xno"], [
 	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
-	AC_DEFINE(NO_SCRIPTENGINE, [], [Disables compilation of the PHP script engine])
 	], [
 	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
-	AC_DEFINE(SCRIPTENGINE, [], [Enables compilation of the PHP script engine])
 	])
 
 AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
 AS_IF([test "x$with_eventhandler" != "xno"], [
-	AC_DEFINE(EVENTHANDLER, [], [Enables compilation of Homegear's event handler])
+	AM_CONDITIONAL(WITH_EVENTHANDLER, true)
+	], [
+	AM_CONDITIONAL(WITH_EVENTHANDLER, false)
 	])
 
 AC_ARG_WITH([ccu2], [AS_HELP_STRING([--with-ccu2], [Compile for CCU2])], [with_ccu2=yes], [])
 AS_IF([test "x$with_ccu2" = "xyes"], [
-	AC_DEFINE(CCU2, [], [Enables features specific for CCU2])
+	AM_CONDITIONAL(WITH_CCU2, true)
+	], [
+	AM_CONDITIONAL(WITH_CCU2, false)
 	])
 
 #AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])

@@ -29,8 +29,8 @@
 */
 
 #include "CliClient.h"
+#include "../GD/GD.h"
 
-#include "../../config.h"
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -159,7 +159,7 @@ int32_t CliClient::terminal(std::string& command)
 
         if(command.empty())
         {
-            standardOutput("Connected to Homegear (version " + std::string(VERSION) + ").\n\n");
+            standardOutput("Connected to Homegear (version " + GD::homegearVersion + ").\n\n");
             standardOutput("Please type >>help<< to list all available commands.\n");
         }
 

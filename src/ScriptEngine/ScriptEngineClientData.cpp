@@ -28,10 +28,9 @@
  * files in the program, then also delete it here.
 */
 
-#include "ScriptEngineClientData.h"
-
 #ifndef NO_SCRIPTENGINE
 
+#include "ScriptEngineClientData.h"
 #include "../GD/GD.h"
 
 namespace Homegear

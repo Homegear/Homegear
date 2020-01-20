@@ -39,4 +39,14 @@ libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-h
 else
 libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend -I/usr/include/php7-homegear/php -I/usr/include/php7-homegear/php/main -I/usr/include/php7-homegear/php/sapi -I/usr/include/php7-homegear/php/TSRM -I/usr/include/php7-homegear/php/Zend
 endif
+else
+AM_CPPFLAGS += -DNO_SCRIPTENGINE
+endif
+
+if WITH_EVENTHANDLER
+AM_CPPFLAGS += -DEVENTHANDLER
+endif
+
+if WITH_CCU2
+AM_CPPFLAGS += -DCCU2
 endif

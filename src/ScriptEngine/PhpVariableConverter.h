@@ -31,8 +31,6 @@
 #ifndef PHPVARIABLECONVERTER_H_
 #define PHPVARIABLECONVERTER_H_
 
-#include "../../config.h"
-
 #ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"

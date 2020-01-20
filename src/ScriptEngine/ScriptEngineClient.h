@@ -31,11 +31,9 @@
 #ifndef SCRIPTENGINECLIENT_H_
 #define SCRIPTENGINECLIENT_H_
 
-#include "php_config_fixes.h"
-#include "../../config.h"
-
 #ifndef NO_SCRIPTENGINE
 
+#include "php_config_fixes.h"
 #include "ScriptEngineResponse.h"
 #include "CacheInfo.h"
 #include <homegear-base/BaseLib.h>

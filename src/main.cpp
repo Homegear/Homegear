@@ -36,7 +36,6 @@
 #include "MQTT/Mqtt.h"
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
-#include "../config.h"
 
 #include <execinfo.h>
 #include <signal.h>
@@ -571,11 +570,7 @@ void startUp()
 		}
 
     	GD::out.printMessage("Starting Homegear...");
-    	GD::out.printMessage(std::string("Homegear version ") + VERSION);
-    	GD::out.printMessage(std::string("Git commit SHA of libhomegear-base: ") + GITCOMMITSHABASE);
-    	GD::out.printMessage(std::string("Git branch of libhomegear-base:     ") + GITBRANCHBASE);
-    	GD::out.printMessage(std::string("Git commit SHA of Homegear:         ") + GITCOMMITSHAHOMEGEAR);
-    	GD::out.printMessage(std::string("Git branch of Homegear:             ") + GITBRANCHHOMEGEAR);
+    	GD::out.printMessage(std::string("Homegear version ") + GD::homegearVersion);
 
         GD::out.printMessage("Determining maximum thread count...");
         try
@@ -1087,9 +1082,9 @@ int main(int argc, char* argv[])
 		else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
 		else GD::configPath = "/etc/homegear/";
 
-    	if(std::string(VERSION) != GD::bl->version())
+    	if(std::string(GD::homegearVersion) != GD::bl->version())
     	{
-    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + VERSION + " but got version " + GD::bl->version());
+    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + GD::homegearVersion + " but got version " + GD::bl->version());
     		exit(1);
     	}
 
@@ -1513,12 +1508,8 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-v")
     		{
-    			std::cout << "Homegear version " << VERSION << std::endl;
+    			std::cout << "Homegear version " << GD::homegearVersion << std::endl;
     			std::cout << "Copyright (c) 2013-2019 Homegear GmbH" << std::endl << std::endl;
-    			std::cout << "Git commit SHA of libhomegear-base: " << GITCOMMITSHABASE << std::endl;
-    			std::cout << "Git branch of libhomegear-base:     " << GITBRANCHBASE << std::endl;
-    			std::cout << "Git commit SHA of Homegear:         " << GITCOMMITSHAHOMEGEAR << std::endl;
-    			std::cout << "Git branch of Homegear:             " << GITBRANCHHOMEGEAR << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
     			std::cout << "Copyright (c) 1999-2019 The PHP Group. All rights reserved." << std::endl << std::endl;

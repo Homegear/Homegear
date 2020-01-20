@@ -31,11 +31,9 @@
 #ifndef SCRIPTENGINESERVER_H_
 #define SCRIPTENGINESERVER_H_
 
-#include "ScriptEngineProcess.h"
-#include "../../config.h"
-
 #ifndef NO_SCRIPTENGINE
 
+#include "ScriptEngineProcess.h"
 #include <homegear-base/BaseLib.h>
 
 #include <sys/types.h>

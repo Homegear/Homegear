@@ -418,7 +418,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
             else if(server->webSocket) {}
             else //XML-RPC, JSON-RPC
             {
-                std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size() + 2) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
+                std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::homegearVersion + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size() + 2) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
                 if(server->settings && (server->settings->authType & ClientSettings::Settings::AuthType::basic))
                 {
                     _out.printDebug("Using Basic Access Authentication.");
