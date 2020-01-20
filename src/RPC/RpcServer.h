@@ -31,7 +31,6 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
-#include "../../config.h"
 #include "RPCMethods.h"
 #include "Auth.h"
 #include "RestServer.h"

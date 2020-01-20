@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-base/BaseLib.h>
-#include "../../config.h"
 #include "php_config_fixes.h"
 
 #include <zend_types.h>

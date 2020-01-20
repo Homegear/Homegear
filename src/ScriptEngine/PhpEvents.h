@@ -33,6 +33,8 @@
 
 #ifndef NO_SCRIPTENGINE
 
+#include <homegear-base/BaseLib.h>
+
 namespace Homegear
 {
 

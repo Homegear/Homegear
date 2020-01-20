@@ -31,7 +31,6 @@
 #ifndef GD_H_
 #define GD_H_
 
-#include "../../config.h"
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"
@@ -65,6 +64,7 @@ class GD
 public:
 	static std::unique_ptr<BaseLib::SharedObjects> bl;
 	static BaseLib::Output out;
+	static const std::string homegearVersion;
 	static std::string runAsUser;
 	static std::string runAsGroup;
 	static std::string configPath;

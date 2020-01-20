@@ -32,6 +32,9 @@
 #include "RPCMethods.h"
 #include "../GD/GD.h"
 #include "Roles.h"
+
+#include <sys/stat.h>
+
 #ifdef BSDSYSTEM
 #include <sys/wait.h>
 #endif
@@ -2718,7 +2721,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
             {
                 BaseLib::PVariable description(new BaseLib::Variable(BaseLib::VariableType::tStruct));
                 description->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(std::string("Homegear")))));
-                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(std::string(VERSION)))));
+                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(GD::homegearVersion))));
                 return description;
             }
 
@@ -4910,9 +4913,8 @@ BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({}));
         if(error != ParameterError::Enum::noError) return getError(error);
-
-        std::string version(VERSION);
-        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + version));
+        
+        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + GD::homegearVersion));
     }
     catch(const std::exception& ex)
     {
@@ -5221,11 +5223,13 @@ BaseLib::PVariable RPCLifetick::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
             return std::make_shared<BaseLib::Variable>(false);
         }
 
+#ifndef NO_SCRIPTENGINE
         if(!GD::scriptEngineServer->lifetick())
         {
             GD::out.printCritical("Critical: Script engine server lifetick failed.");
             return std::make_shared<BaseLib::Variable>(false);
         }
+#endif
 
         if(!GD::nodeBlueServer->lifetick())
         {

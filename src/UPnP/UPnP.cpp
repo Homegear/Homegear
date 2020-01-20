@@ -319,7 +319,7 @@ void UPnP::registerServers()
 			_webserverEventHandler = server.second->addWebserverEventHandler(this);
 
 			Packets& packet = _packets[settings->port];
-			std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + std::string(VERSION) + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\n";
+			std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + GD::homegearVersion + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\n";
 			std::string alivePacketRoot = notifyPacketBase + "NT: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\nNTS: ssdp:alive\r\n\r\n";
 			std::string alivePacketRootUUID = notifyPacketBase + "NT: " + _st + "\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
 			std::string alivePacket = notifyPacketBase + "NT: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
@@ -334,7 +334,7 @@ void UPnP::registerServers()
 			packet.byebyeRootUUID = std::vector<char>(&byebyePacketRootUUID.at(0), &byebyePacketRootUUID.at(0) + byebyePacketRootUUID.size());
 			packet.byebye = std::vector<char>(&byebyePacket.at(0), &byebyePacket.at(0) + byebyePacket.size());
 
-			std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nLocation: ") + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\nServer: Homegear " + std::string(VERSION) + "\r\n";
+			std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nLocation: ") + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\nServer: Homegear " + GD::homegearVersion + "\r\n";
 			std::string okPacketRoot = okPacketBase + "ST: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\n\r\n";
 			std::string okPacketRootUUID = okPacketBase + "ST: " + _st + "\r\nUSN: " + _st + "\r\n\r\n";
 			std::string okPacket = okPacketBase + "ST: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\n\r\n";
@@ -345,7 +345,7 @@ void UPnP::registerServers()
 			std::string description = "<?xml version=\"1.0\"?><root xmlns=\"urn:schemas-upnp-org:device-1-0\"><specVersion><major>1</major><minor>0</minor></specVersion>";
 			description.append(std::string("<URLBase>") + "http://" + _address + ":" + std::to_string(settings->port) + "</URLBase>");
 			description.append("<device><deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType><friendlyName>Homegear</friendlyName><manufacturer>Homegear GmbH</manufacturer><manufacturerURL>http://homegear.eu</manufacturerURL>");
-			description.append("<modelDescription>Homegear</modelDescription><modelName>Homegear</modelName><modelNumber>Homegear " + std::string(VERSION) + "</modelNumber><serialNumber>" + _udn + "</serialNumber><modelURL>http://homegear.eu</modelURL>");
+			description.append("<modelDescription>Homegear</modelDescription><modelName>Homegear</modelName><modelNumber>Homegear " + GD::homegearVersion + "</modelNumber><serialNumber>" + _udn + "</serialNumber><modelURL>http://homegear.eu</modelURL>");
 			description.append("<UDN>uuid:" + _udn + "</UDN><presentationURL>" + "http://" + _address + ":" + std::to_string(settings->port) + "</presentationURL></device></root>");
 			packet.description = std::vector<char>(&description.at(0), &description.at(0) + description.size());
 		}

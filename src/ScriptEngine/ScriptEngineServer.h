@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineProcess.h"
-#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 
 #include <sys/types.h>
