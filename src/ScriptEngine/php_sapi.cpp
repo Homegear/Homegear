@@ -34,7 +34,6 @@
 #include "../GD/GD.h"
 #include "php_sapi.h"
 #include "PhpVariableConverter.h"
-#include "../../config.h"
 
 #ifdef I2CSUPPORT
 #include <linux/i2c-dev.h>
@@ -45,7 +44,7 @@
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
 #if PHP_VERSION_ID >= 70400
-#error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
+#error "PHP 7.4 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of hg_stream_open() equals zend_stream_open() in zend_stream.c
@@ -236,7 +235,7 @@ static zend_module_entry homegear_module_entry = {
         PHP_RINIT(homegear),
         PHP_RSHUTDOWN(homegear),
         PHP_MINFO(homegear),
-        VERSION,
+        Homegear::GD::homegearVersion.c_str(),
         STANDARD_MODULE_PROPERTIES
 };
 
@@ -610,7 +609,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
             php_register_variable_safe((char*)"WEBSOCKET_AUTH_TYPE", (char*)webSocketAuthType.c_str(), webSocketAuthType.size(), track_vars_array);
         }
 
-        std::string version = std::string("Homegear ") + VERSION;
+        std::string version = std::string("Homegear ") + Homegear::GD::homegearVersion;
         php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array);
         php_register_variable_safe((char*)"SCRIPT_NAME", (char*)scriptInfo->relativePath.c_str(), scriptInfo->relativePath.size(), track_vars_array);
         std::string phpSelf = scriptInfo->relativePath + header.pathInfo;
@@ -2851,7 +2850,7 @@ static PHP_MINFO_FUNCTION(homegear)
 {
     php_info_print_table_start();
     php_info_print_table_row(2, "Homegear support", "enabled");
-    php_info_print_table_row(2, "Homegear version", VERSION);
+    php_info_print_table_row(2, "Homegear version", Homegear::GD::homegearVersion);
     php_info_print_table_end();
 }
 

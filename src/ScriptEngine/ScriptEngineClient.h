@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
-#include "../../config.h"
 #include "ScriptEngineResponse.h"
 #include "CacheInfo.h"
 #include <homegear-base/BaseLib.h>

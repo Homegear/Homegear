@@ -28,9 +28,10 @@
  * files in the program, then also delete it here.
 */
 
+#include "SimplePhpNode.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "SimplePhpNode.h"
 #include "../GD/GD.h"
 
 namespace Homegear

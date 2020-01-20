@@ -69,6 +69,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 			getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 
@@ -82,6 +83,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
@@ -97,6 +99,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			{
 				getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -110,6 +113,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			else if(!contentString.empty())
@@ -120,6 +124,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 				content.insert(content.end(), header.begin(), header.end());
 				content.insert(content.end(), contentString.begin(), contentString.end());
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -129,6 +134,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 
@@ -183,6 +189,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
                 {
                     getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
                     send(socket, content);
+                    socket->close();
                     return;
                 }
 			}
@@ -194,6 +201,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
                 {
                     getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
                     send(socket, content);
+                    socket->close();
                     return;
                 }
 			}
@@ -217,6 +225,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -243,6 +252,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -310,6 +320,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std
 			content.insert(content.end(), header.begin(), header.end());
 			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
 			send(socket, content);
+            socket->close();
 		}
 		catch(const std::exception& ex)
 		{
@@ -375,6 +386,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
@@ -388,6 +400,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 			{
 				getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -401,6 +414,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			else if(!contentString.empty())
@@ -411,6 +425,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 				content.insert(content.end(), header.begin(), header.end());
 				content.insert(content.end(), contentString.begin(), contentString.end());
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -419,6 +434,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 
@@ -468,6 +484,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
                 {
                     getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
                     send(socket, content);
+                    socket->close();
                     return;
                 }
 			}
@@ -479,6 +496,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
                 {
                     getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
                     send(socket, content);
+                    socket->close();
                     return;
                 }
 			}
@@ -492,6 +510,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -516,6 +535,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -554,11 +574,13 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, st
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 #else
         getError(500, _http.getStatusText(500), "Homegear is compiled without script engine.", content);
         send(socket, content);
+        socket->close();
 #endif
 	}
 	catch(const std::exception& ex)
@@ -637,7 +659,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
 	try
 	{
 		std::vector<std::string> additionalHeaders;
-		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + VERSION + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
+		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::homegearVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
 		std::string header;
 		_http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
 		content.insert(content.end(), header.begin(), header.end());
@@ -657,7 +679,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
 {
 	try
 	{
-		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + VERSION + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
+		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::homegearVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
 		std::string header;
 		_http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
 		content.insert(content.end(), header.begin(), header.end());
@@ -680,8 +702,6 @@ void WebServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<ch
 		if(data.empty()) return;
 		try
 		{
-			//Sleep a tiny little bit. Some clients like don't accept responses too fast.
-			//std::this_thread::sleep_for(std::chrono::milliseconds(22));
 			socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)

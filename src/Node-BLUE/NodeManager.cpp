@@ -243,7 +243,7 @@ std::string NodeManager::getNodeLocales(std::string& language)
 		for(auto& directory : directories)
 		{
 			std::string localePath = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/locales/" + language + "/";
-			if(!GD::bl->io.directoryExists(localePath)) continue;
+			if(!BaseLib::Io::directoryExists(localePath)) continue;
 			std::vector<std::string> files = GD::bl->io.getFiles(localePath);
 			if(files.empty()) continue;
 			for(auto& file : files)
@@ -251,10 +251,23 @@ std::string NodeManager::getNodeLocales(std::string& language)
 				std::string path = localePath + file;
 				try
 				{
-					std::string content = GD::bl->io.getFileContent(path);
+				    if(file.size() > 5 && file.compare(file.size() - 5, 5, ".html") == 0) continue;
+
+					std::string content = BaseLib::Io::getFileContent(path);
 					BaseLib::HelperFunctions::trim(content);
 					BaseLib::PVariable json = jsonDecoder->decode(content); //Check for JSON errors
-					if(json->structValue->empty()) continue;
+					if(json->structValue->empty() || json->structValue->begin()->second->structValue->empty()) continue;
+
+					auto htmlPath = path;
+					if(htmlPath.size() > 5 && htmlPath.compare(htmlPath.size() - 5, 5, ".json") == 0) htmlPath = htmlPath.substr(0, htmlPath.size() - 5);
+					htmlPath.append(".help.html");
+					if(BaseLib::Io::fileExists(htmlPath))
+                    {
+					    std::string help = BaseLib::Io::getFileContent(htmlPath);
+					    json->structValue->begin()->second->structValue->begin()->second->structValue->emplace("help", std::make_shared<BaseLib::Variable>(help));
+					    BaseLib::Rpc::JsonEncoder::encode(json, content);
+                    }
+
 					if(locales.size() + content.size() > locales.capacity()) locales.reserve(locales.capacity() + content.size() + 8192);
 					if(!firstFile) locales += ",";
 					else firstFile = false;
