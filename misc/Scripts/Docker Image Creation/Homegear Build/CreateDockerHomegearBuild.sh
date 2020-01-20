@@ -156,7 +156,6 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
-DEBIAN_FRONTEND=noninteractive chroot $rootfs 
 
 echo "deb https://homegear.eu/packages/$dist/ $distver/" > $rootfs/etc/apt/sources.list.d/homegear.list
 
