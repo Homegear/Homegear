@@ -725,8 +725,7 @@ var RED = (function() {
     }
 
     return {
-        init: init,
-        reloadNodes: loadNodeList
+        init: init
     }
 })();
 ;/**
@@ -22550,7 +22549,7 @@ RED.palette.editor = (function() {
                                 if(!xhr) {
                                     installButton.addClass('disabled');
                                     installButton.text(RED._('palette.editor.installed'));
-                                    RED.reloadNodes();
+                                    location.reload();
                                 }
                             });
                         }
