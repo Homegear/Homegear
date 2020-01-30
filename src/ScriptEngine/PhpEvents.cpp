@@ -29,8 +29,8 @@
 
 #ifndef NO_SCRIPTENGINE
 
-#include "../GD/GD.h"
 #include "PhpEvents.h"
+#include "../GD/GD.h"
 
 namespace Homegear
 {

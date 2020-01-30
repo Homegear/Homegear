@@ -10,6 +10,7 @@
 		<function channel="0" type="" channelCount="1">
 			<properties/>
 			<configParameters>custom_ch0_master</configParameters>
+			<variables>maint_ch0_values</variables>
 		</function>
 		<function channel="1" type="VirtualWindowContact" channelCount="1">
 			<properties/>
@@ -19,8 +20,18 @@
 	</functions>
 	<packets/>
 	<parameterGroups>
-		<configParameters id="config"/>
 		<configParameters id="custom_ch0_master" />
+		<variables id="maint_ch0_values">
+			<parameter id="LOWBAT">
+				<properties>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
 		<variables id="custom_ch1_values">
 			<parameter id="STATE">
 				<properties>

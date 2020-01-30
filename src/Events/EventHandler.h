@@ -31,8 +31,6 @@
 #ifndef EVENTHANDLER_H_
 #define EVENTHANDLER_H_
 
-#include "../../config.h"
-
 #ifdef EVENTHANDLER
 #include <homegear-base/BaseLib.h>
 

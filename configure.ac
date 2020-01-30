@@ -77,22 +77,25 @@ AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`./getGitCommitHomegear.sh`], [Defin
 AC_DEFINE_UNQUOTED([GITBRANCHBASE], [`./getGitBranchBase.sh`], [Define git branch of libhomegear-base])
 AC_DEFINE_UNQUOTED([GITBRANCHHOMEGEAR], [`./getGitBranchHomegear.sh`], [Define git branch of Homegear])
 
-#AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
-#AS_IF([test "x$with_scriptengine" = "xno"], [
-#	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
-#	], [
-#	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
-#	AC_DEFINE(SCRIPTENGINE, [], [Enables compilation of the PHP script engine])
-#	])
+AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
+AS_IF([test "x$with_scriptengine" = "xno"], [
+	AM_CONDITIONAL(WITH_SCRIPTENGINE, false)
+	], [
+	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
+	])
 
 AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
 AS_IF([test "x$with_eventhandler" != "xno"], [
-	AC_DEFINE(EVENTHANDLER, [], [Enables compilation of Homegear's event handler])
+	AM_CONDITIONAL(WITH_EVENTHANDLER, true)
+	], [
+	AM_CONDITIONAL(WITH_EVENTHANDLER, false)
 	])
 
 AC_ARG_WITH([ccu2], [AS_HELP_STRING([--with-ccu2], [Compile for CCU2])], [with_ccu2=yes], [])
 AS_IF([test "x$with_ccu2" = "xyes"], [
-	AC_DEFINE(CCU2, [], [Enables features specific for CCU2])
+	AM_CONDITIONAL(WITH_CCU2, true)
+	], [
+	AM_CONDITIONAL(WITH_CCU2, false)
 	])
 
 #AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])
@@ -106,10 +109,5 @@ AC_ARG_WITH([i2c], [AS_HELP_STRING([--without-i2c], [Compile without I2C support
 AS_IF([test "x$with_i2c" != "xno"], [
 	AC_DEFINE(I2CSUPPORT, [], [Enables compilation of all I2C interfaces and I2C support in PHP])
 	])
-
-AC_ARG_ENABLE(sesocketdebug, AS_HELP_STRING([--enable-sesocketdebug], [Enable logging of script engine communication to PCAP file, default: no]), [sesocketdebug=true], [sesocketdebug=false])
-AS_IF([test "x$sesocketdebug" = "xtrue"], [
-        AC_DEFINE(DEBUGSESOCKET, [], [Enable debugging of scriptengine communication])
-        ])
 
 AC_OUTPUT(Makefile src/Makefile homegear-miscellaneous/src/Makefile)

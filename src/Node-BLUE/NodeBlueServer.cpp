@@ -33,6 +33,8 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
+#include <sys/stat.h>
+
 namespace Homegear
 {
 
@@ -50,6 +52,11 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_flowsRestarting = false;
 	_lastNodeEvent = 0;
 	_nodeEventCounter = 0;
+
+    _lifetick1.first = 0;
+    _lifetick1.second = true;
+    _lifetick2.first = 0;
+    _lifetick2.second = true;
 
 	_rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 	_rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
@@ -124,6 +131,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion()));
 	_rpcMethods.emplace("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit()));
 	_rpcMethods.emplace("invokeFamilyMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInvokeFamilyMethod()));
+    _rpcMethods.emplace("lifetick", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLifetick()));
 	_rpcMethods.emplace("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces()));
 	_rpcMethods.emplace("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers()));
 	_rpcMethods.emplace("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices()));
@@ -220,12 +228,20 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
 	}
 
+    { // System variables
+        _rpcMethods.emplace("addRoleToSystemVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAddRoleToSystemVariable>()));
+        _rpcMethods.emplace("getSystemVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetSystemVariablesInRole>()));
+        _rpcMethods.emplace("removeRoleFromSystemVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromSystemVariable>()));
+    }
+
 	{ // Roles
 		_rpcMethods.emplace("addRoleToVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAddRoleToVariable>()));
         _rpcMethods.emplace("aggregateRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAggregateRoles>()));
 		_rpcMethods.emplace("createRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCreateRole>()));
 		_rpcMethods.emplace("deleteRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteRole>()));
 		_rpcMethods.emplace("getRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoles>()));
+        _rpcMethods.emplace("getRolesInDevice", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRolesInDevice>()));
+        _rpcMethods.emplace("getRolesInRoom", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRolesInRoom>()));
 		_rpcMethods.emplace("getRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoleMetadata>()));
 		_rpcMethods.emplace("getVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetVariablesInRole>()));
 		_rpcMethods.emplace("removeRoleFromVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromVariable>()));
@@ -235,6 +251,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 
 	{ // UI
 		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
+        _rpcMethods.emplace("checkUiElementSimpleCreation", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCheckUiElementSimpleCreation>()));
 		_rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
 		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
 		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
@@ -247,18 +264,77 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 		_rpcMethods.emplace("setUserMetadata", std::make_shared<Rpc::RPCSetUserMetadata>());
 	}
 
+    //{{{ User data
+    _rpcMethods.emplace("deleteUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteUserData>()));
+    _rpcMethods.emplace("getUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetUserData>()));
+    _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
+    //}}}
+
 #ifndef NO_SCRIPTENGINE
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNode", std::bind(&NodeBlueServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("executePhpNodeMethod", std::bind(&NodeBlueServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 #endif
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("invokeNodeMethod", std::bind(&NodeBlueServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("invokeIpcProcessMethod", std::bind(&NodeBlueServer::invokeIpcProcessMethod, this, std::placeholders::_1, std::placeholders::_2)));
 	_localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("nodeEvent", std::bind(&NodeBlueServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>>("frontendEventLog", std::bind(&NodeBlueServer::frontendEventLog, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 NodeBlueServer::~NodeBlueServer()
 {
 	if(!_stopServer) stop();
 	GD::bl->threadManager.join(_maintenanceThread);
+}
+
+bool NodeBlueServer::lifetick()
+{
+    try
+    {
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+                return false;
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+                return false;
+            }
+        }
+
+        std::vector<PNodeBlueClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto result = sendRequest(*i, "lifetick", std::make_shared<BaseLib::Array>(), true);
+            if(result->errorStruct || !result->booleanValue) return false;
+        }
+
+        return true;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 void NodeBlueServer::collectGarbage()
@@ -545,7 +621,7 @@ void NodeBlueServer::homegearReloading()
 	}
 }
 
-void NodeBlueServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
+void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool coreDumped)
 {
 	try
 	{
@@ -829,12 +905,124 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 		std::string thisSubflowId = subflowNode->structValue->at("id")->stringValue;
 		std::string subflowIdPrefix = thisSubflowId + ':';
 		std::string subflowId = subflowNode->structValue->at("type")->stringValue.substr(8);
+
 		auto subflowInfoIterator = subflowInfos.find(subflowId);
 		if(subflowInfoIterator == subflowInfos.end())
 		{
 			GD::out.printError("Error: Could not find subflow info with for subflow with id " + subflowId);
 			return std::set<std::string>();
 		}
+
+		//{{{ Get environment variables
+        auto environmentVariablesIterator = subflowNode->structValue->find("env");
+		auto defaultEnvironmentVariables = subflowInfoIterator->second->structValue->find("env");
+
+		BaseLib::PVariable environmentVariables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        if(environmentVariablesIterator != subflowNode->structValue->end())
+        {
+            for(auto& entry : *environmentVariablesIterator->second->arrayValue)
+            {
+                auto nameIterator = entry->structValue->find("name");
+                auto valueIterator = entry->structValue->find("value");
+                auto typeIterator = entry->structValue->find("type");
+                if(nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end())
+                {
+                    if(typeIterator->second->stringValue == "bool")
+                    {
+                        valueIterator->second->type = BaseLib::VariableType::tBoolean;
+                        valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
+                    }
+                    else if(typeIterator->second->stringValue == "float")
+                    {
+                        valueIterator->second->type = BaseLib::VariableType::tFloat;
+                        valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
+                    }
+                    else if(typeIterator->second->stringValue == "int")
+                    {
+                        valueIterator->second->type = BaseLib::VariableType::tInteger64;
+                        valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
+                    }
+                    else if(typeIterator->second->stringValue == "array")
+                    {
+                        try
+                        {
+                            valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                        }
+                        catch(const std::exception&)
+                        {
+                        }
+                        valueIterator->second->type = BaseLib::VariableType::tArray;
+                    }
+                    else if(typeIterator->second->stringValue == "struct")
+                    {
+                        try
+                        {
+                            valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                        }
+                        catch(const std::exception&)
+                        {
+                        }
+                        valueIterator->second->type = BaseLib::VariableType::tStruct;
+                    }
+                    environmentVariables->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
+                }
+            }
+        }
+
+        if(defaultEnvironmentVariables != subflowInfoIterator->second->structValue->end())
+        {
+            for(auto& entry : *defaultEnvironmentVariables->second->arrayValue)
+            {
+                auto nameIterator = entry->structValue->find("name");
+                auto valueIterator = entry->structValue->find("value");
+                auto typeIterator = entry->structValue->find("type");
+                if(nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end())
+                {
+                    if(environmentVariables->structValue->find(nameIterator->second->stringValue) == environmentVariables->structValue->end())
+                    {
+                        if(typeIterator->second->stringValue == "bool")
+                        {
+                            valueIterator->second->type = BaseLib::VariableType::tBoolean;
+                            valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
+                        }
+                        else if(typeIterator->second->stringValue == "float")
+                        {
+                            valueIterator->second->type = BaseLib::VariableType::tFloat;
+                            valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
+                        }
+                        else if(typeIterator->second->stringValue == "int")
+                        {
+                            valueIterator->second->type = BaseLib::VariableType::tInteger64;
+                            valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
+                        }
+                        else if(typeIterator->second->stringValue == "array")
+                        {
+                            try
+                            {
+                                valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                            }
+                            catch(const std::exception&)
+                            {
+                            }
+                            valueIterator->second->type = BaseLib::VariableType::tArray;
+                        }
+                        else if(typeIterator->second->stringValue == "struct")
+                        {
+                            try
+                            {
+                                valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+                            }
+                            catch(const std::exception&)
+                            {
+                            }
+                            valueIterator->second->type = BaseLib::VariableType::tStruct;
+                        }
+                        environmentVariables->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
+                    }
+                }
+            }
+        }
+        //}}}
 
 		//Copy subflow, prefix all subflow node IDs and wires with subflow ID and identify subsubflows
 		std::unordered_map<std::string, BaseLib::PVariable> subflow;
@@ -844,6 +1032,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable& subflow
 			BaseLib::PVariable subflowNode = std::make_shared<BaseLib::Variable>();
 			*subflowNode = *subflowElement.second;
 			subflowNode->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode->structValue->at("id")->stringValue;
+			subflowNode->structValue->emplace("env", environmentVariables);
 			allNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
 			flowNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
 
@@ -1063,6 +1252,13 @@ void NodeBlueServer::startFlows()
 				continue;
 			}
 
+            auto dIterator = element->structValue->find("d");
+            if(dIterator != element->structValue->end() && (dIterator->second->booleanValue || dIterator->second->stringValue == "true"))
+            {
+                GD::out.printDebug("Debug: Ignoring disabled node: " + idIterator->second->stringValue);
+                continue;
+            }
+
 			auto typeIterator = element->structValue->find("type");
 			if(typeIterator == element->structValue->end()) continue;
 			else if(typeIterator->second->stringValue == "comment") continue;
@@ -1235,14 +1431,11 @@ void NodeBlueServer::startFlows()
 		std::string topic = "flowsStarted";
 		BaseLib::PVariable value = std::make_shared<BaseLib::Variable>(true);
 		GD::rpcClient->broadcastNodeEvent(nodeId, topic, value);
+        frontendNodeEventLog("Flows have been (re)started successfully.");
 	}
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1468,7 +1661,51 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 		}
 
 		std::string contentString;
-		if(path == "node-blue/locales/nodes")
+	    if(path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18)
+        {
+	        auto subpath = path.substr(18);
+	        auto subpathParts = BaseLib::HelperFunctions::splitAll(subpath, '/');
+	        std::string dataId;
+
+	        if(!subpathParts.empty() && subpathParts.at(0) == "global") dataId = "global";
+	        else if(subpathParts.size() > 1) dataId = subpathParts.at(1);
+            std::string key;
+            if(dataId == "global" && subpathParts.size() > 1) key = subpathParts.at(1);
+            else key = subpathParts.size() > 2 ? BaseLib::HelperFunctions::splitFirst(subpathParts.at(2), '?').first : "";
+
+	        if(!dataId.empty())
+            {
+                auto nodeData = _bl->db->getNodeData(dataId, key, false);
+                auto contextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                auto innerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+                if(key.empty())
+                {
+                    for(auto& innerNodeData : *nodeData->structValue)
+                    {
+                        auto innerInnerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                        innerInnerContextData->structValue->emplace("msg", innerNodeData.second);
+                        innerInnerContextData->structValue->emplace("format", std::make_shared<BaseLib::Variable>(getNodeBlueFormatFromVariableType(innerNodeData.second)));
+                        innerContextData->structValue->emplace(innerNodeData.first, innerInnerContextData);
+                    }
+                }
+                else
+                {
+                    innerContextData->structValue->emplace("msg", nodeData);
+                    innerContextData->structValue->emplace("format", std::make_shared<BaseLib::Variable>(getNodeBlueFormatFromVariableType(nodeData)));
+                }
+
+                if(key.empty())
+                {
+                    contextData->structValue->emplace("memory", innerContextData);
+                    _jsonEncoder->encode(contextData, contentString);
+                }
+                else _jsonEncoder->encode(innerContextData, contentString);
+            }
+            else contentString = "{\"memory\":{}}";
+            responseEncoding = "application/json";
+        }
+		else if(path == "node-blue/locales/nodes")
 		{
 			if(!sessionValid) return "unauthorized";
 			std::string language = "en-US";
@@ -1500,9 +1737,96 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 					break;
 				}
 			}
-			path = path.substr(17);
-			path = localePath + language + path;
+			auto file = path.substr(17);
+			path = localePath + language + file;
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+			if(GD::bl->io.fileExists(path + "-extra"))
+            {
+			    auto extraContent = GD::bl->io.getFileContent(path + "-extra");
+			    auto decodedContent = BaseLib::Rpc::JsonDecoder::decode(contentString);
+			    contentString.clear();
+			    auto decodedExtraContent = BaseLib::Rpc::JsonDecoder::decode(extraContent);
+
+			    for(auto& element : *decodedExtraContent->structValue)
+                {
+                    auto subelementIterator = decodedContent->structValue->find(element.first);
+                    if(subelementIterator == decodedContent->structValue->end())
+                    {
+                        decodedContent->structValue->emplace(element.first, element.second);
+                        continue;
+                    }
+
+			        if(element.second->type == BaseLib::VariableType::tStruct)
+                    {
+                        for(auto& subelement : *element.second->structValue)
+                        {
+                            auto subsubelementIterator = subelementIterator->second->structValue->find(subelement.first);
+                            if(subsubelementIterator == subelementIterator->second->structValue->end())
+                            {
+                                subelementIterator->second->structValue->emplace(subelement.first, subelement.second);
+                                continue;
+                            }
+
+                            if(subelement.second->type == BaseLib::VariableType::tStruct)
+                            {
+                                for(auto& subsubelement : *subelement.second->structValue)
+                                {
+                                    auto subsubsubelementIterator = subsubelementIterator->second->structValue->find(subsubelement.first);
+                                    if(subsubsubelementIterator == subsubelementIterator->second->structValue->end())
+                                    {
+                                        subsubelementIterator->second->structValue->emplace(subsubelement.first, subsubelement.second);
+                                        continue;
+                                    }
+
+                                    if(subsubelement.second->type == BaseLib::VariableType::tStruct)
+                                    {
+                                        for(auto& subsubsubelement : *subsubelement.second->structValue)
+                                        {
+                                            auto subsubsubsubelementIterator = subsubsubelementIterator->second->structValue->find(subsubsubelement.first);
+                                            if(subsubsubsubelementIterator == subsubsubelementIterator->second->structValue->end())
+                                            {
+                                                subsubsubelementIterator->second->structValue->emplace(subsubsubelement.first, subsubsubelement.second);
+                                                continue;
+                                            }
+
+                                            if(subsubsubelement.second->type == BaseLib::VariableType::tStruct)
+                                            {
+                                                for(auto& subsubsubsubelement : *subsubsubelement.second->structValue)
+                                                {
+                                                    auto subsubsubsubsubelementIterator = subsubsubsubelementIterator->second->structValue->find(subsubsubsubelement.first);
+                                                    if(subsubsubsubsubelementIterator == subsubsubsubelementIterator->second->structValue->end())
+                                                    {
+                                                        subsubsubsubelementIterator->second->structValue->emplace(subsubsubsubelement.first, subsubsubsubelement.second);
+                                                        continue;
+                                                    }
+
+                                                    if(subsubsubsubelement.second->type == BaseLib::VariableType::tStruct)
+                                                    {
+                                                        _out.printWarning("Warning: File " + path + "-extra has too many levels. Only five levels are allowed.");
+                                                    }
+                                                    else (*(*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first]->structValue)[subsubsubsubelement.first] = subsubsubsubelement.second;
+                                                }
+                                            }
+                                            else (*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first] = subsubsubelement.second;
+                                        }
+                                    }
+                                    else (*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first] = subsubelement.second;
+                                }
+                            }
+                            else
+                            {
+                                (*(*decodedContent->structValue)[element.first]->structValue)[subelement.first] = subelement.second;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        (*decodedContent->structValue)[element.first] = element.second;
+                    }
+                }
+
+                _jsonEncoder->encode(decodedContent, contentString);
+            }
 			responseEncoding = "application/json";
 		}
 		else if(path == "node-blue/flows")
@@ -1537,18 +1861,24 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 			_jsonEncoder->encode(responseJson, contentString);
 			responseEncoding = "application/json";
 		}
-		else if(path == "node-blue/settings" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js")
+		else if(path == "node-blue/settings" || path == "node-blue/theme" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js")
 		{
 			if(!sessionValid) return "unauthorized";
 			path = _webroot + "static/" + path.substr(10);
 			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			responseEncoding = "application/json";
 		}
-		else if(path == "node-blue/settings/user")
+		else if(path.compare(0, 23, "node-blue/settings/user") == 0)
 		{
 			if(!sessionValid) return "unauthorized";
-			path = _webroot + "static/" + path.substr(19);
-			if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+
+			auto settingsPath = _bl->settings.nodeBlueDataPath() + "userSettings.json";
+			if(BaseLib::Io::fileExists(settingsPath)) contentString = GD::bl->io.getFileContent(settingsPath);
+			else
+            {
+                path = _webroot + "static/" + path.substr(19);
+                if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
+            }
 			responseEncoding = "application/json";
 		}
 		else if(path == "node-blue/nodes")
@@ -1576,7 +1906,7 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 					nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
 					nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(infoEntry->nodeName)})));
 					nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-					nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
+					nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(!infoEntry->coreNode));
 					nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
 					nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
 					frontendNodeList->arrayValue->push_back(nodeListEntry);
@@ -1596,6 +1926,55 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 				if(GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
 			}
 		}
+        else if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 || path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0)
+        {
+            if(!sessionValid) return "unauthorized";
+            std::string libraryPath;
+            if(path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) libraryPath = _bl->settings.nodeBlueDataPath() + "examples/";
+            else libraryPath = _bl->settings.nodeBlueDataPath() + "library/";
+
+            if(!BaseLib::Io::directoryExists(libraryPath))
+            {
+                if(!BaseLib::Io::createDirectory(libraryPath, S_IRWXU | S_IRWXG)) return "";
+            }
+            if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 && path.size() > 30) libraryPath += path.substr(30);
+            else if(path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0 && path.size() > 35) libraryPath += path.substr(35);
+
+            bool isDirectory = false;
+            if(BaseLib::Io::isDirectory(libraryPath, isDirectory) == -1) return "";
+
+            if(!isDirectory)
+            {
+                contentString = BaseLib::Io::getFileContent(libraryPath);
+            }
+            else
+            {
+                BaseLib::Io io;
+                io.init(_bl);
+
+                responseEncoding = "application/json";
+
+                auto directories = io.getDirectories(libraryPath);
+                auto files = io.getFiles(libraryPath, false);
+
+                auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                responseJson->arrayValue->reserve(directories.size() + files.size());
+
+                for(auto& directory : directories)
+                {
+                    responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
+                }
+
+                for(auto& file : files)
+                {
+                    auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
+                    responseJson->arrayValue->push_back(fileEntry);
+                }
+
+                _jsonEncoder->encode(responseJson, contentString);
+            }
+        }
 		else if(path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php")
 		{
 			path = _webroot + path.substr(10);
@@ -1647,7 +2026,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 
 		if(path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
 		{
-			if(!sessionValid) return "unauthorized";
+            if(!sessionValid) return "unauthorized";
 			_out.printInfo("Info: Deploying (1)...");
 			std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
 			_out.printInfo("Info: Deploying (2)...");
@@ -1677,6 +2056,68 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 
 			return "{\"rev\": \"" + md5String + "\"}";
 		}
+		else if(path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
+        {
+            if(!sessionValid) return "unauthorized";
+            responseEncoding = "application/json";
+            _out.printInfo("Info: Installing node (1)...");
+            std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
+            _out.printInfo("Info: Installing node (2)...");
+            BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
+            auto moduleIterator = json->structValue->find("module");
+            if(moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return "{\"result\":\"error\"}";
+
+            std::string method = "managementInstallNode";
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->push_back(moduleIterator->second);
+            BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+            if(result->errorStruct)
+            {
+                _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
+                return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+            }
+
+            return R"({"result":"success","commandStatusId":)" + std::to_string(result->integerValue64) + "}";
+        }
+        else if(path == "node-blue/settings/user")
+        {
+            if(!sessionValid) return "unauthorized";
+
+            auto settingsPath = _bl->settings.nodeBlueDataPath() + "userSettings.json";
+            BaseLib::Io::writeFile(settingsPath, http.getContent(), http.getContentSize());
+
+            responseEncoding = "application/json";
+            return R"({"result":"success"})";
+        }
+        else if(path.compare(0, 30, "node-blue/library/local/flows/") == 0 && !http.getContent().empty())
+        {
+            if(!sessionValid) return "unauthorized";
+            std::string libraryDirectory = _bl->settings.nodeBlueDataPath() + "library/";
+            if(!BaseLib::Io::directoryExists(libraryDirectory))
+            {
+                if(!BaseLib::Io::createDirectory(libraryDirectory, S_IRWXU | S_IRWXG)) return "";
+            }
+
+            auto subdirectories = path.substr(30);
+            auto subdirectoryParts = BaseLib::HelperFunctions::splitAll(subdirectories, '/');
+            if(subdirectoryParts.empty()) return "";
+
+            for(int32_t i = 0; i < (signed)subdirectoryParts.size() - 1; i++)
+            {
+                libraryDirectory += subdirectoryParts.at(i) + '/';
+                if(!BaseLib::Io::directoryExists(libraryDirectory))
+                {
+                    if(!BaseLib::Io::createDirectory(libraryDirectory, S_IRWXU | S_IRWXG)) return "";
+                }
+            }
+
+            auto filepath = libraryDirectory + subdirectoryParts.back();
+
+            BaseLib::Io::writeFile(filepath, http.getContent(), http.getContentSize());
+
+            responseEncoding = "application/json";
+            return R"({"result":"success"})";
+        }
 	}
 	catch(const std::exception& ex)
 	{
@@ -1687,6 +2128,81 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
+#endif
+}
+
+std::string NodeBlueServer::handleDelete(std::string& path, BaseLib::Http& http, std::string& responseEncoding)
+{
+#ifdef NO_SCRIPTENGINE
+    return "unauthorized";
+#else
+    try
+    {
+        bool sessionValid = false;
+        {
+            auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+            if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+            if(!sessionValid)
+            {
+                sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+                if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+            }
+            if(!sessionValid)
+            {
+                sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
+                if(sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+            }
+        }
+
+        if(!sessionValid) return "unauthorized";
+
+        std::string contentString;
+        if(path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18)
+        {
+            auto subpath = path.substr(18);
+            auto subpathParts = BaseLib::HelperFunctions::splitAll(subpath, '/');
+            std::string dataId;
+
+            if(!subpathParts.empty() && subpathParts.at(0) == "global") dataId = "global";
+            else if(subpathParts.size() > 1) dataId = subpathParts.at(1);
+            std::string key;
+            if(dataId == "global" && subpathParts.size() > 1) key = subpathParts.at(1);
+            else if(subpathParts.size() > 2) key = BaseLib::HelperFunctions::splitFirst(subpathParts.at(2), '?').first;
+
+            if(!dataId.empty() && !key.empty()) _bl->db->deleteNodeData(dataId, key);
+        }
+        else if(path.compare(0, 16, "node-blue/nodes/") == 0 && path.size() > 16)
+        {
+            responseEncoding = "application/json";
+            auto node = path.substr(16);
+            _out.printInfo("Info: Uninstalling node (1)...");
+            std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
+            _out.printInfo("Info: Uninstalling node (2)...");
+
+            std::string method = "managementUninstallNode";
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->push_back(std::make_shared<BaseLib::Variable>(node));
+            BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+            if(result->errorStruct)
+            {
+                _out.printError("Error: Could not uninstall node: " + result->structValue->at("faultString")->stringValue);
+                return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+            }
+
+            return "{\"result\":\"success\",\"commandStatusId\":" + std::to_string(result->integerValue64) + "}";
+        }
+
+        return contentString;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 #endif
 }
 
@@ -1757,7 +2273,7 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 				{
 					if(_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
 					{
-						auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+						auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
 						if(systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
 						{
 							newVariables->push_back(variables->at(i));
@@ -2146,13 +2662,14 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 		std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
 		while(totallySentBytes < (signed) data.size())
 		{
-			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
-			if(sentBytes <= 0)
+			int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, data.data() + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
+			if(sentBytes == -1)
 			{
 				if(errno == EAGAIN) continue;
 				if(clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
+			else if(sentBytes == 0) return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			totallySentBytes += sentBytes;
 		}
 	}
@@ -2167,10 +2684,16 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData& clientData, std::ve
 	return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait)
 {
 	try
 	{
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = false;
+            _lifetick1.first = BaseLib::HelperFunctions::getTime();
+        }
+
 		int32_t packetId;
 		{
 			std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
@@ -2198,6 +2721,8 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 				return BaseLib::Variable::createError(-32500, "Unknown application error.");
 			}
 		}
+
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::nodeBlue, packetId, clientData->pid, IpcLoggerPacketDirection::toClient, data);
 
 		std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
 		BaseLib::PVariable result = send(clientData, data);
@@ -2235,6 +2760,11 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData& clientData, 
 			clientData->rpcResponses.erase(packetId);
 		}
 
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = true;
+        }
+
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -2252,10 +2782,22 @@ void NodeBlueServer::sendResponse(PNodeBlueClientData& clientData, BaseLib::PVar
 {
 	try
 	{
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = false;
+            _lifetick2.first = BaseLib::HelperFunctions::getTime();
+        }
+
 		BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
 		std::vector<char> data;
 		_rpcEncoder->encodeResponse(array, data);
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::nodeBlue, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
 		send(clientData, data);
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = true;
+        }
 	}
 	catch(const std::exception& ex)
 	{
@@ -2495,6 +3037,21 @@ void NodeBlueServer::readClient(PNodeBlueClientData& clientData)
 				processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
 				if(clientData->binaryRpc->isFinished())
 				{
+                    if(GD::ipcLogger->enabled())
+                    {
+                        if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                        {
+                            std::string methodName;
+                            BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+                            GD::ipcLogger->log(IpcModule::nodeBlue, request->at(1)->integerValue, clientData->pid, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                        else
+                        {
+                            BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
+                            GD::ipcLogger->log(IpcModule::nodeBlue, response->arrayValue->at(0)->integerValue, clientData->pid, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                    }
+
 					if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
 					{
 						std::string methodName;
@@ -2589,7 +3146,7 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket)
 		}
 		strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
 		serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+		bool bound = (bind(_serverFileDescriptor->descriptor.load(), (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
@@ -2714,11 +3271,66 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& par
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::string NodeBlueServer::getNodeBlueFormatFromVariableType(const BaseLib::PVariable& variable)
+{
+    std::string format;
+    switch(variable->type)
+    {
+        case BaseLib::VariableType::tArray:
+            format = "array[" + std::to_string(variable->arrayValue->size()) + "]";
+            break;
+        case BaseLib::VariableType::tBoolean:
+            format = "boolean";
+            break;
+        case BaseLib::VariableType::tFloat:
+            format = "number";
+            break;
+        case BaseLib::VariableType::tInteger:
+            format = "number";
+            break;
+        case BaseLib::VariableType::tInteger64:
+            format = "number";
+            break;
+        case BaseLib::VariableType::tString:
+            format = "string[" + std::to_string(variable->stringValue.size()) + "]";
+            if(variable->stringValue.size() > 1000) variable->stringValue = variable->stringValue.substr(0, 1000) + "...";
+            variable->stringValue = BaseLib::HelperFunctions::stripNonPrintable(variable->stringValue);
+            break;
+        case BaseLib::VariableType::tStruct:
+            format = "Object";
+            break;
+        case BaseLib::VariableType::tBase64:
+            format = "string[" + std::to_string(variable->stringValue.size()) + "]";
+            if(variable->stringValue.size() > 1000) variable->stringValue = variable->stringValue.substr(0, 1000) + "...";
+            variable->stringValue = BaseLib::HelperFunctions::stripNonPrintable(variable->stringValue);
+            break;
+        case BaseLib::VariableType::tVariant:
+            break;
+        case BaseLib::VariableType::tBinary:
+            break;
+        case BaseLib::VariableType::tVoid:
+            format = "null";
+            break;
+    }
+    return format;
+}
+
+void NodeBlueServer::frontendNodeEventLog(const std::string& message)
+{
+    try
+    {
+        auto value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        value->structValue->emplace("ts", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime()));
+        value->structValue->emplace("data", std::make_shared<BaseLib::Variable>(message));
+        GD::rpcClient->broadcastNodeEvent("", "event-log/flowsStarted", value);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 // {{{ RPC methods
@@ -2763,10 +3375,6 @@ BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData& clie
 	catch(const std::exception& ex)
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2867,11 +3475,25 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData& clientD
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::invokeIpcProcessMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
+        if(parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "First parameter is not of type Integer.");
+        if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Second parameter is not of type String.");
+        if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Third parameter is not of type Array.");
+
+        return GD::ipcServer->callProcessRpcMethod(parameters->at(0)->integerValue64, _dummyClientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
@@ -2898,11 +3520,25 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData& clientData, Ba
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::frontendEventLog(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameter.");
+
+        if(parameters->at(0)->stringValue.empty()) frontendNodeEventLog(parameters->at(1)->stringValue);
+        else frontendNodeEventLog("Node " + parameters->at(0)->stringValue + ": " + parameters->at(1)->stringValue);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
 

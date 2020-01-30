@@ -74,6 +74,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 {
     try
     {
+        if(userName.empty()) return false;
         if(password.empty()) return false;
         std::shared_ptr<BaseLib::Database::DataTable> rows = GD::bl->db->getPassword(userName);
         if(rows->empty() || rows->at(0).empty() || rows->at(0).size() != 2) return false;
@@ -201,6 +202,8 @@ bool User::update(const std::string& userName, const std::string& password, cons
 {
     try
     {
+        if(userName.empty()) return false;
+
         uint64_t userId = GD::bl->db->getUserId(userName);
         if(userId == 0) return false;
 
@@ -259,10 +262,65 @@ bool User::getAll(std::map<uint64_t, UserInfo>& users)
     return false;
 }
 
+void User::deleteData(const std::string& userName, const std::string& component, const std::string& key)
+{
+    try
+    {
+        if(userName.empty()) return;
+
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return;
+
+        GD::bl->db->deleteUserData(userId, component, key);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error deleting user data: " + std::string(ex.what()));
+    }
+}
+
+BaseLib::PVariable User::getData(const std::string& userName, const std::string& component, const std::string& key)
+{
+    try
+    {
+        if(userName.empty()) return BaseLib::Variable::createError(-1, "Username is not set.");
+
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return BaseLib::Variable::createError(-1, "Unknown user ID.");
+
+        return GD::bl->db->getUserData(userId, component, key);
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error getting user data: " + std::string(ex.what()));
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool User::setData(const std::string& userName, const std::string& component, const std::string& key, const BaseLib::PVariable& value)
+{
+    try
+    {
+        if(userName.empty()) return false;
+
+        uint64_t userId = GD::bl->db->getUserId(userName);
+        if(userId == 0) return false;
+
+        return !GD::bl->db->setUserData(userId, component, key, value)->errorStruct;
+    }
+    catch(std::exception& ex)
+    {
+        GD::out.printError("Error setting user data: " + std::string(ex.what()));
+    }
+    return false;
+}
+
 BaseLib::PVariable User::getMetadata(const std::string& userName)
 {
     try
     {
+        if(userName.empty()) return BaseLib::Variable::createError(-1, "Username is not set.");
+
         uint64_t userId = GD::bl->db->getUserId(userName);
         if(userId == 0) return BaseLib::Variable::createError(-1, "Unknown user ID.");
 
@@ -272,10 +330,6 @@ BaseLib::PVariable User::getMetadata(const std::string& userName)
     {
         GD::out.printError("Error updating user: " + std::string(ex.what()));
     }
-    catch(...)
-    {
-        GD::out.printError("Unknown error updating user.");
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -283,6 +337,8 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 {
     try
     {
+        if(userName.empty()) return false;
+
         uint64_t userId = GD::bl->db->getUserId(userName);
         if(userId == 0) return false;
 
@@ -304,7 +360,10 @@ bool User::setMetadata(const std::string& userName, BaseLib::PVariable metadata)
 // {{{ OAuth
 std::string User::generateOauthKey(const std::string& userName, const std::string& privateKey, const std::string& publicKey, std::string type, int32_t lifetime)
 {
+    if(userName.empty()) return "";
+
     uint64_t userId = GD::bl->db->getUserId(userName);
+    if(userId == 0) return "";
     int64_t keyIndex = 0;
     if(type == "access")
     {

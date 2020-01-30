@@ -161,6 +161,8 @@ private:
 
 	std::mutex _peerSubscriptionsMutex;
 	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
+    std::mutex _eventSubscriptionsMutex;
+	std::set<std::string> _eventSubscriptions;
 
 	std::mutex _flowSubscriptionsMutex;
 	std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
@@ -184,9 +186,9 @@ private:
 
 	void registerClient();
 
-	Flows::PVariable invoke(std::string methodName, Flows::PArray parameters, bool wait);
+	Flows::PVariable invoke(const std::string& methodName, Flows::PArray parameters, bool wait);
 
-	Flows::PVariable invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait);
+	Flows::PVariable invokeNodeMethod(const std::string& nodeId, const std::string& methodName, Flows::PArray parameters, bool wait);
 
 	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
 
@@ -194,41 +196,47 @@ private:
 
 	Flows::PVariable send(std::vector<char>& data);
 
-	void log(std::string nodeId, int32_t logLevel, std::string message);
+	void log(const std::string& nodeId, int32_t logLevel, const std::string& message);
 
-	void subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
+	void frontendEventLog(const std::string& nodeId, const std::string& message);
 
-	void unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable);
+	void subscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable);
 
-	void subscribeFlow(std::string nodeId, std::string flowId);
+	void unsubscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable);
 
-	void unsubscribeFlow(std::string nodeId, std::string flowId);
+	void subscribeFlow(const std::string& nodeId, const std::string& flowId);
 
-	void subscribeGlobal(std::string nodeId);
+	void unsubscribeFlow(const std::string& nodeId, const std::string& flowId);
 
-	void unsubscribeGlobal(std::string nodeId);
+	void subscribeGlobal(const std::string& nodeId);
 
-	void queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
+	void unsubscribeGlobal(const std::string& nodeId);
 
-	void nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value);
+    void subscribeHomegearEvents(const std::string& nodeId);
 
-	Flows::PVariable getNodeData(std::string nodeId, std::string key);
+    void unsubscribeHomegearEvents(const std::string& nodeId);
 
-	void setNodeData(std::string nodeId, std::string key, Flows::PVariable value);
+	void queueOutput(const std::string& nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
-    Flows::PVariable getFlowData(std::string flowId, std::string key);
+	void nodeEvent(const std::string& nodeId, const std::string& topic, Flows::PVariable value);
 
-    void setFlowData(std::string flowId, std::string key, Flows::PVariable value);
+	Flows::PVariable getNodeData(const std::string& nodeId, const std::string& key);
 
-    Flows::PVariable getGlobalData(std::string key);
+	void setNodeData(const std::string& nodeId, const std::string& key, Flows::PVariable value);
 
-    void setGlobalData(std::string key, Flows::PVariable value);
+    Flows::PVariable getFlowData(const std::string& flowId, const std::string& key);
 
-	void setInternalMessage(std::string nodeId, Flows::PVariable message);
+    void setFlowData(const std::string& flowId, const std::string& key, Flows::PVariable value);
 
-	void setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
+    Flows::PVariable getGlobalData(const std::string& key);
 
-	Flows::PVariable getConfigParameter(std::string nodeId, std::string name);
+    void setGlobalData(const std::string& key, Flows::PVariable value);
+
+	void setInternalMessage(const std::string& nodeId, Flows::PVariable message);
+
+	void setInputValue(const std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
+
+	Flows::PVariable getConfigParameter(const std::string& nodeId, const std::string& name);
 
 	// {{{ RPC methods
 	/**
@@ -242,6 +250,12 @@ private:
      * @param parameters Irrelevant for this method.
      */
 	Flows::PVariable shutdown(Flows::PArray& parameters);
+
+	/**
+	 * Checks if everything is working.
+	 * @param parameters Irrelevant for this method.
+	 */
+	Flows::PVariable lifetick(Flows::PArray& parameters);
 
 	/**
      * Starts a new flow.

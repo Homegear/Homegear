@@ -59,15 +59,15 @@ public:
 
 	virtual void startUpComplete();
 
-	virtual void variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
+	virtual void variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
 
-	virtual void setNodeVariable(std::string& variable, Flows::PVariable& value);
+	virtual void setNodeVariable(const std::string& variable, Flows::PVariable value);
 
 	virtual Flows::PVariable getConfigParameterIncoming(std::string name);
 
 	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 
-	virtual Flows::PVariable invokeLocal(std::string methodName, Flows::PArray& parameters);
+	virtual Flows::PVariable invokeLocal(const std::string& methodName, Flows::PArray parameters);
 };
 
 }

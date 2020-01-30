@@ -33,6 +33,8 @@
 
 #ifndef NO_SCRIPTENGINE
 
+#include <homegear-base/BaseLib.h>
+
 namespace Homegear
 {
 
@@ -77,7 +79,11 @@ public:
 
     void setPeerId(uint64_t peerId) { _peerId = peerId; }
 
-    int32_t getPeerId() { return _peerId; }
+    uint64_t getPeerId() { return _peerId; }
+
+    void setNodeId(std::string nodeId) { _nodeId = nodeId; }
+
+    std::string getNodeId() { return _nodeId; }
 
     std::function<void(std::string output, bool error)>& getOutputCallback() { return _outputCallback; };
 
@@ -90,8 +96,9 @@ private:
     std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
     std::string _token;
 
-    // {{{ Data exchange - e are abusing the events object here for data exchange between main thread and sub threads.
+    // {{{ Data exchange - we are abusing the events object here for data exchange between main thread and sub threads.
     uint64_t _peerId = 0;
+    std::string _nodeId;
     int32_t _logLevel = -1;
     // }}}
 

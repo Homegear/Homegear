@@ -29,8 +29,8 @@
 */
 
 #include "CliClient.h"
+#include "../GD/GD.h"
 
-#include "../../config.h"
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -159,7 +159,7 @@ int32_t CliClient::terminal(std::string& command)
 
         if(command.empty())
         {
-            standardOutput("Connected to Homegear (version " + std::string(VERSION) + ").\n\n");
+            standardOutput("Connected to Homegear (version " + GD::homegearVersion + ").\n\n");
             standardOutput("Please type >>help<< to list all available commands.\n");
         }
 
@@ -491,7 +491,7 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
                 std::string value = parameters->at(4)->arrayValue->at(i)->print(false, false, true);
                 BaseLib::HelperFunctions::trim(value);
 
-                standardOutput("ID >>" + (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) + "<<, channel >>" + std::to_string(parameters->at(2)->integerValue) + "<<, variable >>" + parameters->at(3)->arrayValue->at(i)->stringValue + "<<, source >>" + parameters->at(0)->stringValue + "<<, value >>" + value + "<<\n");
+                standardOutput(BaseLib::HelperFunctions::getTimeString() + ": ID >>" + (peerId > 999999 ? "0x" + BaseLib::HelperFunctions::getHexString(peerId, 8) : std::to_string(peerId)) + "<<, channel >>" + std::to_string(parameters->at(2)->integerValue) + "<<, variable >>" + parameters->at(3)->arrayValue->at(i)->stringValue + "<<, source >>" + parameters->at(0)->stringValue + "<<, value >>" + value + "<<\n");
             }
         }
 

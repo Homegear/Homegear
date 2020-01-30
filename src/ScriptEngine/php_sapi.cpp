@@ -34,7 +34,6 @@
 #include "../GD/GD.h"
 #include "php_sapi.h"
 #include "PhpVariableConverter.h"
-#include "../../config.h"
 
 #ifdef I2CSUPPORT
 #include <linux/i2c-dev.h>
@@ -45,7 +44,7 @@
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
 #if PHP_VERSION_ID >= 70400
-#error "PHP 7.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
+#error "PHP 7.4 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of hg_stream_open() equals zend_stream_open() in zend_stream.c
@@ -236,7 +235,7 @@ static zend_module_entry homegear_module_entry = {
         PHP_RINIT(homegear),
         PHP_RSHUTDOWN(homegear),
         PHP_MINFO(homegear),
-        VERSION,
+        Homegear::GD::homegearVersion.c_str(),
         STANDARD_MODULE_PROPERTIES
 };
 
@@ -579,7 +578,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
         BaseLib::Http* http = &SEG(http);
         BaseLib::ScriptEngine::PScriptInfo& scriptInfo = SEG(scriptInfo);
         if(!http || !scriptInfo) return;
-        BaseLib::Http::Header& header = http->getHeader();
+        const BaseLib::Http::Header& header = http->getHeader();
         BaseLib::Rpc::ServerInfo::Info* server = (BaseLib::Rpc::ServerInfo::Info*)SG(server_context);
         zval value;
 
@@ -610,7 +609,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
             php_register_variable_safe((char*)"WEBSOCKET_AUTH_TYPE", (char*)webSocketAuthType.c_str(), webSocketAuthType.size(), track_vars_array);
         }
 
-        std::string version = std::string("Homegear ") + VERSION;
+        std::string version = std::string("Homegear ") + Homegear::GD::homegearVersion;
         php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array);
         php_register_variable_safe((char*)"SCRIPT_NAME", (char*)scriptInfo->relativePath.c_str(), scriptInfo->relativePath.size(), track_vars_array);
         std::string phpSelf = scriptInfo->relativePath + header.pathInfo;
@@ -650,6 +649,35 @@ static void php_homegear_register_variables(zval* track_vars_array)
             BaseLib::HelperFunctions::toUpper(name);
             php_register_variable_safe((char*)name.c_str(), (char*)i->second.c_str(), i->second.size(), track_vars_array);
         }
+        if(scriptInfo->clientInfo)
+        {
+            if(scriptInfo->clientInfo->authenticated) php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"true", 4, track_vars_array);
+            else php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"false", 5, track_vars_array);
+            if(scriptInfo->clientInfo->hasClientCertificate)
+            {
+                std::string sslClientVerify = "SUCCESS";
+                php_register_variable_safe((char*) "SSL_CLIENT_VERIFY", (char*) sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+                php_register_variable_safe((char*) "SSL_CLIENT_S_DN", (char*) scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
+                auto dnParts = BaseLib::HelperFunctions::splitAll(scriptInfo->clientInfo->distinguishedName, ',');
+                for(auto& attribute : dnParts)
+                {
+                    auto attributePair = BaseLib::HelperFunctions::splitFirst(attribute, '=');
+                    BaseLib::HelperFunctions::trim(attributePair.first);
+                    BaseLib::HelperFunctions::toUpper(attributePair.first);
+                    BaseLib::HelperFunctions::trim(attributePair.second);
+                    BaseLib::HelperFunctions::toLower(attributePair.second);
+                    if(attributePair.first.empty() || attributePair.second.empty()) continue;
+                    std::string name = "SSL_CLIENT_S_DN_" + attributePair.first;
+                    php_register_variable_safe((char*) name.c_str(), (char*) attributePair.second.c_str(), attributePair.second.size(), track_vars_array);
+                }
+            }
+        }
+        else
+        {
+            std::string sslClientVerify = "NONE";
+            php_register_variable_safe((char*)"SSL_CLIENT_VERIFY", (char*)sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+        }
+
         zval_ptr_dtor(&value);
     }
 }
@@ -658,7 +686,7 @@ void php_homegear_invoke_rpc(std::string& methodName, BaseLib::PVariable& parame
 {
     if(SEG(id) == 0)
     {
-        zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
+        zend_throw_exception(homegear_exception_class_entry, "Script ID is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
         RETURN_FALSE
     }
     if(!SEG(rpcCallback)) RETURN_FALSE;
@@ -744,6 +772,7 @@ ZEND_FUNCTION(hg_register_thread)
     SEG(rpcCallback) = phpEvents->getRpcCallback();
     SEG(logLevel) = phpEvents->getLogLevel();
     SEG(peerId) = phpEvents->getPeerId();
+    SEG(nodeId) = phpEvents->getNodeId();
     RETURN_TRUE
 }
 
@@ -2821,7 +2850,7 @@ static PHP_MINFO_FUNCTION(homegear)
 {
     php_info_print_table_start();
     php_info_print_table_row(2, "Homegear support", "enabled");
-    php_info_print_table_row(2, "Homegear version", VERSION);
+    php_info_print_table_row(2, "Homegear version", Homegear::GD::homegearVersion);
     php_info_print_table_end();
 }
 

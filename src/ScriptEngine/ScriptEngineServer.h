@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineProcess.h"
-#include "../../config.h"
 #include <homegear-base/BaseLib.h>
 
 #include <sys/types.h>
@@ -65,6 +64,8 @@ public:
 
     virtual ~ScriptEngineServer();
 
+    bool lifetick();
+
     bool start();
 
     void stop();
@@ -73,7 +74,7 @@ public:
 
     void homegearReloading();
 
-    void processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped);
+    void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
     void devTestClient();
 
@@ -140,10 +141,6 @@ private:
     typedef std::shared_ptr<ClientScriptInfo> PClientScriptInfo;
 
     BaseLib::Output _out;
-#ifdef DEBUGSESOCKET
-    std::mutex _socketOutputMutex;
-    std::ofstream _socketOutput;
-#endif
     std::string _socketPath;
     std::atomic_bool _shuttingDown;
     std::atomic_bool _stopServer;
@@ -177,15 +174,16 @@ private:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
     std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
+    std::mutex _lifetick1Mutex;
+    std::pair<int64_t, bool> _lifetick1;
+    std::mutex _lifetick2Mutex;
+    std::pair<int64_t, bool> _lifetick2;
+
     // {{{ Debugging / Valgrinding
     pid_t _manualClientCurrentProcessId = 1;
     std::mutex _unconnectedProcessesMutex;
     std::queue<pid_t> _unconnectedProcesses;
     // }}}
-
-#ifdef DEBUGSESOCKET
-    void socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data);
-#endif
 
     void collectGarbage();
 
@@ -197,7 +195,7 @@ private:
 
     BaseLib::PVariable send(PScriptEngineClientData& clientData, std::vector<char>& data);
 
-    BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait);
+    BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait);
 
     void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 

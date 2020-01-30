@@ -270,7 +270,13 @@ void UPnP::processPacket(BaseLib::Http& http)
 				{
 					mx = BaseLib::HelperFunctions::getRandomNumber(0, mx - 500);
 					_out.printDebug("Debug: Sleeping " + std::to_string(mx) + "ms before sending response.");
-					std::this_thread::sleep_for(std::chrono::milliseconds(mx));
+					for(int32_t i = 0; i < mx / 1000; i++)
+                    {
+					    if(_stopServer) break;
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                    }
+                    if(_stopServer) return;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(mx % 1000));
 				}
 				sendOK(address.first, port, header.fields.at("st") == "upnp:rootdevice");
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -313,7 +319,7 @@ void UPnP::registerServers()
 			_webserverEventHandler = server.second->addWebserverEventHandler(this);
 
 			Packets& packet = _packets[settings->port];
-			std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + std::string(VERSION) + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\n";
+			std::string notifyPacketBase = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=1800\r\nSERVER: Homegear " + GD::homegearVersion + "\r\nLOCATION: " + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\n";
 			std::string alivePacketRoot = notifyPacketBase + "NT: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\nNTS: ssdp:alive\r\n\r\n";
 			std::string alivePacketRootUUID = notifyPacketBase + "NT: " + _st + "\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
 			std::string alivePacket = notifyPacketBase + "NT: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\nNTS: ssdp:alive\r\n\r\n";
@@ -328,7 +334,7 @@ void UPnP::registerServers()
 			packet.byebyeRootUUID = std::vector<char>(&byebyePacketRootUUID.at(0), &byebyePacketRootUUID.at(0) + byebyePacketRootUUID.size());
 			packet.byebye = std::vector<char>(&byebyePacket.at(0), &byebyePacket.at(0) + byebyePacket.size());
 
-			std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nLocation: ") + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\nServer: Homegear " + std::string(VERSION) + "\r\n";
+			std::string okPacketBase = std::string("HTTP/1.1 200 OK\r\nCache-Control: max-age=1800\r\nLocation: ") + "http://" + _address + ":" + std::to_string(settings->port) + "/description.xml\r\nServer: Homegear " + GD::homegearVersion + "\r\n";
 			std::string okPacketRoot = okPacketBase + "ST: upnp:rootdevice\r\nUSN: " + _st + "::upnp:rootdevice\r\n\r\n";
 			std::string okPacketRootUUID = okPacketBase + "ST: " + _st + "\r\nUSN: " + _st + "\r\n\r\n";
 			std::string okPacket = okPacketBase + "ST: urn:schemas-upnp-org:device:basic:1\r\nUSN: " + _st + "\r\n\r\n";
@@ -339,7 +345,7 @@ void UPnP::registerServers()
 			std::string description = "<?xml version=\"1.0\"?><root xmlns=\"urn:schemas-upnp-org:device-1-0\"><specVersion><major>1</major><minor>0</minor></specVersion>";
 			description.append(std::string("<URLBase>") + "http://" + _address + ":" + std::to_string(settings->port) + "</URLBase>");
 			description.append("<device><deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType><friendlyName>Homegear</friendlyName><manufacturer>Homegear GmbH</manufacturer><manufacturerURL>http://homegear.eu</manufacturerURL>");
-			description.append("<modelDescription>Homegear</modelDescription><modelName>Homegear</modelName><modelNumber>Homegear " + std::string(VERSION) + "</modelNumber><serialNumber>" + _udn + "</serialNumber><modelURL>http://homegear.eu</modelURL>");
+			description.append("<modelDescription>Homegear</modelDescription><modelName>Homegear</modelName><modelNumber>Homegear " + GD::homegearVersion + "</modelNumber><serialNumber>" + _udn + "</serialNumber><modelURL>http://homegear.eu</modelURL>");
 			description.append("<UDN>uuid:" + _udn + "</UDN><presentationURL>" + "http://" + _address + ":" + std::to_string(settings->port) + "</presentationURL></device></root>");
 			packet.description = std::vector<char>(&description.at(0), &description.at(0) + description.size());
 		}
@@ -510,7 +516,7 @@ std::shared_ptr<BaseLib::FileDescriptor> UPnP::getSocketDescriptor()
 		localSock.sin_port = htons(1900);
 		localSock.sin_addr.s_addr = inet_addr("239.255.255.250");
 
-		if(bind(socketDescriptor->descriptor, (struct sockaddr*) &localSock, sizeof(localSock)) == -1)
+		if(bind(socketDescriptor->descriptor.load(), (struct sockaddr*) &localSock, sizeof(localSock)) == -1)
 		{
 			_out.printError("Error: Binding to address " + _address + " failed: " + std::string(strerror(errno)));
 			GD::bl->fileDescriptorManager.close(socketDescriptor);

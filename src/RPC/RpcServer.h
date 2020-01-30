@@ -31,7 +31,6 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
-#include "../../config.h"
 #include "RPCMethods.h"
 #include "Auth.h"
 #include "RestServer.h"
@@ -165,13 +164,13 @@ private:
 
     void sendRPCResponseToClient(std::shared_ptr<Client> client, std::vector<char>& data, bool keepAlive);
 
-    void packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+    void packetReceived(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 
     void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http& http);
 
-    void analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+    void analyzeRPC(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 
-    void analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
+    void analyzeRPCResponse(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive);
 
     void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<BaseLib::PVariable>> parameters, int32_t messageId, PacketType::Enum responseType, bool keepAlive);
 

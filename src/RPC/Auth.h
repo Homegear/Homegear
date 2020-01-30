@@ -72,7 +72,7 @@ public:
 
 	bool sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
 
-	bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, BaseLib::Security::PAcls& acls, std::string& error);
+	bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, std::string& dn, BaseLib::Security::PAcls& acls, std::string& error);
 
 	void sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bool binary);
 

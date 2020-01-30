@@ -46,15 +46,13 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _out.init(GD::bl.get());
     _out.setPrefix("Script Engine Server: ");
 
-#ifdef DEBUGSESOCKET
-    BaseLib::Io::deleteFile(GD::bl->settings.logfilePath() + "homegear-socket.pcap");
-    _socketOutput.open(GD::bl->settings.logfilePath() + "homegear-socket.pcap", std::ios::app | std::ios::binary);
-    std::vector<uint8_t> buffer{ 0xa1, 0xb2, 0xc3, 0xd4, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0xe4 };
-    _socketOutput.write((char*)buffer.data(), buffer.size());
-#endif
-
     _shuttingDown = false;
     _stopServer = false;
+
+    _lifetick1.first = 0;
+    _lifetick1.second = true;
+    _lifetick2.first = 0;
+    _lifetick2.second = true;
 
     _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
     _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
@@ -128,6 +126,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("getVersion", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetVersion()));
     _rpcMethods.emplace("init", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInit()));
     _rpcMethods.emplace("invokeFamilyMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCInvokeFamilyMethod()));
+    _rpcMethods.emplace("lifetick", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLifetick()));
     _rpcMethods.emplace("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces()));
     _rpcMethods.emplace("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers()));
     _rpcMethods.emplace("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices()));
@@ -226,12 +225,20 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _rpcMethods.emplace("updateCategory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateCategory()));
     }
 
+    { // System variables
+        _rpcMethods.emplace("addRoleToSystemVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAddRoleToSystemVariable>()));
+        _rpcMethods.emplace("getSystemVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetSystemVariablesInRole>()));
+        _rpcMethods.emplace("removeRoleFromSystemVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromSystemVariable>()));
+    }
+
     { // Roles
         _rpcMethods.emplace("addRoleToVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAddRoleToVariable>()));
         _rpcMethods.emplace("aggregateRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCAggregateRoles>()));
         _rpcMethods.emplace("createRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCreateRole>()));
         _rpcMethods.emplace("deleteRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteRole>()));
         _rpcMethods.emplace("getRoles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoles>()));
+        _rpcMethods.emplace("getRolesInDevice", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRolesInDevice>()));
+        _rpcMethods.emplace("getRolesInRoom", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRolesInRoom>()));
         _rpcMethods.emplace("getRoleMetadata", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetRoleMetadata>()));
         _rpcMethods.emplace("getVariablesInRole", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetVariablesInRole>()));
         _rpcMethods.emplace("removeRoleFromVariable", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCRemoveRoleFromVariable>()));
@@ -241,6 +248,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
 
     { // UI
         _rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
+        _rpcMethods.emplace("checkUiElementSimpleCreation", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCheckUiElementSimpleCreation>()));
         _rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
         _rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
         _rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
@@ -276,6 +284,12 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("verifyOauthKey", std::bind(&ScriptEngineServer::verifyOauthKey, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //}}}
 
+    //{{{ User data
+    _rpcMethods.emplace("deleteUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteUserData>()));
+    _rpcMethods.emplace("getUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetUserData>()));
+    _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
+    //}}}
+
     //{{{ Groups
     _localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -304,149 +318,58 @@ ScriptEngineServer::~ScriptEngineServer()
 {
     if(!_stopServer) stop();
     GD::bl->threadManager.join(_scriptFinishedThread);
-#ifdef DEBUGSESOCKET
-    _socketOutput.close();
-#endif
 }
 
-#ifdef DEBUGSESOCKET
-void ScriptEngineServer::socketOutput(int32_t packetId, PScriptEngineClientData& clientData, bool serverRequest, bool request, std::vector<char> data)
+bool ScriptEngineServer::lifetick()
 {
     try
     {
-        int64_t time = BaseLib::HelperFunctions::getTimeMicroseconds();
-        int32_t timeSeconds = time / 1000000;
-        int32_t timeMicroseconds = time % 1000000;
-
-        uint32_t length = 20 + 8 + data.size();
-
-        std::vector<uint8_t> buffer;
-        buffer.reserve(length);
-        buffer.push_back((uint8_t)(timeSeconds >> 24));
-        buffer.push_back((uint8_t)(timeSeconds >> 16));
-        buffer.push_back((uint8_t)(timeSeconds >> 8));
-        buffer.push_back((uint8_t)timeSeconds);
-
-        buffer.push_back((uint8_t)(timeMicroseconds >> 24));
-        buffer.push_back((uint8_t)(timeMicroseconds >> 16));
-        buffer.push_back((uint8_t)(timeMicroseconds >> 8));
-        buffer.push_back((uint8_t)timeMicroseconds);
-
-        buffer.push_back((uint8_t)(length >> 24)); //incl_len
-        buffer.push_back((uint8_t)(length >> 16));
-        buffer.push_back((uint8_t)(length >> 8));
-        buffer.push_back((uint8_t)length);
-
-        buffer.push_back((uint8_t)(length >> 24)); //orig_len
-        buffer.push_back((uint8_t)(length >> 16));
-        buffer.push_back((uint8_t)(length >> 8));
-        buffer.push_back((uint8_t)length);
-
-        //{{{ IPv4 header
-            buffer.push_back(0x45); //Version 4 (0100....); Header length 20 (....0101)
-            buffer.push_back(0); //Differentiated Services Field
-
-            buffer.push_back((uint8_t)(length >> 8)); //Length
-            buffer.push_back((uint8_t)length);
-
-            buffer.push_back((uint8_t)((packetId % 65536) >> 8)); //Identification
-            buffer.push_back((uint8_t)(packetId % 65536));
-
-            buffer.push_back(0); //Flags: 0 (000.....); Fragment offset 0 (...00000 00000000)
-            buffer.push_back(0);
-
-            buffer.push_back(0x80); //TTL
-
-            buffer.push_back(17); //Protocol UDP
-
-            buffer.push_back(0); //Header checksum
-            buffer.push_back(0);
-
-            if(request)
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
             {
-                if(serverRequest)
-                {
-                    buffer.push_back(1); //Source
-                    buffer.push_back(1);
-                    buffer.push_back(1);
-                    buffer.push_back(1);
-
-                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
-                    buffer.push_back((uint8_t)(clientData->pid >> 16));
-                    buffer.push_back((uint8_t)(clientData->pid >> 8));
-                    buffer.push_back((uint8_t)clientData->pid);
-                }
-                else
-                {
-                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
-                    buffer.push_back((uint8_t)(clientData->pid >> 16));
-                    buffer.push_back((uint8_t)(clientData->pid >> 8));
-                    buffer.push_back((uint8_t)clientData->pid);
-
-                    buffer.push_back(2); //Destination
-                    buffer.push_back(2);
-                    buffer.push_back(2);
-                    buffer.push_back(2);
-                }
+                GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+                return false;
             }
-            else
+        }
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
             {
-                if(serverRequest)
-                {
-                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Source
-                    buffer.push_back((uint8_t)(clientData->pid >> 16));
-                    buffer.push_back((uint8_t)(clientData->pid >> 8));
-                    buffer.push_back((uint8_t)clientData->pid);
-
-                    buffer.push_back(1); //Destination
-                    buffer.push_back(1);
-                    buffer.push_back(1);
-                    buffer.push_back(1);
-                }
-                else
-                {
-                    buffer.push_back(2); //Source
-                    buffer.push_back(2);
-                    buffer.push_back(2);
-                    buffer.push_back(2);
-
-                    buffer.push_back(0x80 | (uint8_t)(clientData->pid >> 24)); //Destination
-                    buffer.push_back((uint8_t)(clientData->pid >> 16));
-                    buffer.push_back((uint8_t)(clientData->pid >> 8));
-                    buffer.push_back((uint8_t)clientData->pid);
-                }
+                GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+                return false;
             }
-        // }}}
-        // {{{ UDP header
-            buffer.push_back(0); //Source port
-            buffer.push_back(1);
+        }
 
-            buffer.push_back((uint8_t)(clientData->pid >> 8)); //Destination port
-            buffer.push_back((uint8_t)clientData->pid);
+        std::vector<PScriptEngineClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
 
-            length -= 20;
-            buffer.push_back((uint8_t)(length >> 8)); //Length
-            buffer.push_back((uint8_t)length);
+        for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto result = sendRequest(*i, "lifetick", std::make_shared<BaseLib::Array>(), true);
+            if(result->errorStruct || !result->booleanValue) return false;
+        }
 
-            buffer.push_back(0); //Checksum
-            buffer.push_back(0);
-        // }}}
-
-        buffer.insert(buffer.end(), data.begin(), data.end());
-
-        std::lock_guard<std::mutex> socketOutputGuard(_socketOutputMutex);
-        _socketOutput.write((char*)buffer.data(), buffer.size());
+        return true;
     }
     catch(const std::exception& ex)
     {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return false;
 }
-#endif
 
 void ScriptEngineServer::collectGarbage()
 {
@@ -663,7 +586,7 @@ void ScriptEngineServer::homegearReloading()
     }
 }
 
-void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t signal, bool coreDumped)
+void ScriptEngineServer::processKilled(pid_t pid, int exitCode, int signal, bool coreDumped)
 {
     try
     {
@@ -687,6 +610,7 @@ void ScriptEngineServer::processKilled(pid_t pid, int32_t exitCode, int32_t sign
             else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
 
             if(signal != -1 && signal != 15) exitCode = -32500;
+
 
             process->setExited(true);
             process->requestConditionVariable.notify_all();
@@ -914,7 +838,7 @@ void ScriptEngineServer::broadcastEvent(std::string& source, uint64_t id, int32_
                 {
                     if(_scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesReadSet())
                     {
-                        auto systemVariable = GD::bl->db->getSystemVariableInternal(variables->at(i));
+                        auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
                         if(systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable))
                         {
                             newVariables->push_back(variables->at(i));
@@ -1299,10 +1223,16 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData& clientData,
     return BaseLib::PVariable(new BaseLib::Variable());
 }
 
-BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clientData, std::string methodName, BaseLib::PArray& parameters, bool wait)
+BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait)
 {
     try
     {
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = false;
+            _lifetick1.first = BaseLib::HelperFunctions::getTime();
+        }
+
         int32_t packetId;
         {
             std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
@@ -1331,9 +1261,8 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
             }
         }
 
-#ifdef DEBUGSESOCKET
-        socketOutput(packetId, clientData, true, true, data);
-#endif
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::scriptEngine, packetId, clientData->pid, IpcLoggerPacketDirection::toClient, data);
+
         std::unique_lock<std::mutex> waitLock(clientData->waitMutex);
         BaseLib::PVariable result = send(clientData, data);
         if(result->errorStruct || !wait)
@@ -1370,6 +1299,11 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
             clientData->rpcResponses.erase(packetId);
         }
 
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = true;
+        }
+
         return result;
     }
     catch(const std::exception& ex)
@@ -1380,6 +1314,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData& clie
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1387,13 +1322,22 @@ void ScriptEngineServer::sendResponse(PScriptEngineClientData& clientData, BaseL
 {
     try
     {
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = false;
+            _lifetick2.first = BaseLib::HelperFunctions::getTime();
+        }
+
         BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
         std::vector<char> data;
         _rpcEncoder->encodeResponse(array, data);
-#ifdef DEBUGSESOCKET
-        socketOutput(packetId->integerValue, clientData, false, false, data);
-#endif
+        if(GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::scriptEngine, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
         send(clientData, data);
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = true;
+        }
     }
     catch(const std::exception& ex)
     {
@@ -1631,19 +1575,20 @@ void ScriptEngineServer::readClient(PScriptEngineClientData& clientData)
                 processedBytes += clientData->binaryRpc->process(&(clientData->buffer[processedBytes]), bytesRead - processedBytes);
                 if(clientData->binaryRpc->isFinished())
                 {
-#ifdef DEBUGSESOCKET
-                    if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                    if(GD::ipcLogger->enabled())
                     {
-                        std::string methodName;
-                        BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
-                        socketOutput(request->at(1)->integerValue, clientData, false, true, clientData->binaryRpc->getData());
+                        if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
+                        {
+                            std::string methodName;
+                            BaseLib::PArray request = _rpcDecoder->decodeRequest(clientData->binaryRpc->getData(), methodName);
+                            GD::ipcLogger->log(IpcModule::scriptEngine, request->at(1)->integerValue, clientData->pid, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
+                        else
+                        {
+                            BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
+                            GD::ipcLogger->log(IpcModule::scriptEngine, response->arrayValue->at(0)->integerValue, clientData->pid, IpcLoggerPacketDirection::toServer, clientData->binaryRpc->getData());
+                        }
                     }
-                    else
-                    {
-                        BaseLib::PVariable response = _rpcDecoder->decodeResponse(clientData->binaryRpc->getData());
-                        socketOutput(response->arrayValue->at(0)->integerValue, clientData, true, false, clientData->binaryRpc->getData());
-                    }
-#endif
 
                     if(clientData->binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
                     {
@@ -1743,7 +1688,7 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket)
         }
         strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
         serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-        bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+        bool bound = (bind(_serverFileDescriptor->descriptor.load(), (sockaddr*) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
         if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
         {
             GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
@@ -1908,35 +1853,36 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         if(scriptType == ScriptInfo::ScriptType::cli)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-                    BaseLib::PVariable(new BaseLib::Variable((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->script),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->arguments),
+                    std::make_shared<BaseLib::Variable>((bool) scriptInfo->scriptOutputCallback || scriptInfo->returnOutput)}));
         }
         else if(scriptType == ScriptInfo::ScriptType::web)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->contentPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->contentPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
                     scriptInfo->http.serialize(),
-                    scriptInfo->serverInfo->serialize()}));
+                    scriptInfo->serverInfo->serialize(),
+                    scriptInfo->clientInfo->serialize()}));
         }
         else if(scriptType == ScriptInfo::ScriptType::device || scriptType == ScriptInfo::ScriptType::device2)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->script)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->arguments)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->peerId))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->script),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->arguments),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->peerId)}));
 
             if(scriptType == ScriptInfo::ScriptType::device2)
             {
@@ -1948,23 +1894,23 @@ void ScriptEngineServer::executeScript(PScriptInfo& scriptInfo, bool wait)
         else if(scriptType == ScriptInfo::ScriptType::simpleNode)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
                     scriptInfo->nodeInfo,
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->inputPort)),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->inputPort),
                     scriptInfo->message}));
         }
         else if(scriptType == ScriptInfo::ScriptType::statefulNode)
         {
             parameters = std::move(BaseLib::PArray(new BaseLib::Array{
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->id)),
-                    BaseLib::PVariable(new BaseLib::Variable((int32_t) scriptInfo->getType())),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->id),
+                    std::make_shared<BaseLib::Variable>((int32_t) scriptInfo->getType()),
                     scriptInfo->nodeInfo,
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->fullPath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->relativePath)),
-                    BaseLib::PVariable(new BaseLib::Variable(scriptInfo->maxThreadCount))}));
+                    std::make_shared<BaseLib::Variable>(scriptInfo->fullPath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->relativePath),
+                    std::make_shared<BaseLib::Variable>(scriptInfo->maxThreadCount)}));
 
             {
                 std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -3256,7 +3202,7 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineCli
     {
         if(GD::nodeBlueServer)
         {
-            if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+            if(parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");
             if(parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
             if(parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
             if(parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type array.");

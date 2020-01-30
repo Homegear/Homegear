@@ -23,7 +23,7 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
+void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime)
 {
 	try
 	{
@@ -69,6 +69,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 			getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 
@@ -82,21 +83,23 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
-			else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
-			else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
+			else if(path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+			else if(path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.html")) path += "index.html";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.htm")) path += "index.htm";
 			else
 			{
 				getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -110,6 +113,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			else if(!contentString.empty())
@@ -120,6 +124,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 				content.insert(content.end(), header.begin(), header.end());
 				content.insert(content.end(), contentString.begin(), contentString.end());
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -129,6 +134,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			GD::out.printWarning("Warning: Requested URL not found: " + path);
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 
@@ -138,30 +144,30 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 
 			if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
 			{
-				if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+				if(!BaseLib::Io::fileExists(GD::bl->settings.uiPath() + path.substr(3)))
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 					{
 						http.setRedirectUrl('/' + path);
 						http.setRedirectQueryString(http.getHeader().args);
 						http.setRedirectStatus(200);
 
-						if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+						if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
 						else path = "ui/index.hgs";
 					}
 				}
 			}
 			else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
 			{
-				if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+				if(!BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
 					{
 						http.setRedirectUrl('/' + path);
 						http.setRedirectQueryString(http.getHeader().args);
 						http.setRedirectStatus(200);
 
-						if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+						if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
 						else path = "admin/index.hgs";
 					}
 				}
@@ -179,23 +185,37 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+                if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    socket->close();
+                    return;
+                }
 			}
 			else if(path == "node-blue/signin.php")
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+				if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    socket->close();
+                    return;
+                }
 			}
 			else if(path.compare(0, 6, "admin/") == 0)
 			{
 				if(path == "admin/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php"))
 					{
 						fullPath = GD::bl->settings.adminUiPath() + "index.php";
 						relativePath += "index.php";
 						ending = "php";
 					}
-					else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+					else if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
 					{
 						fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
 						relativePath += "index.hgs";
@@ -205,6 +225,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -215,13 +236,13 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			{
 				if(path == "ui/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.php";
 						relativePath += "index.php";
 						ending = "php";
 					}
-					else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+					else if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.hgs";
 						relativePath += "index.hgs";
@@ -231,6 +252,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -242,7 +264,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 #ifndef NO_SCRIPTENGINE
 			if(ending == "php" || ending == "php5" || ending == "php7" || ending == "hgs")
 			{
-				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
+				BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
 				scriptInfo->socket = socket;
 				scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 				scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -298,6 +320,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 			content.insert(content.end(), header.begin(), header.end());
 			if(!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
 			send(socket, content);
+            socket->close();
 		}
 		catch(const std::exception& ex)
 		{
@@ -316,7 +339,7 @@ void WebServer::get(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> soc
 	}
 }
 
-void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
 {
 	try
 	{
@@ -363,19 +386,21 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
 				getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			if(path == "node-blue/") path = "node-blue/index.php";
-			else if(path.compare(0, 3, "ui/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
-			else if(path.compare(0, 6, "admin/") == 0 && (GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
-			else if(GD::bl->io.fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
+			else if(path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
+			else if(path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
+			else if(BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.hgs")) path += "index.hgs";
 			else
 			{
 				getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -389,6 +414,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			{
 				getError(401, _http.getStatusText(401), "You are not logged in.", content);
 				send(socket, content);
+                socket->close();
 				return;
 			}
 			else if(!contentString.empty())
@@ -399,6 +425,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				content.insert(content.end(), header.begin(), header.end());
 				content.insert(content.end(), contentString.begin(), contentString.end());
 				send(socket, content);
+                socket->close();
 				return;
 			}
 		}
@@ -407,36 +434,37 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 
 #ifndef NO_SCRIPTENGINE
 		if(path.compare(0, 3, "ui/") == 0 && path.size() > 3)
 		{
-			if(!GD::bl->io.fileExists(GD::bl->settings.uiPath() + path.substr(3)))
+			if(!BaseLib::Io::fileExists(GD::bl->settings.uiPath() + path.substr(3)))
 			{
-				if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+				if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 				{
 					http.setRedirectUrl('/' + path);
 					http.setRedirectQueryString(http.getHeader().args);
 					http.setRedirectStatus(200);
 
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php")) path = "ui/index.php";
 					else path = "ui/index.hgs";
 				}
 			}
 		}
 		else if(path.compare(0, 6, "admin/") == 0 && path.size() > 6)
 		{
-			if(!GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
+			if(!BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + path.substr(6)))
 			{
-				if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php") || GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
+				if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))
 				{
 					http.setRedirectUrl('/' + path);
 					http.setRedirectQueryString(http.getHeader().args);
 					http.setRedirectStatus(200);
 
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
 					else path = "admin/index.hgs";
 				}
 			}
@@ -452,22 +480,37 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/index.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+                if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    socket->close();
+                    return;
+                }
 			}
 			else if(path == "node-blue/signin.php")
 			{
 				fullPath = GD::bl->settings.nodeBluePath() + "www/signin.php";
 				contentPath = GD::bl->settings.nodeBluePath();
+                if(!BaseLib::Io::fileExists(fullPath))
+                {
+                    getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+                    send(socket, content);
+                    socket->close();
+                    return;
+                }
 			}
 			else if(path.compare(0, 6, "admin/") == 0)
 			{
 				if(path == "admin/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
-					else if(GD::bl->io.fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
+					if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) fullPath = GD::bl->settings.adminUiPath() + "index.php";
+					else if(BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs")) fullPath = GD::bl->settings.adminUiPath() + "index.hgs";
 					else
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -478,12 +521,12 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 			{
 				if(path == "ui/")
 				{
-					if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.php"))
+					if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.php";
 						relativePath += "index.php";
 					}
-					else if(GD::bl->io.fileExists(GD::bl->settings.uiPath() + "index.hgs"))
+					else if(BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))
 					{
 						fullPath = GD::bl->settings.uiPath() + "index.hgs";
 						relativePath += "index.hgs";
@@ -492,6 +535,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 					{
 						getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
 						send(socket, content);
+                        socket->close();
 						return;
 					}
 				}
@@ -499,7 +543,7 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 				contentPath = GD::bl->settings.uiPath();
 			}
 			else fullPath = _serverInfo->contentPath + path;
-			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo));
+			BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
 			scriptInfo->socket = socket;
 			scriptInfo->scriptHeadersCallback = std::bind(&WebServer::sendHeaders, this, std::placeholders::_1, std::placeholders::_2);
 			scriptInfo->scriptOutputCallback = std::bind(&WebServer::sendOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -530,11 +574,13 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 		{
 			getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
 			send(socket, content);
+            socket->close();
 			return;
 		}
 #else
         getError(500, _http.getStatusText(500), "Homegear is compiled without script engine.", content);
         send(socket, content);
+        socket->close();
 #endif
 	}
 	catch(const std::exception& ex)
@@ -547,12 +593,73 @@ void WebServer::post(BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> so
 	}
 }
 
+void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket)
+{
+    try
+    {
+        if(!socket)
+        {
+            _out.printError("Error: Socket is nullptr.");
+            return;
+        }
+        std::string path = http.getHeader().path;
+
+        std::vector<char> content;
+        if(!path.empty() && path.front() == '/') path = path.substr(1);
+
+        if(GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0)
+        {
+            _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: DELETE)");
+            std::string responseEncoding;
+            std::string contentString = GD::nodeBlueServer->handleDelete(path, http, responseEncoding);
+            if(contentString == "unauthorized")
+            {
+                getError(401, _http.getStatusText(401), "You are not logged in.", content);
+                send(socket, content);
+                return;
+            }
+            else if(!contentString.empty())
+            {
+                std::vector<std::string> headers;
+                std::string header;
+                _http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
+                content.insert(content.end(), header.begin(), header.end());
+                content.insert(content.end(), contentString.begin(), contentString.end());
+                send(socket, content);
+                return;
+            }
+            else
+            {
+                std::vector<std::string> headers;
+                std::string header;
+                _http.constructHeader(contentString.size(), responseEncoding, 204, "No Content", headers, header);
+                content.insert(content.end(), header.begin(), header.end());
+                send(socket, content);
+                return;
+            }
+        }
+
+        GD::out.printWarning("Warning: Requested URL not found: " + path);
+        getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+        send(socket, content);
+        return;
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content)
 {
 	try
 	{
 		std::vector<std::string> additionalHeaders;
-		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + VERSION + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
+		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::homegearVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
 		std::string header;
 		_http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
 		content.insert(content.end(), header.begin(), header.end());
@@ -572,7 +679,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
 {
 	try
 	{
-		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + VERSION + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
+		std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::homegearVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
 		std::string header;
 		_http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
 		content.insert(content.end(), header.begin(), header.end());
@@ -595,8 +702,6 @@ void WebServer::send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<ch
 		if(data.empty()) return;
 		try
 		{
-			//Sleep a tiny little bit. Some clients like don't accept responses too fast.
-			//std::this_thread::sleep_for(std::chrono::milliseconds(22));
 			socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)

@@ -56,6 +56,7 @@ void php_homegear_node_invoke_rpc(std::string& methodName, BaseLib::PVariable& p
 }
 
 ZEND_FUNCTION(hg_node_log);
+ZEND_FUNCTION(hg_node_frontend_event_log);
 ZEND_FUNCTION(hg_node_invoke_node_method);
 ZEND_FUNCTION(hg_node_output);
 ZEND_FUNCTION(hg_node_node_event);
@@ -109,6 +110,39 @@ ZEND_FUNCTION(hg_node_log)
     RETURN_TRUE;
 }
 
+ZEND_FUNCTION(hg_node_frontend_event_log)
+{
+    int argc = 0;
+    zval* args = nullptr;
+    if(zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
+    std::string message;
+    if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::frontendEventLog().");
+    else if(argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::frontendEventLog().");
+    else
+    {
+        if(Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "message is not of type string.");
+        else
+        {
+            if(Z_STRLEN(args[0]) > 0) message = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
+        }
+    }
+    if(message.empty()) RETURN_FALSE;
+
+    std::string methodName("executePhpNodeBaseMethod");
+    BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+    parameters->arrayValue->reserve(2);
+    parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
+    parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("frontendEventLog"));
+    BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+    innerParameters->arrayValue->reserve(2);
+    innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
+    innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(message));
+    parameters->arrayValue->push_back(innerParameters);
+    php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
+
+    RETURN_TRUE;
+}
+
 ZEND_FUNCTION(hg_node_invoke_node_method)
 {
     int argc = 0;
@@ -117,7 +151,8 @@ ZEND_FUNCTION(hg_node_invoke_node_method)
     std::string nodeId;
     std::string nodeMethodName;
     BaseLib::PVariable nodeMethodParameters;
-    if(argc > 3) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::invokeNodeMethod().");
+    bool wait = true;
+    if(argc > 4) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::invokeNodeMethod().");
     else if(argc < 3) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::invokeNodeMethod().");
     else
     {
@@ -138,6 +173,15 @@ ZEND_FUNCTION(hg_node_invoke_node_method)
         {
             nodeMethodParameters = Homegear::PhpVariableConverter::getVariable(&(args[2]));
         }
+
+        if(argc == 4)
+        {
+            if(Z_TYPE(args[3]) != IS_TRUE && Z_TYPE(args[3]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "wait is not of type boolean.");
+            else
+            {
+                wait = (Z_TYPE(args[3]) == IS_TRUE);
+            }
+        }
     }
     if(nodeId.empty() || nodeMethodName.empty()) RETURN_FALSE;
 
@@ -147,10 +191,11 @@ ZEND_FUNCTION(hg_node_invoke_node_method)
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
     parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("invokeNodeMethod"));
     BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-    innerParameters->arrayValue->reserve(3);
+    innerParameters->arrayValue->reserve(4);
     innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(nodeId));
     innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(nodeMethodName));
     innerParameters->arrayValue->push_back(nodeMethodParameters);
+    innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(wait));
     parameters->arrayValue->push_back(innerParameters);
     php_homegear_node_invoke_rpc(methodName, parameters, return_value, true);
 }
@@ -446,6 +491,7 @@ ZEND_FUNCTION(hg_node_get_config_parameter)
 
 static const zend_function_entry homegear_node_base_methods[] = {
         ZEND_ME_MAPPING(log, hg_node_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(frontendEventLog, hg_node_frontend_event_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(invokeNodeMethod, hg_node_invoke_node_method, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(output, hg_node_output, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

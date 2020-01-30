@@ -34,7 +34,6 @@
 #ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"
-#include "../../config.h"
 #include "ScriptEngineResponse.h"
 #include "CacheInfo.h"
 #include <homegear-base/BaseLib.h>
@@ -153,9 +152,6 @@ private:
     std::atomic_int _processingThreadCount2;
     std::atomic<int64_t> _processingThreadCountMaxReached1;
     std::atomic<int64_t> _processingThreadCountMaxReached2;
-#ifdef DEBUGSESOCKET
-    std::ofstream _socketOutput;
-#endif
     std::string _socketPath;
     std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
     int64_t _lastGargabeCollection = 0;
@@ -230,11 +226,6 @@ private:
 
     BaseLib::PVariable send(std::vector<char>& data);
 
-#ifdef DEBUGSESOCKET
-    std::mutex _socketOutputMutex;
-    void socketOutput(int32_t packetId, bool clientRequest, bool request, std::vector<char> data);
-#endif
-
     // {{{ RPC methods
     /**
      * Causes the log files to be reopened.
@@ -247,6 +238,12 @@ private:
      * @param parameters Irrelevant for this method.
      */
     BaseLib::PVariable shutdown(BaseLib::PArray& parameters);
+
+    /**
+     * Checks if everything is working.
+     * @param parameters Irrelevant for this method.
+     */
+    BaseLib::PVariable lifetick(BaseLib::PArray& parameters);
 
     /**
      * Executes a new script.

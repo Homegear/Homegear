@@ -61,7 +61,7 @@ private:
     std::map<int32_t, PScriptFinishedInfo> _scriptFinishedInfo;
     PScriptEngineClientData _clientData;
     bool _nodeProcess = false;
-    bool _exited = false;
+    std::atomic_bool _exited{false};
     std::atomic_uint _nodeThreadCount;
     std::function<void(std::string)> _unregisterNode;
     std::function<void(uint64_t)> _unregisterDevice;

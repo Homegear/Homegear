@@ -347,7 +347,7 @@ bool Auth::sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::W
 #endif
 }
 
-bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, BaseLib::Security::PAcls& acls, std::string& error)
+bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, std::string& dn, BaseLib::Security::PAcls& acls, std::string& error)
 {
 	userName = "";
 	if(!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
@@ -374,6 +374,7 @@ bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDes
 	}
 
 	std::string certUserName = std::string((char*) distinguishedName.data, distinguishedName.size);
+	dn = certUserName;
 	BaseLib::HelperFunctions::toLower(certUserName);
 	if(validUser(certUserName)) userName = certUserName;
 	else

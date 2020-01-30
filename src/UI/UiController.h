@@ -61,15 +61,17 @@ public:
 
     BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data);
 
-    BaseLib::PVariable getAllUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language);
+    BaseLib::PVariable addUiElementSimple(const BaseLib::PRpcClientInfo& clientInfo, const std::string& label, const BaseLib::PVariable& variable, bool dryRun);
 
-    BaseLib::PVariable getAvailableUiElements(BaseLib::PRpcClientInfo clientInfo, std::string& language);
+    BaseLib::PVariable getAllUiElements(const BaseLib::PRpcClientInfo& clientInfo, const std::string& language);
 
-    BaseLib::PVariable getUiElementsInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, std::string& language);
+    BaseLib::PVariable getAvailableUiElements(const BaseLib::PRpcClientInfo& clientInfo, const std::string& language);
 
-    BaseLib::PVariable getUiElementsInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, std::string& language);
+    BaseLib::PVariable getUiElementsInRoom(const BaseLib::PRpcClientInfo& clientInfo, uint64_t roomId, const std::string& language);
 
-    BaseLib::PVariable removeUiElement(BaseLib::PRpcClientInfo clientInfo, uint64_t databaseId);
+    BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo& clientInfo, uint64_t categoryId, const std::string& language);
+
+    BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId);
 
 protected:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
@@ -82,7 +84,9 @@ protected:
 
     void addDataInfo(PUiElement& uiElement, BaseLib::PVariable& data);
 
-    void addVariableValues(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variableInputs);
+    void addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue);
+
+    BaseLib::PVariable findRoleVariables(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& uiInfo, const BaseLib::PVariable& variable, uint64_t roomId, BaseLib::PVariable& inputPeers, BaseLib::PVariable& outputPeers);
 
     bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
 };

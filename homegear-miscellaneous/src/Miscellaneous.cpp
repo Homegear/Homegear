@@ -1,3 +1,5 @@
+#include <memory>
+
 /* Copyright 2013-2019 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -46,7 +48,6 @@ Miscellaneous::Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::IFami
 
 Miscellaneous::~Miscellaneous()
 {
-
 }
 
 void Miscellaneous::dispose()
@@ -63,7 +64,7 @@ void Miscellaneous::reloadRpcDevices()
 
 std::shared_ptr<BaseLib::Systems::ICentral> Miscellaneous::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
-	return std::shared_ptr<MiscCentral>(new MiscCentral(deviceId, serialNumber, this));
+	return std::make_shared<MiscCentral>(deviceId, serialNumber, this);
 }
 
 void Miscellaneous::createCentral()

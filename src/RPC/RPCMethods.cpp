@@ -32,6 +32,9 @@
 #include "RPCMethods.h"
 #include "../GD/GD.h"
 #include "Roles.h"
+
+#include <sys/stat.h>
+
 #ifdef BSDSYSTEM
 #include <sys/wait.h>
 #endif
@@ -113,14 +116,21 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
 
         BaseLib::PVariable methodInfo(new BaseLib::Variable(BaseLib::VariableType::tArray));
         auto methods = GD::rpcServers.begin()->second->getMethods();
+        auto ipcMethods = GD::ipcServer->getRpcMethods();
+        methodInfo->arrayValue->reserve(methods->size() + ipcMethods.size());
         for(auto& method : *methods)
         {
-            methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
+            if(clientInfo->acls->checkMethodAccess(method.first))
+            {
+                methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
+            }
         }
-        std::unordered_map<std::string, std::shared_ptr<RpcMethod>> ipcMethods = GD::ipcServer->getRpcMethods();
         for(auto& method : ipcMethods)
         {
-            methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
+            if(clientInfo->acls->checkMethodAccess(method.first))
+            {
+                methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
+            }
         }
 
         return methodInfo;
@@ -143,6 +153,8 @@ BaseLib::PVariable RPCSystemMethodHelp::invoke(BaseLib::PRpcClientInfo clientInf
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("system.methodHelp")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo->acls->checkMethodAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         BaseLib::PVariable help;
 
@@ -179,6 +191,8 @@ BaseLib::PVariable RPCSystemMethodSignature::invoke(BaseLib::PRpcClientInfo clie
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("system.methodSignature")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo->acls->checkMethodAccess(parameters->at(0)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         BaseLib::PVariable signature;
 
@@ -247,6 +261,7 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
                 continue;
             }
             std::string methodName = (*i)->structValue->at("methodName")->stringValue;
+            if(!clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
             auto parameters = (*i)->structValue->at("params");
 
             if(methodName == "system.multicall") returns->arrayValue->push_back(BaseLib::Variable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
@@ -486,7 +501,9 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -494,6 +511,69 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
 
         if(!GD::bl->db->roleExists(parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        if(parameters->at(0)->integerValue64 == 0) //System variable
+        {
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
+            if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+            BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::both;
+            bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
+            if(parameters->at(3)->integerValue64 != 0) systemVariable->roles.emplace(parameters->at(3)->integerValue64, std::move(BaseLib::Role(parameters->at(3)->integerValue64, direction, invert)));
+
+            auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
+            if(result->errorStruct)
+            {
+                GD::out.printError("Error: Could not set role: " + result->structValue->at("faultString")->stringValue);
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+
+            //{{{ Add variables from metadata
+            auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(3)->integerValue64);
+            auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+            if(addVariablesIterator != roleMetadata->structValue->end())
+            {
+                for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+                {
+                    auto idIterator = variableInfo->structValue->find("id");
+                    auto typeIterator = variableInfo->structValue->find("type");
+                    if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
+                    {
+                        continue;
+                    }
+                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+                    auto defaultValueIterator = variableInfo->structValue->find("default");
+                    auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
+                    if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
+                    if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                    else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                    else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                    else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
+                    else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                    else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
+                    else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
+
+                    GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                    auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
+                    if(!roleSystemVariable) continue;
+
+                    auto rolesIterator = variableInfo->structValue->find("roles");
+                    if(rolesIterator != variableInfo->structValue->end())
+                    {
+                        for(auto& role : *rolesIterator->second->arrayValue)
+                        {
+                            if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                        }
+                    }
+                    GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
+                }
+            }
+            //}}}
+
+            return std::make_shared<BaseLib::Variable>(true);
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -508,7 +588,10 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                 if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
             }
 
-            bool result = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue64);
+            BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::both;
+            bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
+
+            bool result = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue64, direction, invert);
             return std::make_shared<BaseLib::Variable>(result);
         }
 
@@ -539,14 +622,14 @@ BaseLib::PVariable RPCAddCategoryToSystemVariable::invoke(BaseLib::PRpcClientInf
 
         if(!GD::bl->db->categoryExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         if(parameters->at(1)->integerValue64 != 0) systemVariable->categories.emplace(parameters->at(1)->integerValue64);
 
-        return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+        return GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
     }
     catch(const std::exception& ex)
     {
@@ -572,6 +655,24 @@ BaseLib::PVariable RPCAddCategoryToVariable::invoke(BaseLib::PRpcClientInfo clie
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
 
         if(!GD::bl->db->categoryExists(parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        if(parameters->at(0)->integerValue64 == 0) //System variable
+        {
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
+            if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+            if(parameters->at(3)->integerValue64 != 0) systemVariable->categories.emplace(parameters->at(3)->integerValue64);
+
+            auto result = GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
+            if(result->errorStruct)
+            {
+                GD::out.printError("Error: Could not set category: " + result->structValue->at("faultString")->stringValue);
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+            return std::make_shared<BaseLib::Variable>(true);
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -870,6 +971,93 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToSystemVariable", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+
+        if(!GD::bl->db->roleExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
+        if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        BaseLib::RoleDirection direction = parameters->size() >= 3 ? (BaseLib::RoleDirection)parameters->at(2)->integerValue : BaseLib::RoleDirection::both;
+        bool invert = parameters->size() >= 4 ? parameters->at(3)->booleanValue : false;
+        if(parameters->at(1)->integerValue64 != 0) systemVariable->roles.emplace(parameters->at(1)->integerValue64, std::move(BaseLib::Role(parameters->at(1)->integerValue64, direction, invert)));
+
+        auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
+        if(result->errorStruct)
+        {
+            GD::out.printError("Error: Could not set role: " + result->structValue->at("faultString")->stringValue);
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        //{{{ Add variables from metadata
+        auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(1)->integerValue64);
+        auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+        if(addVariablesIterator != roleMetadata->structValue->end())
+        {
+            for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+            {
+                auto idIterator = variableInfo->structValue->find("id");
+                auto typeIterator = variableInfo->structValue->find("type");
+                if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
+                {
+                    continue;
+                }
+                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+                auto defaultValueIterator = variableInfo->structValue->find("default");
+                auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
+                if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
+                if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
+                else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
+                else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
+
+                GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
+                if(!roleSystemVariable) continue;
+
+                auto rolesIterator = variableInfo->structValue->find("roles");
+                if(rolesIterator != variableInfo->structValue->end())
+                {
+                    for(auto& role : *rolesIterator->second->arrayValue)
+                    {
+                        if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                    }
+                }
+                GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
+            }
+        }
+        //}}}
+
+        return std::make_shared<BaseLib::Variable>(true);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCAddRoomToStory::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try
@@ -908,12 +1096,12 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
 
         if(!GD::bl->db->roomExists((uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->setSystemVariableRoom(systemVariable->name, (uint64_t) parameters->at(1)->integerValue64);
+        return GD::systemVariableController->setRoom(systemVariable->name, (uint64_t) parameters->at(1)->integerValue64);
     }
     catch(const std::exception& ex)
     {
@@ -931,13 +1119,28 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tStruct})
-                                                                                                                 }));
+            //UI element name; UI element data
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tStruct}),
+            //Peer ID; channel; variable name; label
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tString})
+        }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("addUiElement")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
+        if(parameters->size() == 4)
+        {
+            BaseLib::PVariable variableArray;
+            std::string label;
+            variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            variableArray->arrayValue->reserve(3);
+            variableArray->arrayValue->push_back(parameters->at(0));
+            variableArray->arrayValue->push_back(parameters->at(1));
+            variableArray->arrayValue->push_back(parameters->at(2));
+            label = parameters->at(3)->stringValue;
+            return GD::uiController->addUiElementSimple(clientInfo, label, variableArray, false);
+        }
+        else return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
     }
     catch(const std::exception& ex)
     {
@@ -963,6 +1166,22 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
 
         if(!GD::bl->db->roomExists((uint64_t) parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        if(parameters->at(0)->integerValue64 == 0) //System variable
+        {
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
+            if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+            auto result = GD::systemVariableController->setRoom(systemVariable->name, parameters->at(3)->integerValue64);
+            if(result->errorStruct)
+            {
+                GD::out.printError("Error: Could not set room: " + result->structValue->at("faultString")->stringValue);
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+            return std::make_shared<BaseLib::Variable>(true);
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -1054,6 +1273,38 @@ BaseLib::PVariable RPCCheckServiceAccess::invoke(BaseLib::PRpcClientInfo clientI
         if(error != ParameterError::Enum::noError) return getError(error);
 
         return std::make_shared<BaseLib::Variable>(clientInfo->acls->checkServiceAccess(parameters->at(0)->stringValue));
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCCheckUiElementSimpleCreation::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         //Peer ID; channel; variable name
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("checkUiElementSimpleCreation")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        BaseLib::PVariable variableArray;
+        variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        variableArray->arrayValue->reserve(3);
+        variableArray->arrayValue->push_back(parameters->at(0));
+        variableArray->arrayValue->push_back(parameters->at(1));
+        variableArray->arrayValue->push_back(parameters->at(2));
+        auto result = GD::uiController->addUiElementSimple(clientInfo, "", variableArray, true);
+        return std::make_shared<BaseLib::Variable>(!result->errorStruct);
     }
     catch(const std::exception& ex)
     {
@@ -1363,7 +1614,7 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
             }
         }
 
-        GD::bl->db->removeCategoryFromSystemVariables(categoryId);
+        GD::systemVariableController->removeCategory(categoryId);
 
         return result;
     }
@@ -1563,6 +1814,8 @@ BaseLib::PVariable RPCDeleteRole::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         BaseLib::PVariable result = GD::bl->db->deleteRole(roleId);
         if(result->errorStruct) return result;
 
+        GD::systemVariableController->removeRole(roleId);
+
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
         {
@@ -1628,7 +1881,7 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
             }
         }
 
-        GD::bl->db->removeRoomFromSystemVariables(roomId);
+        GD::systemVariableController->removeRoom(roomId);
         GD::bl->db->removeRoomFromStories(roomId);
 
         return result;
@@ -1677,12 +1930,39 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return std::make_shared<BaseLib::Variable>();
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->deleteSystemVariable(parameters->at(0)->stringValue);
+        return GD::systemVariableController->erase(parameters->at(0)->stringValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCDeleteUserData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("deleteUserData")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+        User::deleteData(clientInfo->user, parameters->at(0)->stringValue, key);
+
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {
@@ -2008,7 +2288,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
             returnRoomsCategoriesFlags = parameters->at(0)->booleanValue;
         }
 
-        return GD::bl->db->getAllSystemVariables(clientInfo, returnRoomsCategoriesFlags, checkAcls);
+        return GD::systemVariableController->getAll(clientInfo, returnRoomsCategoriesFlags, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -2441,7 +2721,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
             {
                 BaseLib::PVariable description(new BaseLib::Variable(BaseLib::VariableType::tStruct));
                 description->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(std::string("Homegear")))));
-                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(std::string(VERSION)))));
+                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(GD::homegearVersion))));
                 return description;
             }
 
@@ -3716,7 +3996,7 @@ BaseLib::PVariable RPCGetRoles::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     try
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getRoles")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->categoriesReadSet();
+        bool checkAcls = clientInfo->acls->rolesReadSet();
         if(!parameters->empty())
         {
             ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -3728,6 +4008,96 @@ BaseLib::PVariable RPCGetRoles::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
 
         return GD::bl->db->getRoles(clientInfo, languageCode, checkAcls);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetRolesInDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getRolesInDevice")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+        bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central)
+            {
+                auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+                if(!peer) continue;
+                if(checkDeviceAcls && !clientInfo->acls->checkDeviceReadAccess(peer)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                return peer->getRolesInDevice(clientInfo, checkVariableAcls);
+            }
+        }
+
+        return BaseLib::Variable::createError(-2, "Unknown device.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetRolesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+        }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getRolesInRoom")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+        bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+
+        if(!GD::bl->db->roomExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+        {
+            auto systemVariables = GD::systemVariableController->getRolesInRoom(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+            if(!systemVariables->arrayValue->empty())
+            {
+                auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                channelStruct->structValue->emplace("-1", std::move(systemVariables));
+                result->structValue->emplace("0", channelStruct);
+            }
+        }
+
+        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        {
+            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+            if(central)
+            {
+                auto variables = central->getRolesInRoom(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
+                result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+            }
+        }
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -4004,7 +4374,7 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        return GD::bl->db->getSystemVariable(clientInfo, parameters->at(0)->stringValue, checkAcls);
+        return GD::systemVariableController->getValue(clientInfo, parameters->at(0)->stringValue, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4027,7 +4397,7 @@ BaseLib::PVariable RPCGetSystemVariableFlags::invoke(BaseLib::PRpcClientInfo cli
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableReadAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
@@ -4059,7 +4429,34 @@ BaseLib::PVariable RPCGetSystemVariablesInCategory::invoke(BaseLib::PRpcClientIn
 
         if(!GD::bl->db->categoryExists((uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-        return GD::bl->db->getSystemVariablesInCategory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
+        return GD::systemVariableController->getVariablesInCategory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetSystemVariablesInRole::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleReadAccess("getSystemVariablesInRole", (uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+
+        if(!GD::bl->db->roleExists((uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        return GD::systemVariableController->getVariablesInRole(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4086,7 +4483,7 @@ BaseLib::PVariable RPCGetSystemVariablesInRoom::invoke(BaseLib::PRpcClientInfo c
 
         if(!GD::bl->db->roomExists((uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        return GD::bl->db->getSystemVariablesInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
+        return GD::systemVariableController->getVariablesInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -4115,6 +4512,16 @@ BaseLib::PVariable RPCGetVariablesInCategory::invoke(BaseLib::PRpcClientInfo cli
         if(!GD::bl->db->categoryExists(parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
         BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+        {
+            auto systemVariables = GD::systemVariableController->getVariablesInCategory(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+            if(!systemVariables->arrayValue->empty())
+            {
+                auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                channelStruct->structValue->emplace("-1", std::move(systemVariables));
+                result->structValue->emplace("0", channelStruct);
+            }
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -4145,7 +4552,8 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -4157,14 +4565,38 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
 
         BaseLib::PVariable result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
+        if(parameters->size() == 1 || parameters->at(1)->integerValue64 == 0)
+        {
+            auto systemVariables = GD::systemVariableController->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+            if(!systemVariables->structValue->empty())
+            {
+                auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                channelStruct->structValue->emplace("-1", std::move(systemVariables));
+                result->structValue->emplace("0", channelStruct);
+            }
+        }
+
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
         {
             std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
             if(central)
             {
-                auto variables = central->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
-                result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+                if(parameters->size() == 2)
+                {
+                    if(!central->peerExists((uint64_t)parameters->at(1)->integerValue64)) continue;
+
+                    auto peer = central->getPeer((uint64_t)parameters->at(1)->integerValue64);
+                    if(!peer) continue;
+                    if(checkDeviceAcls && !clientInfo->acls->checkDeviceReadAccess(peer)) continue;
+
+                    return peer->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
+                }
+                else
+                {
+                    auto variables = central->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkDeviceAcls, checkVariableAcls);
+                    result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+                }
             }
         }
 
@@ -4249,6 +4681,31 @@ BaseLib::PVariable RPCGetUpdateStatus::invoke(BaseLib::PRpcClientInfo clientInfo
         }
 
         return updateInfo;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetUserData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getUserData")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
+        return User::getData(clientInfo->user, parameters->at(0)->stringValue, key);
     }
     catch(const std::exception& ex)
     {
@@ -4390,26 +4847,48 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
     try
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getVariableDescription")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-        for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+        std::unordered_set<std::string> fields;
+        if(parameters->size() == 4)
         {
-            std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-            if(central && central->peerExists((uint64_t) parameters->at(0)->integerValue64))
+            for(auto& field : *parameters->at(3)->arrayValue)
             {
-                if(checkAcls)
-                {
-                    auto peer = central->getPeer((uint64_t) parameters->at(0)->integerValue64);
-                    if(!peer || !clientInfo->acls->checkVariableReadAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-                }
+                fields.emplace(field->stringValue);
+            }
+        }
 
-                return central->getVariableDescription(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+        if(parameters->at(0)->integerValue64 == 0)
+        {
+            //System variable
+            bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+
+            return GD::systemVariableController->getVariableDescription(clientInfo, parameters->at(2)->stringValue, fields, checkAcls);
+        }
+        else
+        {
+            //Device variable
+            bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+                if(central && central->peerExists((uint64_t) parameters->at(0)->integerValue64))
+                {
+                    if(checkAcls)
+                    {
+                        auto peer = central->getPeer((uint64_t) parameters->at(0)->integerValue64);
+                        if(!peer || !clientInfo->acls->checkVariableReadAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+                    }
+
+                    return central->getVariableDescription(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue, fields);
+                }
             }
         }
 
@@ -4434,9 +4913,8 @@ BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({}));
         if(error != ParameterError::Enum::noError) return getError(error);
-
-        std::string version(VERSION);
-        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + version));
+        
+        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + GD::homegearVersion));
     }
     catch(const std::exception& ex)
     {
@@ -4704,6 +5182,68 @@ BaseLib::PVariable RPCInvokeFamilyMethod::invoke(BaseLib::PRpcClientInfo clientI
         if(!central) return BaseLib::Variable::createError(-32501, "Family has no central.");
 
         return central->invokeFamilyMethod(clientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCLifetick::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("lifetick")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+
+        if(!GD::rpcClient->lifetick())
+        {
+            GD::out.printCritical("Critical: RPC client lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        for(auto& server : GD::rpcServers)
+        {
+            if(!server.second->lifetick())
+            {
+                GD::out.printCritical("Critical: RPC Server lifetick (Port " + std::to_string(server.second->getInfo()->port) + "): Failed");
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+        }
+
+        if(!GD::familyController->lifetick())
+        {
+            GD::out.printCritical("Critical: Device families lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+#ifndef NO_SCRIPTENGINE
+        if(!GD::scriptEngineServer->lifetick())
+        {
+            GD::out.printCritical("Critical: Script engine server lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+#endif
+
+        if(!GD::nodeBlueServer->lifetick())
+        {
+            GD::out.printCritical("Critical: Node-BLUE server lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        if(!GD::ipcServer->lifetick())
+        {
+            GD::out.printCritical("Critical: IPC server lifetick failed.");
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+
+        return std::make_shared<BaseLib::Variable>(true);
     }
     catch(const std::exception& ex)
     {
@@ -5394,14 +5934,14 @@ BaseLib::PVariable RPCRemoveCategoryFromSystemVariable::invoke(BaseLib::PRpcClie
 
         if(!GD::bl->db->categoryExists((uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         if(parameters->at(1)->integerValue64 != 0) systemVariable->categories.erase((uint64_t) parameters->at(1)->integerValue64);
 
-        return GD::bl->db->setSystemVariableCategories(systemVariable->name, systemVariable->categories);
+        return GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
     }
     catch(const std::exception& ex)
     {
@@ -5427,6 +5967,24 @@ BaseLib::PVariable RPCRemoveCategoryFromVariable::invoke(BaseLib::PRpcClientInfo
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
 
         if(!GD::bl->db->categoryExists((uint64_t) parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown category.");
+
+        if(parameters->at(0)->integerValue64 == 0) //System variable
+        {
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
+            if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+            if(parameters->at(3)->integerValue64 != 0) systemVariable->categories.erase((uint64_t) parameters->at(3)->integerValue64);
+
+            auto result = GD::systemVariableController->setCategories(systemVariable->name, systemVariable->categories);
+            if(result->errorStruct)
+            {
+                GD::out.printError("Error: Could not remove category from system variable: " + result->structValue->at("faultString")->stringValue);
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+            return std::make_shared<BaseLib::Variable>(true);
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -5649,6 +6207,59 @@ BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("removeRoleFromSystemVariable", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+
+        if(!GD::bl->db->roleExists((uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
+        if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+        if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        if(parameters->at(1)->integerValue64 != 0) systemVariable->roles.erase((uint64_t) parameters->at(1)->integerValue64);
+
+        //{{{ Remove variables from metadata
+        auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(1)->integerValue64);
+        auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+        if(addVariablesIterator != roleMetadata->structValue->end())
+        {
+            for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+            {
+                auto idIterator = variableInfo->structValue->find("id");
+                if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty())
+                {
+                    continue;
+                }
+                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+
+                GD::systemVariableController->erase(roleSystemVariableName);
+            }
+        }
+        //}}}
+
+        return GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try
@@ -5662,6 +6273,44 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
 
         if(!GD::bl->db->roleExists((uint64_t) parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        if(parameters->at(0)->integerValue64 == 0) //System variable
+        {
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
+            if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+            if(parameters->at(3)->integerValue64 != 0) systemVariable->roles.erase((uint64_t) parameters->at(3)->integerValue64);
+
+            auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
+            if(result->errorStruct)
+            {
+                GD::out.printError("Error: Could not remove role from system variable: " + result->structValue->at("faultString")->stringValue);
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+
+            //{{{ Remove variables from metadata
+            auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(3)->integerValue64);
+            auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+            if(addVariablesIterator != roleMetadata->structValue->end())
+            {
+                for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+                {
+                    auto idIterator = variableInfo->structValue->find("id");
+                    if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty())
+                    {
+                        continue;
+                    }
+                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+
+                    GD::systemVariableController->erase(roleSystemVariableName);
+                }
+            }
+            //}}}
+
+            return std::make_shared<BaseLib::Variable>(true);
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -5733,12 +6382,12 @@ BaseLib::PVariable RPCRemoveSystemVariableFromRoom::invoke(BaseLib::PRpcClientIn
 
         if(!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-        auto systemVariable = GD::bl->db->getSystemVariableInternal(parameters->at(0)->stringValue);
+        auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
 
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        if(systemVariable->room == roomId) return GD::bl->db->setSystemVariableRoom(systemVariable->name, 0);
+        if(systemVariable->room == roomId) return GD::systemVariableController->setRoom(systemVariable->name, 0);
         else return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
@@ -5791,6 +6440,24 @@ BaseLib::PVariable RPCRemoveVariableFromRoom::invoke(BaseLib::PRpcClientInfo cli
         uint64_t roomId = (uint64_t) parameters->at(3)->integerValue64;
 
         if(!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
+
+        if(parameters->at(0)->integerValue64 == 0) //System variable
+        {
+            auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
+            if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
+
+            if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+            systemVariable->room = 0;
+
+            auto result = GD::systemVariableController->setRoom(systemVariable->name, systemVariable->room);
+            if(result->errorStruct)
+            {
+                GD::out.printError("Error: Could not remove room from sytem variable: " + result->structValue->at("faultString")->stringValue);
+                return std::make_shared<BaseLib::Variable>(false);
+            }
+            return std::make_shared<BaseLib::Variable>(true);
+        }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
@@ -6744,7 +7411,7 @@ BaseLib::PVariable RPCSetRoleMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("setRoleMetadata", (uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("setRoleMetadata", (uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         return GD::bl->db->setRoleMetadata((uint64_t) parameters->at(0)->integerValue64, parameters->at(1));
     }
@@ -6824,7 +7491,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
         BaseLib::PVariable value = parameters->size() > 1 ? parameters->at(1) : std::make_shared<BaseLib::Variable>();
         int32_t flags = parameters->size() > 2 ? parameters->at(2)->integerValue : -1;
 
-        return GD::bl->db->setSystemVariable(clientInfo, parameters->at(0)->stringValue, value, flags, checkAcls);
+        return GD::systemVariableController->setValue(clientInfo, parameters->at(0)->stringValue, value, flags, checkAcls);
     }
     catch(const std::exception& ex)
     {
@@ -6916,6 +7583,30 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
         }
 
         return BaseLib::Variable::createError(-2, "Device not found.");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCSetUserData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
+{
+    try
+    {
+        if(!clientInfo || !clientInfo->acls->checkMethodAccess("setUserData")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant})
+                                                                                                                 }));
+        if(error != ParameterError::Enum::noError) return getError(error);
+
+        return std::make_shared<BaseLib::Variable>(User::setData(clientInfo->user, parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2)));
     }
     catch(const std::exception& ex)
     {

@@ -31,7 +31,6 @@
 #ifndef GD_H_
 #define GD_H_
 
-#include "../../config.h"
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"
@@ -44,6 +43,8 @@
 #include "../RPC/RpcServer.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"
+#include "../IpcLogger.h"
+#include "../Database/SystemVariableController.h"
 #include <homegear-base/BaseLib.h>
 
 #include <vector>
@@ -63,6 +64,7 @@ class GD
 public:
 	static std::unique_ptr<BaseLib::SharedObjects> bl;
 	static BaseLib::Output out;
+	static const std::string homegearVersion;
 	static std::string runAsUser;
 	static std::string runAsGroup;
 	static std::string configPath;
@@ -89,6 +91,8 @@ public:
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
 	static std::unique_ptr<UiController> uiController;
+    static std::unique_ptr<SystemVariableController> systemVariableController;
+	static std::unique_ptr<IpcLogger> ipcLogger;
 #ifdef EVENTHANDLER
 	static std::unique_ptr<EventHandler> eventHandler;
 #endif

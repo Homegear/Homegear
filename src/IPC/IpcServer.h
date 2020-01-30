@@ -35,6 +35,8 @@
 
 #include <homegear-base/BaseLib.h>
 
+#include <utility>
+
 namespace Homegear
 {
 
@@ -44,6 +46,8 @@ public:
 	IpcServer();
 
 	virtual ~IpcServer();
+
+    bool lifetick();
 
 	bool start();
 
@@ -61,7 +65,9 @@ public:
 
 	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
-	BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters);
+    BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
+
+	BaseLib::PVariable callRpcMethod(const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
 
 	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
 
@@ -75,23 +81,23 @@ private:
 			broadcast
 		};
 
-		QueueEntry() {}
+		QueueEntry() = default;
 
 		QueueEntry(PIpcClientData clientData, std::vector<char>& packet)
 		{
-			this->clientData = clientData;
+			this->clientData = std::move(clientData);
 			this->packet = packet;
 		}
 
 		QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters)
 		{
 			type = QueueEntryType::broadcast;
-			this->clientData = clientData;
-			this->methodName = methodName;
-			this->parameters = parameters;
+			this->clientData = std::move(clientData);
+			this->methodName = std::move(methodName);
+			this->parameters = std::move(parameters);
 		}
 
-		virtual ~QueueEntry() {}
+		~QueueEntry() override = default;
 
 		QueueEntryType type = QueueEntryType::defaultType;
 		PIpcClientData clientData;
@@ -128,6 +134,11 @@ private:
 	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
+    std::mutex _lifetick1Mutex;
+    std::pair<int64_t, bool> _lifetick1;
+    std::mutex _lifetick2Mutex;
+    std::pair<int64_t, bool> _lifetick2;
+
 	void collectGarbage();
 
 	bool getFileDescriptor(bool deleteOldSocket = false);
@@ -136,17 +147,21 @@ private:
 
 	void readClient(PIpcClientData& clientData);
 
-	BaseLib::PVariable send(PIpcClientData& clientData, std::vector<char>& data);
+	BaseLib::PVariable send(const PIpcClientData& clientData, const std::vector<char>& data);
 
-	BaseLib::PVariable sendRequest(PIpcClientData& clientData, std::string methodName, BaseLib::PArray& parameters);
+	BaseLib::PVariable sendRequest(const PIpcClientData& clientData, const std::string& methodName, const BaseLib::PArray& parameters);
 
 	void sendResponse(PIpcClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
 
 	void closeClientConnection(PIpcClientData client);
 
-	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry) override;
 
 	// {{{ RPC methods
+    BaseLib::PVariable getHomegearPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
+    BaseLib::PVariable setPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+
 	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
 
 	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);

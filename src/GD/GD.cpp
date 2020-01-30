@@ -30,12 +30,14 @@
 
 #include "GD.h"
 #include "../UPnP/UPnP.h"
+#include "../../config.h"
 
 namespace Homegear
 {
 
 std::unique_ptr<BaseLib::SharedObjects> GD::bl;
 BaseLib::Output GD::out;
+const std::string GD::homegearVersion = VERSION;
 std::string GD::runAsUser = "";
 std::string GD::runAsGroup = "";
 std::string GD::configPath = "/etc/homegear/";
@@ -64,5 +66,7 @@ std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
 #endif
 std::unique_ptr<IpcServer> GD::ipcServer;
 std::unique_ptr<NodeBlue::NodeBlueServer> GD::nodeBlueServer;
+std::unique_ptr<SystemVariableController> GD::systemVariableController;
+std::unique_ptr<IpcLogger> GD::ipcLogger;
 
 }

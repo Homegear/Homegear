@@ -203,6 +203,7 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("getVersion", std::make_shared<RPCGetVersion>());
     _rpcMethods->emplace("init", std::make_shared<RPCInit>());
     _rpcMethods->emplace("invokeFamilyMethod", std::make_shared<RPCInvokeFamilyMethod>());
+    _rpcMethods->emplace("lifetick", std::make_shared<RPCLifetick>());
     _rpcMethods->emplace("listBidcosInterfaces", std::make_shared<RPCListBidcosInterfaces>());
     _rpcMethods->emplace("listClientServers", std::make_shared<RPCListClientServers>());
     _rpcMethods->emplace("listDevices", std::make_shared<RPCListDevices>());
@@ -263,12 +264,20 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
 
+    { // System variables
+        _rpcMethods->emplace("addRoleToSystemVariable", std::make_shared<RPCAddRoleToSystemVariable>());
+        _rpcMethods->emplace("getSystemVariablesInRole", std::make_shared<RPCGetSystemVariablesInRole>());
+        _rpcMethods->emplace("removeRoleFromSystemVariable", std::make_shared<RPCRemoveRoleFromSystemVariable>());
+    }
+
     { // Roles
         _rpcMethods->emplace("addRoleToVariable", std::make_shared<RPCAddRoleToVariable>());
         _rpcMethods->emplace("aggregateRoles", std::make_shared<RPCAggregateRoles>());
         _rpcMethods->emplace("createRole", std::make_shared<RPCCreateRole>());
         _rpcMethods->emplace("deleteRole", std::make_shared<RPCDeleteRole>());
         _rpcMethods->emplace("getRoles", std::make_shared<RPCGetRoles>());
+        _rpcMethods->emplace("getRolesInDevice", std::make_shared<RPCGetRolesInDevice>());
+        _rpcMethods->emplace("getRolesInRoom", std::make_shared<RPCGetRolesInRoom>());
         _rpcMethods->emplace("getRoleMetadata", std::make_shared<RPCGetRoleMetadata>());
         _rpcMethods->emplace("getVariablesInRole", std::make_shared<RPCGetVariablesInRole>());
         _rpcMethods->emplace("removeRoleFromVariable", std::make_shared<RPCRemoveRoleFromVariable>());
@@ -278,6 +287,7 @@ RpcServer::RpcServer()
     
     //{{{ UI
         _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
+        _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RPCCheckUiElementSimpleCreation>());
         _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
         _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
         _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
@@ -288,6 +298,12 @@ RpcServer::RpcServer()
     //{{{ Users
         _rpcMethods->emplace("getUserMetadata", std::make_shared<RPCGetUserMetadata>());
         _rpcMethods->emplace("setUserMetadata", std::make_shared<RPCSetUserMetadata>());
+    //}}}
+
+    //{{{ User data
+    _rpcMethods->emplace("deleteUserData", std::make_shared<RPCDeleteUserData>());
+    _rpcMethods->emplace("getUserData", std::make_shared<RPCGetUserData>());
+    _rpcMethods->emplace("setUserData", std::make_shared<RPCSetUserData>());
     //}}}
 }
 
@@ -308,23 +324,23 @@ bool RpcServer::lifetick()
 {
     try
     {
-        _lifetick1Mutex.lock();
-        if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
         {
-            GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
-            _lifetick1Mutex.unlock();
-            return false;
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            if(!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+                return false;
+            }
         }
-        _lifetick1Mutex.unlock();
 
-        _lifetick2Mutex.lock();
-        if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
         {
-            GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
-            _lifetick2Mutex.unlock();
-            return false;
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            if(!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000)
+            {
+                GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+                return false;
+            }
         }
-        _lifetick2Mutex.unlock();
         return true;
     }
     catch(const std::exception& ex)
@@ -361,7 +377,16 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
             _out.printError("Error: Settings is nullptr.");
             return;
         }
-        if(!_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer) return;
+        if(!_info->familyServer && !_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer && !_info->restServer)
+        {
+            GD::out.printWarning("Warning: Not starting server as no server types are specified.");
+            return;
+        }
+        if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::undefined)
+        {
+            _out.printError("Error: authType is not set.");
+            return;
+        }
         _out.setPrefix("RPC Server (Port " + std::to_string(info->port) + "): ");
 
         if(info->familyServer)
@@ -395,6 +420,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
             _out.printWarning("Warning: RPC server has no WebSocket authorization enabled. This is very dangerous as every webpage opened in a browser (also remote one's!!!) can control this installation.");
         }
 
+        if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none) _out.printInfo("Info: Enabling no authentication.");
         if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication.");
         if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) _out.printInfo("Info: Enabling client certificate authentication.");
         if(_info->websocketAuthType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic) _out.printInfo("Info: Enabling basic authentication for WebSockets.");
@@ -650,7 +676,7 @@ void RpcServer::mainThread()
                 _out.printInfo("Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: " + std::to_string(client->id));
 
                 client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
-                if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none)
+                if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none)
                 {
                     std::vector<uint64_t> groups{8}; //No user
                     client->acls->fromGroups(groups);
@@ -775,7 +801,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
     }
 }
 
-void RpcServer::analyzeRPC(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPC(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -943,8 +969,9 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
     try
     {
         if(!parameters) parameters = BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tArray));
-        if(_stopped || GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
-        if(_rpcMethods->find(methodName) == _rpcMethods->end())
+        if(GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
+        auto rpcMethodsIterator = _rpcMethods->find(methodName);
+        if(rpcMethodsIterator == _rpcMethods->end())
         {
             if(_info->familyServer)
             {
@@ -954,10 +981,13 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
             BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
             return result;
         }
-        _lifetick1Mutex.lock();
-        _lifetick1.second = false;
-        _lifetick1.first = BaseLib::HelperFunctions::getTime();
-        _lifetick1Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = false;
+            _lifetick1.first = BaseLib::HelperFunctions::getTime();
+        }
+
         if(GD::bl->debugLevel >= 4)
         {
             _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
@@ -966,15 +996,17 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std
                 (*i)->print(true, false);
             }
         }
-        BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(clientInfo, parameters->arrayValue);
+        BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(clientInfo, parameters->arrayValue);
         if(GD::bl->debugLevel >= 5)
         {
             _out.printDebug("Response: ");
             ret->print(true, false);
         }
-        _lifetick1Mutex.lock();
-        _lifetick1.second = true;
-        _lifetick1Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+            _lifetick1.second = true;
+        }
         return ret;
     }
     catch(const std::exception& ex)
@@ -1006,7 +1038,8 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
             return;
         }
 
-        if(_rpcMethods->find(methodName) == _rpcMethods->end())
+        auto rpcMethodsIterator = _rpcMethods->find(methodName);
+        if(rpcMethodsIterator == _rpcMethods->end())
         {
             if(_info->familyServer)
             {
@@ -1021,10 +1054,13 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
             sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
             return;
         }
-        _lifetick2Mutex.lock();
-        _lifetick2.first = BaseLib::HelperFunctions::getTime();
-        _lifetick2.second = false;
-        _lifetick2Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.first = BaseLib::HelperFunctions::getTime();
+            _lifetick2.second = false;
+        }
+
         if(GD::bl->debugLevel >= 4 && methodName != "getNodeVariable")
         {
             _out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + (client->clientType == BaseLib::RpcClientType::ccu2 ? " (CCU)" : "") + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "") + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t) (client->rpcType)) + ") Parameters:");
@@ -1033,16 +1069,18 @@ void RpcServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
                 (*i)->print(true, false);
             }
         }
-        BaseLib::PVariable ret = _rpcMethods->at(methodName)->invoke(client, parameters);
+        BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(client, parameters);
         if(GD::bl->debugLevel >= 5)
         {
             _out.printDebug("Response: ");
             ret->print(true, false);
         }
         sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
-        _lifetick2Mutex.lock();
-        _lifetick2.second = true;
-        _lifetick2Mutex.unlock();
+
+        {
+            std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
+            _lifetick2.second = true;
+        }
     }
     catch(const std::exception& ex)
     {
@@ -1065,7 +1103,7 @@ std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t c
     return header;
 }
 
-void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1100,7 +1138,7 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::vector<c
     }
 }
 
-void RpcServer::packetReceived(std::shared_ptr<Client> client, std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
+void RpcServer::packetReceived(std::shared_ptr<Client> client, const std::vector<char>& packet, PacketType::Enum packetType, bool keepAlive)
 {
     try
     {
@@ -1381,17 +1419,25 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                         if(binaryRpc.isFinished())
                         {
                             std::shared_ptr<BaseLib::Rpc::RpcHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
-                            if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+                            if(!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic))
                             {
                                 try
                                 {
                                     if(!client->auth->basicServer(client->socket, header, client->user, client->acls))
                                     {
-                                        _out.printError("Error: Authorization failed. Closing connection.");
-                                        doBreak = true;
-                                        break;
+                                        if(!(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                                        {
+                                            _out.printError("Error: Authorization failed. Closing connection.");
+                                            doBreak = true;
+                                            break;
+                                        }
+                                        else _out.printInfo("Info: Basic authentication failed. Falling back to no authentication.");
                                     }
-                                    else _out.printDebug("Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                    else
+                                    {
+                                        client->authenticated = true;
+                                        _out.printDebug("Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                    }
                                 }
                                 catch(AuthException& ex)
                                 {
@@ -1400,6 +1446,13 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     break;
                                 }
                             }
+                            else if(!client->authenticated && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                            {
+                                _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
+                                http.reset();
+                                break;
+                            }
+
 
                             packetType = (binaryRpc.getType() == BaseLib::Rpc::BinaryRpc::Type::request) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 
@@ -1504,7 +1557,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                 if(http.headerProcessingStarted()) processHttp = true;
                 else
                 {
-                    if(!strncmp(buffer.data(), "GET ", 4) || !strncmp(buffer.data(), "HEAD ", 5))
+                    if(!strncmp(buffer.data(), "GET ", 4) || !strncmp(buffer.data(), "HEAD ", 5) || !strncmp(buffer.data(), "DELETE ", 7))
                     {
                         buffer.at(bytesRead) = '\0';
                         packetType = PacketType::Enum::xmlRequest;
@@ -1572,17 +1625,25 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     break;
                                 }
 
-                                if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)
+                                if(!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic))
                                 {
                                     try
                                     {
                                         if(!client->auth->basicServer(client->socket, http, client->user, client->acls))
                                         {
-                                            _out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
-                                            http.reset();
-                                            break;
+                                            if(!(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                                            {
+                                                _out.printError("Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
+                                                http.reset();
+                                                break;
+                                            }
+                                            else _out.printInfo("Info: Basic authentication failed. Falling back to no authentication.");
                                         }
-                                        else _out.printInfo("Info: Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                        else
+                                        {
+                                            client->authenticated = true;
+                                            _out.printInfo("Info: Client successfully authorized as user [" + client->user + "] using basic authentication.");
+                                        }
                                     }
                                     catch(AuthException& ex)
                                     {
@@ -1590,6 +1651,12 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                         http.reset();
                                         break;
                                     }
+                                }
+                                else if(!client->authenticated && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none))
+                                {
+                                    _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
+                                    http.reset();
+                                    break;
                                 }
                                 if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
                                 {
@@ -1605,7 +1672,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     !_info->jsonrpcServer ||
                                     http.getHeader().method != "POST" ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
-                                    http.getHeader().path == "/node-blue/flows" ||
+                                    http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ))
@@ -1613,8 +1680,9 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                     client->rpcType = BaseLib::RpcType::webserver;
                                     http.getHeader().remoteAddress = client->address;
                                     http.getHeader().remotePort = client->port;
-                                    if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(http, client->socket);
-                                    else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(http, client->socket, _info->cacheAssets);
+                                    if(http.getHeader().method == "POST" || http.getHeader().method == "PUT") _webServer->post(client, http, client->socket);
+                                    else if(http.getHeader().method == "GET" || http.getHeader().method == "HEAD") _webServer->get(client, http, client->socket, _info->cacheAssets);
+                                    else if(http.getHeader().method == "DELETE") _webServer->delete_(client, http, client->socket);
                                     if(http.getHeader().connection & BaseLib::Http::Connection::Enum::close) closeClientConnection(client);
                                     client->lastReceivedPacket = BaseLib::HelperFunctions::getTime();
                                 }
@@ -1692,7 +1760,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
             }
         }
 
-        timeval timeout;
+        timeval timeout{};
         timeout.tv_sec = 0;
         timeout.tv_usec = 100000;
         fd_set readFileDescriptor;
@@ -1819,7 +1887,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
         if(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
         {
             std::string error;
-            if(!client->auth->certificateServer(client->socketDescriptor, client->user, client->acls, error))
+            if(!client->auth->certificateServer(client->socketDescriptor, client->user, client->distinguishedName, client->acls, error))
             {
                 if(_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
                 {
@@ -1829,7 +1897,12 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
                 }
                 else _out.printInfo("Info: Certificate authentication failed. Falling back to next authentication type. Error was: " + error);
             }
-            else _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
+            else
+            {
+                client->authenticated = true;
+                client->hasClientCertificate = true;
+                _out.printInfo("Info: User [" + client->user + "] was successfully authenticated using certificate authentication.");
+            }
         }
 
         return;
@@ -1885,7 +1958,7 @@ void RpcServer::getSocketDescriptor()
                 if(fcntl(_serverFileDescriptor->descriptor, F_SETFL, fcntl(_serverFileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0) throw BaseLib::Exception("Error: Could not set socket options.");
             }
             if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw BaseLib::Exception("Error: Could not set socket options.");
-            if(bind(_serverFileDescriptor->descriptor, info->ai_addr, info->ai_addrlen) == -1)
+            if(bind(_serverFileDescriptor->descriptor.load(), info->ai_addr, info->ai_addrlen) == -1)
             {
                 error = errno;
                 continue;

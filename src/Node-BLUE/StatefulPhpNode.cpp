@@ -28,9 +28,10 @@
  * files in the program, then also delete it here.
 */
 
+#include "StatefulPhpNode.h"
+
 #ifndef NO_SCRIPTENGINE
 
-#include "StatefulPhpNode.h"
 #include "../GD/GD.h"
 
 namespace Homegear
@@ -165,7 +166,7 @@ void StatefulPhpNode::startUpComplete()
 	}
 }
 
-void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
+void StatefulPhpNode::variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value)
 {
 	try
 	{
@@ -190,7 +191,7 @@ void StatefulPhpNode::variableEvent(uint64_t peerId, int32_t channel, std::strin
 	}
 }
 
-void StatefulPhpNode::setNodeVariable(std::string& variable, Flows::PVariable& value)
+void StatefulPhpNode::setNodeVariable(const std::string& variable, Flows::PVariable value)
 {
 	try
 	{
@@ -260,7 +261,7 @@ void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PV
 	}
 }
 
-Flows::PVariable StatefulPhpNode::invokeLocal(std::string methodName, Flows::PArray& innerParameters)
+Flows::PVariable StatefulPhpNode::invokeLocal(const std::string& methodName, Flows::PArray innerParameters)
 {
 	try
 	{
@@ -278,7 +279,7 @@ Flows::PVariable StatefulPhpNode::invokeLocal(std::string methodName, Flows::PAr
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	return Flows::Variable::createError(-32601, ": Requested method not found.");
+	return Flows::Variable::createError(-32601, "Requested method not found.");
 }
 
 }

@@ -65,6 +65,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
 
     _localRpcMethods.emplace("reload", std::bind(&NodeBlueClient::reload, this, std::placeholders::_1));
     _localRpcMethods.emplace("shutdown", std::bind(&NodeBlueClient::shutdown, this, std::placeholders::_1));
+    _localRpcMethods.emplace("lifetick", std::bind(&NodeBlueClient::lifetick, this, std::placeholders::_1));
     _localRpcMethods.emplace("startFlow", std::bind(&NodeBlueClient::startFlow, this, std::placeholders::_1));
     _localRpcMethods.emplace("startNodes", std::bind(&NodeBlueClient::startNodes, this, std::placeholders::_1));
     _localRpcMethods.emplace("configNodesStarted", std::bind(&NodeBlueClient::configNodesStarted, this, std::placeholders::_1));
@@ -142,6 +143,7 @@ void NodeBlueClient::dispose()
                             }
                         }
                     }
+
                     {
                         std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
                         for(auto& flowId : _flowSubscriptions)
@@ -149,10 +151,17 @@ void NodeBlueClient::dispose()
                             flowId.second.erase(node.first);
                         }
                     }
+
                     {
                         std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
                         _globalSubscriptions.erase(node.first);
                     }
+
+                    {
+                        std::lock_guard<std::mutex> eventSubscriptionsGuard(_eventSubscriptionsMutex);
+                        _eventSubscriptions.erase(node.first);
+                    }
+
                     _nodeManager->unloadNode(node.second->id);
                 }
             }
@@ -218,6 +227,25 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
                             }
                         }
                     }
+
+                    {
+                        std::lock_guard<std::mutex> flowSubscriptionsGuard(_flowSubscriptionsMutex);
+                        for(auto& flowId : _flowSubscriptions)
+                        {
+                            flowId.second.erase(node.first);
+                        }
+                    }
+
+                    {
+                        std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
+                        _globalSubscriptions.erase(node.first);
+                    }
+
+                    {
+                        std::lock_guard<std::mutex> eventSubscriptionsGuard(_eventSubscriptionsMutex);
+                        _eventSubscriptions.erase(node.first);
+                    }
+
                     _nodeManager->unloadNode(node.second->id);
                 }
             }
@@ -255,14 +283,21 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId)
         }
 
         {
+            std::lock_guard<std::mutex> eventSubscriptionsGuard(_eventSubscriptionsMutex);
+            _eventSubscriptions.clear();
+        }
+
+        {
             std::lock_guard<std::mutex> internalMessagesGuard(_internalMessagesMutex);
             _internalMessages.clear();
         }
 
-        {
+        // We don't reset _inputValues. This keeps old nodes in the array but you can still request history data for all
+        // nodes that still exist which outweighs this problem.
+        /*{
             std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
             _inputValues.clear();
-        }
+        }*/
 
         _out.printMessage("Reinitializing...");
 
@@ -665,7 +700,7 @@ Flows::PVariable NodeBlueClient::send(std::vector<char>& data)
     return std::make_shared<Flows::Variable>();
 }
 
-Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray parameters, bool wait)
+Flows::PVariable NodeBlueClient::invoke(const std::string& methodName, Flows::PArray parameters, bool wait)
 {
     try
     {
@@ -729,9 +764,9 @@ Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray pa
 
         int64_t startTime = BaseLib::HelperFunctions::getTime();
         std::unique_lock<std::mutex> waitLock(requestInfo->waitMutex);
-        while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&]
+        while(!requestInfo->conditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&]
         {
-            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 30000) return true;
+            if(_shuttingDownOrRestarting && BaseLib::HelperFunctions::getTime() - startTime > 10000) return true;
             else return response->finished || _stopped;
         }));
 
@@ -762,7 +797,7 @@ Flows::PVariable NodeBlueClient::invoke(std::string methodName, Flows::PArray pa
     return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
-Flows::PVariable NodeBlueClient::invokeNodeMethod(std::string nodeId, std::string methodName, Flows::PArray parameters, bool wait)
+Flows::PVariable NodeBlueClient::invokeNodeMethod(const std::string& nodeId, const std::string& methodName, Flows::PArray parameters, bool wait)
 {
     try
     {
@@ -801,12 +836,31 @@ void NodeBlueClient::sendResponse(Flows::PVariable& packetId, Flows::PVariable& 
     }
 }
 
-void NodeBlueClient::log(std::string nodeId, int32_t logLevel, std::string message)
+void NodeBlueClient::log(const std::string& nodeId, int32_t logLevel, const std::string& message)
 {
     _out.printMessage("Node " + nodeId + ": " + message, logLevel, logLevel <= 3);
+    frontendEventLog(nodeId, message);
 }
 
-void NodeBlueClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+void NodeBlueClient::frontendEventLog(const std::string& nodeId, const std::string& message)
+{
+    try
+    {
+        Flows::PArray parameters = std::make_shared<Flows::Array>();
+        parameters->reserve(2);
+        parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+        parameters->push_back(std::make_shared<Flows::Variable>(message));
+
+        Flows::PVariable result = invoke("frontendEventLog", parameters, false);
+        if(result->errorStruct) GD::out.printError("Error calling frontendEventLog: " + result->structValue->at("faultString")->stringValue);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void NodeBlueClient::subscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable)
 {
     try
     {
@@ -819,7 +873,7 @@ void NodeBlueClient::subscribePeer(std::string nodeId, uint64_t peerId, int32_t 
     }
 }
 
-void NodeBlueClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_t channel, std::string variable)
+void NodeBlueClient::unsubscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable)
 {
     try
     {
@@ -832,7 +886,7 @@ void NodeBlueClient::unsubscribePeer(std::string nodeId, uint64_t peerId, int32_
     }
 }
 
-void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
+void NodeBlueClient::subscribeFlow(const std::string& nodeId, const std::string& flowId)
 {
     try
     {
@@ -846,7 +900,7 @@ void NodeBlueClient::subscribeFlow(std::string nodeId, std::string flowId)
     }
 }
 
-void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
+void NodeBlueClient::unsubscribeFlow(const std::string& nodeId, const std::string& flowId)
 {
     try
     {
@@ -860,7 +914,7 @@ void NodeBlueClient::unsubscribeFlow(std::string nodeId, std::string flowId)
     }
 }
 
-void NodeBlueClient::subscribeGlobal(std::string nodeId)
+void NodeBlueClient::subscribeGlobal(const std::string& nodeId)
 {
     try
     {
@@ -873,7 +927,7 @@ void NodeBlueClient::subscribeGlobal(std::string nodeId)
     }
 }
 
-void NodeBlueClient::unsubscribeGlobal(std::string nodeId)
+void NodeBlueClient::unsubscribeGlobal(const std::string& nodeId)
 {
     try
     {
@@ -886,7 +940,33 @@ void NodeBlueClient::unsubscribeGlobal(std::string nodeId)
     }
 }
 
-void NodeBlueClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
+void NodeBlueClient::subscribeHomegearEvents(const std::string& nodeId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> eventSubscriptionsGuard(_eventSubscriptionsMutex);
+        _eventSubscriptions.insert(nodeId);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void NodeBlueClient::unsubscribeHomegearEvents(const std::string& nodeId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> eventSubscriptionsGuard(_eventSubscriptionsMutex);
+        _eventSubscriptions.erase(nodeId);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void NodeBlueClient::queueOutput(const std::string& nodeId, uint32_t index, Flows::PVariable message, bool synchronous)
 {
     try
     {
@@ -1056,7 +1136,7 @@ void NodeBlueClient::queueOutput(std::string nodeId, uint32_t index, Flows::PVar
     }
 }
 
-void NodeBlueClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVariable value)
+void NodeBlueClient::nodeEvent(const std::string& nodeId, const std::string& topic, Flows::PVariable value)
 {
     try
     {
@@ -1079,7 +1159,7 @@ void NodeBlueClient::nodeEvent(std::string nodeId, std::string topic, Flows::PVa
     }
 }
 
-Flows::PVariable NodeBlueClient::getNodeData(std::string nodeId, std::string key)
+Flows::PVariable NodeBlueClient::getNodeData(const std::string& nodeId, const std::string& key)
 {
     try
     {
@@ -1104,7 +1184,7 @@ Flows::PVariable NodeBlueClient::getNodeData(std::string nodeId, std::string key
     return std::make_shared<Flows::Variable>();
 }
 
-void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVariable value)
+void NodeBlueClient::setNodeData(const std::string& nodeId, const std::string& key, Flows::PVariable value)
 {
     try
     {
@@ -1122,7 +1202,7 @@ void NodeBlueClient::setNodeData(std::string nodeId, std::string key, Flows::PVa
     }
 }
 
-Flows::PVariable NodeBlueClient::getFlowData(std::string flowId, std::string key)
+Flows::PVariable NodeBlueClient::getFlowData(const std::string& flowId, const std::string& key)
 {
     try
     {
@@ -1147,7 +1227,7 @@ Flows::PVariable NodeBlueClient::getFlowData(std::string flowId, std::string key
     return std::make_shared<Flows::Variable>();
 }
 
-void NodeBlueClient::setFlowData(std::string flowId, std::string key, Flows::PVariable value)
+void NodeBlueClient::setFlowData(const std::string& flowId, const std::string& key, Flows::PVariable value)
 {
     try
     {
@@ -1165,7 +1245,7 @@ void NodeBlueClient::setFlowData(std::string flowId, std::string key, Flows::PVa
     }
 }
 
-Flows::PVariable NodeBlueClient::getGlobalData(std::string key)
+Flows::PVariable NodeBlueClient::getGlobalData(const std::string& key)
 {
     try
     {
@@ -1188,7 +1268,7 @@ Flows::PVariable NodeBlueClient::getGlobalData(std::string key)
     return std::make_shared<Flows::Variable>();
 }
 
-void NodeBlueClient::setGlobalData(std::string key, Flows::PVariable value)
+void NodeBlueClient::setGlobalData(const std::string& key, Flows::PVariable value)
 {
     try
     {
@@ -1205,7 +1285,7 @@ void NodeBlueClient::setGlobalData(std::string key, Flows::PVariable value)
     }
 }
 
-void NodeBlueClient::setInternalMessage(std::string nodeId, Flows::PVariable message)
+void NodeBlueClient::setInternalMessage(const std::string& nodeId, Flows::PVariable message)
 {
     try
     {
@@ -1231,7 +1311,7 @@ void NodeBlueClient::setInternalMessage(std::string nodeId, Flows::PVariable mes
     }
 }
 
-void NodeBlueClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
+void NodeBlueClient::setInputValue(const std::string& nodeId, int32_t inputIndex, Flows::PVariable message)
 {
     try
     {
@@ -1268,7 +1348,7 @@ void NodeBlueClient::setInputValue(std::string& nodeId, int32_t inputIndex, Flow
     }
 }
 
-Flows::PVariable NodeBlueClient::getConfigParameter(std::string nodeId, std::string name)
+Flows::PVariable NodeBlueClient::getConfigParameter(const std::string& nodeId, const std::string& name)
 {
     try
     {
@@ -1361,6 +1441,28 @@ Flows::PVariable NodeBlueClient::shutdown(Flows::PArray& parameters)
         _maintenanceThread = std::thread(&NodeBlueClient::dispose, this);
 
         return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::lifetick(Flows::PArray& parameters)
+{
+    try
+    {
+        for(int32_t i = 0; i < _queueCount; i++)
+        {
+            if(queueSize(i) > 1000)
+            {
+                _out.printError("Error in lifetick: More than 1000 items are queued in queue number " + std::to_string(i));
+                return std::make_shared<Flows::Variable>(false);
+            }
+        }
+
+        return std::make_shared<Flows::Variable>(true);
     }
     catch(const std::exception& ex)
     {
@@ -1514,25 +1616,27 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray& parameters)
                 nodeObject->setId(node->id);
                 nodeObject->setFlowId(node->flowId);
 
-                nodeObject->setLog(std::function<void(std::string, int32_t, std::string)>(std::bind(&NodeBlueClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setInvoke(std::function<Flows::PVariable(std::string, Flows::PArray)>(std::bind(&NodeBlueClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
-                nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(std::string, std::string, Flows::PArray, bool)>(std::bind(&NodeBlueClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setSubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setUnsubscribePeer(std::function<void(std::string, uint64_t, int32_t, std::string)>(std::bind(&NodeBlueClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setSubscribeFlow(std::function<void(std::string, std::string)>(std::bind(&NodeBlueClient::subscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setUnsubscribeFlow(std::function<void(std::string, std::string)>(std::bind(&NodeBlueClient::unsubscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSubscribeGlobal(std::function<void(std::string)>(std::bind(&NodeBlueClient::subscribeGlobal, this, std::placeholders::_1)));
-                nodeObject->setUnsubscribeGlobal(std::function<void(std::string)>(std::bind(&NodeBlueClient::unsubscribeGlobal, this, std::placeholders::_1)));
-                nodeObject->setOutput(std::function<void(std::string, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-                nodeObject->setNodeEvent(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setGetNodeData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSetNodeData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setGetFlowData(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getFlowData, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSetFlowData(std::function<void(std::string, std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setFlowData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-                nodeObject->setGetGlobalData(std::function<Flows::PVariable(std::string)>(std::bind(&NodeBlueClient::getGlobalData, this, std::placeholders::_1)));
-                nodeObject->setSetGlobalData(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setGlobalData, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setSetInternalMessage(std::function<void(std::string, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
-                nodeObject->setGetConfigParameter(std::function<Flows::PVariable(std::string, std::string)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setLog(std::function<void(const std::string&, int32_t, const std::string&)>(std::bind(&NodeBlueClient::log, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setInvoke(std::function<Flows::PVariable(const std::string&, Flows::PArray)>(std::bind(&NodeBlueClient::invoke, this, std::placeholders::_1, std::placeholders::_2, true)));
+                nodeObject->setInvokeNodeMethod(std::function<Flows::PVariable(const std::string&, const std::string&, Flows::PArray, bool)>(std::bind(&NodeBlueClient::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setSubscribePeer(std::function<void(const std::string&, uint64_t, int32_t, const std::string&)>(std::bind(&NodeBlueClient::subscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setUnsubscribePeer(std::function<void(const std::string&, uint64_t, int32_t, const std::string&)>(std::bind(&NodeBlueClient::unsubscribePeer, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setSubscribeFlow(std::function<void(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::subscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setUnsubscribeFlow(std::function<void(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::unsubscribeFlow, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSubscribeGlobal(std::function<void(const std::string&)>(std::bind(&NodeBlueClient::subscribeGlobal, this, std::placeholders::_1)));
+                nodeObject->setUnsubscribeGlobal(std::function<void(const std::string&)>(std::bind(&NodeBlueClient::unsubscribeGlobal, this, std::placeholders::_1)));
+                nodeObject->setSubscribeHomegearEvents(std::function<void(const std::string&)>(std::bind(&NodeBlueClient::subscribeHomegearEvents, this, std::placeholders::_1)));
+                nodeObject->setUnsubscribeHomegearEvents(std::function<void(const std::string&)>(std::bind(&NodeBlueClient::unsubscribeHomegearEvents, this, std::placeholders::_1)));
+                nodeObject->setOutput(std::function<void(const std::string&, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
+                nodeObject->setNodeEvent(std::function<void(const std::string&, const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetNodeData(std::function<Flows::PVariable(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetNodeData(std::function<void(const std::string&, const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetFlowData(std::function<Flows::PVariable(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::getFlowData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetFlowData(std::function<void(const std::string&, const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setFlowData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+                nodeObject->setGetGlobalData(std::function<Flows::PVariable(const std::string&)>(std::bind(&NodeBlueClient::getGlobalData, this, std::placeholders::_1)));
+                nodeObject->setSetGlobalData(std::function<void(const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setGlobalData, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setSetInternalMessage(std::function<void(const std::string&, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
+                nodeObject->setGetConfigParameter(std::function<Flows::PVariable(const std::string&, const std::string&)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
                 if(!nodeObject->init(node))
                 {
@@ -1730,6 +1834,10 @@ Flows::PVariable NodeBlueClient::stopFlow(Flows::PArray& parameters)
                 std::lock_guard<std::mutex> globalSubscriptionsGuard(_globalSubscriptionsMutex);
                 _globalSubscriptions.erase(node.first);
             }
+            {
+                std::lock_guard<std::mutex> eventSubscriptionsGuard(_eventSubscriptionsMutex);
+                _eventSubscriptions.erase(node.first);
+            }
             _nodeManager->unloadNode(node.second->id);
         }
         _flows.erase(flowsIterator);
@@ -1806,6 +1914,15 @@ Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray& paramet
             if(innerParameters->at(2)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 3 is not of type string.");
 
             log(innerParameters->at(0)->stringValue, innerParameters->at(1)->integerValue, innerParameters->at(2)->stringValue);
+            return std::make_shared<Flows::Variable>();
+        }
+        else if(methodName == "frontendEventLog")
+        {
+            if(innerParameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+            if(innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
+            if(innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 3 is not of type string.");
+
+            frontendEventLog(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue);
             return std::make_shared<Flows::Variable>();
         }
         else if(methodName == "invokeNodeMethod")
@@ -2218,30 +2335,41 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
     {
         if(parameters->size() != 5) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-        std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
-        std::string& source = parameters->at(0)->stringValue;
-        auto peerId = static_cast<uint64_t>(parameters->at(1)->integerValue64);
-        int32_t channel = parameters->at(2)->integerValue;
-
-        auto peerIterator = _peerSubscriptions.find(peerId);
-        if(peerIterator == _peerSubscriptions.end()) return std::make_shared<Flows::Variable>();
-
-        auto channelIterator = peerIterator->second.find(channel);
-        if(channelIterator == peerIterator->second.end()) return std::make_shared<Flows::Variable>();
-
-        for(uint32_t j = 0; j < parameters->at(3)->arrayValue->size(); j++)
         {
-            std::string variableName = parameters->at(3)->arrayValue->at(j)->stringValue;
-
-            auto variableIterator = channelIterator->second.find(variableName);
-            if(variableIterator == channelIterator->second.end()) continue;
-
-            Flows::PVariable value = parameters->at(4)->arrayValue->at(j);
-
-            for(auto nodeId : variableIterator->second)
+            std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+            for(auto nodeId : _eventSubscriptions)
             {
                 Flows::PINode node = _nodeManager->getNode(nodeId);
-                if(node) node->variableEvent(source, peerId, channel, variableName, value);
+                if(node) node->homegearEvent("deviceVariableEvent", parameters);
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
+            std::string& source = parameters->at(0)->stringValue;
+            auto peerId = static_cast<uint64_t>(parameters->at(1)->integerValue64);
+            int32_t channel = parameters->at(2)->integerValue;
+
+            auto peerIterator = _peerSubscriptions.find(peerId);
+            if(peerIterator == _peerSubscriptions.end()) return std::make_shared<Flows::Variable>();
+
+            auto channelIterator = peerIterator->second.find(channel);
+            if(channelIterator == peerIterator->second.end()) return std::make_shared<Flows::Variable>();
+
+            for(uint32_t j = 0; j < parameters->at(3)->arrayValue->size(); j++)
+            {
+                std::string variableName = parameters->at(3)->arrayValue->at(j)->stringValue;
+
+                auto variableIterator = channelIterator->second.find(variableName);
+                if(variableIterator == channelIterator->second.end()) continue;
+
+                Flows::PVariable value = parameters->at(4)->arrayValue->at(j);
+
+                for(auto nodeId : variableIterator->second)
+                {
+                    Flows::PINode node = _nodeManager->getNode(nodeId);
+                    if(node) node->variableEvent(source, peerId, channel, variableName, value);
+                }
             }
         }
 
@@ -2260,16 +2388,27 @@ Flows::PVariable NodeBlueClient::broadcastFlowVariableEvent(Flows::PArray& param
     {
         if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-        std::lock_guard<std::mutex> eventsGuard(_flowSubscriptionsMutex);
-        std::string& flowId = parameters->at(0)->stringValue;
-
-        auto flowIterator = _flowSubscriptions.find(flowId);
-        if(flowIterator == _flowSubscriptions.end()) return std::make_shared<Flows::Variable>();
-
-        for(auto nodeId : flowIterator->second)
         {
-            Flows::PINode node = _nodeManager->getNode(nodeId);
-            if(node) node->flowVariableEvent(flowId, parameters->at(1)->stringValue, parameters->at(2));
+            std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+            for(auto nodeId : _eventSubscriptions)
+            {
+                Flows::PINode node = _nodeManager->getNode(nodeId);
+                if(node) node->homegearEvent("flowVariableEvent", parameters);
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> eventsGuard(_flowSubscriptionsMutex);
+            std::string& flowId = parameters->at(0)->stringValue;
+
+            auto flowIterator = _flowSubscriptions.find(flowId);
+            if(flowIterator == _flowSubscriptions.end()) return std::make_shared<Flows::Variable>();
+
+            for(auto nodeId : flowIterator->second)
+            {
+                Flows::PINode node = _nodeManager->getNode(nodeId);
+                if(node) node->flowVariableEvent(flowId, parameters->at(1)->stringValue, parameters->at(2));
+            }
         }
 
         return std::make_shared<Flows::Variable>();
@@ -2287,12 +2426,22 @@ Flows::PVariable NodeBlueClient::broadcastGlobalVariableEvent(Flows::PArray& par
     {
         if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
-        std::lock_guard<std::mutex> eventsGuard(_globalSubscriptionsMutex);
-
-        for(auto nodeId : _globalSubscriptions)
         {
-            Flows::PINode node = _nodeManager->getNode(nodeId);
-            if(node) node->globalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
+            std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+            for(auto nodeId : _eventSubscriptions)
+            {
+                Flows::PINode node = _nodeManager->getNode(nodeId);
+                if(node) node->homegearEvent("globalVariableEvent", parameters);
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> eventsGuard(_globalSubscriptionsMutex);
+            for(auto nodeId : _globalSubscriptions)
+            {
+                Flows::PINode node = _nodeManager->getNode(nodeId);
+                if(node) node->globalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
+            }
         }
 
         return std::make_shared<Flows::Variable>();
@@ -2310,6 +2459,13 @@ Flows::PVariable NodeBlueClient::broadcastNewDevices(Flows::PArray& parameters)
     {
         if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
+        std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+        for(auto nodeId : _eventSubscriptions)
+        {
+            Flows::PINode node = _nodeManager->getNode(nodeId);
+            if(node) node->homegearEvent("newDevices", parameters);
+        }
+
         return std::make_shared<Flows::Variable>();
     }
     catch(const std::exception& ex)
@@ -2325,6 +2481,13 @@ Flows::PVariable NodeBlueClient::broadcastDeleteDevices(Flows::PArray& parameter
     {
         if(parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
+        std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+        for(auto nodeId : _eventSubscriptions)
+        {
+            Flows::PINode node = _nodeManager->getNode(nodeId);
+            if(node) node->homegearEvent("deleteDevices", parameters);
+        }
+
         return std::make_shared<Flows::Variable>();
     }
     catch(const std::exception& ex)
@@ -2339,6 +2502,13 @@ Flows::PVariable NodeBlueClient::broadcastUpdateDevice(Flows::PArray& parameters
     try
     {
         if(parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+        for(auto nodeId : _eventSubscriptions)
+        {
+            Flows::PINode node = _nodeManager->getNode(nodeId);
+            if(node) node->homegearEvent("updateDevice", parameters);
+        }
 
         return std::make_shared<Flows::Variable>();
     }
