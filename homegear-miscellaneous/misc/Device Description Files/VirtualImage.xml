@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="VirtualThermostat">
-			<description>VirtualThermostat</description>
-			<typeNumber>0xF003</typeNumber>
+		<device id="VirtualImage">
+			<description>VirtualImage</description>
+			<typeNumber>0xF008</typeNumber>
 		</device>
 	</supportedDevices>
 	<properties/>
@@ -15,7 +15,7 @@
 			<configParameters>config</configParameters>
 			<variables>maint_ch0_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualThermostat">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualImage">
 			<variables>custom_ch1_values</variables>
 		</function>
 	</functions>
@@ -33,48 +33,36 @@
 			</parameter>
 		</variables>
 		<variables id="custom_ch1_values">
-			<parameter id="ACTUAL_TEMPERATURE">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalDecimal>
-					<minimumValue>5.000000</minimumValue>
-					<maximumValue>30.000000</maximumValue>
-					<defaultValue>17.000000</defaultValue>
-				</logicalDecimal>
-				<physicalNone>
+	      <parameter id="IMAGE_URL">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
 					<operationType>store</operationType>
-				</physicalNone>
-			</parameter>
-			<parameter id="ACTUAL_HUMIDITY">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalFloat>
-					<minimumValue>0</minimumValue>
-					<maximumValue>100</maximumValue>
-					<defaultValue>50</defaultValue>
-				</logicalFloat>
-				<physicalNone>
+			</physicalNone>
+	      </parameter>
+	      <parameter id="BINARY_IMAGE">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
 					<operationType>store</operationType>
-				</physicalNone>
-			</parameter>
-			<parameter id="SET_TEMPERATURE">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalDecimal>
-					<minimumValue>5.000000</minimumValue>
-					<maximumValue>30.000000</maximumValue>
-					<defaultValue>17.000000</defaultValue>
-				</logicalDecimal>
-				<physicalNone>
-					<operationType>store</operationType>
-				</physicalNone>
-			</parameter>
+			</physicalNone>
+	      </parameter>
 			<parameter id="MODE">
 				<properties>
 					<readable>true</readable>
