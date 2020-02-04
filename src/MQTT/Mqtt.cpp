@@ -61,11 +61,34 @@ Mqtt::~Mqtt()
 	}
 }
 
+void Mqtt::getClientName()
+{
+    try
+    {
+        _clientName = _settings.clientName();
+        if(_clientName.empty() && !GD::bl->db->getHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, _clientName))
+        {
+            _clientName = BaseLib::HelperFunctions::getTimeUuid();
+            GD::bl->db->setHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, _clientName);
+            _out.printInfo("Info: Created new unique client name: " + _clientName);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Mqtt::loadSettings()
 {
 	_settings.load(GD::bl->settings.mqttSettingsPath());
 	auto parts = BaseLib::HelperFunctions::splitAll(_settings.bmxTopic() ? _settings.bmxPrefix() : _settings.prefix(), '/');
 	_prefixParts = parts.size() > 0 ? parts.size() - 1 : 0;
+	getClientName();
 }
 
 void Mqtt::start()
