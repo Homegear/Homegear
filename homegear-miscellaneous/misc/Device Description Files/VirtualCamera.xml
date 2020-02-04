@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<device id="VirtualCamera">
+			<description>VirtualCamera</description>
+			<typeNumber>0xF007</typeNumber>
+		</device>
+	</supportedDevices>
+	<properties/>
+	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+			<properties>
+				<internal>true</internal>
+			</properties>
+			<configParameters>config</configParameters>
+			<variables>maint_ch0_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualCamera">
+			<variables>custom_ch1_values</variables>
+		</function>
+	</functions>
+	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<configParameters id="config"/>
+		<variables id="maint_ch0_values">
+			<parameter id="LOWBAT">
+				<properties>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch1_values">
+	      <parameter id="STREAM_URL">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <mandatory>true</mandatory>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+	      <parameter id="SNAPSHOT_URL">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+	      <parameter id="BINARY_IMAGE">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+			<parameter id="PTZ_UP">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_DOWN">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_LEFT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_RIGHT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_CENTER">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_STOP">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_FAV_ONE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_FAV_TWO">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PTZ_FAV_THREE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="MOTION">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="MODE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>
