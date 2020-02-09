@@ -4570,9 +4570,16 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
             auto systemVariables = GD::systemVariableController->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
             if(!systemVariables->structValue->empty())
             {
-                auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                channelStruct->structValue->emplace("-1", std::move(systemVariables));
-                result->structValue->emplace("0", channelStruct);
+                if(parameters->size() > 1)
+                {
+                    result->structValue->emplace("-1", std::move(systemVariables));
+                }
+                else
+                {
+                    auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    channelStruct->structValue->emplace("-1", std::move(systemVariables));
+                    result->structValue->emplace("0", channelStruct);
+                }
             }
         }
 
