@@ -378,7 +378,7 @@ void Mqtt::listen()
 							_out.printError("Could not read packet: Too much data.");
 							break;
 						}
-						if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: MQTT packet received: " + BaseLib::HelperFunctions::getHexString(data));
+						if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: MQTT packet received: " + BaseLib::HelperFunctions::getHexString(data));
 					}
 					if(length == 0)
 					{
@@ -607,7 +607,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 
 			if(peerId == 0 && channel < 0)
 			{
-				GD::out.printInfo("Info: MQTT RPC call received. Method: setSystemVariable");
+				_out.printInfo("Info: MQTT RPC call received. Method: setSystemVariable");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(2);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(parts.at(_prefixParts + 4))));
@@ -617,7 +617,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			}
 			else if(peerId != 0 && channel < 0)
 			{
-				GD::out.printInfo("Info: MQTT RPC call received. Method: setMetadata");
+				_out.printInfo("Info: MQTT RPC call received. Method: setMetadata");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(3);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
@@ -628,7 +628,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 			}
 			else
 			{
-				GD::out.printInfo("Info: MQTT RPC call received. Method: setValue");
+                _out.printInfo("Info: MQTT RPC call received. Method: setValue");
 				BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 				parameters->arrayValue->reserve(4);
 				parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
@@ -643,7 +643,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 		{
 			uint64_t peerId = BaseLib::Math::getNumber(parts.at(_prefixParts + 2));
 			int32_t channel = BaseLib::Math::getNumber(parts.at(_prefixParts + 3));
-			GD::out.printInfo("Info: MQTT RPC call received. Method: putParamset");
+			_out.printInfo("Info: MQTT RPC call received. Method: putParamset");
 			BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
 			parameters->arrayValue->reserve(4);
 			parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
@@ -697,7 +697,7 @@ void Mqtt::processPublish(std::vector<char>& data)
 				_out.printWarning("Warning: Could not decode MQTT RPC packet.");
 				return;
 			}
-			GD::out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
+			_out.printInfo("Info: MQTT RPC call received. Method: " + methodName);
 			BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(_dummyClientInfo, methodName, parameters);
 			std::shared_ptr<MqttMessage> responseData(new MqttMessage());
 			_jsonEncoder->encodeMQTTResponse(methodName, response, messageId, responseData->message);
@@ -735,7 +735,7 @@ void Mqtt::subscribe(std::string topic)
 {
 	try
 	{
-		if(GD::bl->debugLevel >= 4) GD::out.printInfo("Info: Subscribing to topic " + topic);
+		if(GD::bl->debugLevel >= 4) _out.printInfo("Info: Subscribing to topic " + topic);
 		std::vector<char> payload;
 		payload.reserve(200);
 		int16_t id = 0;
@@ -1351,7 +1351,7 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool
 		packet.insert(packet.end(), payload.begin(), payload.end());
 		int32_t j = 0;
 		std::vector<char> response(7);
-		if(GD::bl->debugLevel >= 4) GD::out.printInfo("MQTT Client Info: Publishing topic   " + fullTopic);
+		if(GD::bl->debugLevel >= 4) _out.printInfo("MQTT Client Info: Publishing topic   " + fullTopic);
 		for(int32_t i = 0; i < 25; i++)
 		{
 			if(_reconnecting)
