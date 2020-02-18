@@ -430,6 +430,19 @@
             "de-DE": "Sicherheit - Türzustand"
         },
         "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.doorContact",
+                "roleIdsIn": [
+                    [
+                        301001
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        301001
+                    ]
+                ]
+            },
             "icon": "door_open_2",
             "translations": {
                 "de-DE": {
