@@ -18,6 +18,24 @@
 		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualVacuum">
 			<variables>custom_ch1_values</variables>
 		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="2" type="VirtualVacuum">
+			<variables>custom_ch2_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="3" type="VirtualVacuum">
+			<variables>custom_ch3_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="4" type="VirtualVacuum">
+			<variables>custom_ch4_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="5" type="VirtualVacuum">
+			<variables>custom_ch5_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="6" type="VirtualVacuum">
+			<variables>custom_ch6_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="7" type="VirtualVacuum">
+			<variables>custom_ch7_values</variables>
+		</function>
 	</functions>
 	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
 		<configParameters id="config"/>
@@ -269,6 +287,66 @@
 					<writeable>true</writeable>
 				</properties>
 				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch2_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch3_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch4_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch5_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch6_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
