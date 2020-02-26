@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -64,7 +64,9 @@ class GD
 public:
 	static std::unique_ptr<BaseLib::SharedObjects> bl;
 	static BaseLib::Output out;
-	static const std::string homegearVersion;
+	static const std::string baseLibVersion;
+    static const std::string nodeLibVersion;
+    static const std::string ipcLibVersion;
 	static std::string runAsUser;
 	static std::string runAsGroup;
 	static std::string configPath;

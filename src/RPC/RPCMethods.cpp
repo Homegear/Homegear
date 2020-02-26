@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -2721,7 +2721,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
             {
                 BaseLib::PVariable description(new BaseLib::Variable(BaseLib::VariableType::tStruct));
                 description->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(std::string("Homegear")))));
-                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(GD::homegearVersion))));
+                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(GD::baseLibVersion))));
                 return description;
             }
 
@@ -4921,7 +4921,7 @@ BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({}));
         if(error != ParameterError::Enum::noError) return getError(error);
         
-        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + GD::homegearVersion));
+        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + GD::baseLibVersion));
     }
     catch(const std::exception& ex)
     {

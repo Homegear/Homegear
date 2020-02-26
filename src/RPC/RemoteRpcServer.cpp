@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -229,7 +229,7 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 			if(json) _jsonEncoder->encodeRequest(methodName, parameters, encodedPacket);
 			else _xmlRpcEncoder->encodeRequest(methodName, parameters, encodedPacket);
 
-			const std::string header = "POST " + path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::homegearVersion + "\r\nHost: " + hostname + ":" + address.second + "\r\nContent-Type: " + (json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(encodedPacket.size() + 2) + "\r\nConnection: Keep-Alive\r\n\r\n";
+			const std::string header = "POST " + path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::baseLibVersion + "\r\nHost: " + hostname + ":" + address.second + "\r\nContent-Type: " + (json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(encodedPacket.size() + 2) + "\r\nConnection: Keep-Alive\r\n\r\n";
 			encodedPacket.reserve(encodedPacket.size() + header.size() + 2);
 			encodedPacket.push_back('\r');
 			encodedPacket.push_back('\n');

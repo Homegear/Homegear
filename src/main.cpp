@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -570,7 +570,7 @@ void startUp()
 		}
 
     	GD::out.printMessage("Starting Homegear...");
-    	GD::out.printMessage(std::string("Homegear version ") + GD::homegearVersion);
+    	GD::out.printMessage(std::string("Homegear version ") + GD::baseLibVersion);
 
         GD::out.printMessage("Determining maximum thread count...");
         try
@@ -1082,11 +1082,23 @@ int main(int argc, char* argv[])
 		else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
 		else GD::configPath = "/etc/homegear/";
 
-    	if(std::string(GD::homegearVersion) != GD::bl->version())
+    	if(std::string(GD::baseLibVersion) != GD::bl->version())
     	{
-    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + GD::homegearVersion + " but got version " + GD::bl->version());
+    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + GD::baseLibVersion + " but got version " + GD::bl->version());
     		exit(1);
     	}
+
+        if(std::string(GD::nodeLibVersion) != Flows::INode::version())
+        {
+            GD::out.printCritical(std::string("Node library has wrong version. Expected version ") + GD::nodeLibVersion + " but got version " + Flows::INode::version());
+            exit(1);
+        }
+
+        if(std::string(GD::ipcLibVersion) != Ipc::IIpcClient::version())
+        {
+            GD::out.printCritical(std::string("IPC library has wrong version. Expected version ") + GD::ipcLibVersion + " but got version " + Ipc::IIpcClient::version());
+            exit(1);
+        }
 
     	for(int32_t i = 1; i < argc; i++)
     	{
@@ -1508,11 +1520,15 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-v")
     		{
-    			std::cout << "Homegear version " << GD::homegearVersion << std::endl;
-    			std::cout << "Copyright (c) 2013-2019 Homegear GmbH" << std::endl << std::endl;
+    			std::cout << "Homegear version " << GD::baseLibVersion << std::endl;
+                std::cout << "Copyright (c) 2013-2020 Homegear GmbH" << std::endl << std::endl;
+                std::cout << "Required library versions:" << std::endl;
+                std::cout << "  - libhomegear-base: " << GD::baseLibVersion << std::endl;
+                std::cout << "  - libhomegear-node: " << GD::nodeLibVersion << std::endl;
+                std::cout << "  - libhomegear-ipc:  " << GD::ipcLibVersion << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999-2019 The PHP Group. All rights reserved." << std::endl << std::endl;
+    			std::cout << "Copyright (c) 1999-2020 The PHP Group. All rights reserved." << std::endl << std::endl;
 
     			exit(0);
     		}
