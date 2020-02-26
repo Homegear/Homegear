@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<device id="VirtualMediaPlayer">
+			<description>VirtualVacuum</description>
+			<typeNumber>0xF00a</typeNumber>
+		</device>
+	</supportedDevices>
+	<properties/>
+	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+			<properties>
+				<internal>true</internal>
+			</properties>
+			<configParameters>config</configParameters>
+			<variables>maint_ch0_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualMediaPlayer">
+			<variables>custom_ch1_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="2" type="VirtualMediaPlayer">
+			<variables>custom_ch2_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="3" type="VirtualMediaPlayer">
+			<variables>custom_ch3_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="4" type="VirtualMediaPlayer">
+			<variables>custom_ch4_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="5" type="VirtualMediaPlayer">
+			<variables>custom_ch5_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="6" type="VirtualMediaPlayer">
+			<variables>custom_ch6_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="7" type="VirtualMediaPlayer">
+			<variables>custom_ch7_values</variables>
+		</function>
+	</functions>
+	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<configParameters id="config"/>
+		<variables id="maint_ch0_values">
+			<parameter id="LOWBAT">
+				<properties>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch1_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="BATTERY">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalDecimal/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+	      <parameter id="CURRENT_ALBUM_ART">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+	      <parameter id="CURRENT_ALBUM_ART_BINARY">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+			<parameter id="CURRENT_TITLE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="CURRENT_ARTIST">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="CURRENT_ALBUM">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="MODE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="INFO">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PLAY">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="STOP">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PAUSE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="NEXT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>			
+			<parameter id="PREVIOUS">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="REWIND">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="FORWARD">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="VOLUME">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch2_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch3_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch4_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch5_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch6_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>
