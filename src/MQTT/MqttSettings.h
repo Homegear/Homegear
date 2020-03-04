@@ -69,6 +69,8 @@ public:
 
     std::string password() { return _password; }
 
+    uint32_t qos() { return _qos; }
+
     bool retain() { return _retain; }
 
     bool plainTopic() { return _plainTopic; }
@@ -118,6 +120,7 @@ private:
     std::string _homegearId;
     std::string _username;
     std::string _password;
+    uint32_t _qos;
     bool _retain = true;
     bool _plainTopic = true;
     bool _jsonTopic = true;
