@@ -2068,7 +2068,15 @@ void DatabaseController::createDefaultRoles()
                             auto translationsIterator = roleEntry->structValue->find("translations");
                             if(idIterator == roleEntry->structValue->end() || translationsIterator == roleEntry->structValue->end()) continue;
 
-                            int64_t id = idIterator->second->integerValue64;
+                            int64_t id = 0;
+                            if(idIterator->second->type == BaseLib::VariableType::tInteger64 || idIterator->second->type == BaseLib::VariableType::tInteger)
+                            {
+                                id = idIterator->second->integerValue64;
+                            }
+                            else
+                            {
+                                id = BaseLib::Math::getNumber64(BaseLib::HelperFunctions::stringReplace(idIterator->second->stringValue, ".", ""));
+                            }
                             if(id <= 0) continue;
 
                             auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -4232,6 +4240,19 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
     uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
     if(result == 0) throw BaseLib::Exception("Error saving peer to database. See previous errors in log for more information.");
     return result;
+}
+
+uint64_t DatabaseController::savePeerParameterSynchronous(BaseLib::Database::DataRow& data)
+{
+    if(data.size() == 7)
+    {
+        data.push_front(data.at(5));
+        uint64_t result = _db.executeWriteCommand("REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue) + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND remotePeer=" + std::to_string(data.at(4)->intValue) + " AND remoteChannel=" + std::to_string(data.at(5)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)", data);
+        if(result == 0) throw BaseLib::Exception("Error saving peer parameter to database. See previous errors in log for more information.");
+        return result;
+    }
+    else GD::out.printError("Error: The number of columns is invalid.");
+    return 0;
 }
 
 void DatabaseController::savePeerParameterAsynchronous(BaseLib::Database::DataRow& data)

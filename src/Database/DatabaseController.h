@@ -322,6 +322,8 @@ public:
 
 	uint64_t savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type) override;
 
+    uint64_t savePeerParameterSynchronous(BaseLib::Database::DataRow& data) override;
+
 	void savePeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
 
 	void saveSpecialPeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
