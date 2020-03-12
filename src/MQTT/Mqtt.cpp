@@ -745,7 +745,7 @@ void Mqtt::subscribe(std::string topic)
 		payload.push_back(topic.size() >> 8);
 		payload.push_back(topic.size() & 0xFF);
 		payload.insert(payload.end(), topic.begin(), topic.end());
-		payload.push_back(1); //QoS
+		payload.push_back(_settings.qos());
 		std::vector<char> lengthBytes = getLengthBytes(payload.size());
 		std::vector<char> subscribePacket;
 		subscribePacket.reserve(1 + lengthBytes.size() + payload.size());
@@ -1346,7 +1346,8 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool
 		lengthBytes = getLengthBytes(payload.size());
 
 		packet.reserve(1 + lengthBytes.size() + payload.size());
-		retain && _settings.retain() ? packet.push_back(0x33) : packet.push_back(0x32);
+		retain && _settings.retain() ? packet.push_back(0x31) : packet.push_back(0x30);
+		if(_settings.qos() == 1) packet.back() |= 2;
 		packet.insert(packet.end(), lengthBytes.begin(), lengthBytes.end());
 		packet.insert(packet.end(), payload.begin(), payload.end());
 		int32_t j = 0;
@@ -1362,13 +1363,18 @@ void Mqtt::publish(const std::string& topic, const std::vector<char>& data, bool
 			}
 			if(!_socket->connected()) reconnect();
 			if(!_started) break;
+            if(_settings.qos() == 0)
+            {
+                send(packet);
+                return;
+            }
 			if(i == 1) packet[0] |= 8;
 			getResponse(packet, response, MQTT_PACKET_PUBACK, id, true);
 			if(response.empty())
 			{
 				//_socket->close();
 				//reconnect();
-				if(i >= 5) _out.printWarning("MQTT Client Warning: No PUBACK received.");
+				if(i >= 5) _out.printWarning("MQTT client warning: No PUBACK received.");
 			}
 			else return;
 
