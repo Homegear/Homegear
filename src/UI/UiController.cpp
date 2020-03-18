@@ -170,87 +170,99 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables for roles required by UI element.");
 
+                    size_t roleCount = 0;
+
                     auto channelIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
                     if(channelIterator != variables->structValue->end() && !channelIterator->second->structValue->empty())
                     {
-                        size_t roleCount = 0;
-
                         auto variableIterator = channelIterator->second->structValue->find(variable->arrayValue->at(2)->stringValue);
                         if(variableIterator != channelIterator->second->structValue->end())
                         {
+                            bool wrongDirection = false;
                             auto directionIterator = variableIterator->second->structValue->find("direction");
                             if(directionIterator != variableIterator->second->structValue->end())
                             {
                                 if(directionIterator->second->integerValue64 == 1)
                                 {
                                     GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator->first + " does not have required direction (input). Simple UI element creation is not possible.");
-                                    continue;
+                                    wrongDirection = true;
                                 }
                             }
 
-                            roleCount++;
+                            if(!wrongDirection)
+                            {
+                                roleCount++;
 
-                            //Role in variable
-                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator->first));
-                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                //Role in variable
+                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator->first));
+                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                            }
                         }
-                        else
+
+                        if(roleCount == 0)
                         {
                             //Variable not found, look for alternative in channel
                             for(auto& variableIterator2 : *channelIterator->second->structValue)
                             {
+                                bool wrongDirection = false;
                                 auto directionIterator = variableIterator2.second->structValue->find("direction");
                                 if(directionIterator != variableIterator2.second->structValue->end())
                                 {
                                     if(directionIterator->second->integerValue64 == 1)
                                     {
                                         GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator2.first + " does not have required direction (input). Simple UI element creation is not possible.");
-                                        continue;
+                                        wrongDirection = true;
                                     }
                                 }
 
-                                roleCount++;
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
 
-                                //Role in channel
-                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
-                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                    //Role in channel
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
                             }
                         }
 
                         if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role (" + std::to_string(roleId) + ") exists multiple times in channel. Simple UI element creation is not possible.");
                     }
-                    else
+
+                    if(roleCount == 0)
                     {
                         //Role not in channel
-                        size_t roleCount = 0;
-
                         for(auto& channelIterator2 : *variables->structValue)
                         {
                             for(auto& variableIterator : *channelIterator2.second->structValue)
                             {
+                                bool wrongDirection = false;
                                 auto directionIterator = variableIterator.second->structValue->find("direction");
                                 if(directionIterator != variableIterator.second->structValue->end())
                                 {
                                     if(directionIterator->second->integerValue64 == 1)
                                     {
                                         GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
-                                        continue;
+                                        wrongDirection = true;
                                     }
                                 }
 
-                                roleCount++;
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
 
-                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
                             }
                         }
 
@@ -261,33 +273,37 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                             //Role not in device, try to find role in room
                             requestParameters->arrayValue->resize(1);
                             requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
-                            std::string methodName = "getRolesInRoom";
-                            auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                            if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
+                            std::string methodName2 = "getRolesInRoom";
+                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+                            if(variables2->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
 
-                            for(auto& deviceIterator : *variables->structValue)
+                            for(auto& deviceIterator : *variables2->structValue)
                             {
                                 for(auto& channelIterator2 : *deviceIterator.second->structValue)
                                 {
                                     for(auto& variableIterator : *channelIterator2.second->structValue)
                                     {
+                                        bool wrongDirection = false;
                                         auto directionIterator = variableIterator.second->structValue->find("direction");
                                         if(directionIterator != variableIterator.second->structValue->end())
                                         {
                                             if(directionIterator->second->integerValue64 == 1)
                                             {
                                                 GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + " of device " + deviceIterator.first + ". Simple UI element creation is not possible.");
-                                                continue;
+                                                wrongDirection = true;
                                             }
                                         }
 
-                                        roleCount++;
+                                        if(!wrongDirection)
+                                        {
+                                            roleCount++;
 
-                                        auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                        roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                        roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                        roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                        outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                        }
                                     }
                                 }
                             }
@@ -304,7 +320,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 inputPeers->arrayValue->emplace_back(std::move(outerArray));
             }
 
-            for(auto roleIdOuter : roleIdsOut)
+            for(const auto& roleIdOuter : roleIdsOut)
             {
                 auto outerArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 outerArray->arrayValue->reserve(roleIdOuter.size());
@@ -318,86 +334,98 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables for roles required by UI element.");
 
+                    size_t roleCount = 0;
+
                     auto channelIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
                     if(channelIterator != variables->structValue->end() && !channelIterator->second->structValue->empty())
                     {
-                        size_t roleCount = 0;
-
                         auto variableIterator = channelIterator->second->structValue->find(variable->arrayValue->at(2)->stringValue);
                         if(variableIterator != channelIterator->second->structValue->end())
                         {
+                            bool wrongDirection = false;
                             auto directionIterator = variableIterator->second->structValue->find("direction");
                             if(directionIterator != variableIterator->second->structValue->end())
                             {
                                 if(directionIterator->second->integerValue64 == 0)
                                 {
                                     GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator->first + " does not have required direction (output). Simple UI element creation is not possible.");
-                                    continue;
+                                    wrongDirection = true;
                                 }
                             }
 
-                            roleCount++;
-
-                            //Role in channel
-                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator->first));
-                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
-                        }
-                        else
-                        {
-                            for(auto& variableIterator2 : *channelIterator->second->structValue)
+                            if(!wrongDirection)
                             {
-                                auto directionIterator = variableIterator2.second->structValue->find("direction");
-                                if(directionIterator != variableIterator2.second->structValue->end())
-                                {
-                                    if(directionIterator->second->integerValue64 == 0)
-                                    {
-                                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator2.first + " does not have required direction (output). Simple UI element creation is not possible.");
-                                        continue;
-                                    }
-                                }
-
                                 roleCount++;
 
                                 //Role in channel
                                 auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                                 roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
                                 roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator->first));
                                 outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                            }
+                        }
+
+                        if(roleCount == 0)
+                        {
+                            for(auto& variableIterator2 : *channelIterator->second->structValue)
+                            {
+                                bool wrongDirection = false;
+                                auto directionIterator = variableIterator2.second->structValue->find("direction");
+                                if(directionIterator != variableIterator2.second->structValue->end())
+                                {
+                                    if(directionIterator->second->integerValue64 == 0)
+                                    {
+                                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator2.first + " does not have required direction (output). Simple UI element creation is not possible.");
+                                        wrongDirection = true;
+                                    }
+                                }
+
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
+
+                                    //Role in channel
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
                             }
                         }
 
                         if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role (" + std::to_string(roleId) + ") exists multiple times in channel. Simple UI element creation is not possible.");
                     }
-                    else
+
+                    if(roleCount == 0)
                     {
                         //Role not in channel
-                        size_t roleCount = 0;
-
                         for(auto& channelIterator2 : *variables->structValue)
                         {
                             for(auto& variableIterator : *channelIterator2.second->structValue)
                             {
+                                bool wrongDirection = false;
                                 auto directionIterator = variableIterator.second->structValue->find("direction");
                                 if(directionIterator != variableIterator.second->structValue->end())
                                 {
                                     if(directionIterator->second->integerValue64 == 0)
                                     {
                                         GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
-                                        continue;
+                                        wrongDirection = true;
                                     }
                                 }
 
-                                roleCount++;
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
 
-                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
                             }
                         }
 
@@ -408,33 +436,37 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                             //Role not in device, try to find role in room
                             requestParameters->arrayValue->resize(1);
                             requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
-                            std::string methodName = "getRolesInRoom";
-                            auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                            if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
+                            std::string methodName2 = "getRolesInRoom";
+                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+                            if(variables2->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
 
-                            for(auto& deviceIterator : *variables->structValue)
+                            for(auto& deviceIterator : *variables2->structValue)
                             {
                                 for(auto& channelIterator2 : *deviceIterator.second->structValue)
                                 {
                                     for(auto& variableIterator : *channelIterator2.second->structValue)
                                     {
+                                        bool wrongDirection = false;
                                         auto directionIterator = variableIterator.second->structValue->find("direction");
                                         if(directionIterator != variableIterator.second->structValue->end())
                                         {
                                             if(directionIterator->second->integerValue64 == 0)
                                             {
                                                 GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first + ". Simple UI element creation is not possible.");
-                                                continue;
+                                                wrongDirection = true;
                                             }
                                         }
 
-                                        roleCount++;
+                                        if(!wrongDirection)
+                                        {
+                                            roleCount++;
 
-                                        auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                        roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                        roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                        roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                        outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                        }
                                     }
                                 }
                             }
