@@ -56,19 +56,36 @@
             "de-DE": "Licht - Helligkeit"
         },
         "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.lightingBrightness",
-                "roleIdsIn": [
-                    [
-                        101000
+            "simpleCreationInfo": [
+                {
+                    "element": "Base.lightingSwitchBrightness",
+                    "roleIdsIn": [
+                        [
+                            100001,
+                            101000
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001,
+                            101000
+                        ]
                     ]
-                ],
-                "roleIdsOut": [
-                    [
-                        101000
+                },
+                {
+                    "element": "Base.lightingBrightness",
+                    "roleIdsIn": [
+                        [
+                            101000
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            101000
+                        ]
                     ]
-                ]
-            },
+                }
+            ],
             "icon": "light_dim_1",
             "invokeOutputs": [
                 {
