@@ -60,7 +60,7 @@ void UiController::load()
             uiElement->databaseId = (uint64_t) row.second.at(0)->intValue;
             uiElement->elementId = row.second.at(1)->textValue;
             uiElement->data = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
-            uiElement->metadata = _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
+            uiElement->metadata = row.second.at(3)->binaryValue->empty() ? std::make_shared<BaseLib::Variable>() : _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
 
             if(uiElement->databaseId == 0 || uiElement->elementId.empty()) continue;
 
@@ -1322,6 +1322,7 @@ BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientI
         }
 
         GD::bl->db->setUiElementMetadata(databaseId, metadata);
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {

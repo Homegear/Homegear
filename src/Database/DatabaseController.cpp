@@ -1150,7 +1150,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUiElements(
 {
     try
     {
-        return _db.executeCommand("SELECT id, element, data FROM uiElements");
+        return _db.executeCommand("SELECT id, element, data, metadata FROM uiElements");
     }
     catch(const std::exception& ex)
     {
