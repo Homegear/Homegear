@@ -292,7 +292,9 @@ RpcServer::RpcServer()
         _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
         _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
         _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
+        _rpcMethods->emplace("getUiElementMetadata", std::make_shared<RPCGetUiElementMetadata>());
         _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
+        _rpcMethods->emplace("setUiElementMetadata", std::make_shared<RPCSetUiElementMetadata>());
     //}}}
 
     //{{{ Users

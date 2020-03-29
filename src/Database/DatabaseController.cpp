@@ -127,7 +127,7 @@ void DatabaseController::initializeDatabase()
         _db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS roles (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS rolesIndex ON roles (id)");
-        _db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB)");
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB, metadata BLOB)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id, element)");
 
         //{{{ Create default groups
@@ -367,7 +367,7 @@ void DatabaseController::initializeDatabase()
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.11")));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.12")));
             data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
             _db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -441,7 +441,7 @@ bool DatabaseController::convertDatabase()
         int64_t versionId = result->at(0).at(0)->intValue;
         std::string version = result->at(0).at(3)->textValue;
 
-        if(version == "0.7.11") return false; //Up to date
+        if(version == "0.7.12") return false; //Up to date
         /*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -848,8 +848,26 @@ bool DatabaseController::convertDatabase()
 
             version = "0.7.11";
         }
+        if(version == "0.7.11")
+        {
+            GD::out.printMessage("Converting database from version " + version + " to version 0.7.12...");
 
-        if(version != "0.7.11")
+            data.clear();
+            _db.executeCommand("ALTER TABLE uiElements ADD COLUMN metadata BLOB");
+
+            data.clear();
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+            //Don't forget to set new version in initializeDatabase!!!
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.12")));
+            data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+            _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+            version = "0.7.12";
+        }
+
+        if(version != "0.7.12")
         {
             GD::out.printCritical("Critical: Unknown database version: " + version);
             return true; //Don't know, what to do
@@ -1096,20 +1114,24 @@ BaseLib::PVariable DatabaseController::deleteData(std::string& component, std::s
 //}}}
 
 //{{{ UI
-uint64_t DatabaseController::addUiElement(std::string& elementId, BaseLib::PVariable data)
+uint64_t DatabaseController::addUiElement(const std::string& elementStringId, const BaseLib::PVariable& data, const BaseLib::PVariable& metadata)
 {
     try
     {
         BaseLib::Database::DataRow rowData;
         rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>());
 
-        rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(elementId));
+        rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(elementStringId));
 
         std::vector<char> dataBlob;
         _rpcEncoder->encodeResponse(data, dataBlob);
         rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(dataBlob));
 
-        uint64_t result = _db.executeWriteCommand("REPLACE INTO uiElements VALUES(?, ?, ?)", rowData);
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+        rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+        uint64_t result = _db.executeWriteCommand("REPLACE INTO uiElements VALUES(?, ?, ?, ?)", rowData);
 
         return result;
     }
@@ -1141,6 +1163,29 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUiElements(
     return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
+BaseLib::PVariable DatabaseController::getUiElementMetadata(uint64_t databaseId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(databaseId));
+        auto rows = _db.executeCommand("SELECT metadata FROM uiElements WHERE id=?", data);
+
+        if(rows->empty()) return BaseLib::Variable::createError(-1, "Unknown UI element.");
+
+        return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 void DatabaseController::removeUiElement(uint64_t databaseId)
 {
     try
@@ -1158,6 +1203,33 @@ void DatabaseController::removeUiElement(uint64_t databaseId)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+BaseLib::PVariable DatabaseController::setUiElementMetadata(uint64_t databaseId, const BaseLib::PVariable& metadata)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(databaseId));
+        if(_db.executeCommand("SELECT id FROM uiElements WHERE id=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown UI element.");
+
+        std::vector<char> metadataBlob;
+        _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+        data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+        _db.executeCommand("UPDATE uiElements SET metadata=? WHERE id=?", data);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 //}}}
 

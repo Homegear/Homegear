@@ -253,7 +253,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
         _rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
         _rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
+        _rpcMethods.emplace("getUiElementMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUiElementMetadata()));
         _rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+        _rpcMethods.emplace("setUiElementMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetUiElementMetadata()));
     }
 
     _localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));

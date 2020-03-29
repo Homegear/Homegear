@@ -100,11 +100,15 @@ public:
 	// }}}
 
 	// {{{ UI
-	uint64_t addUiElement(std::string& elementId, BaseLib::PVariable data) override;
+	uint64_t addUiElement(const std::string& elementStringId, const BaseLib::PVariable& data, const BaseLib::PVariable& metadata) override;
 
 	std::shared_ptr<BaseLib::Database::DataTable> getUiElements() override;
 
+    BaseLib::PVariable getUiElementMetadata(uint64_t databaseId) override;
+
 	void removeUiElement(uint64_t databaseId) override;
+
+    BaseLib::PVariable setUiElementMetadata(uint64_t databaseId, const BaseLib::PVariable& metadata) override;
 	// }}}
 
 	// {{{ Stories

@@ -312,6 +312,7 @@ public:
     RPCAddUiElement()
     {
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tStruct});
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
     }
 
@@ -1265,6 +1266,17 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCGetUiElementMetadata : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCGetUiElementMetadata()
+    {
+        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCGetUpdateStatus : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -2007,6 +2019,17 @@ public:
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
+class RPCSetUiElementMetadata : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RPCSetUiElementMetadata()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);

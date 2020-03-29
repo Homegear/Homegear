@@ -60,6 +60,7 @@ void UiController::load()
             uiElement->databaseId = (uint64_t) row.second.at(0)->intValue;
             uiElement->elementId = row.second.at(1)->textValue;
             uiElement->data = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+            uiElement->metadata = _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
 
             if(uiElement->databaseId == 0 || uiElement->elementId.empty()) continue;
 
@@ -79,7 +80,7 @@ void UiController::load()
     }
 }
 
-BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data)
+BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo, const std::string& elementId, const BaseLib::PVariable& data, const BaseLib::PVariable& metadata)
 {
     try
     {
@@ -87,7 +88,7 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
         if(data->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "data is not of type Struct.");
 
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
-        auto databaseId = GD::bl->db->addUiElement(elementId, data);
+        auto databaseId = GD::bl->db->addUiElement(elementId, data, metadata);
 
         if(databaseId == 0) return BaseLib::Variable::createError(-1, "Error adding element to database.");
 
@@ -638,7 +639,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 addUiElementData->structValue->emplace("metadata", metadata);
             }
 
-            return addUiElement(clientInfo, elementId, addUiElementData);
+            return addUiElement(clientInfo, elementId, addUiElementData, std::make_shared<BaseLib::Variable>());
         }
         else return std::make_shared<BaseLib::Variable>();
     }
@@ -649,7 +650,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVariable& data)
+void UiController::addDataInfo(UiController::PUiElement& uiElement, const BaseLib::PVariable& data)
 {
     try
     {
@@ -971,6 +972,8 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                 }
             }
 
+            elementInfo->structValue->emplace("dynamicMetadata", uiElement->metadata);
+
             uiElements->arrayValue->emplace_back(elementInfo);
         }
 
@@ -988,6 +991,23 @@ BaseLib::PVariable UiController::getAvailableUiElements(const BaseLib::PRpcClien
     try
     {
         return _descriptions->getUiElements(language);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::getUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+        auto elementIterator = _uiElements.find(databaseId);
+        if(elementIterator == _uiElements.end()) return BaseLib::Variable::createError(-2, "Unknown element.");
+
+        return elementIterator->second->metadata;
     }
     catch(const std::exception& ex)
     {
@@ -1281,6 +1301,27 @@ BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo& 
         _uiElements.erase(elementIterator);
 
         return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId, const BaseLib::PVariable& metadata)
+{
+    try
+    {
+        {
+            std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+            auto elementIterator = _uiElements.find(databaseId);
+            if(elementIterator == _uiElements.end()) return BaseLib::Variable::createError(-2, "Unknown element.");
+
+            elementIterator->second->metadata = metadata;
+        }
+
+        GD::bl->db->setUiElementMetadata(databaseId, metadata);
     }
     catch(const std::exception& ex)
     {
