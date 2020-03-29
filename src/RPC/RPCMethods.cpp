@@ -1196,7 +1196,7 @@ BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, B
         else
         {
             auto metadata = (parameters->size() == 3 ? parameters->at(2) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
-            return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
+            return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1), metadata);
         }
     }
     catch(const std::exception& ex)
