@@ -229,6 +229,14 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             return BaseLib::Variable::createError(-1, "translations and profile are empty or not a valid Struct.");
         }
 
+        {
+            std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
+            auto variableProfileIterator = _variableProfiles.find(profileId);
+            if(variableProfileIterator == _variableProfiles.end()) return BaseLib::Variable::createError(-1, "Variable profile not found.");
+            if(!translations->structValue->empty()) variableProfileIterator->second->name = translations;
+            if(!profile->structValue->empty()) variableProfileIterator->second->profile = profile;
+        }
+
         auto result = GD::bl->db->updateVariableProfile(profileId, translations, profile);
 
         return std::make_shared<BaseLib::Variable>(result);
