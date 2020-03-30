@@ -310,9 +310,9 @@ RpcServer::RpcServer()
     //}}}
 
     //{{{ Variable profiles
+    _rpcMethods->emplace("activateVariableProfile", std::make_shared<RpcMethods::RpcActivateVariableProfile>());
     _rpcMethods->emplace("addVariableProfile", std::make_shared<RpcMethods::RpcAddVariableProfile>());
     _rpcMethods->emplace("deleteVariableProfile", std::make_shared<RpcMethods::RpcDeleteVariableProfile>());
-    _rpcMethods->emplace("executeVariableProfile", std::make_shared<RpcMethods::RpcExecuteVariableProfile>());
     _rpcMethods->emplace("getAllVariableProfiles", std::make_shared<RpcMethods::RpcGetAllVariableProfiles>());
     _rpcMethods->emplace("getVariableProfile", std::make_shared<RpcMethods::RpcGetVariableProfile>());
     _rpcMethods->emplace("updateVariableProfile", std::make_shared<RpcMethods::RpcUpdateVariableProfile>());

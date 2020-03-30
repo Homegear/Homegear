@@ -64,54 +64,7 @@ void VariableProfileManager::load()
     }
 }
 
-BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile)
-{
-    try
-    {
-        if(translations->structValue->empty() || profile->structValue->empty())
-        {
-            return BaseLib::Variable::createError(-1, "translations or profile is empty or not a valid Struct.");
-        }
-
-        uint64_t id = GD::bl->db->addVariableProfile(translations, profile);
-        if(id == 0) return BaseLib::Variable::createError(-1, "Could not insert profile into database.");
-
-        auto variableProfile = std::make_shared<VariableProfile>();
-        variableProfile->id = id;
-        variableProfile->name = translations;
-        variableProfile->profile = profile;
-
-        std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
-        _variableProfiles.emplace(variableProfile->id, std::move(variableProfile));
-
-        return std::make_shared<BaseLib::Variable>(id);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable VariableProfileManager::deleteVariableProfile(uint64_t profileId)
-{
-    try
-    {
-        GD::bl->db->deleteVariableProfile(profileId);
-
-        std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
-        _variableProfiles.erase(profileId);
-
-        return std::make_shared<BaseLib::Variable>();
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable VariableProfileManager::executeVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId)
+BaseLib::PVariable VariableProfileManager::activateVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId)
 {
     try
     {
@@ -154,6 +107,53 @@ BaseLib::PVariable VariableProfileManager::executeVariableProfile(const BaseLib:
         }
 
         return std::make_shared<BaseLib::Variable>(returnValue);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile)
+{
+    try
+    {
+        if(translations->structValue->empty() || profile->structValue->empty())
+        {
+            return BaseLib::Variable::createError(-1, "translations or profile is empty or not a valid Struct.");
+        }
+
+        uint64_t id = GD::bl->db->addVariableProfile(translations, profile);
+        if(id == 0) return BaseLib::Variable::createError(-1, "Could not insert profile into database.");
+
+        auto variableProfile = std::make_shared<VariableProfile>();
+        variableProfile->id = id;
+        variableProfile->name = translations;
+        variableProfile->profile = profile;
+
+        std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
+        _variableProfiles.emplace(variableProfile->id, std::move(variableProfile));
+
+        return std::make_shared<BaseLib::Variable>(id);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable VariableProfileManager::deleteVariableProfile(uint64_t profileId)
+{
+    try
+    {
+        GD::bl->db->deleteVariableProfile(profileId);
+
+        std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
+        _variableProfiles.erase(profileId);
+
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {

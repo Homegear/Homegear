@@ -39,6 +39,17 @@ namespace Homegear
 namespace RpcMethods
 {
 
+class RpcActivateVariableProfile : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RpcActivateVariableProfile()
+    {
+        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RpcAddVariableProfile : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -56,17 +67,6 @@ public:
     RpcDeleteVariableProfile()
     {
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
-};
-
-class RpcExecuteVariableProfile : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcExecuteVariableProfile()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;

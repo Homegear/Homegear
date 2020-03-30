@@ -58,9 +58,9 @@ public:
     VariableProfileManager();
 
     void load();
+    BaseLib::PVariable activateVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId);
     BaseLib::PVariable addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile);
     BaseLib::PVariable deleteVariableProfile(uint64_t profileId);
-    BaseLib::PVariable executeVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId);
     BaseLib::PVariable getAllVariableProfiles(const std::string& languageCode);
     BaseLib::PVariable getVariableProfile(uint64_t id, const std::string& languageCode);
     BaseLib::PVariable updateVariableProfile(uint64_t profileId, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile);
