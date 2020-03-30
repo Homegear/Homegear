@@ -32,6 +32,8 @@
 
 #include "ScriptEngineServer.h"
 #include "../GD/GD.h"
+#include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
@@ -292,6 +294,15 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
     //}}}
 
+    //{{{ Variable profiles
+    _rpcMethods.emplace("addVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcAddVariableProfile>()));
+    _rpcMethods.emplace("deleteVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcDeleteVariableProfile>()));
+    _rpcMethods.emplace("executeVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcExecuteVariableProfile>()));
+    _rpcMethods.emplace("getAllVariableProfiles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetAllVariableProfiles>()));
+    _rpcMethods.emplace("getVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetVariableProfile>()));
+    _rpcMethods.emplace("updateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcUpdateVariableProfile>()));
+    //}}}
+
     //{{{ Groups
     _localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -301,19 +312,25 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("updateGroup", std::bind(&ScriptEngineServer::updateGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //}}}
 
+    //{{{ Modules
     _localRpcMethods.emplace("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("unloadModule", std::bind(&ScriptEngineServer::unloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("reloadModule", std::bind(&ScriptEngineServer::reloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 
+    //{{{ License modules
     _localRpcMethods.emplace("checkLicense", std::bind(&ScriptEngineServer::checkLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 
+    //{{{ Node-BLUE
     _localRpcMethods.emplace("nodeEvent", std::bind(&ScriptEngineServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("nodeOutput", std::bind(&ScriptEngineServer::nodeOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&ScriptEngineServer::executePhpNodeBaseMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 }
 
 ScriptEngineServer::~ScriptEngineServer()

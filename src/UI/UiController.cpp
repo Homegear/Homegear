@@ -87,17 +87,30 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
         if(elementId.empty()) return BaseLib::Variable::createError(-1, "elementId is empty.");
         if(data->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "data is not of type Struct.");
 
+        BaseLib::PVariable dataCopy = data;
+        BaseLib::PVariable dynamicMetadata = metadata;
+        if(!dynamicMetadata || dynamicMetadata->structValue->empty())
+        {
+            auto metadataIterator = dataCopy->structValue->find("dynamicMetadata");
+            if(metadataIterator != dataCopy->structValue->end())
+            {
+                dynamicMetadata = metadataIterator->second;
+                dataCopy->structValue->erase("dynamicMetadata");
+            }
+        }
+
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
-        auto databaseId = GD::bl->db->addUiElement(elementId, data, metadata);
+        auto databaseId = GD::bl->db->addUiElement(elementId, dataCopy, dynamicMetadata);
 
         if(databaseId == 0) return BaseLib::Variable::createError(-1, "Error adding element to database.");
 
         auto uiElement = std::make_shared<UiElement>();
         uiElement->databaseId = databaseId;
         uiElement->elementId = elementId;
-        uiElement->data = data;
+        uiElement->data = dataCopy;
+        uiElement->metadata = dynamicMetadata;
 
-        addDataInfo(uiElement, data);
+        addDataInfo(uiElement, dataCopy);
 
         _uiElements.emplace(uiElement->databaseId, uiElement);
         _uiElementsByRoom[uiElement->roomId].emplace(uiElement);

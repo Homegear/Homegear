@@ -29,6 +29,7 @@
 */
 
 #include "RpcServer.h"
+#include "RpcMethods/VariableProfileRpcMethods.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <gnutls/gnutls.h>
@@ -306,6 +307,15 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("deleteUserData", std::make_shared<RPCDeleteUserData>());
     _rpcMethods->emplace("getUserData", std::make_shared<RPCGetUserData>());
     _rpcMethods->emplace("setUserData", std::make_shared<RPCSetUserData>());
+    //}}}
+
+    //{{{ Variable profiles
+    _rpcMethods->emplace("addVariableProfile", std::make_shared<RpcMethods::RpcAddVariableProfile>());
+    _rpcMethods->emplace("deleteVariableProfile", std::make_shared<RpcMethods::RpcDeleteVariableProfile>());
+    _rpcMethods->emplace("executeVariableProfile", std::make_shared<RpcMethods::RpcExecuteVariableProfile>());
+    _rpcMethods->emplace("getAllVariableProfiles", std::make_shared<RpcMethods::RpcGetAllVariableProfiles>());
+    _rpcMethods->emplace("getVariableProfile", std::make_shared<RpcMethods::RpcGetVariableProfile>());
+    _rpcMethods->emplace("updateVariableProfile", std::make_shared<RpcMethods::RpcUpdateVariableProfile>());
     //}}}
 }
 

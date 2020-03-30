@@ -40,6 +40,7 @@
 #include "../FamilyModules/FamilyServer.h"
 #include "../Database/DatabaseController.h"
 #include "../UI/UiController.h"
+#include "../VariableProfiles/VariableProfileManager.h"
 #include "../RPC/RpcServer.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"
@@ -93,6 +94,7 @@ public:
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
 	static std::unique_ptr<UiController> uiController;
+	static std::unique_ptr<VariableProfileManager> variableProfileManager;
     static std::unique_ptr<SystemVariableController> systemVariableController;
 	static std::unique_ptr<IpcLogger> ipcLogger;
 #ifdef EVENTHANDLER

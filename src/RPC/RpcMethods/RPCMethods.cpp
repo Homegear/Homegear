@@ -30,8 +30,8 @@
 
 #include <homegear-base/Managers/ProcessManager.h>
 #include "RPCMethods.h"
-#include "../GD/GD.h"
-#include "Roles.h"
+#include "../../GD/GD.h"
+#include "../Roles.h"
 
 #include <sys/stat.h>
 

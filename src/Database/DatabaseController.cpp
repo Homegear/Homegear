@@ -129,6 +129,8 @@ void DatabaseController::initializeDatabase()
         _db.executeCommand("CREATE INDEX IF NOT EXISTS rolesIndex ON roles (id)");
         _db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB, metadata BLOB)");
         _db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id, element)");
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS variableProfiles (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, profile BLOB)");
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS variableProfilesIndex ON variableProfiles (id)");
 
         //{{{ Create default groups
         {
@@ -4915,4 +4917,99 @@ void DatabaseController::deleteLicenseVariable(int32_t moduleId, uint64_t mapKey
 }
 // }}}
 
+// {{{ Variable profiles
+uint64_t DatabaseController::addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+
+        std::vector<char> translationsBlob;
+        _rpcEncoder->encodeResponse(translations, translationsBlob);
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+        std::vector<char> profileBlob;
+        _rpcEncoder->encodeResponse(profile, profileBlob);
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(profileBlob));
+
+        uint64_t result = _db.executeWriteCommand("REPLACE INTO variableProfiles VALUES(?, ?, ?)", data);
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return 0;
+}
+
+void DatabaseController::deleteVariableProfile(uint64_t profileId)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(profileId));
+
+        _db.executeWriteCommand("DELETE FROM variableProfiles WHERE id=?", data);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getVariableProfiles()
+{
+    try
+    {
+        return _db.executeCommand("SELECT id, translations, profile FROM variableProfiles");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return std::shared_ptr<BaseLib::Database::DataTable>();
+}
+
+bool DatabaseController::updateVariableProfile(uint64_t profileId, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile)
+{
+    try
+    {
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(profileId));
+        if(_db.executeCommand("SELECT id FROM variableProfiles WHERE id=?", data)->empty()) return false;
+
+        std::vector<char> translationsBlob;
+        if(!translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
+
+        std::vector<char> profileBlob;
+        if(!profile->structValue->empty()) _rpcEncoder->encodeResponse(profile, profileBlob);
+
+        if(!translationsBlob.empty() && !profileBlob.empty())
+        {
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(profileBlob));
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+            _db.executeCommand("UPDATE variableProfiles SET translations=?, profile=? WHERE id=?", data);
+        }
+        else if(!translationsBlob.empty())
+        {
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+            _db.executeCommand("UPDATE variableProfiles SET translations=? WHERE id=?", data);
+        }
+        else if(!profileBlob.empty())
+        {
+            data.push_front(std::make_shared<BaseLib::Database::DataColumn>(profileBlob));
+            _db.executeCommand("UPDATE variableProfiles SET profile=? WHERE id=?", data);
+        }
+
+        return true;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return false;
+}
+// }}}
 }

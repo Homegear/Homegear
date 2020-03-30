@@ -82,8 +82,8 @@ set(SOURCE_FILES
         src/RPC/Roles.h
         src/RPC/RpcClient.cpp
         src/RPC/RpcClient.h
-        src/RPC/RPCMethods.cpp
-        src/RPC/RPCMethods.h
+        src/RPC/RpcMethods/RPCMethods.cpp
+        src/RPC/RpcMethods/RPCMethods.h
         src/RPC/RpcServer.cpp
         src/RPC/RpcServer.h
         src/ScriptEngine/CacheInfo.h
@@ -120,7 +120,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/IpcLogger.cpp
         src/IpcLogger.h
-        src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h)
+        src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h src/VariableProfiles/VariableProfileManager.cpp src/VariableProfiles/VariableProfileManager.h src/RPC/RpcMethods/VariableProfileRpcMethods.cpp src/RPC/RpcMethods/VariableProfileRpcMethods.h)
 
 add_custom_target(homegear COMMAND ../../devscripts/makeAll.sh SOURCES ${SOURCE_FILES})
 

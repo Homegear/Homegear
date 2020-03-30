@@ -31,7 +31,7 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
-#include "RPCMethods.h"
+#include "RpcMethods/RPCMethods.h"
 #include "Auth.h"
 #include "RestServer.h"
 #include "../WebServer/WebServer.h"

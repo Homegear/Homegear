@@ -373,6 +373,16 @@ public:
 
 	void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey) override;
 	// }}}
+
+    // {{{ Variable profiles
+    uint64_t addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile) override;
+
+    void deleteVariableProfile(uint64_t profileId) override;
+
+    std::shared_ptr<BaseLib::Database::DataTable> getVariableProfiles() override;
+
+    bool updateVariableProfile(uint64_t profileId, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile) override;
+    // }}}
 protected:
 	std::atomic_bool _disposing;
 
