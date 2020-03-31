@@ -306,19 +306,6 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCAddUiElement : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddUiElement()
-    {
-        addSignature(BaseLib::VariableType::tInteger64, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger64, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger64, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCAddVariableToRoom : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -350,17 +337,6 @@ public:
     RPCCheckServiceAccess()
     {
         addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCheckUiElementSimpleCreation : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCheckUiElementSimpleCreation()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -645,17 +621,6 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetAllUiElements : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAllUiElements()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCGetAllValues : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -682,17 +647,6 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetAvailableUiElements : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAvailableUiElements()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCGetCategories : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -711,17 +665,6 @@ public:
     RPCGetCategoryMetadata()
     {
         addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCGetCategoryUiElements : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetCategoryUiElements()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -1154,17 +1097,6 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetRoomUiElements : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRoomUiElements()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCGetServiceMessages : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -1261,17 +1193,6 @@ public:
     RPCGetSystemVariablesInRoom()
     {
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCGetUiElementMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetUiElementMetadata()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -1721,17 +1642,6 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCRemoveUiElement : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveUiElement()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCRemoveVariableFromRoom : public BaseLib::Rpc::RpcMethod
 {
 public:
@@ -2019,17 +1929,6 @@ public:
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
         addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCSetUiElementMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetUiElementMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);

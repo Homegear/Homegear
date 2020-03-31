@@ -175,6 +175,7 @@ BaseLib::PVariable VariableProfileManager::getAllVariableProfiles(const std::str
             std::string name;
             auto nameIterator = profile.second->name->structValue->find(languageCode);
             if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en-US");
+            if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
             if(nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
 
             profile.second->profile->structValue->erase("id");
@@ -204,6 +205,7 @@ BaseLib::PVariable VariableProfileManager::getVariableProfile(uint64_t id, const
         std::string name;
         auto nameIterator = variableProfileIterator->second->name->structValue->find(languageCode);
         if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en-US");
+        if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
         if(nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;
 
         variableProfileIterator->second->profile->structValue->erase("id");

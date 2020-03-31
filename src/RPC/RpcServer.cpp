@@ -29,6 +29,7 @@
 */
 
 #include "RpcServer.h"
+#include "RpcMethods/UiRpcMethods.h"
 #include "RpcMethods/VariableProfileRpcMethods.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
@@ -287,15 +288,15 @@ RpcServer::RpcServer()
     }
     
     //{{{ UI
-        _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
-        _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RPCCheckUiElementSimpleCreation>());
-        _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
-        _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
-        _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
-        _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
-        _rpcMethods->emplace("getUiElementMetadata", std::make_shared<RPCGetUiElementMetadata>());
-        _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
-        _rpcMethods->emplace("setUiElementMetadata", std::make_shared<RPCSetUiElementMetadata>());
+        _rpcMethods->emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
+        _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
+        _rpcMethods->emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
+        _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
+        _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
+        _rpcMethods->emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
+        _rpcMethods->emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+        _rpcMethods->emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
+        _rpcMethods->emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
     //}}}
 
     //{{{ Users
