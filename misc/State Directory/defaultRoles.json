@@ -292,31 +292,6 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.heatingIsStateSliderMode",
-                    "roleIdsIn": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ]
-                    ]
-                },
-                {
                     "element": "Base.heatingIsStateSliderModeWindow",
                     "roleIdsIn": [
                         [
@@ -344,6 +319,31 @@
                         ],
                         [
                             301002
+                        ]
+                    ]
+                },
+                {
+                    "element": "Base.heatingIsStateSliderMode",
+                    "roleIdsIn": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
                         ]
                     ]
                 }
@@ -1012,5 +1012,320 @@
             "de-DE": "Fenster - Position"
         },
         "uiRef": 600000
+    },
+    {
+        "id": "70.00.00",
+        "translations": {
+            "en-US": "weather",
+            "de-DE": "Wetter"
+        }
+    },
+    {
+        "id": "70.00.01",
+        "translations": {
+            "en-US": "weather - city",
+            "de-DE": "Wetter - Stadt"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateCity",
+                "roleIdsIn": [
+                    [
+                        700001
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700001
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.02",
+        "translations": {
+            "en-US": "weather - cloudcoverage",
+            "de-DE": "Wetter - Bewölkung"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateCloudcoverage",
+                "roleIdsIn": [
+                    [
+                        700002
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700002
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.03",
+        "translations": {
+            "en-US": "weather - datetime",
+            "de-DE": "Wetter - Datum Zeit"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateDate",
+                "roleIdsIn": [
+                    [
+                        700003
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700003
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.04",
+        "translations": {
+            "en-US": "weather - humidity",
+            "de-DE": "Wetter - Luftfeuchtigkeit"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.humidity",
+                "roleIdsIn": [
+                    [
+                        700004
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700004
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.05",
+        "translations": {
+            "en-US": "weather - pressure",
+            "de-DE": "Wetter - Luftdruck"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climatePressure",
+                "roleIdsIn": [
+                    [
+                        700005
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700005
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.06",
+        "translations": {
+            "en-US": "weather - rain forecast 3h",
+            "de-DE": "Wetter - Regenvorhersage 3h"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateRain3h",
+                "roleIdsIn": [
+                    [
+                        700006
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700006
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.07",
+        "translations": {
+            "en-US": "weather - snow forecast 3h",
+            "de-DE": "Wetter - Schneevorhersage 3h"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateSnow3h",
+                "roleIdsIn": [
+                    [
+                        700007
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700007
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.08",
+        "translations": {
+            "en-US": "weather - sunrise",
+            "de-DE": "Wetter - Sonnenaufgang"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateSunrise",
+                "roleIdsIn": [
+                    [
+                        700008
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700008
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.09",
+        "translations": {
+            "en-US": "weather - sunset",
+            "de-DE": "Wetter - Sonnenuntergang"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateSunset",
+                "roleIdsIn": [
+                    [
+                        700009
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700009
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.10",
+        "translations": {
+            "en-US": "weather - temperature",
+            "de-DE": "Wetter - Temperatur"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.temperature",
+                "roleIdsIn": [
+                    [
+                        700010
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700010
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.11",
+        "translations": {
+            "en-US": "weather - weather",
+            "de-DE": "Wetter - Wetter"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWeather",
+                "roleIdsIn": [
+                    [
+                        700011
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700011
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.12",
+        "translations": {
+            "en-US": "weather - wind direction",
+            "de-DE": "Wetter - Windrichtung"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWinddirection",
+                "roleIdsIn": [
+                    [
+                        700012
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700012
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.13",
+        "translations": {
+            "en-US": "weather - wind gust",
+            "de-DE": "Wetter - Windböen"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWindgust",
+                "roleIdsIn": [
+                    [
+                        700013
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700013
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.14",
+        "translations": {
+            "en-US": "weather - wind speed",
+            "de-DE": "Wetter - Windgeschwindigkeit"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWindspeed",
+                "roleIdsIn": [
+                    [
+                        700014
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700014
+                    ]
+                ]
+            }
+        }
     }
 ]
