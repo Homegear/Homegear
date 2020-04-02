@@ -127,7 +127,7 @@ private:
     std::atomic_bool _stopServer;
     std::atomic_bool _stopped;
     std::thread _mainThread;
-    int32_t _backlog = 100;
+    static constexpr int32_t _backlog = 100;
     std::mutex _garbageCollectionMutex;
     int64_t _lastGargabeCollection = 0;
     std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;

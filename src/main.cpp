@@ -103,7 +103,7 @@ void bindRPCServers()
 		info += "...";
 		GD::out.printInfo(info);
         int32_t listenPort = -1;
-		settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), settings->address, listenPort);
+		settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), 100, settings->address, listenPort);
 		if(settings->socketDescriptor) GD::out.printInfo("Info: Server successfully bound.");
 	}
 }
