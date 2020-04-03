@@ -592,6 +592,8 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                             }
                         }
                         GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
+                        GD::systemVariableController->setRoom(roleSystemVariable->name, systemVariable->room);
+                        GD::systemVariableController->setCategories(roleSystemVariable->name, systemVariable->categories);
                     }
                 }
             }
