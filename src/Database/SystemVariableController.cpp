@@ -1137,7 +1137,6 @@ BaseLib::PVariable SystemVariableController::setRoom(std::string& variableId, ui
     {
         if(variableId.empty()) return BaseLib::Variable::createError(-32602, "variableId is an empty string.");
         if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
-        if(roomId == 0) return BaseLib::Variable::createError(-1, "Invalid room ID.");
 
         {
             std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);
