@@ -3986,7 +3986,7 @@ BaseLib::PVariable RPCGetRolesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo,
 
         {
             auto systemVariables = GD::systemVariableController->getRolesInRoom(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
-            if(!systemVariables->arrayValue->empty())
+            if(!systemVariables->structValue->empty())
             {
                 auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 channelStruct->structValue->emplace("-1", std::move(systemVariables));

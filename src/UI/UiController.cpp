@@ -613,7 +613,6 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 else GD::out.printInfo("Info: No match for UI definition. Reason: " + result->structValue->at("faultString")->stringValue);
             }
             if(!found) return BaseLib::Variable::createError(-1, "Could not find a matching variable set.");
-
         }
         else if(uiInfo->type == BaseLib::VariableType::tStruct)
         {
