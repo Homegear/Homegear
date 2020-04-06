@@ -44,7 +44,6 @@ RpcClient::RpcClient()
     {
         _out.init(GD::bl.get());
         _out.setPrefix("RPC client: ");
-        _out.setErrorCallback(nullptr); //Avoid endless loops
 
         if(!GD::bl) _out.printCritical("Critical: Can't initialize RPC client, because base library is not initialized.");
         _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));

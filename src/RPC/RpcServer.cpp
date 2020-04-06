@@ -911,7 +911,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
             data.insert(data.begin(), header.begin(), header.end());
             if(GD::bl->debugLevel >= 5)
             {
-                _out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
+                _out.printDebug("Response packet: " + std::string(data.data(), data.size()));
             }
         }
         else if(responseType == PacketType::Enum::binaryResponse)
@@ -919,8 +919,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
             _rpcEncoder->encodeResponse(variable, data);
             if(GD::bl->debugLevel >= 5)
             {
-                _out.printDebug("Response binary:");
-                _out.printBinary(data);
+                _out.printDebug("Response binary: " + BaseLib::HelperFunctions::getHexString(data));
             }
         }
         else if(responseType == PacketType::Enum::jsonResponse)
@@ -942,8 +941,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
             BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, data);
             if(GD::bl->debugLevel >= 5)
             {
-                _out.printDebug("Response WebSocket packet: ");
-                _out.printBinary(data);
+                _out.printDebug("Response WebSocket packet: " + BaseLib::HelperFunctions::getHexString(data));
             }
         }
         sendRPCResponseToClient(client, data, keepAlive);

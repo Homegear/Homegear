@@ -4978,10 +4978,19 @@ bool DatabaseController::updateVariableProfile(uint64_t profileId, const BaseLib
     {
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(profileId));
-        if(_db.executeCommand("SELECT id FROM variableProfiles WHERE id=?", data)->empty()) return false;
+        auto profileRows = _db.executeCommand("SELECT translations FROM variableProfiles WHERE id=?", data);
+        if(profileRows->empty()) return false;
 
-        std::vector<char> translationsBlob;
-        if(!translations->structValue->empty()) _rpcEncoder->encodeResponse(translations, translationsBlob);
+        auto translationsBlob = std::move(*profileRows->at(0).at(0)->binaryValue);
+        auto oldTranslations = _rpcDecoder->decodeResponse(translationsBlob);
+        oldTranslations->type = BaseLib::VariableType::tStruct;
+
+        for(auto& translation : *translations->structValue)
+        {
+            oldTranslations->structValue->emplace(translation.first, translation.second);
+        }
+
+        if(!oldTranslations->structValue->empty()) _rpcEncoder->encodeResponse(oldTranslations, translationsBlob);
 
         std::vector<char> profileBlob;
         if(!profile->structValue->empty()) _rpcEncoder->encodeResponse(profile, profileBlob);

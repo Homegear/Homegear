@@ -684,6 +684,13 @@
             },
             "rolesInclude": [
                 {
+                    "aggregationType": 2,
+                    "roles": [
+                        501001,
+                        501002
+                    ]
+                },
+                {
                     "aggregationType": 1,
                     "roles": [
                         501004
