@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -170,6 +170,7 @@ private:
 	BaseLib::Output _out;
 	MqttSettings _settings;
 	uint32_t _prefixParts = 0;
+	std::string _clientName;
 	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
 	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 	std::unique_ptr<BaseLib::TcpSocket> _socket;
@@ -192,6 +193,8 @@ private:
 	Mqtt(const Mqtt&);
 
 	Mqtt& operator=(const Mqtt&);
+
+	void getClientName();
 
 	void connect();
 

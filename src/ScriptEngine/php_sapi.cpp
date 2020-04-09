@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -235,7 +235,7 @@ static zend_module_entry homegear_module_entry = {
         PHP_RINIT(homegear),
         PHP_RSHUTDOWN(homegear),
         PHP_MINFO(homegear),
-        Homegear::GD::homegearVersion.c_str(),
+        Homegear::GD::baseLibVersion.c_str(),
         STANDARD_MODULE_PROPERTIES
 };
 
@@ -609,7 +609,7 @@ static void php_homegear_register_variables(zval* track_vars_array)
             php_register_variable_safe((char*)"WEBSOCKET_AUTH_TYPE", (char*)webSocketAuthType.c_str(), webSocketAuthType.size(), track_vars_array);
         }
 
-        std::string version = std::string("Homegear ") + Homegear::GD::homegearVersion;
+        std::string version = std::string("Homegear ") + Homegear::GD::baseLibVersion;
         php_register_variable_safe((char*)"SERVER_SOFTWARE", (char*)version.c_str(), version.size(), track_vars_array);
         php_register_variable_safe((char*)"SCRIPT_NAME", (char*)scriptInfo->relativePath.c_str(), scriptInfo->relativePath.size(), track_vars_array);
         std::string phpSelf = scriptInfo->relativePath + header.pathInfo;
@@ -2850,7 +2850,7 @@ static PHP_MINFO_FUNCTION(homegear)
 {
     php_info_print_table_start();
     php_info_print_table_row(2, "Homegear support", "enabled");
-    php_info_print_table_row(2, "Homegear version", Homegear::GD::homegearVersion);
+    php_info_print_table_row(2, "Homegear version", Homegear::GD::baseLibVersion);
     php_info_print_table_end();
 }
 

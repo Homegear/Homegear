@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -1137,7 +1137,8 @@ BaseLib::PVariable SystemVariableController::setRoom(std::string& variableId, ui
     {
         if(variableId.empty()) return BaseLib::Variable::createError(-32602, "variableId is an empty string.");
         if(variableId.size() > 250) return BaseLib::Variable::createError(-32602, "variableId has more than 250 characters.");
-        if(roomId == 0) return BaseLib::Variable::createError(-1, "Invalid room ID.");
+
+        //Allow roomId == 0!!! "0" means "no room assigned".
 
         {
             std::lock_guard<std::mutex> systemVariableGuard(_systemVariableMutex);

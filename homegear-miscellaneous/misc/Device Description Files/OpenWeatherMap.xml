@@ -599,7 +599,7 @@ class HomegearDevice extends HomegearDeviceBase
 				<properties>
 					<writeable>false</writeable>
 					<addonWriteable>true</addonWriteable>
-					<unit>km/h</unit>
+					<unit>m/s</unit>
 					<casts>
 						<rpcBinary/>
 					</casts>
@@ -615,7 +615,7 @@ class HomegearDevice extends HomegearDeviceBase
 				<properties>
 					<writeable>false</writeable>
 					<addonWriteable>true</addonWriteable>
-					<unit>km/h</unit>
+					<unit>m/s</unit>
 					<casts>
 						<rpcBinary/>
 					</casts>

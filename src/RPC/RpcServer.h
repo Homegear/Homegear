@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,7 +31,7 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
-#include "RPCMethods.h"
+#include "RpcMethods/RPCMethods.h"
 #include "Auth.h"
 #include "RestServer.h"
 #include "../WebServer/WebServer.h"
@@ -127,7 +127,7 @@ private:
     std::atomic_bool _stopServer;
     std::atomic_bool _stopped;
     std::thread _mainThread;
-    int32_t _backlog = 100;
+    static constexpr int32_t _backlog = 100;
     std::mutex _garbageCollectionMutex;
     int64_t _lastGargabeCollection = 0;
     std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;

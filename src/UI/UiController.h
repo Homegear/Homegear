@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -46,6 +46,7 @@ public:
         std::string elementId;
         std::string label;
         BaseLib::PVariable data;
+        BaseLib::PVariable metadata;
         uint64_t roomId = 0;
         std::unordered_set<uint64_t> categoryIds;
         BaseLib::DeviceDescription::UiElements::PUiPeerInfo peerInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiPeerInfo>();
@@ -59,7 +60,7 @@ public:
 
     void load();
 
-    BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data);
+    BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, const std::string& elementId, const BaseLib::PVariable& data, const BaseLib::PVariable& metadata);
 
     BaseLib::PVariable addUiElementSimple(const BaseLib::PRpcClientInfo& clientInfo, const std::string& label, const BaseLib::PVariable& variable, bool dryRun);
 
@@ -67,12 +68,15 @@ public:
 
     BaseLib::PVariable getAvailableUiElements(const BaseLib::PRpcClientInfo& clientInfo, const std::string& language);
 
+    BaseLib::PVariable getUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId);
+
     BaseLib::PVariable getUiElementsInRoom(const BaseLib::PRpcClientInfo& clientInfo, uint64_t roomId, const std::string& language);
 
     BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo& clientInfo, uint64_t categoryId, const std::string& language);
 
     BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId);
 
+    BaseLib::PVariable setUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId, const BaseLib::PVariable& metadata);
 protected:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
     std::unique_ptr<BaseLib::DeviceDescription::UiElements> _descriptions;
@@ -82,7 +86,7 @@ protected:
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByRoom;
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
 
-    void addDataInfo(PUiElement& uiElement, BaseLib::PVariable& data);
+    void addDataInfo(PUiElement& uiElement, const BaseLib::PVariable& data);
 
     void addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue);
 

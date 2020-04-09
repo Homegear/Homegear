@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -30,8 +30,8 @@
 
 #include <homegear-base/Managers/ProcessManager.h>
 #include "RPCMethods.h"
-#include "../GD/GD.h"
-#include "Roles.h"
+#include "../../GD/GD.h"
+#include "../Roles.h"
 
 #include <sys/stat.h>
 
@@ -507,10 +507,24 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToVariable", parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        uint64_t roleId = parameters->at(3)->integerValue64;
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToVariable", roleId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
 
-        if(!GD::bl->db->roleExists(parameters->at(3)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+        if(!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        uint64_t middleGroupRoleId = 0;
+        uint64_t mainGroupRoleId = 0;
+
+        //{{{ Get parent roles
+        {
+            uint64_t hexRoleId = BaseLib::Math::getNumber64(std::to_string(roleId), true);
+            middleGroupRoleId = BaseLib::Math::getNumber64(BaseLib::HelperFunctions::getHexString(hexRoleId & 0x00FFFF00, 6));
+            mainGroupRoleId = BaseLib::Math::getNumber64(BaseLib::HelperFunctions::getHexString(hexRoleId & 0x00FF0000, 6));
+            if(middleGroupRoleId == mainGroupRoleId || middleGroupRoleId == roleId || !GD::bl->db->roleExists(middleGroupRoleId)) middleGroupRoleId = 0;
+            if(mainGroupRoleId == roleId || !GD::bl->db->roleExists(mainGroupRoleId)) mainGroupRoleId = 0;
+        }
+        //}}}
 
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
@@ -521,7 +535,9 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
             BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::both;
             bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
-            if(parameters->at(3)->integerValue64 != 0) systemVariable->roles.emplace(parameters->at(3)->integerValue64, std::move(BaseLib::Role(parameters->at(3)->integerValue64, direction, invert)));
+            if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+            if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, std::move(BaseLib::Role(middleGroupRoleId, direction, invert)));
+            if(mainGroupRoleId != 0) systemVariable->roles.emplace(mainGroupRoleId, std::move(BaseLib::Role(mainGroupRoleId, direction, invert)));
 
             auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
             if(result->errorStruct)
@@ -531,43 +547,54 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
             }
 
             //{{{ Add variables from metadata
-            auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(3)->integerValue64);
-            auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
-            if(addVariablesIterator != roleMetadata->structValue->end())
+            for(int32_t i = 0; i < 3; i++)
             {
-                for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+                uint64_t currentRoleId = 0;
+                if(i == 0) currentRoleId = roleId;
+                else if(i == 1) currentRoleId = middleGroupRoleId;
+                else currentRoleId = mainGroupRoleId;
+                if(currentRoleId == 0) continue;
+
+                auto roleMetadata = GD::bl->db->getRoleMetadata(currentRoleId);
+                auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+                if(addVariablesIterator != roleMetadata->structValue->end())
                 {
-                    auto idIterator = variableInfo->structValue->find("id");
-                    auto typeIterator = variableInfo->structValue->find("type");
-                    if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
+                    for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
                     {
-                        continue;
-                    }
-                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
-                    auto defaultValueIterator = variableInfo->structValue->find("default");
-                    auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
-                    if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
-                    if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
-                    else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
-                    else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
-                    else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
-                    else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
-                    else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
-                    else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
-
-                    GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
-                    auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
-                    if(!roleSystemVariable) continue;
-
-                    auto rolesIterator = variableInfo->structValue->find("roles");
-                    if(rolesIterator != variableInfo->structValue->end())
-                    {
-                        for(auto& role : *rolesIterator->second->arrayValue)
+                        auto idIterator = variableInfo->structValue->find("id");
+                        auto typeIterator = variableInfo->structValue->find("type");
+                        if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
                         {
-                            if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                            continue;
                         }
+                        std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+                        auto defaultValueIterator = variableInfo->structValue->find("default");
+                        auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
+                        if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
+                        if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                        else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                        else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                        else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
+                        else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                        else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
+                        else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
+
+                        GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                        auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
+                        if(!roleSystemVariable) continue;
+
+                        auto rolesIterator = variableInfo->structValue->find("roles");
+                        if(rolesIterator != variableInfo->structValue->end())
+                        {
+                            for(auto& role : *rolesIterator->second->arrayValue)
+                            {
+                                if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                            }
+                        }
+                        GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
+                        GD::systemVariableController->setRoom(roleSystemVariable->name, systemVariable->room);
+                        GD::systemVariableController->setCategories(roleSystemVariable->name, systemVariable->categories);
                     }
-                    GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
                 }
             }
             //}}}
@@ -591,8 +618,10 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
             BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::both;
             bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
 
-            bool result = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue64, direction, invert);
-            return std::make_shared<BaseLib::Variable>(result);
+            bool result1 = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, roleId, direction, invert);
+            bool result2 = middleGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, middleGroupRoleId, direction, invert) : true;
+            bool result3 = mainGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, mainGroupRoleId, direction, invert): true;
+            return std::make_shared<BaseLib::Variable>(result1 || result2 || result3);
         }
 
         return BaseLib::Variable::createError(-2, "Device not found.");
@@ -982,10 +1011,24 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToSystemVariable", parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        uint64_t roleId = parameters->at(1)->integerValue64;
+        if(!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToSystemVariable", roleId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
 
-        if(!GD::bl->db->roleExists(parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-1, "Unknown role.");
+        if(!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "Unknown role.");
+
+        uint64_t middleGroupRoleId = 0;
+        uint64_t mainGroupRoleId = 0;
+
+        //{{{ Get parent roles
+        {
+            uint64_t hexRoleId = BaseLib::Math::getNumber64(std::to_string(roleId), true);
+            middleGroupRoleId = BaseLib::Math::getNumber64(BaseLib::HelperFunctions::getHexString(hexRoleId & 0x00FFFF00, 6));
+            mainGroupRoleId = BaseLib::Math::getNumber64(BaseLib::HelperFunctions::getHexString(hexRoleId & 0x00FF0000, 6));
+            if(middleGroupRoleId == mainGroupRoleId || middleGroupRoleId == roleId || !GD::bl->db->roleExists(middleGroupRoleId)) middleGroupRoleId = 0;
+            if(mainGroupRoleId == roleId || !GD::bl->db->roleExists(mainGroupRoleId)) mainGroupRoleId = 0;
+        }
+        //}}}
 
         auto systemVariable = GD::systemVariableController->getInternal(parameters->at(0)->stringValue);
         if(!systemVariable) return BaseLib::Variable::createError(-5, "Unknown system variable.");
@@ -994,7 +1037,9 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
 
         BaseLib::RoleDirection direction = parameters->size() >= 3 ? (BaseLib::RoleDirection)parameters->at(2)->integerValue : BaseLib::RoleDirection::both;
         bool invert = parameters->size() >= 4 ? parameters->at(3)->booleanValue : false;
-        if(parameters->at(1)->integerValue64 != 0) systemVariable->roles.emplace(parameters->at(1)->integerValue64, std::move(BaseLib::Role(parameters->at(1)->integerValue64, direction, invert)));
+        if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+        if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, std::move(BaseLib::Role(middleGroupRoleId, direction, invert)));
+        if(mainGroupRoleId != 0) systemVariable->roles.emplace(mainGroupRoleId, std::move(BaseLib::Role(mainGroupRoleId, direction, invert)));
 
         auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
         if(result->errorStruct)
@@ -1004,43 +1049,51 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
         }
 
         //{{{ Add variables from metadata
-        auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(1)->integerValue64);
-        auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
-        if(addVariablesIterator != roleMetadata->structValue->end())
+        for(int32_t i = 0; i < 3; i++)
         {
-            for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
+            uint64_t currentRoleId = 0;
+            if(i == 0) currentRoleId = roleId;
+            else if(i == 1) currentRoleId = middleGroupRoleId;
+            else currentRoleId = mainGroupRoleId;
+            if(currentRoleId == 0) continue;
+            auto roleMetadata = GD::bl->db->getRoleMetadata(currentRoleId);
+            auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
+            if(addVariablesIterator != roleMetadata->structValue->end())
             {
-                auto idIterator = variableInfo->structValue->find("id");
-                auto typeIterator = variableInfo->structValue->find("type");
-                if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
+                for(auto& variableInfo : *addVariablesIterator->second->arrayValue)
                 {
-                    continue;
-                }
-                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
-                auto defaultValueIterator = variableInfo->structValue->find("default");
-                auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
-                if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
-                if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
-                else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
-                else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
-                else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
-                else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
-                else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
-                else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
-
-                GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
-                auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
-                if(!roleSystemVariable) continue;
-
-                auto rolesIterator = variableInfo->structValue->find("roles");
-                if(rolesIterator != variableInfo->structValue->end())
-                {
-                    for(auto& role : *rolesIterator->second->arrayValue)
+                    auto idIterator = variableInfo->structValue->find("id");
+                    auto typeIterator = variableInfo->structValue->find("type");
+                    if(idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty() || typeIterator == variableInfo->structValue->end())
                     {
-                        if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                        continue;
                     }
+                    std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+                    auto defaultValueIterator = variableInfo->structValue->find("default");
+                    auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
+                    if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
+                    if(typeIterator->second->stringValue == "ACTION") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                    else if(typeIterator->second->stringValue == "BOOL") roleSystemVariableValue->setType(BaseLib::VariableType::tBoolean);
+                    else if(typeIterator->second->stringValue == "INTEGER") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                    else if(typeIterator->second->stringValue == "INTEGER64") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger64);
+                    else if(typeIterator->second->stringValue == "ENUM") roleSystemVariableValue->setType(BaseLib::VariableType::tInteger);
+                    else if(typeIterator->second->stringValue == "FLOAT") roleSystemVariableValue->setType(BaseLib::VariableType::tFloat);
+                    else if(typeIterator->second->stringValue == "STRING") roleSystemVariableValue->setType(BaseLib::VariableType::tString);
+
+                    GD::systemVariableController->setValue(clientInfo, roleSystemVariableName, roleSystemVariableValue, 0, false);
+                    auto roleSystemVariable = GD::systemVariableController->getInternal(roleSystemVariableName);
+                    if(!roleSystemVariable) continue;
+
+                    auto rolesIterator = variableInfo->structValue->find("roles");
+                    if(rolesIterator != variableInfo->structValue->end())
+                    {
+                        for(auto& role : *rolesIterator->second->arrayValue)
+                        {
+                            if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                        }
+                    }
+                    GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
                 }
-                GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
             }
         }
         //}}}
@@ -1102,45 +1155,6 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
         if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         return GD::systemVariableController->setRoom(systemVariable->name, (uint64_t) parameters->at(1)->integerValue64);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-            //UI element name; UI element data
-            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tStruct}),
-            //Peer ID; channel; variable name; label
-            std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tString})
-        }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("addUiElement")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        if(parameters->size() == 4)
-        {
-            BaseLib::PVariable variableArray;
-            std::string label;
-            variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-            variableArray->arrayValue->reserve(3);
-            variableArray->arrayValue->push_back(parameters->at(0));
-            variableArray->arrayValue->push_back(parameters->at(1));
-            variableArray->arrayValue->push_back(parameters->at(2));
-            label = parameters->at(3)->stringValue;
-            return GD::uiController->addUiElementSimple(clientInfo, label, variableArray, false);
-        }
-        else return GD::uiController->addUiElement(clientInfo, parameters->at(0)->stringValue, parameters->at(1));
     }
     catch(const std::exception& ex)
     {
@@ -1273,38 +1287,6 @@ BaseLib::PVariable RPCCheckServiceAccess::invoke(BaseLib::PRpcClientInfo clientI
         if(error != ParameterError::Enum::noError) return getError(error);
 
         return std::make_shared<BaseLib::Variable>(clientInfo->acls->checkServiceAccess(parameters->at(0)->stringValue));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCCheckUiElementSimpleCreation::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         //Peer ID; channel; variable name
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString})
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("checkUiElementSimpleCreation")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        BaseLib::PVariable variableArray;
-        variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-        variableArray->arrayValue->reserve(3);
-        variableArray->arrayValue->push_back(parameters->at(0));
-        variableArray->arrayValue->push_back(parameters->at(1));
-        variableArray->arrayValue->push_back(parameters->at(2));
-        auto result = GD::uiController->addUiElementSimple(clientInfo, "", variableArray, true);
-        return std::make_shared<BaseLib::Variable>(!result->errorStruct);
     }
     catch(const std::exception& ex)
     {
@@ -2301,30 +2283,6 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetAllUiElements::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAllUiElements")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString})
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::uiController->getAllUiElements(clientInfo, parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
 BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try
@@ -2416,30 +2374,6 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetAvailableUiElements::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAvailableUiElements")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString})
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::uiController->getAvailableUiElements(clientInfo, parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
 BaseLib::PVariable RPCGetCategories::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
 {
     try
@@ -2481,30 +2415,6 @@ BaseLib::PVariable RPCGetCategoryMetadata::invoke(BaseLib::PRpcClientInfo client
         if(!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getCategoryMetadata", (uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
         return GD::bl->db->getCategoryMetadata((uint64_t) parameters->at(0)->integerValue64);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetCategoryUiElements::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getCategoryUiElements")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        return GD::uiController->getUiElementsInCategory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
     }
     catch(const std::exception& ex)
     {
@@ -2721,7 +2631,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
             {
                 BaseLib::PVariable description(new BaseLib::Variable(BaseLib::VariableType::tStruct));
                 description->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(std::string("Homegear")))));
-                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(GD::homegearVersion))));
+                description->structValue->insert(BaseLib::StructElement("FIRMWARE", BaseLib::PVariable(new BaseLib::Variable(GD::baseLibVersion))));
                 return description;
             }
 
@@ -4078,7 +3988,7 @@ BaseLib::PVariable RPCGetRolesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo,
 
         {
             auto systemVariables = GD::systemVariableController->getRolesInRoom(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
-            if(!systemVariables->arrayValue->empty())
+            if(!systemVariables->structValue->empty())
             {
                 auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 channelStruct->structValue->emplace("-1", std::move(systemVariables));
@@ -4200,30 +4110,6 @@ BaseLib::PVariable RPCGetRoomsInStory::invoke(BaseLib::PRpcClientInfo clientInfo
         bool checkAcls = clientInfo->acls->roomsReadSet();
 
         return GD::bl->db->getRoomsInStory(clientInfo, (uint64_t) parameters->at(0)->integerValue64, checkAcls);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetRoomUiElements::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getRoomUiElements")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        return GD::uiController->getUiElementsInRoom(clientInfo, (uint64_t) parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
     }
     catch(const std::exception& ex)
     {
@@ -4570,9 +4456,16 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
             auto systemVariables = GD::systemVariableController->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, checkVariableAcls);
             if(!systemVariables->structValue->empty())
             {
-                auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                channelStruct->structValue->emplace("-1", std::move(systemVariables));
-                result->structValue->emplace("0", channelStruct);
+                if(parameters->size() > 1)
+                {
+                    result->structValue->emplace("-1", std::move(systemVariables));
+                }
+                else
+                {
+                    auto channelStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    channelStruct->structValue->emplace("-1", std::move(systemVariables));
+                    result->structValue->emplace("0", channelStruct);
+                }
             }
         }
 
@@ -4914,7 +4807,7 @@ BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({}));
         if(error != ParameterError::Enum::noError) return getError(error);
         
-        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + GD::homegearVersion));
+        return BaseLib::PVariable(new BaseLib::Variable("Homegear " + GD::baseLibVersion));
     }
     catch(const std::exception& ex)
     {
@@ -6389,30 +6282,6 @@ BaseLib::PVariable RPCRemoveSystemVariableFromRoom::invoke(BaseLib::PRpcClientIn
 
         if(systemVariable->room == roomId) return GD::systemVariableController->setRoom(systemVariable->name, 0);
         else return std::make_shared<BaseLib::Variable>();
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCRemoveUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("removeUiElement")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        return GD::uiController->removeUiElement(clientInfo, (uint64_t) parameters->at(0)->integerValue64);
     }
     catch(const std::exception& ex)
     {

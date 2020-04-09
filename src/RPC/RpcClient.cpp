@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -44,7 +44,6 @@ RpcClient::RpcClient()
     {
         _out.init(GD::bl.get());
         _out.setPrefix("RPC client: ");
-        _out.setErrorCallback(nullptr); //Avoid endless loops
 
         if(!GD::bl) _out.printCritical("Critical: Can't initialize RPC client, because base library is not initialized.");
         _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get()));
@@ -418,7 +417,7 @@ void RpcClient::sendRequest(RemoteRpcServer* server, std::vector<char>& data, st
             else if(server->webSocket) {}
             else //XML-RPC, JSON-RPC
             {
-                std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::homegearVersion + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size() + 2) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
+                std::string header = "POST " + server->path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::baseLibVersion + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: " + (server->json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(data.size() + 2) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\n";
                 if(server->settings && (server->settings->authType & ClientSettings::Settings::AuthType::basic))
                 {
                     _out.printDebug("Using Basic Access Authentication.");
