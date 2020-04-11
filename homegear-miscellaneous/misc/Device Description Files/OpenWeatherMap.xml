@@ -30,16 +30,19 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
 	while(true)
 	{
 		$result = $hg->pollEvent();
-		if($result["TYPE"] == "event" && $result["PEERID"] == $peerId)
+		if($result)
 		{
-			if($result["VARIABLE"] == "REQUEST")
+			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId)
 			{
-				$eventChannel->send(['name' => 'request', 'value' => true]);
+				if($result["VARIABLE"] == "REQUEST")
+				{
+					$eventChannel->send(['name' => 'request', 'value' => true]);
+				}
 			}
-		}
-		else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
-		{
-			$eventChannel->send(['name' => 'updateDevice', 'value' => true]);
+			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
+			{
+				$eventChannel->send(['name' => 'updateDevice', 'value' => true]);
+			}
 		}
 
 		$event = NULL;
@@ -127,7 +130,9 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 			        $hg->setValue($peerId, 1, "CITY_LONGITUDE", (double)$data["coord"]["lon"]);
 			        $hg->setValue($peerId, 1, "CITY_LATITUDE", (double)$data["coord"]["lat"]);
 			        $hg->setValue($peerId, 1, "SUNRISE", (integer)$data["sys"]["sunrise"]);
+			        $hg->setValue($peerId, 1, "SUNRISE_STRING", date($config['DATE_FORMAT'], (integer)$data["sys"]["sunrise"]));
 			        $hg->setValue($peerId, 1, "SUNSET", (integer)$data["sys"]["sunset"]);
+			        $hg->setValue($peerId, 1, "SUNSET_STRING", date($config['DATE_FORMAT'], (integer)$data["sys"]["sunset"]));
 			        if(array_key_exists("weather", $data) && count($data["weather"]) > 0)
 			        {
 			            $hg->setValue($peerId, 1, "WEATHER", (string)$data["weather"][0]["main"]);
@@ -158,7 +163,9 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 			        $hg->setValue($peerId, 1, "CITY_LONGITUDE", 0.0);
 			        $hg->setValue($peerId, 1, "CITY_LATITUDE", 0.0);
 			        $hg->setValue($peerId, 1, "SUNRISE", 0);
+			        $hg->setValue($peerId, 1, "SUNRISE_STRING", "");
 			        $hg->setValue($peerId, 1, "SUNSET", 0);
+			        $hg->setValue($peerId, 1, "SUNSET_STRING", "");
 			        $hg->setValue($peerId, 1, "WEATHER", "");
 			        $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
 			        $hg->setValue($peerId, 1, "WEATHER_ICON", "");
@@ -393,6 +400,19 @@ class HomegearDevice extends HomegearDeviceBase
 					<operationType>config</operationType>
 				</physicalString>
 			</parameter>
+			<parameter id="DATE_FORMAT">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString>
+					<defaultValue>G:i</defaultValue>
+				</logicalString>
+				<physicalString>
+					<operationType>config</operationType>
+				</physicalString>
+			</parameter>
 		</configParameters>
 		<variables id="custom_ch1_values">
 			<parameter id="REQUEST">
@@ -475,6 +495,20 @@ class HomegearDevice extends HomegearDeviceBase
 					<operationType>store</operationType>
 				</physicalInteger>
 			</parameter>
+			<parameter id="SUNRISE_STRING">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString>
+				</logicalString>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
 			<parameter id="SUNSET">
 				<properties>
 					<writeable>false</writeable>
@@ -490,6 +524,20 @@ class HomegearDevice extends HomegearDeviceBase
 				<physicalInteger>
 					<operationType>store</operationType>
 				</physicalInteger>
+			</parameter>
+			<parameter id="SUNSET_STRING">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString>
+				</logicalString>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
 			</parameter>
 			<parameter id="WEATHER">
 				<properties>

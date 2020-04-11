@@ -41,6 +41,7 @@
 
 #include <utility>
 #include <zend_stream.h>
+#include <Zend/zend_stream.h>
 
 namespace Homegear
 {
@@ -968,6 +969,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
             if(!scriptInfo->script.empty())
             {
+#if PHP_VERSION_ID < 70400
                 zendHandle.type = ZEND_HANDLE_MAPPED;
                 zendHandle.handle.fp = nullptr;
                 zendHandle.handle.stream.handle = nullptr;
@@ -978,6 +980,20 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 zendHandle.filename = scriptInfo->fullPath.c_str();
                 zendHandle.opened_path = nullptr;
                 zendHandle.free_filename = 0;
+#else
+                auto stream = new hg_stream_handle();
+                stream->position = 0;
+                stream->buffer = scriptInfo->script;
+
+                zendHandle.type = ZEND_HANDLE_STREAM;
+                zendHandle.filename = scriptInfo->fullPath.c_str();
+                zendHandle.opened_path = nullptr; //It might make sense to set this.
+                zendHandle.handle.stream.handle = stream;
+                zendHandle.handle.stream.reader = hg_zend_stream_reader;
+                zendHandle.handle.stream.fsizer = hg_zend_stream_fsizer;
+                zendHandle.handle.stream.isatty = 0;
+                zendHandle.handle.stream.closer = hg_zend_stream_closer;
+#endif
             }
             else
             {
@@ -985,7 +1001,6 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 zendHandle.filename = scriptInfo->fullPath.c_str();
                 zendHandle.opened_path = nullptr;
                 zendHandle.free_filename = 0;
-                memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
             }
 
             zend_homegear_globals* globals = php_homegear_get_globals();
