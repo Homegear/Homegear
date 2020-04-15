@@ -70,6 +70,7 @@ private:
         std::atomic_bool running;
         std::string filename;
         uint64_t peerId = 0;
+        std::string nodeId;
 
         ThreadInfo() : running(true) {}
     };

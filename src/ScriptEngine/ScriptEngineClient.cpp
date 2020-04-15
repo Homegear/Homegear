@@ -41,7 +41,6 @@
 
 #include <utility>
 #include <zend_stream.h>
-#include <Zend/zend_stream.h>
 
 namespace Homegear
 {
@@ -1730,6 +1729,11 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
                 PThreadInfo threadInfo = std::make_shared<ThreadInfo>();
                 threadInfo->filename = scriptInfo->fullPath;
                 threadInfo->peerId = static_cast<uint64_t>(scriptInfo->peerId);
+                if(scriptInfo->nodeInfo)
+                {
+                    auto idIterator = scriptInfo->nodeInfo->structValue->find("id");
+                    if(idIterator != scriptInfo->nodeInfo->structValue->end()) threadInfo->nodeId = idIterator->second->stringValue;
+                }
                 threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
                 _scriptThreads.emplace(scriptInfo->id, threadInfo);
 
@@ -1835,7 +1839,7 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
         {
             if(i->second->running)
             {
-                BaseLib::Array data{std::make_shared<BaseLib::Variable>(i->second->peerId), std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
+                BaseLib::Array data{std::make_shared<BaseLib::Variable>(i->second->peerId), std::make_shared<BaseLib::Variable>(i->second->nodeId), std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
                 scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(data))));
             }
         }

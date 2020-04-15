@@ -80,7 +80,7 @@ public:
 
     uint32_t scriptCount();
 
-    std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> getRunningScripts();
+    std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> getRunningScripts();
 
     void executeScript(PScriptInfo& scriptInfo, bool wait);
 

@@ -718,11 +718,11 @@ uint32_t ScriptEngineServer::scriptCount()
     return 0;
 }
 
-std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
+std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
 {
     try
     {
-        if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+        if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>>();
         std::vector<PScriptEngineClientData> clients;
         {
             std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -733,7 +733,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
             }
         }
 
-        std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts;
+        std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> runningScripts;
         BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
         for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
         {
@@ -741,7 +741,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
             if(runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
             for(auto& script : *(response->arrayValue))
             {
-                runningScripts.push_back(std::tuple<int32_t, uint64_t, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->integerValue, script->arrayValue->at(2)->stringValue));
+                runningScripts.push_back(std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->stringValue, script->arrayValue->at(2)->integerValue, script->arrayValue->at(3)->stringValue));
             }
         }
         return runningScripts;
@@ -754,7 +754,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+    return std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>>();
 }
 
 BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& parameters)
