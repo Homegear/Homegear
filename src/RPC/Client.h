@@ -107,6 +107,8 @@ public:
 
     void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
+    void broadcastRequestUiRefresh(const std::string& id);
+
 	void broadcastPtyOutput(std::string& output);
 
 	void sendUnknownDevices(std::pair<std::string, std::string>& address);

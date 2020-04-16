@@ -799,6 +799,26 @@ void Client::broadcastVariableProfileStateChanged(uint64_t profileId, bool state
     }
 }
 
+void Client::broadcastRequestUiRefresh(const std::string& id)
+{
+    try
+    {
+        std::lock_guard<std::mutex> serversGuard(_serversMutex);
+        for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
+        {
+            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("requestUiRefresh") == server->second->knownMethods.end())) continue;
+            if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("requestUiRefresh")) continue;
+            auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
+            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("requestUiRefresh", parameters)));
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
 void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable)
 {
     try

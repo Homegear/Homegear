@@ -74,6 +74,8 @@ public:
 
     BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo& clientInfo, uint64_t categoryId, const std::string& language);
 
+    BaseLib::PVariable requestUiRefresh(const BaseLib::PRpcClientInfo& clientInfo, const std::string& id);
+
     BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId);
 
     BaseLib::PVariable setUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId, const BaseLib::PVariable& metadata);
