@@ -63,6 +63,8 @@ public:
 
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
+    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+
 	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
     BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);

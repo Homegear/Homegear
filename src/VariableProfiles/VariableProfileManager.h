@@ -43,19 +43,42 @@ struct VariableProfile
 {
     uint64_t id;
     BaseLib::PVariable name;
+    int64_t lastActivation = 0;
     BaseLib::PVariable profile;
+    bool isActive = false;
+    uint32_t activeVariables = 0;
+    uint32_t variableCount = 0;
 };
 typedef std::shared_ptr<VariableProfile> PVariableProfile;
+
+struct VariableProfileAssociation
+{
+    uint64_t profileId = 0;
+    bool ignoreUpdatesFromDevice = true;
+    uint32_t deviceRefractoryPeriod = 60;
+    BaseLib::PVariable profileValue;
+    BaseLib::PVariable currentValue;
+};
+typedef std::shared_ptr<VariableProfileAssociation> PVariableProfileAssociation;
 
 class VariableProfileManager
 {
 private:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 
+    BaseLib::PRpcClientInfo _profileManagerClientInfo;
+
     std::mutex _variableProfilesMutex;
     std::unordered_map<uint64_t, PVariableProfile> _variableProfiles;
+
+    /**
+     * Peer ID, channel, variable, profile ID
+     */
+    std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::unordered_map<uint64_t, PVariableProfileAssociation>>>> _profilesByVariable;
 public:
     VariableProfileManager();
+
+    void variableEvent(const std::string& source, uint64_t id, int32_t channel, const std::shared_ptr<std::vector<std::string>>& variables, const BaseLib::PArray& values);
 
     void load();
     BaseLib::PVariable activateVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId);

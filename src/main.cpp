@@ -937,7 +937,6 @@ void startUp()
 		GD::uiController->load();
 
         GD::variableProfileManager.reset(new VariableProfileManager());
-        GD::variableProfileManager->load();
 
 		GD::ipcLogger.reset(new IpcLogger());
 
@@ -1024,6 +1023,9 @@ void startUp()
 				exitHomegear(1);
 			}
 		}
+
+        GD::out.printInfo("Starting variable profile manager...");
+        GD::variableProfileManager->load();
 
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
         GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);

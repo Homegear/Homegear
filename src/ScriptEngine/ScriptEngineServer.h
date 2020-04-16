@@ -98,6 +98,8 @@ public:
 
     void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
+    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+
     BaseLib::PVariable getAllScripts();
 
 private:

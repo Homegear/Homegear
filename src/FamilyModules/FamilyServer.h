@@ -45,7 +45,7 @@ public:
 
     bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
-    BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters);
+    BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PArray& parameters);
 private:
     BaseLib::Output _out;
 

@@ -331,6 +331,8 @@ private:
 	Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);
 
 	Flows::PVariable broadcastUpdateDevice(Flows::PArray& parameters);
+
+    Flows::PVariable broadcastVariableProfileStateChanged(Flows::PArray& parameters);
 	// }}}
 };
 

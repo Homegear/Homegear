@@ -975,7 +975,7 @@ bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& me
     return false;
 }
 
-BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
+BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PVariable& parameters)
 {
     try
     {

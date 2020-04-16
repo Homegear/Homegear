@@ -282,6 +282,8 @@ private:
     BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
 
     BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
+
+    BaseLib::PVariable broadcastVariableProfileStateChanged(BaseLib::PArray& parameters);
     // }}}
 };
 

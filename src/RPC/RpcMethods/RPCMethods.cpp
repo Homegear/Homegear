@@ -7563,20 +7563,20 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         {
             if(peerId == 0 && channel < 0)
             {
-                BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+                auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 requestParameters->arrayValue->reserve(2);
-                requestParameters->arrayValue->push_back(parameters->at(2));
-                requestParameters->arrayValue->push_back(value);
+                requestParameters->arrayValue->emplace_back(parameters->at(2));
+                requestParameters->arrayValue->emplace_back(value);
                 std::string methodName = "setSystemVariable";
                 return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
             }
             else if(peerId != 0 && channel < 0)
             {
-                BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+                auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 requestParameters->arrayValue->reserve(3);
-                requestParameters->arrayValue->push_back(parameters->at(0));
-                requestParameters->arrayValue->push_back(parameters->at(2));
-                requestParameters->arrayValue->push_back(value);
+                requestParameters->arrayValue->emplace_back(parameters->at(0));
+                requestParameters->arrayValue->emplace_back(parameters->at(2));
+                requestParameters->arrayValue->emplace_back(value);
                 std::string methodName = "setMetadata";
                 return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
             }

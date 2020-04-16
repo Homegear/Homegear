@@ -108,7 +108,7 @@ public:
 
     bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
-    BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters);
+    BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PVariable& parameters);
 
     BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 

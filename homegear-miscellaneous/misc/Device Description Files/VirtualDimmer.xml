@@ -31,22 +31,25 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
 	while(true)
 	{
 		$result = $hg->pollEvent();
-		if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
+		if($result)
 		{
-			if($result["VARIABLE"] == 'LEVEL')
+			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
 			{
-				$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
-				$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"]);
-			}
-			else if($result["VARIABLE"] == 'LEVEL_FAST')
-			{
-				$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
-				$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"]);
-			}
-			else if($result["VARIABLE"] == 'STATE')
-			{
-				$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
-				$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
+				if($result["VARIABLE"] == 'LEVEL')
+				{
+					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
+					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"]);
+				}
+				else if($result["VARIABLE"] == 'LEVEL_FAST')
+				{
+					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
+					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"]);
+				}
+				else if($result["VARIABLE"] == 'STATE')
+				{
+					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
+					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
+				}
 			}
 		}
 

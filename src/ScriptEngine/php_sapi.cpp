@@ -1285,45 +1285,65 @@ ZEND_FUNCTION(hg_poll_event)
         phpEvents = eventsIterator->second;
     }
     std::shared_ptr<Homegear::PhpEvents::EventData> eventData = phpEvents->poll(timeout);
-    if(eventData)
+    if(eventData && eventData->type != Homegear::PhpEvents::EventDataType::undefined)
     {
         array_init(return_value);
         zval element;
 
-        if(!eventData->type.empty())
+        if(eventData->type == Homegear::PhpEvents::EventDataType::event ||
+                eventData->type == Homegear::PhpEvents::EventDataType::newDevices ||
+                eventData->type == Homegear::PhpEvents::EventDataType::deleteDevices ||
+                eventData->type == Homegear::PhpEvents::EventDataType::updateDevice)
         {
-            ZVAL_STRINGL(&element, eventData->type.c_str(), eventData->type.size());
+            if(eventData->type == Homegear::PhpEvents::EventDataType::event) ZVAL_STRINGL(&element, "event", sizeof("event") - 1);
+            else if(eventData->type == Homegear::PhpEvents::EventDataType::newDevices) ZVAL_STRINGL(&element, "newDevices", sizeof("newDevices") - 1);
+            else if(eventData->type == Homegear::PhpEvents::EventDataType::deleteDevices) ZVAL_STRINGL(&element, "deleteDevices", sizeof("deleteDevices") - 1);
+            else if(eventData->type == Homegear::PhpEvents::EventDataType::updateDevice) ZVAL_STRINGL(&element, "updateDevice", sizeof("updateDevice") - 1);
             add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
+
+            if(!eventData->source.empty())
+            {
+                ZVAL_STRINGL(&element, eventData->source.c_str(), eventData->source.size());
+                add_assoc_zval_ex(return_value, "EVENTSOURCE", sizeof("EVENTSOURCE") - 1, &element);
+            }
+
+            ZVAL_LONG(&element, eventData->id);
+            add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+
+            ZVAL_LONG(&element, eventData->channel);
+            add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
+
+            if(!eventData->variable.empty())
+            {
+                ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
+                add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
+            }
+
+            if(eventData->hint != -1)
+            {
+                ZVAL_LONG(&element, eventData->hint);
+                add_assoc_zval_ex(return_value, "HINT", sizeof("HINT") - 1, &element);
+            }
+
+            if(eventData->value)
+            {
+                Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
+                add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+            }
         }
-
-        if(!eventData->source.empty())
+        else if(eventData->type == Homegear::PhpEvents::EventDataType::variableProfileStateChanged)
         {
-            ZVAL_STRINGL(&element, eventData->source.c_str(), eventData->source.size());
-            add_assoc_zval_ex(return_value, "EVENTSOURCE", sizeof("EVENTSOURCE") - 1, &element);
-        }
+            ZVAL_STRINGL(&element, "variableProfileStateChanged", sizeof("variableProfileStateChanged") - 1);
+            add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
 
-        ZVAL_LONG(&element, eventData->id);
-        add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+            ZVAL_LONG(&element, eventData->id);
+            add_assoc_zval_ex(return_value, "PROFILEID", sizeof("PROFILEID") - 1, &element);
 
-        ZVAL_LONG(&element, eventData->channel);
-        add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
-
-        if(!eventData->variable.empty())
-        {
-            ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
-            add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
-        }
-
-        if(eventData->hint != -1)
-        {
-            ZVAL_LONG(&element, eventData->hint);
-            add_assoc_zval_ex(return_value, "HINT", sizeof("HINT") - 1, &element);
-        }
-
-        if(eventData->value)
-        {
-            Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
-            add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+            if(eventData->value)
+            {
+                Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
+                add_assoc_zval_ex(return_value, "STATE", sizeof("STATE") - 1, &element);
+            }
         }
     }
     else RETURN_FALSE
