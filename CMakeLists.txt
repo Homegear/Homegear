@@ -3,7 +3,7 @@ project(Homegear)
 
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories(/usr/include/php7-homegear /usr/include/php7-homegear/main /usr/include/php7-homegear/sapi /usr/include/php7-homegear/TSRM /usr/include/php7-homegear/Zend)
+include_directories(/usr/include/php7-homegear /usr/include/php7-homegear/main /usr/include/php7-homegear/sapi /usr/include/php7-homegear/TSRM /usr/include/php7-homegear/Zend /usr/include/php7-homegear/php /usr/include/php7-homegear/php/main /usr/include/php7-homegear/php/sapi /usr/include/php7-homegear/php/TSRM /usr/include/php7-homegear/php/Zend)
 
 set(SOURCE_FILES
         homegear-miscellaneous/src/Factory.cpp

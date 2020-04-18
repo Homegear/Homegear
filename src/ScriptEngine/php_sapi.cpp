@@ -48,6 +48,10 @@
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of hg_stream_open() equals zend_stream_open() in zend_stream.c
+ * 3. Check if ext/opcache changed references to ZEND_HANDLE_STREAM, because the stream is interpreted as php_stream
+ *    there, which causes PHP to crash when a script is started from Homegear. This is the only extension that needs to
+ *    be checked, because we force Homegear to work with Opcache. The references everywhere else can't expect the file
+ *    handle to be of type php_stream.
  */
 #endif
 

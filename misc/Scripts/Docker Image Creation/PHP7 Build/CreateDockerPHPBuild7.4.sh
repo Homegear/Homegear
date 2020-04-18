@@ -265,6 +265,7 @@ git checkout release
 cd ..
 # Add Homegear to allowed OPcode cache modules
 sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
+sed -i '/.*case ZEND_HANDLE_STREAM:.*/a\\t\t\tif (strcmp(sapi_module.name, "homegear") == 0) return 0;' ext/opcache/ZendAccelerator.c
 cd ..
 autoconf
 version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`

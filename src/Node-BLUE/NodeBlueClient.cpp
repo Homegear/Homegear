@@ -2334,11 +2334,11 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
 {
     try
     {
-        if(parameters->size() != 5) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->size() != 6) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
         {
             std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-            for(auto nodeId : _eventSubscriptions)
+            for(auto& nodeId : _eventSubscriptions)
             {
                 Flows::PINode node = _nodeManager->getNode(nodeId);
                 if(node) node->homegearEvent("deviceVariableEvent", parameters);
@@ -2366,10 +2366,10 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
 
                 Flows::PVariable value = parameters->at(4)->arrayValue->at(j);
 
-                for(auto nodeId : variableIterator->second)
+                for(auto& nodeId : variableIterator->second)
                 {
                     Flows::PINode node = _nodeManager->getNode(nodeId);
-                    if(node) node->variableEvent(source, peerId, channel, variableName, value);
+                    if(node) node->variableEvent(source, peerId, channel, variableName, value, parameters->at(5));
                 }
             }
         }
