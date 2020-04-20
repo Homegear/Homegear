@@ -1696,6 +1696,7 @@ public:
     {
         addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
         addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
     }
 
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);

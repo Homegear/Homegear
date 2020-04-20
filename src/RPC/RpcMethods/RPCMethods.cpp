@@ -6590,32 +6590,35 @@ BaseLib::PVariable RPCSearchDevices::invoke(BaseLib::PRpcClientInfo clientInfo, 
     {
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("searchDevices")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        int32_t familyID = -1;
+        int32_t familyId = -1;
+        std::string interfaceId;
         if(!parameters->empty())
         {
             ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})
-                                                                                                                     }));
+                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}),
+                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+            }));
             if(error != ParameterError::Enum::noError) return getError(error);
 
-            familyID = parameters->at(0)->integerValue;
+            familyId = parameters->at(0)->integerValue;
+            if(parameters->size() > 1) interfaceId = parameters->at(1)->stringValue;
         }
 
         std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-        if(familyID > -1)
+        if(familyId > -1)
         {
-            if(families.find(familyID) == families.end())
+            if(families.find(familyId) == families.end())
             {
                 return BaseLib::Variable::createError(-2, "Device family is unknown.");
             }
-            return families.at(familyID)->getCentral()->searchDevices(clientInfo);
+            return families.at(familyId)->getCentral()->searchDevices(clientInfo, interfaceId);
         }
 
         BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tInteger));
         for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
         {
             std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-            if(central) result->integerValue += central->searchDevices(clientInfo)->integerValue;
+            if(central) result->integerValue += central->searchDevices(clientInfo, interfaceId)->integerValue;
         }
 
         return result;
