@@ -68,7 +68,7 @@ BaseLib::PVariable RpcAddVariableProfile::invoke(BaseLib::PRpcClientInfo clientI
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("addVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->addVariableProfile(parameters->at(0), parameters->at(1));
+        return GD::variableProfileManager->addVariableProfile(clientInfo, parameters->at(0), parameters->at(1));
     }
     catch(const std::exception& ex)
     {

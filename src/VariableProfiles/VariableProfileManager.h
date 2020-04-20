@@ -45,6 +45,7 @@ struct VariableProfile
     BaseLib::PVariable name;
     int64_t lastActivation = 0;
     BaseLib::PVariable profile;
+    BaseLib::PVariable profileBackup;
     bool isActive = false;
     uint32_t activeVariables = 0;
     uint32_t variableCount = 0;
@@ -75,6 +76,9 @@ private:
      * Peer ID, channel, variable, profile ID
      */
     std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::unordered_map<uint64_t, PVariableProfileAssociation>>>> _profilesByVariable;
+
+    bool setValue(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId, uint64_t peerId, int32_t channel, const std::string& variable, const BaseLib::PVariable& value, bool wait);
+    std::list<BaseLib::PVariable> getRoleVariables(uint64_t profileId, const BaseLib::PVariable& profile);
 public:
     VariableProfileManager();
 
@@ -82,7 +86,7 @@ public:
 
     void load();
     BaseLib::PVariable activateVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId);
-    BaseLib::PVariable addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile);
+    BaseLib::PVariable addVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile);
     BaseLib::PVariable deleteVariableProfile(uint64_t profileId);
     BaseLib::PVariable getAllVariableProfiles(const std::string& languageCode);
     BaseLib::PVariable getVariableProfile(uint64_t id, const std::string& languageCode);
