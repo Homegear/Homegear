@@ -31,6 +31,29 @@
 					<operationType>store</operationType>
 				</physicalNone>
 			</parameter>
+		    <parameter id="UNREACH">
+		       <properties>
+		         <readable>true</readable>
+		         <writeable>true</writeable>
+		         <service>true</service>
+		     </properties>
+		       <logicalBoolean />
+		       <physicalBoolean>
+		         <operationType>internal</operationType>
+		       </physicalBoolean>
+		  </parameter>
+	      <parameter id="STICKY_UNREACH">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <service>true</service>
+	          <sticky>true</sticky>
+	        </properties>
+	        <logicalBoolean />
+	        <physicalBoolean>
+	          <operationType>internal</operationType>
+	        </physicalBoolean>
+	      </parameter>
 		</variables>
 		<variables id="custom_ch1_values">
 			<parameter id="ACTUAL_TEMPERATURE">

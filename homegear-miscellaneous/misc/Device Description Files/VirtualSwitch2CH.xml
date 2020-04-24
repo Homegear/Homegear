@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice version="1">
+	<supportedDevices>
+		<device id="VirtualSwitch2CH">
+			<description>VirtualSwitch 2CH</description>
+			<typeNumber>0xF014</typeNumber>
+		</device>
+	</supportedDevices>
+	<properties/>
+	<functions>
+		<function channel="0" type="MAINTENANCE">
+			<properties>
+				<internal>true</internal>
+			</properties>
+			<configParameters>config</configParameters>
+			<variables>maint_ch0_values</variables>
+		</function>
+		<function channel="1" type="VirtualSwitch">
+			<variables>custom_ch1_values</variables>
+		</function>
+        <function channel="2" type="VirtualSwitch">
+			<variables>custom_ch2_values</variables>
+		</function>
+	</functions>
+	<parameterGroups>
+		<configParameters id="config"/>
+		<variables id="maint_ch0_values">
+			<parameter id="LOWBAT">
+				<properties>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="UNREACH">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean />
+				<physicalBoolean>
+					<operationType>internal</operationType>
+				</physicalBoolean>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<service>true</service>
+					<sticky>true</sticky>
+				</properties>
+				<logicalBoolean />
+				<physicalBoolean>
+					<operationType>internal</operationType>
+				</physicalBoolean>
+			</parameter>
+		</variables>
+		<variables id="custom_ch1_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+        <variables id="custom_ch2_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>
