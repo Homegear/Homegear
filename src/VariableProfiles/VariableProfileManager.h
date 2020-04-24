@@ -39,13 +39,26 @@
 namespace Homegear
 {
 
+struct VariableProfileValue
+{
+    uint64_t peerId = 0;
+    int32_t channel = -1;
+    std::string variable;
+    BaseLib::PVariable value;
+    bool wait = false;
+    bool invert = false;
+    bool ignoreValueFromDevice = true;
+    uint32_t deviceRefractoryPeriod = 60;
+};
+typedef std::shared_ptr<VariableProfileValue> PVariableProfileValue;
+
 struct VariableProfile
 {
     uint64_t id;
     BaseLib::PVariable name;
     int64_t lastActivation = 0;
-    BaseLib::PVariable profile;
-    BaseLib::PVariable profileBackup;
+    std::vector<PVariableProfileValue> values;
+    BaseLib::PVariable profileStruct;
     bool isActive = false;
     uint32_t activeVariables = 0;
     uint32_t variableCount = 0;
@@ -55,7 +68,7 @@ typedef std::shared_ptr<VariableProfile> PVariableProfile;
 struct VariableProfileAssociation
 {
     uint64_t profileId = 0;
-    bool ignoreUpdatesFromDevice = true;
+    bool ignoreValueFromDevice = true;
     uint32_t deviceRefractoryPeriod = 60;
     BaseLib::PVariable profileValue;
     BaseLib::PVariable currentValue;
@@ -78,7 +91,7 @@ private:
     std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::unordered_map<uint64_t, PVariableProfileAssociation>>>> _profilesByVariable;
 
     bool setValue(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId, uint64_t peerId, int32_t channel, const std::string& variable, const BaseLib::PVariable& value, bool wait);
-    std::list<BaseLib::PVariable> getRoleVariables(uint64_t profileId, const BaseLib::PVariable& profile);
+    std::list<PVariableProfileValue> getRoleVariables(uint64_t profileId, const BaseLib::PVariable& profile);
 public:
     VariableProfileManager();
 

@@ -476,11 +476,11 @@ stage_two()
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
     resize2fs /dev/mmcblk0p2 | dialog --title "Partition setup" --progressbox "Resizing root partition..." $TTY_Y $TTY_X
-    mkfs.ext4 -F /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
+    mkfs.btrfs -f /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
 
     sed -i '/\/dev\/mmcblk0p2/a\
-\/dev\/mmcblk0p3  \/data                       ext4            defaults,noatime,commit=600             0       1' /etc/fstab
-    mount -o defaults,noatime,commit=600 /dev/mmcblk0p3 /data
+\/dev\/mmcblk0p3  \/data                       btrfs            defaults,degraded,compress=lzo,noatime,nodiratime,autodefrag,space_cache,commit=600             0       1' /etc/fstab
+    mount -o defaults,degraded,compress=lzo,noatime,nodiratime,autodefrag,space_cache,commit=600 /dev/mmcblk0p3 /data
     sed -i '/^After=/ s/$/ data.mount/' /lib/systemd/system/setup-tmpfs.service
     systemctl daemon-reload
     rm -f /partstagetwo

@@ -59,47 +59,42 @@ void VariableProfileManager::load()
             auto variableProfile = std::make_shared<VariableProfile>();
             variableProfile->id = (uint64_t) row.second.at(0)->intValue;
             variableProfile->name = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
-            variableProfile->profile = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
-            variableProfile->profileBackup = std::make_shared<BaseLib::Variable>();
-            *variableProfile->profileBackup = *variableProfile->profile;
+            variableProfile->profileStruct = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
 
             if(variableProfile->id == 0 || variableProfile->name->structValue->empty()) continue;
 
+            size_t valuesArraySize = 0;
+
+            auto valuesIterator = variableProfile->profileStruct->structValue->find("values");
+            if(valuesIterator != variableProfile->profileStruct->structValue->end())
             {
-                auto roleVariables = getRoleVariables(variableProfile->id, variableProfile->profile);
+                valuesArraySize = valuesIterator->second->arrayValue->size();
+            }
+
+            {
+                auto roleVariables = getRoleVariables(variableProfile->id, variableProfile->profileStruct);
                 if(!roleVariables.empty())
                 {
-                    auto valuesIterator = variableProfile->profile->structValue->find("values");
-                    if(valuesIterator != variableProfile->profile->structValue->end())
+                    variableProfile->values.reserve(roleVariables.size() + valuesArraySize);
+                    for(auto& roleVariable : roleVariables)
                     {
-                        valuesIterator->second->arrayValue->reserve(valuesIterator->second->arrayValue->size() + roleVariables.size());
-                        for(auto& roleVariable : roleVariables)
-                        {
-                            valuesIterator->second->arrayValue->emplace_back(roleVariable);
-                        }
+                        variableProfile->values.emplace_back(roleVariable);
                     }
                 }
             }
 
-            _variableProfiles.emplace(variableProfile->id, variableProfile);
-
-            auto valuesIterator = variableProfile->profile->structValue->find("values");
-            if(valuesIterator != variableProfile->profile->structValue->end())
+            if(valuesIterator != variableProfile->profileStruct->structValue->end())
             {
-                variableProfile->isActive = true;
                 for(auto& valueEntry : *valuesIterator->second->arrayValue)
                 {
-                    auto roleIterator = valueEntry->structValue->find("role");
                     auto peerIdIterator = valueEntry->structValue->find("peerId");
                     auto channelIterator = valueEntry->structValue->find("channel");
                     auto variableIterator = valueEntry->structValue->find("variable");
                     auto valueIterator = valueEntry->structValue->find("value");
+                    auto waitIterator = valueEntry->structValue->find("wait");
                     auto invertIterator = valueEntry->structValue->find("invert");
                     auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
                     auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
-
-                    //Ignore role entry
-                    if(roleIterator != valueEntry->structValue->end() && peerIdIterator == valueEntry->structValue->end()) continue;
 
                     if(peerIdIterator == valueEntry->structValue->end() || channelIterator == valueEntry->structValue->end() || variableIterator == valueEntry->structValue->end() || valueIterator == valueEntry->structValue->end())
                     {
@@ -107,36 +102,50 @@ void VariableProfileManager::load()
                         continue;
                     }
 
-                    uint64_t peerId = peerIdIterator->second->integerValue64;
-                    int32_t channel = channelIterator->second->integerValue;
-                    std::string& variable = variableIterator->second->stringValue;
-                    BaseLib::PVariable value = valueIterator->second;
-                    bool invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && value->type == BaseLib::VariableType::tBoolean);
+                    auto profileValue = std::make_shared<VariableProfileValue>();
+                    profileValue->peerId = peerIdIterator->second->integerValue64;
+                    profileValue->channel = channelIterator->second->integerValue;
+                    profileValue->variable = variableIterator->second->stringValue;
+                    profileValue->value = valueIterator->second;
+                    if(!profileValue->value) continue;
+                    profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
+                    profileValue->invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
 
-                    auto profileAssociation = std::make_shared<VariableProfileAssociation>();
-                    profileAssociation->profileId = variableProfile->id;
-                    profileAssociation->profileValue = invert ? std::make_shared<BaseLib::Variable>(!value->booleanValue) : value;
-                    if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileAssociation->ignoreUpdatesFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
-                    if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileAssociation->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
-
-                    {
-                        auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                        parameters->arrayValue->reserve(3);
-                        parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(peerId));
-                        parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(channel));
-                        parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
-                        auto response = GD::rpcServers.begin()->second->callMethod(_profileManagerClientInfo, "getValue", parameters);
-                        if(!response->errorStruct) profileAssociation->currentValue = response;
-                        else profileAssociation->currentValue = std::make_shared<BaseLib::Variable>();
-                    }
-
-                    variableProfile->variableCount++;
-
-                    if(*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
-                    else variableProfile->activeVariables++;
-
-                    _profilesByVariable[peerId][channel][variable][variableProfile->id] = profileAssociation;
+                    if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
+                    if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = deviceRefractoryPeriodIterator->second->integerValue;
+                    variableProfile->values.emplace_back(std::move(profileValue));
                 }
+            }
+
+            _variableProfiles.emplace(variableProfile->id, variableProfile);
+
+            variableProfile->isActive = !variableProfile->values.empty();
+            for(auto& valueEntry : variableProfile->values)
+            {
+                auto profileAssociation = std::make_shared<VariableProfileAssociation>();
+                profileAssociation->profileId = variableProfile->id;
+                profileAssociation->profileValue = valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value;
+                profileAssociation->ignoreValueFromDevice = valueEntry->ignoreValueFromDevice;
+                profileAssociation->deviceRefractoryPeriod = valueEntry->deviceRefractoryPeriod;
+
+                {
+                    auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    parameters->arrayValue->reserve(3);
+                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->peerId));
+                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->channel));
+                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->variable));
+                    auto response = GD::rpcServers.begin()->second->callMethod(_profileManagerClientInfo, "getValue", parameters);
+                    if(!response->errorStruct) profileAssociation->currentValue = response;
+                }
+
+                if(!profileAssociation->currentValue) profileAssociation->currentValue = std::make_shared<BaseLib::Variable>();
+
+                variableProfile->variableCount++;
+
+                if(*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
+                else variableProfile->activeVariables++;
+
+                _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable][variableProfile->id] = profileAssociation;
             }
         }
     }
@@ -172,7 +181,7 @@ void VariableProfileManager::variableEvent(const std::string& source, uint64_t i
                             {
                                 if(source.compare(0, 7, "device-") == 0)
                                 {
-                                    if(profileAssociation.second->ignoreUpdatesFromDevice ||
+                                    if(profileAssociation.second->ignoreValueFromDevice ||
                                             (signed)profileAssociation.first + (profileAssociation.second->deviceRefractoryPeriod * 1000) < BaseLib::HelperFunctions::getTime())
                                     {
                                         continue;
@@ -232,13 +241,13 @@ BaseLib::PVariable VariableProfileManager::activateVariableProfile(const BaseLib
 {
     try
     {
-        BaseLib::PVariable profile;
+        std::vector<PVariableProfileValue> profileValues;
 
         {
             std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
             auto variableProfileIterator = _variableProfiles.find(profileId);
             if(variableProfileIterator == _variableProfiles.end()) return BaseLib::Variable::createError(-1, "Variable profile not found.");
-            profile = variableProfileIterator->second->profile;
+            profileValues = variableProfileIterator->second->values;
             variableProfileIterator->second->lastActivation = BaseLib::HelperFunctions::getTime();
         }
 
@@ -246,38 +255,10 @@ BaseLib::PVariable VariableProfileManager::activateVariableProfile(const BaseLib
 
         bool returnValue = true;
 
-        auto valuesIterator = profile->structValue->find("values");
-        if(valuesIterator != profile->structValue->end())
+        for(auto& valueEntry : profileValues)
         {
-            for(auto& valueEntry : *valuesIterator->second->arrayValue)
-            {
-                auto roleIterator = valueEntry->structValue->find("role");
-                auto peerIdIterator = valueEntry->structValue->find("peerId");
-                auto channelIterator = valueEntry->structValue->find("channel");
-                auto variableIterator = valueEntry->structValue->find("variable");
-                auto valueIterator = valueEntry->structValue->find("value");
-                auto waitIterator = valueEntry->structValue->find("wait");
-                auto invertIterator = valueEntry->structValue->find("invert");
-
-                //Ignore role entry
-                if(roleIterator != valueEntry->structValue->end() && peerIdIterator == valueEntry->structValue->end()) continue;
-
-                if(peerIdIterator == valueEntry->structValue->end() || channelIterator == valueEntry->structValue->end() || variableIterator == valueEntry->structValue->end() || valueIterator == valueEntry->structValue->end())
-                {
-                    GD::out.printWarning("Warning: Value entry of profile " + std::to_string(profileId) + " is missing required elements.");
-                    continue;
-                }
-
-                uint64_t peerId = peerIdIterator->second->integerValue64;
-                int32_t channel = channelIterator->second->integerValue;
-                std::string& variable = variableIterator->second->stringValue;
-                BaseLib::PVariable value = valueIterator->second;
-                bool wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue);
-                bool invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && value->type == BaseLib::VariableType::tBoolean);
-
-                auto result = setValue(clientInfo, profileId, peerId, channel, variable, invert ? std::make_shared<BaseLib::Variable>(!value->booleanValue) : value, wait);
-                if(!result) returnValue = false;
-            }
+            auto result = setValue(clientInfo, profileId, valueEntry->peerId, valueEntry->channel, valueEntry->variable, valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value, valueEntry->wait);
+            if(!result) returnValue = false;
         }
 
         return std::make_shared<BaseLib::Variable>(returnValue);
@@ -361,20 +342,22 @@ bool VariableProfileManager::setValue(const BaseLib::PRpcClientInfo& clientInfo,
     return false;
 }
 
-std::list<BaseLib::PVariable> VariableProfileManager::getRoleVariables(uint64_t profileId, const BaseLib::PVariable& profile)
+std::list<PVariableProfileValue> VariableProfileManager::getRoleVariables(uint64_t profileId, const BaseLib::PVariable& profile)
 {
     try
     {
-        std::list<BaseLib::PVariable> roleVariables;
+        std::list<PVariableProfileValue> roleVariables;
 
-        auto valuesIterator = profile->structValue->find("values");
-        if(valuesIterator != profile->structValue->end())
+        auto rolesIterator = profile->structValue->find("roles");
+        if(rolesIterator != profile->structValue->end())
         {
-            for(auto& valueEntry : *valuesIterator->second->arrayValue)
+            for(auto& valueEntry : *rolesIterator->second->arrayValue)
             {
                 auto roleIterator = valueEntry->structValue->find("role");
                 auto valueIterator = valueEntry->structValue->find("value");
                 auto waitIterator = valueEntry->structValue->find("wait");
+                auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
+                auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
 
                 if(roleIterator != valueEntry->structValue->end())
                 {
@@ -385,7 +368,12 @@ std::list<BaseLib::PVariable> VariableProfileManager::getRoleVariables(uint64_t 
                     }
 
                     BaseLib::PVariable value = valueIterator->second;
+                    if(!value) continue;
                     bool wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue);
+                    bool ignoreValueFromDevice = true;
+                    if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
+                    uint32_t deviceRefractoryPeriod = 60;
+                    if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) deviceRefractoryPeriod = deviceRefractoryPeriodIterator->second->integerValue64;
 
                     auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                     requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleIterator->second->integerValue64));
@@ -415,18 +403,17 @@ std::list<BaseLib::PVariable> VariableProfileManager::getRoleVariables(uint64_t 
                                     invert = invertIterator->second->booleanValue;
                                 }
 
-                                uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
-                                int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
-                                std::string variable = variableElement.first;
+                                auto profileValue = std::make_shared<VariableProfileValue>();
+                                profileValue->peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
+                                profileValue->channel = BaseLib::Math::getNumber(channelStructElement.first);
+                                profileValue->variable = variableElement.first;
+                                profileValue->value = value;
+                                profileValue->wait = wait;
+                                profileValue->invert = invert;
+                                profileValue->ignoreValueFromDevice = ignoreValueFromDevice;
+                                profileValue->deviceRefractoryPeriod = deviceRefractoryPeriod;
 
-                                auto variableEntry = std::make_shared<BaseLib::Variable>();
-                                *variableEntry = *valueEntry;
-                                variableEntry->structValue->emplace("peerId", std::make_shared<BaseLib::Variable>(peerId));
-                                variableEntry->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(channel));
-                                variableEntry->structValue->emplace("variable", std::make_shared<BaseLib::Variable>(variable));
-                                if(wait) variableEntry->structValue->emplace("wait", std::make_shared<BaseLib::Variable>(wait));
-                                if(invert) variableEntry->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(invert));
-                                roleVariables.emplace_back(std::move(variableEntry));
+                                roleVariables.emplace_back(std::move(profileValue));
                             }
                         }
                     }
@@ -440,7 +427,7 @@ std::list<BaseLib::PVariable> VariableProfileManager::getRoleVariables(uint64_t 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    return std::list<BaseLib::PVariable>();
+    return std::list<PVariableProfileValue>();
 }
 
 BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile)
@@ -455,51 +442,43 @@ BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRp
         uint64_t id = GD::bl->db->addVariableProfile(translations, profile);
         if(id == 0) return BaseLib::Variable::createError(-1, "Could not insert profile into database.");
 
-        BaseLib::PVariable profileBackup = std::make_shared<BaseLib::Variable>();
-        *profileBackup = *profile;
+        auto variableProfile = std::make_shared<VariableProfile>();
+        variableProfile->id = id;
+        variableProfile->name = translations;
+        variableProfile->profileStruct = profile;
+
+        size_t valuesArraySize = 0;
+
+        auto valuesIterator = variableProfile->profileStruct->structValue->find("values");
+        if(valuesIterator != variableProfile->profileStruct->structValue->end())
+        {
+            valuesArraySize = valuesIterator->second->arrayValue->size();
+        }
 
         {
             auto roleVariables = getRoleVariables(id, profile);
             if(!roleVariables.empty())
             {
-                auto valuesIterator = profile->structValue->find("values");
-                if(valuesIterator != profile->structValue->end())
+                variableProfile->values.reserve(roleVariables.size() + valuesArraySize);
+                for(auto& roleVariable : roleVariables)
                 {
-                    valuesIterator->second->arrayValue->reserve(valuesIterator->second->arrayValue->size() + roleVariables.size());
-                    for(auto& roleVariable : roleVariables)
-                    {
-                        valuesIterator->second->arrayValue->emplace_back(roleVariable);
-                    }
+                    variableProfile->values.emplace_back(roleVariable);
                 }
             }
         }
 
-        auto variableProfile = std::make_shared<VariableProfile>();
-        variableProfile->id = id;
-        variableProfile->name = translations;
-        variableProfile->profile = profile;
-        variableProfile->profileBackup = profileBackup;
-
-        std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
-        _variableProfiles.emplace(variableProfile->id, variableProfile);
-
-        auto valuesIterator = variableProfile->profile->structValue->find("values");
-        if(valuesIterator != variableProfile->profile->structValue->end())
+        if(valuesIterator != variableProfile->profileStruct->structValue->end())
         {
-            variableProfile->isActive = true;
             for(auto& valueEntry : *valuesIterator->second->arrayValue)
             {
-                auto roleIterator = valueEntry->structValue->find("role");
                 auto peerIdIterator = valueEntry->structValue->find("peerId");
                 auto channelIterator = valueEntry->structValue->find("channel");
                 auto variableIterator = valueEntry->structValue->find("variable");
                 auto valueIterator = valueEntry->structValue->find("value");
+                auto waitIterator = valueEntry->structValue->find("wait");
                 auto invertIterator = valueEntry->structValue->find("invert");
                 auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
                 auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
-
-                //Ignore role entry
-                if(roleIterator != valueEntry->structValue->end() && peerIdIterator == valueEntry->structValue->end()) continue;
 
                 if(peerIdIterator == valueEntry->structValue->end() || channelIterator == valueEntry->structValue->end() || variableIterator == valueEntry->structValue->end() || valueIterator == valueEntry->structValue->end())
                 {
@@ -507,36 +486,50 @@ BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRp
                     continue;
                 }
 
-                uint64_t peerId = peerIdIterator->second->integerValue64;
-                int32_t channel = channelIterator->second->integerValue;
-                std::string& variable = variableIterator->second->stringValue;
-                BaseLib::PVariable value = valueIterator->second;
-                bool invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && value->type == BaseLib::VariableType::tBoolean);
-
-                auto profileAssociation = std::make_shared<VariableProfileAssociation>();
-                profileAssociation->profileId = variableProfile->id;
-                profileAssociation->profileValue = invert ? std::make_shared<BaseLib::Variable>(!value->booleanValue) : value;
-                if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileAssociation->ignoreUpdatesFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
-                if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileAssociation->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
-
-                {
-                    auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                    parameters->arrayValue->reserve(3);
-                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(peerId));
-                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(channel));
-                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
-                    auto response = GD::rpcServers.begin()->second->callMethod(_profileManagerClientInfo, "getValue", parameters);
-                    if(!response->errorStruct) profileAssociation->currentValue = response;
-                    else profileAssociation->currentValue = std::make_shared<BaseLib::Variable>();
-                }
-
-                variableProfile->variableCount++;
-
-                if(*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
-                else variableProfile->activeVariables++;
-
-                _profilesByVariable[peerId][channel][variable][variableProfile->id] = profileAssociation;
+                auto profileValue = std::make_shared<VariableProfileValue>();
+                profileValue->peerId = peerIdIterator->second->integerValue64;
+                profileValue->channel = channelIterator->second->integerValue;
+                profileValue->variable = variableIterator->second->stringValue;
+                profileValue->value = valueIterator->second;
+                if(!profileValue->value) continue;
+                profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
+                profileValue->invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
+                if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
+                if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
+                variableProfile->values.emplace_back(std::move(profileValue));
             }
+        }
+
+        std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
+        _variableProfiles.emplace(variableProfile->id, variableProfile);
+
+        variableProfile->isActive = !variableProfile->values.empty();
+        for(auto& valueEntry : variableProfile->values)
+        {
+            auto profileAssociation = std::make_shared<VariableProfileAssociation>();
+            profileAssociation->profileId = variableProfile->id;
+            profileAssociation->profileValue = valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value;
+            profileAssociation->ignoreValueFromDevice = valueEntry->ignoreValueFromDevice;
+            profileAssociation->deviceRefractoryPeriod = valueEntry->deviceRefractoryPeriod;
+
+            {
+                auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                parameters->arrayValue->reserve(3);
+                parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->peerId));
+                parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->channel));
+                parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->variable));
+                auto response = GD::rpcServers.begin()->second->callMethod(_profileManagerClientInfo, "getValue", parameters);
+                if(!response->errorStruct) profileAssociation->currentValue = response;
+            }
+
+            if(!profileAssociation->currentValue) profileAssociation->currentValue = std::make_shared<BaseLib::Variable>();
+
+            variableProfile->variableCount++;
+
+            if(*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
+            else variableProfile->activeVariables++;
+
+            _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable][variableProfile->id] = profileAssociation;
         }
 
         return std::make_shared<BaseLib::Variable>(id);
@@ -560,41 +553,18 @@ BaseLib::PVariable VariableProfileManager::deleteVariableProfile(uint64_t profil
         {
             auto variableProfile = variableProfileIterator->second;
 
-            auto valuesIterator = variableProfile->profile->structValue->find("values");
-            if(valuesIterator != variableProfile->profile->structValue->end())
+            for(auto& valueEntry : variableProfile->values)
             {
-                for(auto& valueEntry : *valuesIterator->second->arrayValue)
+                _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable].erase(variableProfile->id);
+                if(_profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable].empty())
                 {
-                    auto roleIterator = valueEntry->structValue->find("role");
-                    auto peerIdIterator = valueEntry->structValue->find("peerId");
-                    auto channelIterator = valueEntry->structValue->find("channel");
-                    auto variableIterator = valueEntry->structValue->find("variable");
-                    auto valueIterator = valueEntry->structValue->find("value");
-
-                    //Ignore role entry
-                    if(roleIterator != valueEntry->structValue->end() && peerIdIterator == valueEntry->structValue->end()) continue;
-
-                    if(peerIdIterator == valueEntry->structValue->end() || channelIterator == valueEntry->structValue->end() || variableIterator == valueEntry->structValue->end() || valueIterator == valueEntry->structValue->end())
+                    _profilesByVariable[valueEntry->peerId][valueEntry->channel].erase(valueEntry->variable);
+                    if(_profilesByVariable[valueEntry->peerId][valueEntry->channel].empty())
                     {
-                        GD::out.printWarning("Warning: Value entry of profile " + std::to_string(variableProfile->id) + " is missing required elements.");
-                        continue;
-                    }
-
-                    uint64_t peerId = peerIdIterator->second->integerValue64;
-                    int32_t channel = channelIterator->second->integerValue;
-                    std::string& variable = variableIterator->second->stringValue;
-
-                    _profilesByVariable[peerId][channel][variable].erase(variableProfile->id);
-                    if(_profilesByVariable[peerId][channel][variable].empty())
-                    {
-                        _profilesByVariable[peerId][channel].erase(variable);
-                        if(_profilesByVariable[peerId][channel].empty())
+                        _profilesByVariable[valueEntry->peerId].erase(valueEntry->channel);
+                        if(_profilesByVariable[valueEntry->peerId].empty())
                         {
-                            _profilesByVariable[peerId].erase(channel);
-                            if(_profilesByVariable[peerId].empty())
-                            {
-                                _profilesByVariable.erase(peerId);
-                            }
+                            _profilesByVariable.erase(valueEntry->peerId);
                         }
                     }
                 }
@@ -628,17 +598,17 @@ BaseLib::PVariable VariableProfileManager::getAllVariableProfiles(const std::str
             if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
             if(nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
 
-            profile.second->profileBackup->structValue->erase("id");
-            profile.second->profileBackup->structValue->emplace("id", std::make_shared<BaseLib::Variable>(profile.first));
-            profile.second->profileBackup->structValue->erase("name");
-            profile.second->profileBackup->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
-            profile.second->profileBackup->structValue->erase("isActive");
-            profile.second->profileBackup->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(profile.second->isActive));
-            profile.second->profileBackup->structValue->erase("totalVariableCount");
-            profile.second->profileBackup->structValue->emplace("totalVariableCount", std::make_shared<BaseLib::Variable>(profile.second->variableCount));
-            profile.second->profileBackup->structValue->erase("activeVariableCount");
-            profile.second->profileBackup->structValue->emplace("activeVariableCount", std::make_shared<BaseLib::Variable>(profile.second->activeVariables));
-            profiles->arrayValue->emplace_back(profile.second->profileBackup);
+            profile.second->profileStruct->structValue->erase("id");
+            profile.second->profileStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(profile.first));
+            profile.second->profileStruct->structValue->erase("name");
+            profile.second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
+            profile.second->profileStruct->structValue->erase("isActive");
+            profile.second->profileStruct->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(profile.second->isActive));
+            profile.second->profileStruct->structValue->erase("totalVariableCount");
+            profile.second->profileStruct->structValue->emplace("totalVariableCount", std::make_shared<BaseLib::Variable>(profile.second->variableCount));
+            profile.second->profileStruct->structValue->erase("activeVariableCount");
+            profile.second->profileStruct->structValue->emplace("activeVariableCount", std::make_shared<BaseLib::Variable>(profile.second->activeVariables));
+            profiles->arrayValue->emplace_back(profile.second->profileStruct);
         }
 
         return profiles;
@@ -664,18 +634,18 @@ BaseLib::PVariable VariableProfileManager::getVariableProfile(uint64_t id, const
         if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
         if(nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;
 
-        variableProfileIterator->second->profileBackup->structValue->erase("id");
-        variableProfileIterator->second->profileBackup->structValue->emplace("id", std::make_shared<BaseLib::Variable>(variableProfileIterator->first));
-        variableProfileIterator->second->profileBackup->structValue->erase("name");
-        variableProfileIterator->second->profileBackup->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
-        variableProfileIterator->second->profileBackup->structValue->erase("isActive");
-        variableProfileIterator->second->profileBackup->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->isActive));
-        variableProfileIterator->second->profileBackup->structValue->erase("totalVariableCount");
-        variableProfileIterator->second->profileBackup->structValue->emplace("totalVariableCount", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->variableCount));
-        variableProfileIterator->second->profileBackup->structValue->erase("activeVariableCount");
-        variableProfileIterator->second->profileBackup->structValue->emplace("activeVariableCount", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->activeVariables));
+        variableProfileIterator->second->profileStruct->structValue->erase("id");
+        variableProfileIterator->second->profileStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(variableProfileIterator->first));
+        variableProfileIterator->second->profileStruct->structValue->erase("name");
+        variableProfileIterator->second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
+        variableProfileIterator->second->profileStruct->structValue->erase("isActive");
+        variableProfileIterator->second->profileStruct->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->isActive));
+        variableProfileIterator->second->profileStruct->structValue->erase("totalVariableCount");
+        variableProfileIterator->second->profileStruct->structValue->emplace("totalVariableCount", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->variableCount));
+        variableProfileIterator->second->profileStruct->structValue->erase("activeVariableCount");
+        variableProfileIterator->second->profileStruct->structValue->emplace("activeVariableCount", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->activeVariables));
 
-        return variableProfileIterator->second->profileBackup;
+        return variableProfileIterator->second->profileStruct;
     }
     catch(const std::exception& ex)
     {
@@ -693,6 +663,8 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             return BaseLib::Variable::createError(-1, "translations and profile are empty or not a valid Struct.");
         }
 
+        auto newProfile = profile;
+
         {
             std::lock_guard<std::mutex> variableProfilesGuard(_variableProfilesMutex);
             auto variableProfileIterator = _variableProfiles.find(profileId);
@@ -700,47 +672,22 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             auto variableProfile = variableProfileIterator->second;
 
             if(!translations->structValue->empty()) variableProfile->name = translations;
-
-            auto newProfile = profile;
-
-            if(newProfile->structValue->empty()) newProfile = variableProfile->profileBackup;
+            if(newProfile->structValue->empty()) newProfile = variableProfile->profileStruct;
 
             //{{{ Remove old variable associations
             {
-                auto valuesIterator = variableProfile->profile->structValue->find("values");
-                if(valuesIterator != variableProfile->profile->structValue->end())
+                for(auto& valueEntry : variableProfile->values)
                 {
-                    for(auto& valueEntry : *valuesIterator->second->arrayValue)
+                    _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable].erase(variableProfile->id);
+                    if(_profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable].empty())
                     {
-                        auto roleIterator = valueEntry->structValue->find("role");
-                        auto peerIdIterator = valueEntry->structValue->find("peerId");
-                        auto channelIterator = valueEntry->structValue->find("channel");
-                        auto variableIterator = valueEntry->structValue->find("variable");
-
-                        //Ignore role entry
-                        if(roleIterator != valueEntry->structValue->end() && peerIdIterator == valueEntry->structValue->end()) continue;
-
-                        if(peerIdIterator == valueEntry->structValue->end() || channelIterator == valueEntry->structValue->end() || variableIterator == valueEntry->structValue->end())
+                        _profilesByVariable[valueEntry->peerId][valueEntry->channel].erase(valueEntry->variable);
+                        if(_profilesByVariable[valueEntry->peerId][valueEntry->channel].empty())
                         {
-                            GD::out.printWarning("Warning: Value entry of profile " + std::to_string(variableProfile->id) + " is missing required elements.");
-                            continue;
-                        }
-
-                        uint64_t peerId = peerIdIterator->second->integerValue64;
-                        int32_t channel = channelIterator->second->integerValue;
-                        std::string& variable = variableIterator->second->stringValue;
-
-                        _profilesByVariable[peerId][channel][variable].erase(variableProfile->id);
-                        if(_profilesByVariable[peerId][channel][variable].empty())
-                        {
-                            _profilesByVariable[peerId][channel].erase(variable);
-                            if(_profilesByVariable[peerId][channel].empty())
+                            _profilesByVariable[valueEntry->peerId].erase(valueEntry->channel);
+                            if(_profilesByVariable[valueEntry->peerId].empty())
                             {
-                                _profilesByVariable[peerId].erase(channel);
-                                if(_profilesByVariable[peerId].empty())
-                                {
-                                    _profilesByVariable.erase(peerId);
-                                }
+                                _profilesByVariable.erase(valueEntry->peerId);
                             }
                         }
                     }
@@ -748,21 +695,25 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             }
             //}}}
 
-            *variableProfile->profileBackup = *newProfile;
-            variableProfile->profile = newProfile;
+            variableProfile->profileStruct = newProfile;
+            variableProfile->values.clear();
+
+            size_t valuesArraySize = 0;
+
+            auto valuesIterator = variableProfile->profileStruct->structValue->find("values");
+            if(valuesIterator != variableProfile->profileStruct->structValue->end())
+            {
+                valuesArraySize = valuesIterator->second->arrayValue->size();
+            }
 
             {
-                auto roleVariables = getRoleVariables(variableProfile->id, variableProfile->profile);
+                auto roleVariables = getRoleVariables(variableProfile->id, variableProfile->profileStruct);
                 if(!roleVariables.empty())
                 {
-                    auto valuesIterator = variableProfile->profile->structValue->find("values");
-                    if(valuesIterator != variableProfile->profile->structValue->end())
+                    variableProfile->values.reserve(roleVariables.size() + valuesArraySize);
+                    for(auto& roleVariable : roleVariables)
                     {
-                        valuesIterator->second->arrayValue->reserve(valuesIterator->second->arrayValue->size() + roleVariables.size());
-                        for(auto& roleVariable : roleVariables)
-                        {
-                            valuesIterator->second->arrayValue->emplace_back(roleVariable);
-                        }
+                        variableProfile->values.emplace_back(roleVariable);
                     }
                 }
             }
@@ -771,10 +722,9 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             {
                 variableProfile->variableCount = 0;
                 variableProfile->activeVariables = 0;
-                auto valuesIterator = variableProfile->profile->structValue->find("values");
-                if(valuesIterator != variableProfile->profile->structValue->end())
+                auto valuesIterator = variableProfile->profileStruct->structValue->find("values");
+                if(valuesIterator != variableProfile->profileStruct->structValue->end())
                 {
-                    variableProfile->isActive = true;
                     for(auto& valueEntry : *valuesIterator->second->arrayValue)
                     {
                         auto roleIterator = valueEntry->structValue->find("role");
@@ -782,6 +732,7 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
                         auto channelIterator = valueEntry->structValue->find("channel");
                         auto variableIterator = valueEntry->structValue->find("variable");
                         auto valueIterator = valueEntry->structValue->find("value");
+                        auto waitIterator = valueEntry->structValue->find("wait");
                         auto invertIterator = valueEntry->structValue->find("invert");
                         auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
                         auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
@@ -795,42 +746,53 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
                             continue;
                         }
 
-                        uint64_t peerId = peerIdIterator->second->integerValue64;
-                        int32_t channel = channelIterator->second->integerValue;
-                        std::string& variable = variableIterator->second->stringValue;
-                        BaseLib::PVariable value = valueIterator->second;
-                        bool invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && value->type == BaseLib::VariableType::tBoolean);
-
-                        auto profileAssociation = std::make_shared<VariableProfileAssociation>();
-                        profileAssociation->profileId = variableProfile->id;
-                        profileAssociation->profileValue = invert ? std::make_shared<BaseLib::Variable>(!value->booleanValue) : value;
-                        if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileAssociation->ignoreUpdatesFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
-                        if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileAssociation->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
-
-                        {
-                            auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                            parameters->arrayValue->reserve(3);
-                            parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(peerId));
-                            parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(channel));
-                            parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
-                            auto response = GD::rpcServers.begin()->second->callMethod(_profileManagerClientInfo, "getValue", parameters);
-                            if(!response->errorStruct) profileAssociation->currentValue = response;
-                            else profileAssociation->currentValue = std::make_shared<BaseLib::Variable>();
-                        }
-
-                        variableProfile->variableCount++;
-
-                        if(*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
-                        else variableProfile->activeVariables++;
-
-                        _profilesByVariable[peerId][channel][variable][variableProfile->id] = profileAssociation;
+                        auto profileValue = std::make_shared<VariableProfileValue>();
+                        profileValue->peerId = peerIdIterator->second->integerValue64;
+                        profileValue->channel = channelIterator->second->integerValue;
+                        profileValue->variable = variableIterator->second->stringValue;
+                        profileValue->value = valueIterator->second;
+                        if(!profileValue->value) continue;
+                        profileValue->invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
+                        profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
+                        if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
+                        if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
+                        variableProfile->values.emplace_back(std::move(profileValue));
                     }
                 }
             }
             //}}}
+
+            variableProfile->isActive = !variableProfile->values.empty();
+            for(auto& valueEntry : variableProfile->values)
+            {
+                auto profileAssociation = std::make_shared<VariableProfileAssociation>();
+                profileAssociation->profileId = variableProfile->id;
+                profileAssociation->profileValue = valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value;
+                profileAssociation->ignoreValueFromDevice = valueEntry->ignoreValueFromDevice;
+                profileAssociation->deviceRefractoryPeriod = valueEntry->deviceRefractoryPeriod;
+
+                {
+                    auto parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    parameters->arrayValue->reserve(3);
+                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->peerId));
+                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->channel));
+                    parameters->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(valueEntry->variable));
+                    auto response = GD::rpcServers.begin()->second->callMethod(_profileManagerClientInfo, "getValue", parameters);
+                    if(!response->errorStruct) profileAssociation->currentValue = response;
+                }
+
+                if(!profileAssociation->currentValue) profileAssociation->currentValue = std::make_shared<BaseLib::Variable>();
+
+                variableProfile->variableCount++;
+
+                if(*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
+                else variableProfile->activeVariables++;
+
+                _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable][variableProfile->id] = profileAssociation;
+            }
         }
 
-        auto result = GD::bl->db->updateVariableProfile(profileId, translations, profile);
+        auto result = GD::bl->db->updateVariableProfile(profileId, translations, newProfile);
 
         return std::make_shared<BaseLib::Variable>(result);
     }
