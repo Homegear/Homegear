@@ -451,7 +451,12 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
         memset(&handle->handle.stream.mmap, 0, sizeof(zend_mmap));
 #else
         zend_string* opened_path = nullptr;
-        zend_stream_init_fp(handle, zend_fopen(filename, &opened_path), filename);
+        auto fp = zend_fopen(filename, &opened_path);
+        //Don't continue when fp is invalid, i. e. the file could not be opened. This differs from zend_stream_open. But
+        //when calling zend_stream_init_fp() after returning, PHP crashes with a SEGFAULT on "include" of a non-existing
+        //file.
+        if(!fp) return FAILURE;
+        zend_stream_init_fp(handle, fp, filename);
         handle->opened_path = opened_path;
 #endif
         //}}}

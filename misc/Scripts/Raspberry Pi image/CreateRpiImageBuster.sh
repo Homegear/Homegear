@@ -155,7 +155,7 @@ wget http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 apt-key add - < raspberrypi.gpg.key
 rm raspberrypi.gpg.key
 apt-get update
-apt-get -y install libraspberrypi0 libraspberrypi-bin locales console-common dhcpcd5 ntpdate fake-hwclock resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
+apt-get -y install libraspberrypi0 libraspberrypi-bin locales btrfs-tools console-common dhcpcd5 ntpdate fake-hwclock resolvconf openssh-server git-core binutils curl libcurl3-gnutls sudo parted unzip p7zip-full libxml2-utils keyboard-configuration python-lzo libgcrypt20 libgpg-error0 libgnutlsxx28 lua5.2 libenchant1c2a libltdl7 libxslt1.1 libmodbus5 tmux dialog whiptail
 # Wireless packets
 apt-get -y install bluez-firmware firmware-atheros firmware-libertas firmware-realtek firmware-ralink firmware-brcm80211 wireless-tools wpasupplicant
 # Install bootloader and kernel
@@ -319,6 +319,15 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 7 * * * * root systemctl restart ntp
 EOF
 
+cat > "$rootfs/etc/cron.d/btrfs-scrub" <<'EOF'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+# Run BTRFS scrub on data partition once per month to verify
+# checksums.
+
+12 3 1 * * root btrfs scrub start /data
+EOF
+
 cat > "$rootfs/fourth-stage" <<'EOF'
 rm -Rf /tmp
 ln -s /var/tmp /tmp
@@ -476,7 +485,7 @@ stage_two()
     TTY_X=$(($(stty size | awk '{print $2}')-6))
     TTY_Y=$(($(stty size | awk '{print $1}')-6))
     resize2fs /dev/mmcblk0p2 | dialog --title "Partition setup" --progressbox "Resizing root partition..." $TTY_Y $TTY_X
-    mkfs.btrfs -f /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
+    mkfs.btrfs -f -d dup -m dup /dev/mmcblk0p3 | dialog --title "Partition setup" --progressbox "Creating data partition..." $TTY_Y $TTY_X
 
     sed -i '/\/dev\/mmcblk0p2/a\
 \/dev\/mmcblk0p3  \/data                       btrfs            defaults,degraded,compress=lzo,noatime,nodiratime,autodefrag,space_cache,commit=600             0       1' /etc/fstab
@@ -484,6 +493,7 @@ stage_two()
     sed -i '/^After=/ s/$/ data.mount/' /lib/systemd/system/setup-tmpfs.service
     systemctl daemon-reload
     rm -f /partstagetwo
+    sleep 5
 }
 
 [ -f /partstagetwo ] && stage_two
