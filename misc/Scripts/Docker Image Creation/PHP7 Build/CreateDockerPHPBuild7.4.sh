@@ -128,19 +128,19 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "bionic" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -153,11 +153,13 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
-if [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "focal" ]; then
+	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu focal main" > $rootfs/etc/apt/sources.list.d/php7-src.list
+elif [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 elif [ "$distver" == "trusty" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php7-src.list
