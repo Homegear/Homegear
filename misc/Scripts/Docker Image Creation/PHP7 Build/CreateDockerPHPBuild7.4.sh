@@ -123,6 +123,8 @@ Acquire::CompressionTypes::Order:: "gz";
 EOF
 
 #Fix debootstrap base package errors
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+
 if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
