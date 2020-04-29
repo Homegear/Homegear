@@ -157,9 +157,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
-if [ "$distver" == "focal" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu focal main" > $rootfs/etc/apt/sources.list.d/php7-src.list
-elif [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 elif [ "$distver" == "trusty" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php7-src.list
