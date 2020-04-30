@@ -18033,11 +18033,21 @@ RED.view = (function() {
                                 var label = "";
                                 var types = "";
                                 var content = "";
-                                if(d._def && d._def.inputInfo && i < d._def.inputInfo.length) {
-                                    var inputInfo = d._def.inputInfo[i];
-                                    var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
+                                if(d._def && d._def.inputInfo) {
+                                    var inputInfo;
+                                    var infoBody;
+                                    if(typeof d._def.inputInfo === "function") {
+                                        inputInfo = d._def.inputInfo.call(d, i);
+                                        infoBody = inputInfo.description;
+                                    }
+                                    else if(i >= d._def.inputInfo.length) return;
+                                    else {
+                                        inputInfo = d._def.inputInfo[i];
+                                        var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
+                                    }                                    
                                     if(inputInfo.types) {
-                                        label = inputInfo.label ? "<p><b>" + inputInfo.label + "</b></p>" : "";
+                                        label = '';
+                                        if(inputInfo.label) label = "<p><b>" + inputInfo.label + "</b></p>";
                                         types = "<p><b>Types:</b> <i>";
                                         for(var j = 0; j < inputInfo.types.length; j++) {
                                             if(j != 0) types += ", ";
@@ -18236,7 +18246,13 @@ RED.view = (function() {
                                 d._inputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def && node._def.inputInfo && i < node._def.inputInfo.length && node._def.inputInfo[i].label) label.selectAll(".red-ui-flow-node-input-label").text(node._def.inputInfo[i].label);
+                                        if(node._def && node._def.inputInfo && typeof node._def.inputInfo === "function") {
+                                            var inputInfo = node._def.inputInfo.call(node, i);
+                                            if(inputInfo.label) label.selectAll(".red-ui-flow-node-input-label").text(inputInfo.label);
+                                        }
+                                        else if(node._def && node._def.inputInfo && i < node._def.inputInfo.length && node._def.inputInfo[i].label) {
+                                            label.selectAll(".red-ui-flow-node-input-label").text(node._def.inputInfo[i].label);
+                                        }
                                         else if(numInputs > 1) label.selectAll(".red-ui-flow-node-input-label").text(i);
                                         else label.selectAll(".red-ui-flow-node-input-label").text("");
                                 });
@@ -18281,11 +18297,22 @@ RED.view = (function() {
                                 .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})());
 
                             output_group_ports.each(function(i){
-                                if(d._def && d._def.outputInfo && i < d._def.outputInfo.length) {
-                                    var outputInfo = d._def.outputInfo[i];
-                                    var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
+                                if(d._def && d._def.outputInfo) {
+                                    var outputInfo;
+                                    var infoBody;
+                                    if(typeof d._def.outputInfo === "function") {
+                                        outputInfo = d._def.outputInfo.call(d, i);
+                                        infoBody = outputInfo.description;
+                                    }
+                                    else if(i >= d._def.outputInfo.length) return;
+                                    else {
+                                        outputInfo = d._def.outputInfo[i];
+                                        infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
+                                    }
                                     if(outputInfo.types) {
-                                        var content = outputInfo.label ? "<p><b>" + outputInfo.label + "</b></p>" : "";
+                                        label = '';
+                                        if(outputInfo.label) label = "<p><b>" + outputInfo.label + "</b></p>";
+                                        var content = label;
                                         content += "<p><i>";
                                         for(var i = 0; i < outputInfo.types.length; i++) {
                                             if(i != 0) content += ", ";
@@ -18337,7 +18364,13 @@ RED.view = (function() {
                                 d._outputPortLabels.each(function(d,i) {
                                         var label = d3.select(this);
                                         label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) label.selectAll(".red-ui-flow-node-output-label").text(node._def.outputInfo[i].label);
+                                        if(node._def && node._def.outputInfo && typeof node._def.outputInfo === "function") {
+                                            var outputInfo = node._def.outputInfo.call(node, i);
+                                            if(outputInfo.label) label.selectAll(".red-ui-flow-node-output-label").text(outputInfo.label);
+                                        }
+                                        else if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) {
+                                            label.selectAll(".red-ui-flow-node-output-label").text(node._def.outputInfo[i].label);
+                                        }
                                         else if(numOutputs > 1) label.selectAll(".red-ui-flow-node-output-label").text(i);
                                         else label.selectAll(".red-ui-flow-node-output-label").text("");
                                 });
