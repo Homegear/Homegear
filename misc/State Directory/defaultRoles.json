@@ -27,12 +27,13 @@
                 ]
             },
             "icon": "light_on_1",
-            "invokeOutputs": [
-                {
-                    "value": 0,
-                    "buttonText": "Zentral aus"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "an",
+                    "false": "aus"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Lighting",
                 "de-DE": "Beleuchtung"
@@ -87,12 +88,19 @@
                 }
             ],
             "icon": "light_dim_1",
-            "invokeOutputs": [
-                {
-                    "value": 0,
-                    "buttonText": "Zentral aus"
+            "aggregationType": 1,
+            "l2_status": false,
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "an",
+                    "false": "aus"
                 }
-            ],
+            },
+            "label": {
+                "en-US": "Lighting - brightness",
+                "de-DE": "Beleuchtung - Helligkeit"
+            },
             "translations": {
                 "de-DE": {
                     "0": "aus",
@@ -169,23 +177,14 @@
         },
         "ui": {
             "icon": "heater_1",
-            "invokeOutputs": [
-                {
-                    "roleId": 201003,
-                    "value": 0,
-                    "buttonText": "Zentral Frostschutz"
-                },
-                {
-                    "roleId": 201003,
-                    "value": 1,
-                    "buttonText": "Zentral Komfort"
-                },
-                {
-                    "roleId": 201003,
-                    "value": 2,
-                    "buttonText": "Zentral Spar"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "0": "Frostschutz",
+                    "1": "Komfort",
+                    "2": "Spar"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Heating",
                 "de-DE": "Heizung"
@@ -579,12 +578,13 @@
                 ]
             },
             "icon": "socket_1",
-            "invokeOutputs": [
-                {
-                    "value": 0,
-                    "buttonText": "Zentral aus"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "an",
+                    "false": "aus"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Sockets",
                 "de-DE": "Steckdosen"
@@ -656,18 +656,13 @@
                 }
             ],
             "icon": "blind_1",
-            "invokeOutputs": [
-                {
-                    "roleId": 501001,
-                    "value": false,
-                    "buttonText": "Zentral auf"
-                },
-                {
-                    "roleId": 501002,
-                    "value": true,
-                    "buttonText": "Zentral ab"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "einfahren",
+                    "false": "ausfahren"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Shading",
                 "de-DE": "Beschattung"
@@ -807,18 +802,13 @@
                 }
             ],
             "icon": "awning_1",
-            "invokeOutputs": [
-                {
-                    "roleId": 502001,
-                    "value": false,
-                    "buttonText": "Zentral auf"
-                },
-                {
-                    "roleId": 502002,
-                    "value": true,
-                    "buttonText": "Zentral ab"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "ausfahren",
+                    "false": "einfahren"
                 }
-            ],
+            },
             "translations": {
                 "de-DE": {
                     "falseCount": "eingefahren",
@@ -926,18 +916,14 @@
                 }
             ],
             "icon": "window_2",
-            "invokeOutputs": [
-                {
-                    "roleId": 600001,
-                    "value": false,
-                    "buttonText": "Zentral auf"
-                },
-                {
-                    "roleId": 600002,
-                    "value": true,
-                    "buttonText": "Zentral ab"
+            "l2_status": false,
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "schließen",
+                    "false": "öffnen"
                 }
-            ],
+            },
             "translations": {
                 "de-DE": {
                     "falseCount": "geöffnet",
