@@ -1123,15 +1123,18 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, const std::ve
         std::unique_lock<std::mutex> requestLock(client->requestMutex);
         if(packetType == PacketType::Enum::binaryResponse)
         {
+            if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Decoding binary response...");
             if(client->clientType == BaseLib::RpcClientType::ccu2) client->rpcResponse = _rpcDecoderAnsi->decodeResponse(packet);
             else client->rpcResponse = _rpcDecoder->decodeResponse(packet);
         }
         else if(packetType == PacketType::Enum::xmlResponse)
         {
+            if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Decoding XML-RPC response...");
             client->rpcResponse = _xmlRpcDecoder->decodeResponse(packet);
         }
         else if(packetType == PacketType::Enum::jsonResponse || packetType == PacketType::Enum::webSocketResponse)
         {
+            if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Decoding JSON-RPC or WebSocket response...");
             auto jsonStruct = _jsonDecoder->decode(packet);
             auto resultIterator = jsonStruct->structValue->find("result");
             if(resultIterator == jsonStruct->structValue->end()) client->rpcResponse = std::make_shared<BaseLib::Variable>();
