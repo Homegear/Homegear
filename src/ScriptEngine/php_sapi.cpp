@@ -43,11 +43,15 @@
 #if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
-#if PHP_VERSION_ID >= 70400
+#if PHP_VERSION_ID >= 70500
 #error "PHP 7.4 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of hg_stream_open() equals zend_stream_open() in zend_stream.c
+ * 3. Check if ext/opcache changed references to ZEND_HANDLE_STREAM, because the stream is interpreted as php_stream
+ *    there, which causes PHP to crash when a script is started from Homegear. This is the only extension that needs to
+ *    be checked, because we force Homegear to work with Opcache. The references everywhere else can't expect the file
+ *    handle to be of type php_stream.
  */
 #endif
 
@@ -251,22 +255,22 @@ static sapi_module_struct php_homegear_sapi_module = {
 
         php_homegear_ub_write,             /* unbuffered write */
         php_homegear_flush,                /* flush */
-        NULL,                          /* get uid */
-        NULL,                          /* getenv */
+        nullptr,                          /* get uid */
+        nullptr,                          /* getenv */
 
         php_error,                     /* error handler */
 
-        NULL,                          /* header handler */
+        nullptr,                          /* header handler */
         php_homegear_send_headers,                          /* send headers handler */
-        NULL,          /* send header handler */
+        nullptr,          /* send header handler */
 
         php_homegear_read_post,            /* read POST data */
         php_homegear_read_cookies,         /* read Cookies */
 
         php_homegear_register_variables,   /* register server variables */
         php_homegear_log_message,          /* Log message */
-        NULL,							/* Get request time */
-        NULL,							/* Child terminate */
+        nullptr,							/* Get request time */
+        nullptr,							/* Child terminate */
 
         STANDARD_SAPI_MODULE_PROPERTIES
 };
@@ -302,16 +306,45 @@ void php_homegear_build_argv(std::vector<std::string>& arguments)
     //zval_ptr_dtor(&argv);
 }
 
+#if PHP_VERSION_ID >= 70400
+ssize_t hg_zend_stream_reader(void* handle, char* buf, size_t len)
+{
+    if(!handle) return 0;
+
+    auto hg_stream = (hg_stream_handle*)handle;
+
+    size_t bytesToReturn = hg_stream->position + len > hg_stream->buffer.size() ? hg_stream->buffer.size() - hg_stream->position : len;
+    std::copy(hg_stream->buffer.data() + hg_stream->position, hg_stream->buffer.data() + hg_stream->position + bytesToReturn, buf);
+
+    hg_stream->position += bytesToReturn;
+
+    return bytesToReturn;
+}
+
+size_t hg_zend_stream_fsizer(void* handle)
+{
+    if(!handle) return 0;
+
+    return ((hg_stream_handle*)handle)->buffer.size();
+}
+
+void hg_zend_stream_closer(void* handle)
+{
+    if(handle) delete (hg_stream_handle*)handle;
+}
+#endif
+
 int hg_stream_open(const char *filename, zend_file_handle *handle)
 {
     std::string file(filename);
     if(file.size() > 3 && (file.compare(file.size() - 4, 4, ".hgs") == 0 || file.compare(file.size() - 4, 4, ".hgn") == 0))
     {
         std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
-        zend_homegear_globals* globals = php_homegear_get_globals();
         std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>>::iterator scriptIterator = _scriptCache.find(file);
         if(scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(file))
         {
+#if PHP_VERSION_ID < 70400
+            zend_homegear_globals* globals = php_homegear_get_globals();
             globals->additionalStrings.push_front(scriptIterator->second->script);
             handle->type = ZEND_HANDLE_MAPPED;
             handle->handle.fp = nullptr;
@@ -323,6 +356,21 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
             handle->filename = filename;
             handle->opened_path = nullptr;
             handle->free_filename = 0;
+#else
+            auto stream = new hg_stream_handle();
+            stream->position = 0;
+            stream->buffer = scriptIterator->second->script;
+
+            memset(handle, 0, sizeof(zend_file_handle));
+            handle->type = ZEND_HANDLE_STREAM;
+            handle->filename = filename;
+            handle->opened_path = nullptr; //It might make sense to set this.
+            handle->handle.stream.handle = stream;
+            handle->handle.stream.reader = hg_zend_stream_reader;
+            handle->handle.stream.fsizer = hg_zend_stream_fsizer;
+            handle->handle.stream.isatty = 0;
+            handle->handle.stream.closer = hg_zend_stream_closer;
+#endif
             return SUCCESS;
         }
         else
@@ -357,6 +405,8 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
             cacheInfo->lastModified = BaseLib::Io::getFileLastModifiedTime(file);
             if(!cacheInfo->script.empty())
             {
+#if PHP_VERSION_ID < 70400
+                zend_homegear_globals* globals = php_homegear_get_globals();
                 globals->additionalStrings.push_front(cacheInfo->script);
                 _scriptCache[file] = cacheInfo;
                 handle->type = ZEND_HANDLE_MAPPED;
@@ -369,6 +419,21 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
                 handle->filename = filename;
                 handle->opened_path = nullptr;
                 handle->free_filename = 0;
+#else
+                auto stream = new hg_stream_handle();
+                stream->position = 0;
+                stream->buffer = cacheInfo->script;
+
+                memset(handle, 0, sizeof(zend_file_handle));
+                handle->type = ZEND_HANDLE_STREAM;
+                handle->filename = filename;
+                handle->opened_path = nullptr; //It might make sense to set this.
+                handle->handle.stream.handle = stream;
+                handle->handle.stream.reader = hg_zend_stream_reader;
+                handle->handle.stream.fsizer = hg_zend_stream_fsizer;
+                handle->handle.stream.isatty = 0;
+                handle->handle.stream.closer = hg_zend_stream_closer;
+#endif
                 return SUCCESS;
             }
             else return FAILURE;
@@ -376,13 +441,24 @@ int hg_stream_open(const char *filename, zend_file_handle *handle)
     }
     else
     {
-        //{{{ 100% from zend_stream_open in zend_stream.c (ok, 99.9% - I replaced NULL with nullptr)
+        //{{{ 100% from zend_stream_open in zend_stream.c
+#if PHP_VERSION_ID < 70400
         handle->type = ZEND_HANDLE_FP;
         handle->opened_path = nullptr;
         handle->handle.fp = zend_fopen(filename, &handle->opened_path);
         handle->filename = filename;
         handle->free_filename = 0;
         memset(&handle->handle.stream.mmap, 0, sizeof(zend_mmap));
+#else
+        zend_string* opened_path = nullptr;
+        auto fp = zend_fopen(filename, &opened_path);
+        //Don't continue when fp is invalid, i. e. the file could not be opened. This differs from zend_stream_open. But
+        //when calling zend_stream_init_fp() after returning, PHP crashes with a SEGFAULT on "include" of a non-existing
+        //file.
+        if(!fp) return FAILURE;
+        zend_stream_init_fp(handle, fp, filename);
+        handle->opened_path = opened_path;
+#endif
         //}}}
     }
 
@@ -410,7 +486,7 @@ static char* php_homegear_read_cookies()
         //Conversion from (const char*) to (char*) is ok, because PHP makes a copy before parsing and does not change the original data.
         if(!http->getHeader().cookie.empty()) return (char*)http->getHeader().cookie.c_str();
     }
-    return NULL;
+    return nullptr;
 }
 
 static size_t php_homegear_ub_write_string(std::string& string)
@@ -1218,45 +1294,65 @@ ZEND_FUNCTION(hg_poll_event)
         phpEvents = eventsIterator->second;
     }
     std::shared_ptr<Homegear::PhpEvents::EventData> eventData = phpEvents->poll(timeout);
-    if(eventData)
+    if(eventData && eventData->type != Homegear::PhpEvents::EventDataType::undefined)
     {
         array_init(return_value);
         zval element;
 
-        if(!eventData->type.empty())
+        if(eventData->type == Homegear::PhpEvents::EventDataType::event ||
+                eventData->type == Homegear::PhpEvents::EventDataType::newDevices ||
+                eventData->type == Homegear::PhpEvents::EventDataType::deleteDevices ||
+                eventData->type == Homegear::PhpEvents::EventDataType::updateDevice)
         {
-            ZVAL_STRINGL(&element, eventData->type.c_str(), eventData->type.size());
+            if(eventData->type == Homegear::PhpEvents::EventDataType::event) ZVAL_STRINGL(&element, "event", sizeof("event") - 1);
+            else if(eventData->type == Homegear::PhpEvents::EventDataType::newDevices) ZVAL_STRINGL(&element, "newDevices", sizeof("newDevices") - 1);
+            else if(eventData->type == Homegear::PhpEvents::EventDataType::deleteDevices) ZVAL_STRINGL(&element, "deleteDevices", sizeof("deleteDevices") - 1);
+            else if(eventData->type == Homegear::PhpEvents::EventDataType::updateDevice) ZVAL_STRINGL(&element, "updateDevice", sizeof("updateDevice") - 1);
             add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
+
+            if(!eventData->source.empty())
+            {
+                ZVAL_STRINGL(&element, eventData->source.c_str(), eventData->source.size());
+                add_assoc_zval_ex(return_value, "EVENTSOURCE", sizeof("EVENTSOURCE") - 1, &element);
+            }
+
+            ZVAL_LONG(&element, eventData->id);
+            add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+
+            ZVAL_LONG(&element, eventData->channel);
+            add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
+
+            if(!eventData->variable.empty())
+            {
+                ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
+                add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
+            }
+
+            if(eventData->hint != -1)
+            {
+                ZVAL_LONG(&element, eventData->hint);
+                add_assoc_zval_ex(return_value, "HINT", sizeof("HINT") - 1, &element);
+            }
+
+            if(eventData->value)
+            {
+                Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
+                add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+            }
         }
-
-        if(!eventData->source.empty())
+        else if(eventData->type == Homegear::PhpEvents::EventDataType::variableProfileStateChanged)
         {
-            ZVAL_STRINGL(&element, eventData->source.c_str(), eventData->source.size());
-            add_assoc_zval_ex(return_value, "EVENTSOURCE", sizeof("EVENTSOURCE") - 1, &element);
-        }
+            ZVAL_STRINGL(&element, "variableProfileStateChanged", sizeof("variableProfileStateChanged") - 1);
+            add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
 
-        ZVAL_LONG(&element, eventData->id);
-        add_assoc_zval_ex(return_value, "PEERID", sizeof("PEERID") - 1, &element);
+            ZVAL_LONG(&element, eventData->id);
+            add_assoc_zval_ex(return_value, "PROFILEID", sizeof("PROFILEID") - 1, &element);
 
-        ZVAL_LONG(&element, eventData->channel);
-        add_assoc_zval_ex(return_value, "CHANNEL", sizeof("CHANNEL") - 1, &element);
-
-        if(!eventData->variable.empty())
-        {
-            ZVAL_STRINGL(&element, eventData->variable.c_str(), eventData->variable.size());
-            add_assoc_zval_ex(return_value, "VARIABLE", sizeof("VARIABLE") - 1, &element);
-        }
-
-        if(eventData->hint != -1)
-        {
-            ZVAL_LONG(&element, eventData->hint);
-            add_assoc_zval_ex(return_value, "HINT", sizeof("HINT") - 1, &element);
-        }
-
-        if(eventData->value)
-        {
-            Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
-            add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
+            if(eventData->value)
+            {
+                Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
+                add_assoc_zval_ex(return_value, "STATE", sizeof("STATE") - 1, &element);
+            }
         }
     }
     else RETURN_FALSE
@@ -1439,6 +1535,7 @@ ZEND_FUNCTION(hg_log)
     }
 
     if(SEG(peerId) != 0) Homegear::GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, errorLog);
+    else if(!SEG(nodeId).empty()) Homegear::GD::out.printMessage("Script log (node id: " + SEG(nodeId)+ "): " + message, logLevel, errorLog);
     else Homegear::GD::out.printMessage("Script log: " + message, logLevel, errorLog);
     RETURN_TRUE;
 }
@@ -2615,6 +2712,8 @@ int php_homegear_init()
     _superglobals.gpio = new BaseLib::LowLevel::Gpio(Homegear::GD::bl.get(), Homegear::GD::bl->settings.gpioPath());
     _disposed = false;
     pthread_key_create(php_homegear_get_pthread_key(), pthread_data_destructor);
+
+#if PHP_VERSION_ID < 70400
     int32_t maxScriptsPerProcess = Homegear::GD::bl->settings.scriptEngineMaxScriptsPerProcess();
     if(maxScriptsPerProcess < 1) maxScriptsPerProcess = 20;
     int32_t maxThreadsPerScript = Homegear::GD::bl->settings.scriptEngineMaxThreadsPerScript();
@@ -2628,6 +2727,15 @@ int php_homegear_init()
 #ifdef ZEND_SIGNALS
     zend_signal_startup();
 #endif
+#else
+    if(php_tsrm_startup() != 1) //Needs to be called once for the entire process (see TSRM.c)
+    {
+        Homegear::GD::out.printCritical("Critical: Could not start script engine. tsrm_startup returned error.");
+        return FAILURE;
+    }
+    zend_signal_startup();
+#endif
+
     php_homegear_sapi_module.ini_defaults = homegear_ini_defaults;
     ini_path_override = strndup(Homegear::GD::bl->settings.phpIniPath().c_str(), Homegear::GD::bl->settings.phpIniPath().size());
     php_homegear_sapi_module.php_ini_path_override = ini_path_override;
@@ -2651,8 +2759,6 @@ void php_homegear_deinit()
     php_homegear_sapi_module.shutdown(&php_homegear_sapi_module);
     sapi_shutdown();
 
-    ts_free_worker_threads();
-
     tsrm_shutdown(); //Needs to be called once for the entire process (see TSRM.c)
     if(ini_path_override) free(ini_path_override);
     if(sapi_ini_entries) free(sapi_ini_entries);
@@ -2675,7 +2781,7 @@ static int php_homegear_startup(sapi_module_struct* sapi_globals)
 {
     if(php_module_startup(sapi_globals, &homegear_module_entry, 1) == FAILURE) return FAILURE;
 
-    // {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed.
+    // {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed. => is fixed
 
     // Run the test code below a million times (at least 30 executions per second) to check if bug really is fixed. (This part is fixed)
     // Check if Homegear script engine processes crash on the Raspberry Pi (should crash pretty much immediately and often)

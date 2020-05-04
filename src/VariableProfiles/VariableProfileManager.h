@@ -39,27 +39,67 @@
 namespace Homegear
 {
 
+struct VariableProfileValue
+{
+    uint64_t peerId = 0;
+    int32_t channel = -1;
+    std::string variable;
+    BaseLib::PVariable value;
+    bool wait = false;
+    bool invert = false;
+    bool ignoreValueFromDevice = true;
+    uint32_t deviceRefractoryPeriod = 60;
+};
+typedef std::shared_ptr<VariableProfileValue> PVariableProfileValue;
+
 struct VariableProfile
 {
     uint64_t id;
     BaseLib::PVariable name;
-    BaseLib::PVariable profile;
+    int64_t lastActivation = 0;
+    std::vector<PVariableProfileValue> values;
+    BaseLib::PVariable profileStruct;
+    bool isActive = false;
+    uint32_t activeVariables = 0;
+    uint32_t variableCount = 0;
 };
 typedef std::shared_ptr<VariableProfile> PVariableProfile;
+
+struct VariableProfileAssociation
+{
+    uint64_t profileId = 0;
+    bool ignoreValueFromDevice = true;
+    uint32_t deviceRefractoryPeriod = 60;
+    BaseLib::PVariable profileValue;
+    BaseLib::PVariable currentValue;
+};
+typedef std::shared_ptr<VariableProfileAssociation> PVariableProfileAssociation;
 
 class VariableProfileManager
 {
 private:
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 
+    BaseLib::PRpcClientInfo _profileManagerClientInfo;
+
     std::mutex _variableProfilesMutex;
     std::unordered_map<uint64_t, PVariableProfile> _variableProfiles;
+
+    /**
+     * Peer ID, channel, variable, profile ID
+     */
+    std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::unordered_map<uint64_t, PVariableProfileAssociation>>>> _profilesByVariable;
+
+    bool setValue(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId, uint64_t peerId, int32_t channel, const std::string& variable, const BaseLib::PVariable& value, bool wait);
+    std::list<PVariableProfileValue> getRoleVariables(uint64_t profileId, const BaseLib::PVariable& profile);
 public:
     VariableProfileManager();
 
+    void variableEvent(const std::string& source, uint64_t id, int32_t channel, const std::shared_ptr<std::vector<std::string>>& variables, const BaseLib::PArray& values);
+
     void load();
     BaseLib::PVariable activateVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, uint64_t profileId);
-    BaseLib::PVariable addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile);
+    BaseLib::PVariable addVariableProfile(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile);
     BaseLib::PVariable deleteVariableProfile(uint64_t profileId);
     BaseLib::PVariable getAllVariableProfiles(const std::string& languageCode);
     BaseLib::PVariable getVariableProfile(uint64_t id, const std::string& languageCode);

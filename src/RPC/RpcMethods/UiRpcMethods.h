@@ -118,6 +118,17 @@ public:
     BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RpcRequestUiRefresh : public BaseLib::Rpc::RpcMethod
+{
+public:
+    RpcRequestUiRefresh()
+    {
+        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    }
+
+    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RpcRemoveUiElement : public BaseLib::Rpc::RpcMethod
 {
 public:

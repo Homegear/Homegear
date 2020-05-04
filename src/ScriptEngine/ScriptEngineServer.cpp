@@ -257,6 +257,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
         _rpcMethods.emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
         _rpcMethods.emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
         _rpcMethods.emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+        _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
         _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
         _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
     }
@@ -718,11 +719,11 @@ uint32_t ScriptEngineServer::scriptCount()
     return 0;
 }
 
-std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
+std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
 {
     try
     {
-        if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+        if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>>();
         std::vector<PScriptEngineClientData> clients;
         {
             std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -733,7 +734,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
             }
         }
 
-        std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts;
+        std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> runningScripts;
         BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
         for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
         {
@@ -741,7 +742,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
             if(runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
             for(auto& script : *(response->arrayValue))
             {
-                runningScripts.push_back(std::tuple<int32_t, uint64_t, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->integerValue, script->arrayValue->at(2)->stringValue));
+                runningScripts.push_back(std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->stringValue, script->arrayValue->at(2)->integerValue, script->arrayValue->at(3)->stringValue));
             }
         }
         return runningScripts;
@@ -754,7 +755,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+    return std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>>();
 }
 
 BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& parameters)
@@ -1012,6 +1013,7 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
         }
 
         std::vector<PScriptEngineClientData> clients;
+
         {
             std::lock_guard<std::mutex> stateGuard(_stateMutex);
             for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
@@ -1032,9 +1034,42 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(...)
+}
+
+void ScriptEngineServer::broadcastVariableProfileStateChanged(uint64_t profileId, bool state)
+{
+    try
     {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        if(_shuttingDown) return;
+
+        if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("variableProfileStateChanged")) return;
+
+        std::vector<PScriptEngineClientData> clients;
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
+            for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->reserve(2);
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
+
+            std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastVariableProfileStateChanged", parameters);
+            if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastVariableProfileStateChanged\". Queue is full.");
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
 }
 

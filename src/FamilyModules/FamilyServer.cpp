@@ -58,7 +58,7 @@ bool FamilyServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string&
     return false;
 }
 
-BaseLib::PVariable FamilyServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PArray& parameters)
+BaseLib::PVariable FamilyServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PArray& parameters)
 {
     try
     {

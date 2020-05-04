@@ -89,6 +89,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&NodeBlueClient::broadcastDeleteDevices, this, std::placeholders::_1));
     _localRpcMethods.emplace("broadcastNewDevices", std::bind(&NodeBlueClient::broadcastNewDevices, this, std::placeholders::_1));
     _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&NodeBlueClient::broadcastUpdateDevice, this, std::placeholders::_1));
+    _localRpcMethods.emplace("broadcastVariableProfileStateChanged", std::bind(&NodeBlueClient::broadcastVariableProfileStateChanged, this, std::placeholders::_1));
 }
 
 NodeBlueClient::~NodeBlueClient()
@@ -2333,11 +2334,11 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
 {
     try
     {
-        if(parameters->size() != 5) return Flows::Variable::createError(-1, "Wrong parameter count.");
+        if(parameters->size() != 6) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
         {
             std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-            for(auto nodeId : _eventSubscriptions)
+            for(auto& nodeId : _eventSubscriptions)
             {
                 Flows::PINode node = _nodeManager->getNode(nodeId);
                 if(node) node->homegearEvent("deviceVariableEvent", parameters);
@@ -2365,10 +2366,10 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray& parameters)
 
                 Flows::PVariable value = parameters->at(4)->arrayValue->at(j);
 
-                for(auto nodeId : variableIterator->second)
+                for(auto& nodeId : variableIterator->second)
                 {
                     Flows::PINode node = _nodeManager->getNode(nodeId);
-                    if(node) node->variableEvent(source, peerId, channel, variableName, value);
+                    if(node) node->variableEvent(source, peerId, channel, variableName, value, parameters->at(5));
                 }
             }
         }
@@ -2508,6 +2509,28 @@ Flows::PVariable NodeBlueClient::broadcastUpdateDevice(Flows::PArray& parameters
         {
             Flows::PINode node = _nodeManager->getNode(nodeId);
             if(node) node->homegearEvent("updateDevice", parameters);
+        }
+
+        return std::make_shared<Flows::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::broadcastVariableProfileStateChanged(Flows::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+        std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
+        for(auto nodeId : _eventSubscriptions)
+        {
+            Flows::PINode node = _nodeManager->getNode(nodeId);
+            if(node) node->homegearEvent("variableProfileStateChanged", parameters);
         }
 
         return std::make_shared<Flows::Variable>();

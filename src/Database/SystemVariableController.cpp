@@ -1047,6 +1047,7 @@ BaseLib::PVariable SystemVariableController::setValue(BaseLib::PRpcClientInfo cl
         GD::scriptEngineServer->broadcastEvent(source, 0, -1, valueKeys, values);
 #endif
         if(GD::ipcServer) GD::ipcServer->broadcastEvent(source, 0, -1, valueKeys, values);
+        if(GD::variableProfileManager) GD::variableProfileManager->variableEvent(source, 0, -1, valueKeys, values);
         std::string deviceAddress;
         GD::rpcClient->broadcastEvent(source, 0, -1, deviceAddress, valueKeys, values);
 

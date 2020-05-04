@@ -86,6 +86,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000)
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray& parameters)>>("broadcastVariableProfileStateChanged", std::bind(&ScriptEngineClient::broadcastVariableProfileStateChanged, this, std::placeholders::_1)));
 
     php_homegear_init();
 }
@@ -968,6 +969,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
 
             if(!scriptInfo->script.empty())
             {
+#if PHP_VERSION_ID < 70400
                 zendHandle.type = ZEND_HANDLE_MAPPED;
                 zendHandle.handle.fp = nullptr;
                 zendHandle.handle.stream.handle = nullptr;
@@ -978,6 +980,20 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 zendHandle.filename = scriptInfo->fullPath.c_str();
                 zendHandle.opened_path = nullptr;
                 zendHandle.free_filename = 0;
+#else
+                auto stream = new hg_stream_handle();
+                stream->position = 0;
+                stream->buffer = scriptInfo->script;
+
+                zendHandle.type = ZEND_HANDLE_STREAM;
+                zendHandle.filename = scriptInfo->fullPath.c_str();
+                zendHandle.opened_path = nullptr; //It might make sense to set this.
+                zendHandle.handle.stream.handle = stream;
+                zendHandle.handle.stream.reader = hg_zend_stream_reader;
+                zendHandle.handle.stream.fsizer = hg_zend_stream_fsizer;
+                zendHandle.handle.stream.isatty = 0;
+                zendHandle.handle.stream.closer = hg_zend_stream_closer;
+#endif
             }
             else
             {
@@ -985,7 +1001,6 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo)
                 zendHandle.filename = scriptInfo->fullPath.c_str();
                 zendHandle.opened_path = nullptr;
                 zendHandle.free_filename = 0;
-                memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
             }
 
             zend_homegear_globals* globals = php_homegear_get_globals();
@@ -1715,6 +1730,11 @@ BaseLib::PVariable ScriptEngineClient::executeScript(BaseLib::PArray& parameters
                 PThreadInfo threadInfo = std::make_shared<ThreadInfo>();
                 threadInfo->filename = scriptInfo->fullPath;
                 threadInfo->peerId = static_cast<uint64_t>(scriptInfo->peerId);
+                if(scriptInfo->nodeInfo)
+                {
+                    auto idIterator = scriptInfo->nodeInfo->structValue->find("id");
+                    if(idIterator != scriptInfo->nodeInfo->structValue->end()) threadInfo->nodeId = idIterator->second->stringValue;
+                }
                 threadInfo->thread = std::thread(&ScriptEngineClient::scriptThread, this, scriptInfo->id, scriptInfo, sendOutput);
                 _scriptThreads.emplace(scriptInfo->id, threadInfo);
 
@@ -1820,7 +1840,7 @@ BaseLib::PVariable ScriptEngineClient::getRunningScripts(BaseLib::PArray& parame
         {
             if(i->second->running)
             {
-                BaseLib::Array data{std::make_shared<BaseLib::Variable>(i->second->peerId), std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
+                BaseLib::Array data{std::make_shared<BaseLib::Variable>(i->second->peerId), std::make_shared<BaseLib::Variable>(i->second->nodeId), std::make_shared<BaseLib::Variable>(i->first), std::make_shared<BaseLib::Variable>(i->second->filename)};
                 scripts->arrayValue->push_back(std::make_shared<BaseLib::Variable>(std::make_shared<BaseLib::Array>(std::move(data))));
             }
         }
@@ -2014,12 +2034,12 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray& parameter
                     if(!i->second->peerSubscribed(static_cast<uint64_t>(parameters->at(1)->integerValue64), channel, variableName)) continue;
                     auto eventData = std::make_shared<PhpEvents::EventData>();
                     eventData->source = parameters->at(0)->stringValue;
-                    eventData->type = "event";
+                    eventData->type = PhpEvents::EventDataType::event;
                     eventData->id = static_cast<uint64_t>(parameters->at(1)->integerValue64);
                     eventData->channel = channel;
                     eventData->variable = variableName;
                     eventData->value = parameters->at(4)->arrayValue->at(j);
-                    if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
+                    if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
                 }
             }
         }
@@ -2049,9 +2069,9 @@ BaseLib::PVariable ScriptEngineClient::broadcastNewDevices(BaseLib::PArray& para
             if(i->second)
             {
                 std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
-                eventData->type = "newDevices";
+                eventData->type = PhpEvents::EventDataType::newDevices;
                 eventData->value = parameters->at(0);
-                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
+                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
             }
         }
 
@@ -2080,9 +2100,9 @@ BaseLib::PVariable ScriptEngineClient::broadcastDeleteDevices(BaseLib::PArray& p
             if(i->second)
             {
                 std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
-                eventData->type = "deleteDevices";
+                eventData->type = PhpEvents::EventDataType::deleteDevices;
                 eventData->value = parameters->at(0);
-                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
+                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
             }
         }
 
@@ -2112,15 +2132,15 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
             if(i->second && i->second->peerSubscribed(static_cast<uint64_t>(parameters->at(0)->integerValue64), -1, variableName))
             {
                 std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
-                eventData->type = "updateDevice";
+                eventData->type = PhpEvents::EventDataType::updateDevice;
                 eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
                 eventData->channel = parameters->at(1)->integerValue;
                 eventData->hint = parameters->at(2)->integerValue;
-                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event as event buffer is full. Dropping it.");
+                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
             }
         }
 
-        return BaseLib::PVariable(new BaseLib::Variable());
+        return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
     {
@@ -2129,6 +2149,34 @@ BaseLib::PVariable ScriptEngineClient::broadcastUpdateDevice(BaseLib::PArray& pa
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::broadcastVariableProfileStateChanged(BaseLib::PArray& parameters)
+{
+    try
+    {
+        if(parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+        std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+        for(std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i)
+        {
+            if(i->second)
+            {
+                std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+                eventData->type = PhpEvents::EventDataType::variableProfileStateChanged;
+                eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
+                eventData->value = parameters->at(1);
+                if(!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+            }
+        }
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

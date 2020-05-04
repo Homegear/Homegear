@@ -937,7 +937,6 @@ void startUp()
 		GD::uiController->load();
 
         GD::variableProfileManager.reset(new VariableProfileManager());
-        GD::variableProfileManager->load();
 
 		GD::ipcLogger.reset(new IpcLogger());
 
@@ -1025,6 +1024,9 @@ void startUp()
 			}
 		}
 
+        GD::out.printInfo("Starting variable profile manager...");
+        GD::variableProfileManager->load();
+
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
         GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
 
@@ -1032,7 +1034,9 @@ void startUp()
 
         //Wait for all interfaces to connect before setting booting to false
         {
-			for(int32_t i = 0; i < 180; i++)
+            uint32_t maxWait = GD::bl->settings.maxWaitForPhysicalInterfaces();
+            if(maxWait < 1) maxWait = 1;
+			for(int32_t i = 0; i < (signed)maxWait; i++)
 			{
                 if(GD::bl->debugLevel >= 4 && i % 10 == 0) GD::out.printInfo("Info: Waiting for physical interfaces to connect (" + std::to_string(i) + " of 180s" + ").");
 				if(GD::familyController->physicalInterfaceIsOpen())

@@ -1267,6 +1267,21 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
     return false;
 }
 
+BaseLib::PVariable UiController::requestUiRefresh(const BaseLib::PRpcClientInfo& clientInfo, const std::string& id)
+{
+    try
+    {
+        GD::rpcClient->broadcastRequestUiRefresh(id);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId)
 {
     try

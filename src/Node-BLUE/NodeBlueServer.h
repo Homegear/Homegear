@@ -79,6 +79,8 @@ public:
 
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
+    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);

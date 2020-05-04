@@ -42,11 +42,21 @@ class PhpEvents
 {
 
 public:
+    enum class EventDataType
+    {
+        undefined,
+        event,
+        newDevices,
+        deleteDevices,
+        updateDevice,
+        variableProfileStateChanged
+    };
+
     class EventData
     {
     public:
         std::string source;
-        std::string type;
+        EventDataType type = EventDataType::undefined;
         uint64_t id = 0;
         int32_t channel = -1;
         int32_t hint = -1;
