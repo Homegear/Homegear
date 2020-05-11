@@ -622,14 +622,16 @@ bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter
         if(parameter->id == "IP_ADDRESS")
         {
             std::vector<uint8_t> parameterData;
-            parameter->convertToPacket(std::make_shared<Variable>(_ip), parameterData);
-            valuesCentral[channel][parameter->id].setBinaryData(parameterData);
+            auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
+            parameter->convertToPacket(std::make_shared<Variable>(_ip), rpcConfigurationParameter.invert(), parameterData);
+            rpcConfigurationParameter.setBinaryData(parameterData);
         }
         else if(parameter->id == "PEER_ID")
         {
             std::vector<uint8_t> parameterData;
-            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), parameterData);
-            valuesCentral[channel][parameter->id].setBinaryData(parameterData);
+            auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
+            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.invert(), parameterData);
+            rpcConfigurationParameter.setBinaryData(parameterData);
         }
     }
     catch(const std::exception& ex)
@@ -646,14 +648,16 @@ bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter,
         if(parameter->id == "IP_ADDRESS")
         {
             std::vector<uint8_t> parameterData;
-            parameter->convertToPacket(std::make_shared<Variable>(_ip), parameterData);
-            valuesCentral[channel][parameter->id].setBinaryData(parameterData);
+            auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
+            parameter->convertToPacket(std::make_shared<Variable>(_ip), rpcConfigurationParameter.invert(), parameterData);
+            rpcConfigurationParameter.setBinaryData(parameterData);
         }
         else if(parameter->id == "PEER_ID")
         {
             std::vector<uint8_t> parameterData;
-            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), parameterData);
-            valuesCentral[channel][parameter->id].setBinaryData(parameterData);
+            auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
+            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.invert(), parameterData);
+            rpcConfigurationParameter.setBinaryData(parameterData);
         }
     }
     catch(const std::exception& ex)
@@ -733,7 +737,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
                 BaseLib::Systems::RpcConfigurationParameter& parameter = configCentral[channel][i->first];
                 if(!parameter.rpcParameter) continue;
                 if(parameter.rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
-                parameter.rpcParameter->convertToPacket(i->second, value);
+                parameter.rpcParameter->convertToPacket(i->second, clientInfo->addon && clientInfo->peerId == _peerID ? false : parameter.invert(), value);
                 std::vector<uint8_t> shiftedValue = value;
                 parameter.rpcParameter->adjustBitPosition(shiftedValue);
                 int32_t intIndex = (int32_t)parameter.rpcParameter->physical->index;
@@ -806,7 +810,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
             else if(value->type == VariableType::tInteger) serviceMessages->set(valueKey, value->integerValue, channel);
         }
         if(rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
-        if(!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && clientInfo->addon)) return Variable::createError(-6, "parameter is read only");
+        if(!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && clientInfo->addon && clientInfo->peerId == _peerID)) return Variable::createError(-6, "parameter is read only");
         BaseLib::Systems::RpcConfigurationParameter& parameter = valuesCentral[channel][valueKey];
         std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
         std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());
@@ -814,13 +818,13 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
         if(rpcParameter->physical->operationType == IPhysical::OperationType::Enum::store)
         {
             std::vector<uint8_t> parameterData;
-            rpcParameter->convertToPacket(value, parameterData);
+            rpcParameter->convertToPacket(value, clientInfo->addon && clientInfo->peerId == _peerID ? false : parameter.invert(), parameterData);
             parameter.setBinaryData(parameterData);
             if(parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
             else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
 
             valueKeys->push_back(valueKey);
-            values->push_back(rpcParameter->convertFromPacket(parameterData, true));
+            values->push_back(rpcParameter->convertFromPacket(parameterData, clientInfo->addon && clientInfo->peerId == _peerID ? false : parameter.invert(), true));
             std::string address = _serialNumber + ":" + std::to_string(channel);
             if(clientInfo->scriptEngineServer)
             {
@@ -843,7 +847,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
                 raiseRPCEvent(clientInfo->initInterfaceId, _peerID, channel, address, valueKeys, values);
             }
 
-            return PVariable(new Variable(VariableType::tVoid));
+            return std::make_shared<Variable>(VariableType::tVoid);
         }
         return Variable::createError(-6, "Only interface type \"store\" is supported for this device family.");
     }
