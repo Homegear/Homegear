@@ -580,16 +580,24 @@ BaseLib::PVariable VariableProfileManager::getAllVariableProfiles(const std::str
         profiles->arrayValue->reserve(_variableProfiles.size());
         for(auto& profile : _variableProfiles)
         {
-            std::string name;
-            auto nameIterator = profile.second->name->structValue->find(languageCode);
-            if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en-US");
-            if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
-            if(nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
+            profile.second->profileStruct->structValue->erase("translations");
+            profile.second->profileStruct->structValue->erase("name");
+            if(languageCode.empty())
+            {
+                profile.second->profileStruct->structValue->emplace("translations", profile.second->name);
+            }
+            else
+            {
+                std::string name;
+                auto nameIterator = profile.second->name->structValue->find(languageCode);
+                if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en-US");
+                if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
+                if(nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
+                profile.second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
+            }
 
             profile.second->profileStruct->structValue->erase("id");
             profile.second->profileStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(profile.first));
-            profile.second->profileStruct->structValue->erase("name");
-            profile.second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
             profile.second->profileStruct->structValue->erase("isActive");
             profile.second->profileStruct->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(profile.second->isActive));
             profile.second->profileStruct->structValue->erase("totalVariableCount");
@@ -616,16 +624,24 @@ BaseLib::PVariable VariableProfileManager::getVariableProfile(uint64_t id, const
         auto variableProfileIterator = _variableProfiles.find(id);
         if(variableProfileIterator == _variableProfiles.end()) return BaseLib::Variable::createError(-1, "Variable profile not found.");
 
-        std::string name;
-        auto nameIterator = variableProfileIterator->second->name->structValue->find(languageCode);
-        if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en-US");
-        if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
-        if(nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;
+        variableProfileIterator->second->profileStruct->structValue->erase("translations");
+        variableProfileIterator->second->profileStruct->structValue->erase("name");
+        if(languageCode.empty())
+        {
+            variableProfileIterator->second->profileStruct->structValue->emplace("translations", variableProfileIterator->second->name);
+        }
+        else
+        {
+            std::string name;
+            auto nameIterator = variableProfileIterator->second->name->structValue->find(languageCode);
+            if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en-US");
+            if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
+            if(nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;
+            variableProfileIterator->second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
+        }
 
         variableProfileIterator->second->profileStruct->structValue->erase("id");
         variableProfileIterator->second->profileStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(variableProfileIterator->first));
-        variableProfileIterator->second->profileStruct->structValue->erase("name");
-        variableProfileIterator->second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
         variableProfileIterator->second->profileStruct->structValue->erase("isActive");
         variableProfileIterator->second->profileStruct->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->isActive));
         variableProfileIterator->second->profileStruct->structValue->erase("totalVariableCount");
