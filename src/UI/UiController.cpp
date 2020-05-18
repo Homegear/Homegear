@@ -753,7 +753,18 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
         else
         {
             dryrunStruct->structValue->at("visualizable")->booleanValue = true;
-            dryrunStruct->structValue->emplace("visualized", std::make_shared<BaseLib::Variable>(isVisualized(variable->arrayValue->at(0)->integerValue64, variable->arrayValue->at(1)->integerValue, variable->arrayValue->at(2)->stringValue)));
+            auto uiElementsWithVariable = getUiElementsWithVariable(variable->arrayValue->at(0)->integerValue64, variable->arrayValue->at(1)->integerValue, variable->arrayValue->at(2)->stringValue);
+            dryrunStruct->structValue->emplace("visualized", std::make_shared<BaseLib::Variable>(!uiElementsWithVariable.empty()));
+            if(!uiElementsWithVariable.empty())
+            {
+                auto uiElementsWithVariableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                uiElementsWithVariableArray->arrayValue->reserve(uiElementsWithVariable.size());
+                for(auto& element : uiElementsWithVariable)
+                {
+                    uiElementsWithVariableArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(element));
+                }
+                dryrunStruct->structValue->emplace("uiElements", uiElementsWithVariableArray);
+            }
             return dryrunStruct;
         }
     }
@@ -1460,35 +1471,50 @@ BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientI
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-bool UiController::isVisualized(uint64_t peerId, int32_t channel, const std::string& variableName)
+std::unordered_set<uint64_t> UiController::getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string& variableName)
 {
     try
     {
+        std::unordered_set<uint64_t> result;
+
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
         for(auto& uiElement : _uiElements)
         {
+            bool found = false;
             for(auto& inputPeers : uiElement.second->peerInfo->inputPeers)
             {
                 for(auto& inputPeer : inputPeers)
                 {
-                    if(inputPeer->peerId == peerId && inputPeer->channel == channel && inputPeer->name == variableName) return true;
+                    if(inputPeer->peerId == peerId && inputPeer->channel == channel && inputPeer->name == variableName)
+                    {
+                        result.emplace(uiElement.first);
+                        found = true;
+                        break;
+                    }
                 }
             }
+            if(found) continue;
 
             for(auto& outputPeers : uiElement.second->peerInfo->outputPeers)
             {
                 for(auto& outputPeer : outputPeers)
                 {
-                    if(outputPeer->peerId == peerId && outputPeer->channel == channel && outputPeer->name == variableName) return true;
+                    if(outputPeer->peerId == peerId && outputPeer->channel == channel && outputPeer->name == variableName)
+                    {
+                        result.emplace(uiElement.first);
+                        break;
+                    }
                 }
             }
         }
+
+        return result;
     }
     catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    return false;
+    return std::unordered_set<uint64_t>();
 }
 
 }

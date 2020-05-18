@@ -96,7 +96,7 @@ protected:
 
     bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
 
-    bool isVisualized(uint64_t peerId, int32_t channel, const std::string& variableName);
+    std::unordered_set<uint64_t> getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string& variableName);
 };
 
 }
