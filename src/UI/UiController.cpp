@@ -119,6 +119,8 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
             _uiElementsByCategory[categoryId].emplace(uiElement);
         }
 
+        requestUiRefresh(clientInfo, "");
+
         return std::make_shared<BaseLib::Variable>(databaseId);
     }
     catch(const std::exception& ex)
@@ -288,7 +290,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                             requestParameters->arrayValue->resize(1);
                             requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
                             std::string methodName2 = "getRolesInRoom";
-                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName2, requestParameters);
                             if(variables2->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
 
                             for(auto& deviceIterator : *variables2->structValue)
@@ -451,7 +453,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                             requestParameters->arrayValue->resize(1);
                             requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
                             std::string methodName2 = "getRolesInRoom";
-                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName2, requestParameters);
                             if(variables2->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
 
                             for(auto& deviceIterator : *variables2->structValue)
@@ -1439,6 +1441,8 @@ BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo& 
         }
 
         _uiElements.erase(elementIterator);
+
+        requestUiRefresh(clientInfo, "");
 
         return std::make_shared<BaseLib::Variable>();
     }
