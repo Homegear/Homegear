@@ -620,7 +620,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
             bool result1 = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, roleId, direction, invert);
             bool result2 = middleGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, middleGroupRoleId, direction, invert) : true;
-            bool result3 = mainGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, mainGroupRoleId, direction, invert): true;
+            bool result3 = mainGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, mainGroupRoleId, direction, invert) : true;
             return std::make_shared<BaseLib::Variable>(result1 || result2 || result3);
         }
 

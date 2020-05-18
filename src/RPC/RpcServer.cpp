@@ -29,6 +29,7 @@
 */
 
 #include "RpcServer.h"
+#include "RpcMethods/BuildingRpcMethods.h"
 #include "RpcMethods/UiRpcMethods.h"
 #include "RpcMethods/VariableProfileRpcMethods.h"
 #include "../GD/GD.h"
@@ -265,6 +266,18 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateRoom", std::make_shared<RPCUpdateRoom>());
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
+
+    { // Buildings
+        _rpcMethods->emplace("addStoryToBuilding", std::make_shared<RpcMethods::RPCAddStoryToBuilding>());
+        _rpcMethods->emplace("createBuilding", std::make_shared<RpcMethods::RPCCreateBuilding>());
+        _rpcMethods->emplace("deleteBuilding", std::make_shared<RpcMethods::RPCDeleteBuilding>());
+        _rpcMethods->emplace("getStoriesInBuilding", std::make_shared<RpcMethods::RPCGetStoriesInBuilding>());
+        _rpcMethods->emplace("getBuildingMetadata", std::make_shared<RpcMethods::RPCGetBuildingMetadata>());
+        _rpcMethods->emplace("getBuildings", std::make_shared<RpcMethods::RPCGetBuildings>());
+        _rpcMethods->emplace("removeStoryFromBuilding", std::make_shared<RpcMethods::RPCRemoveStoryFromBuilding>());
+        _rpcMethods->emplace("setBuildingMetadata", std::make_shared<RpcMethods::RPCSetBuildingMetadata>());
+        _rpcMethods->emplace("updateBuilding", std::make_shared<RpcMethods::RPCUpdateBuilding>());
+    }
 
     { // System variables
         _rpcMethods->emplace("addRoleToSystemVariable", std::make_shared<RPCAddRoleToSystemVariable>());
