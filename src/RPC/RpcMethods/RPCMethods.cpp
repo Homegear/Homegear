@@ -1122,7 +1122,11 @@ BaseLib::PVariable RPCAddRoomToStory::invoke(BaseLib::PRpcClientInfo clientInfo,
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addRoomToStory", (uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->addRoomToStory((uint64_t) parameters->at(0)->integerValue64, (uint64_t) parameters->at(1)->integerValue64);
+        auto result = GD::bl->db->addRoomToStory((uint64_t) parameters->at(0)->integerValue64, (uint64_t) parameters->at(1)->integerValue64);
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -1521,7 +1525,11 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        return GD::bl->db->createRoom(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+        auto result = GD::bl->db->createRoom(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -1545,7 +1553,11 @@ BaseLib::PVariable RPCCreateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        return GD::bl->db->createStory(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+        auto result = GD::bl->db->createStory(parameters->at(0), parameters->size() == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -1866,6 +1878,8 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         GD::systemVariableController->removeRoom(roomId);
         GD::bl->db->removeRoomFromStories(roomId);
 
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
         return result;
     }
     catch(const std::exception& ex)
@@ -1890,7 +1904,13 @@ BaseLib::PVariable RPCDeleteStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("deleteStory")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->deleteStory((uint64_t) parameters->at(0)->integerValue64);
+        uint64_t storyId = (uint64_t) parameters->at(0)->integerValue64;
+        auto result = GD::bl->db->deleteStory(storyId);
+        GD::bl->db->removeStoryFromBuildings(storyId);
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -6246,7 +6266,11 @@ BaseLib::PVariable RPCRemoveRoomFromStory::invoke(BaseLib::PRpcClientInfo client
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeRoomFromStory", (uint64_t) parameters->at(1)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::bl->db->removeRoomFromStory((uint64_t) parameters->at(0)->integerValue64, (uint64_t) parameters->at(1)->integerValue64);
+        auto result = GD::bl->db->removeRoomFromStory((uint64_t) parameters->at(0)->integerValue64, (uint64_t) parameters->at(1)->integerValue64);
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -7989,8 +8013,14 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
 
         if(!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("updateRoom", (uint64_t) parameters->at(0)->integerValue64)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        if(parameters->size() == 3) return GD::bl->db->updateRoom((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
-        else return GD::bl->db->updateRoom((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+        BaseLib::PVariable result;
+
+        if(parameters->size() == 3) result = GD::bl->db->updateRoom((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+        else result = GD::bl->db->updateRoom((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
@@ -8015,8 +8045,14 @@ BaseLib::PVariable RPCUpdateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("updateStory")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        if(parameters->size() == 3) return GD::bl->db->updateStory((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
-        else return GD::bl->db->updateStory((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+        BaseLib::PVariable result;
+
+        if(parameters->size() == 3) result = GD::bl->db->updateStory((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
+        else result = GD::bl->db->updateStory((uint64_t) parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+
+        GD::uiController->requestUiRefresh(clientInfo, "");
+
+        return result;
     }
     catch(const std::exception& ex)
     {
