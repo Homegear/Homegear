@@ -533,7 +533,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-            BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::both;
+            BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::undefined;
             bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
             if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
             if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, std::move(BaseLib::Role(middleGroupRoleId, direction, invert)));
