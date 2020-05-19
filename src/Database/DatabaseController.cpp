@@ -2579,6 +2579,28 @@ void DatabaseController::createDefaultRoles()
 
                             auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
+                            auto typesIterator = roleEntry->structValue->find("types");
+                            if(typesIterator != roleEntry->structValue->end())
+                            {
+                                auto typesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                                typesArray->arrayValue->reserve(typesIterator->second->arrayValue->size());
+                                for(auto& type : *typesIterator->second->arrayValue)
+                                {
+                                    int32_t typeValue = (int32_t)BaseLib::VariableType::tVoid;
+                                    if(type->stringValue == "bool") typeValue = (int32_t)BaseLib::VariableType::tBoolean;
+                                    else if(type->stringValue == "int") typeValue = (int32_t)BaseLib::VariableType::tInteger;
+                                    else if(type->stringValue == "int64") typeValue = (int32_t)BaseLib::VariableType::tInteger64;
+                                    else if(type->stringValue == "float") typeValue = (int32_t)BaseLib::VariableType::tFloat;
+                                    else if(type->stringValue == "string") typeValue = (int32_t)BaseLib::VariableType::tString;
+                                    else if(type->stringValue == "bin") typeValue = (int32_t)BaseLib::VariableType::tBinary;
+                                    else if(type->stringValue == "array") typeValue = (int32_t)BaseLib::VariableType::tArray;
+                                    else if(type->stringValue == "object") typeValue = (int32_t)BaseLib::VariableType::tStruct;
+                                    else continue;
+                                    typesArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(typeValue));
+                                }
+                                metadata->structValue->emplace("types", typesArray);
+                            }
+
                             auto addVariablesIterator = roleEntry->structValue->find("addVariables");
                             if(addVariablesIterator != roleEntry->structValue->end())
                             {
