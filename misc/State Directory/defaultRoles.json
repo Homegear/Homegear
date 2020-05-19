@@ -64,13 +64,17 @@
                     "element": "Base.lightingSwitchBrightness",
                     "roleIdsIn": [
                         [
-                            100001,
+                            100001
+                        ],
+                        [
                             101001
                         ]
                     ],
                     "roleIdsOut": [
                         [
-                            100001,
+                            100001
+                        ],
+                        [
                             101001
                         ]
                     ]
@@ -443,6 +447,54 @@
         }
     },
     {
+        "id": 202000,
+        "translations": {
+            "en-US": "ventilation",
+            "de-DE": "Lüftung"
+        }
+    },
+    {
+        "id": 202001,
+        "translations": {
+            "en-US": "ventilation level",
+            "de-DE": "Lüftungsstufe"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.ventilationMode",
+                "roleIdsIn": [
+                    [
+                        202001
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        202001
+                    ]
+                ]
+            },
+            "icon": "ventilator_2",
+            "label": {
+                "en-US": "Ventilation",
+                "de-DE": "Lüftung"
+            },
+            "translations": {
+                "de-DE": {
+                    "0": "Stufe 1",
+                    "1": "Stufe 2",
+                    "2": "Stufe 3",
+                    "3": "Stufe 4"
+                },
+                "en-US": {
+                    "0": "Level 1",
+                    "1": "Level 2",
+                    "2": "Level 3",
+                    "3": "Level 4"
+                }
+            }
+        }
+    },
+    {
         "id": 300000,
         "translations": {
             "en-US": "security",
@@ -471,11 +523,7 @@
                         301001
                     ]
                 ],
-                "roleIdsOut": [
-                    [
-                        301001
-                    ]
-                ]
+                "roleIdsOut": []
             },
             "icon": "door_open_2",
             "translations": {
@@ -505,11 +553,7 @@
                         301002
                     ]
                 ],
-                "roleIdsOut": [
-                    [
-                        301002
-                    ]
-                ]
+                "roleIdsOut": []
             },
             "icon": "window_1",
             "label": {
@@ -543,11 +587,7 @@
                         301003
                     ]
                 ],
-                "roleIdsOut": [
-                    [
-                        301003
-                    ]
-                ]
+                "roleIdsOut": []
             },
             "icon": "door-handle_1",
             "label": {
