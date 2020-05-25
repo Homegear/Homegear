@@ -4904,6 +4904,12 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
             flags = parameters->at(2)->integerValue;
         }
 
+        if(!interfaceId.empty() && !clientInfo->initInterfaceId.empty())
+        {
+            //Already initialized
+            return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
+        }
+
         if(!url.empty() && GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end())
         {
             std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
@@ -5066,7 +5072,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
             }
         }
 
-        return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+        return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
     }
     catch(const std::exception& ex)
     {

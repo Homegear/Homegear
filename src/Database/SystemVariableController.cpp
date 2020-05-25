@@ -995,9 +995,79 @@ BaseLib::PVariable SystemVariableController::setValue(BaseLib::PRpcClientInfo cl
                     }
                 }
 
-                //Set type to old value type, value already is converted by constructor of class Variable or RpcDecoder
+                //{{{ Set type to old value type, value already is converted by constructor of class Variable or RpcDecoder
                 if(systemVariable->value->type != BaseLib::VariableType::tVoid)
                 {
+                    //{{{ Perform operation on value
+                    if(value->stringValue.size() > 2 && value->stringValue.at(1) == '=' && (value->stringValue.at(0) == '+' || value->stringValue.at(0) == '-' || value->stringValue.at(0) == '*' || value->stringValue.at(0) == '/'))
+                    {
+                        if(systemVariable->value->type == BaseLib::VariableType::tFloat)
+                        {
+                            std::string numberPart = value->stringValue.substr(2);
+                            double factor = BaseLib::Math::getDouble(numberPart);
+                            if(factor == 0) return BaseLib::Variable::createError(-1, "Factor is \"0\" or no valid number.");
+                            if(value->stringValue.at(0) == '+') value->floatValue = systemVariable->value->floatValue + factor;
+                            else if(value->stringValue.at(0) == '-') value->floatValue = systemVariable->value->floatValue - factor;
+                            else if(value->stringValue.at(0) == '*') value->floatValue = systemVariable->value->floatValue * factor;
+                            else if(value->stringValue.at(0) == '/') value->floatValue = systemVariable->value->floatValue / factor;
+                            value->type = BaseLib::VariableType::tFloat;
+                            value->stringValue.clear();
+                        }
+                        else if(systemVariable->value->type == BaseLib::VariableType::tInteger)
+                        {
+                            std::string numberPart = value->stringValue.substr(2);
+                            int32_t factor = BaseLib::Math::getNumber(numberPart);
+                            if(factor == 0) return BaseLib::Variable::createError(-1, "Factor is \"0\" or no valid number.");
+                            if(value->stringValue.at(0) == '+') value->integerValue = systemVariable->value->integerValue + factor;
+                            else if(value->stringValue.at(0) == '-') value->integerValue = systemVariable->value->integerValue - factor;
+                            else if(value->stringValue.at(0) == '*') value->integerValue = systemVariable->value->integerValue * factor;
+                            else if(value->stringValue.at(0) == '/') value->integerValue = systemVariable->value->integerValue / factor;
+                            value->integerValue64 = value->integerValue;
+                            value->type = BaseLib::VariableType::tInteger;
+                            value->stringValue.clear();
+                        }
+                        else if(systemVariable->value->type == BaseLib::VariableType::tInteger64)
+                        {
+                            std::string numberPart = value->stringValue.substr(2);
+                            int32_t factor = BaseLib::Math::getNumber(numberPart);
+                            if(factor == 0) return BaseLib::Variable::createError(-1, "Factor is \"0\" or no valid number.");
+                            if(value->stringValue.at(0) == '+') value->integerValue64 = systemVariable->value->integerValue64 + factor;
+                            else if(value->stringValue.at(0) == '-') value->integerValue64 = systemVariable->value->integerValue64 - factor;
+                            else if(value->stringValue.at(0) == '*') value->integerValue64 = systemVariable->value->integerValue64 * factor;
+                            else if(value->stringValue.at(0) == '/') value->integerValue64 = systemVariable->value->integerValue64 / factor;
+                            value->integerValue = value->integerValue64;
+                            value->type = BaseLib::VariableType::tInteger64;
+                            value->stringValue.clear();
+                        }
+                    }
+                    else if(value->stringValue == "!") // Toggle boolean
+                    {
+                        if(systemVariable->value->type == BaseLib::VariableType::tBoolean)
+                        {
+                            value->booleanValue = !systemVariable->value->booleanValue;
+                            value->type = BaseLib::VariableType::tBoolean;
+                            value->stringValue.clear();
+                        }
+                        else if(systemVariable->value->type == BaseLib::VariableType::tFloat)
+                        {
+                            value->floatValue = !systemVariable->value->floatValue;
+                            value->type = BaseLib::VariableType::tFloat;
+                            value->stringValue.clear();
+                        }
+                        else if(systemVariable->value->type == BaseLib::VariableType::tInteger)
+                        {
+                            value->integerValue = !systemVariable->value->integerValue;
+                            value->type = BaseLib::VariableType::tInteger;
+                            value->stringValue.clear();
+                        }
+                        else if(systemVariable->value->type == BaseLib::VariableType::tInteger64)
+                        {
+                            value->integerValue64 = !systemVariable->value->integerValue64;
+                            value->type = BaseLib::VariableType::tInteger64;
+                            value->stringValue.clear();
+                        }
+                    }
+
                     if(value->type != systemVariable->value->type)
                     {
                         value->type = systemVariable->value->type;
@@ -1008,11 +1078,13 @@ BaseLib::PVariable SystemVariableController::setValue(BaseLib::PRpcClientInfo cl
                         value->type = BaseLib::VariableType::tInteger;
                     }
                 }
+                //}}}
 
                 systemVariable->value = value;
                 if(systemVariable->flags != -1 && (systemVariable->flags & 4)) flags |= 4;
                 if(flags != -1) systemVariable->flags = flags;
             }
+            //}}}
         }
 
         std::ostringstream categories;
