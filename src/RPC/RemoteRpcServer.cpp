@@ -242,7 +242,6 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 		auto startTime = BaseLib::HelperFunctions::getTime();
 		while(!_serverClientInfo->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(1000), [&]
 		{
-		    GD::out.printInfo("Moin. Waiting (" + methodName + ")...");
 			return _serverClientInfo->rpcResponse || _serverClientInfo->closed || BaseLib::HelperFunctions::getTime() - startTime > 10000;
 		}));
 		_serverClientInfo->waitForResponse = false;

@@ -4904,7 +4904,7 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
             flags = parameters->at(2)->integerValue;
         }
 
-        if(!interfaceId.empty() && !clientInfo->initInterfaceId.empty())
+        if(!interfaceId.empty() && clientInfo->sendEventsToRpcServer)
         {
             //Already initialized
             return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
