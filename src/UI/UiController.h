@@ -95,6 +95,8 @@ protected:
     BaseLib::PVariable findRoleVariables(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& uiInfo, const BaseLib::PVariable& variable, uint64_t roomId, BaseLib::PVariable& inputPeers, BaseLib::PVariable& outputPeers);
 
     bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
+
+    std::unordered_set<uint64_t> getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string& variableName);
 };
 
 }

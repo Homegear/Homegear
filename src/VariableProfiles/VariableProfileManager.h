@@ -46,7 +46,6 @@ struct VariableProfileValue
     std::string variable;
     BaseLib::PVariable value;
     bool wait = false;
-    bool invert = false;
     bool ignoreValueFromDevice = true;
     uint32_t deviceRefractoryPeriod = 60;
 };

@@ -95,8 +95,7 @@ BaseLib::PVariable RpcCheckUiElementSimpleCreation::invoke(BaseLib::PRpcClientIn
         variableArray->arrayValue->push_back(parameters->at(0));
         variableArray->arrayValue->push_back(parameters->at(1));
         variableArray->arrayValue->push_back(parameters->at(2));
-        auto result = GD::uiController->addUiElementSimple(clientInfo, "", variableArray, true);
-        return std::make_shared<BaseLib::Variable>(!result->errorStruct);
+        return GD::uiController->addUiElementSimple(clientInfo, "", variableArray, true);
     }
     catch(const std::exception& ex)
     {

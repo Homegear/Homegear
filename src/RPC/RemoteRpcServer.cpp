@@ -239,14 +239,13 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 
 		_serverClientInfo->socket->proofwrite(encodedPacket);
 
-		int32_t i = 0;
+		auto startTime = BaseLib::HelperFunctions::getTime();
 		while(!_serverClientInfo->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(1000), [&]
 		{
-			i++;
-			return _serverClientInfo->rpcResponse || _serverClientInfo->closed || i == 10;
+			return _serverClientInfo->rpcResponse || _serverClientInfo->closed || BaseLib::HelperFunctions::getTime() - startTime > 10000;
 		}));
 		_serverClientInfo->waitForResponse = false;
-		if(i == 10 || !_serverClientInfo->rpcResponse) return BaseLib::Variable::createError(-32500, "No RPC response received.");
+		if(!_serverClientInfo->rpcResponse) return BaseLib::Variable::createError(-32500, "No RPC response received.");
 
 		if(_serverClientInfo->closed) removed = true;
 

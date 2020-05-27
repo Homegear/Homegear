@@ -111,6 +111,30 @@ public:
     BaseLib::PVariable setUiElementMetadata(uint64_t databaseId, const BaseLib::PVariable& metadata) override;
 	// }}}
 
+    // {{{ Buildings
+    BaseLib::PVariable addStoryToBuilding(uint64_t buildingId, uint64_t storyId) override;
+
+    BaseLib::PVariable createBuilding(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+
+    BaseLib::PVariable deleteBuilding(uint64_t storyId) override;
+
+    BaseLib::PVariable getStoriesInBuilding(BaseLib::PRpcClientInfo clientInfo, uint64_t buildingId, bool checkAcls) override;
+
+    BaseLib::PVariable getBuildingMetadata(uint64_t buildingId) override;
+
+    BaseLib::PVariable getBuildings(std::string languageCode) override;
+
+    BaseLib::PVariable removeStoryFromBuildings(uint64_t storyId) override;
+
+    BaseLib::PVariable removeStoryFromBuilding(uint64_t buildingId, uint64_t storyId) override;
+
+    bool buildingExists(uint64_t buildingId) override;
+
+    BaseLib::PVariable setBuildingMetadata(uint64_t buildingId, BaseLib::PVariable metadata) override;
+
+    BaseLib::PVariable updateBuilding(uint64_t buildingId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+    // }}}
+
 	// {{{ Stories
 	BaseLib::PVariable addRoomToStory(uint64_t storyId, uint64_t roomId) override;
 

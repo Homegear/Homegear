@@ -92,7 +92,6 @@ void VariableProfileManager::load()
                     auto variableIterator = valueEntry->structValue->find("variable");
                     auto valueIterator = valueEntry->structValue->find("value");
                     auto waitIterator = valueEntry->structValue->find("wait");
-                    auto invertIterator = valueEntry->structValue->find("invert");
                     auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
                     auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
 
@@ -109,7 +108,6 @@ void VariableProfileManager::load()
                     profileValue->value = valueIterator->second;
                     if(!profileValue->value) continue;
                     profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
-                    profileValue->invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
 
                     if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
                     if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = deviceRefractoryPeriodIterator->second->integerValue;
@@ -124,7 +122,7 @@ void VariableProfileManager::load()
             {
                 auto profileAssociation = std::make_shared<VariableProfileAssociation>();
                 profileAssociation->profileId = variableProfile->id;
-                profileAssociation->profileValue = valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value;
+                profileAssociation->profileValue = valueEntry->value;
                 profileAssociation->ignoreValueFromDevice = valueEntry->ignoreValueFromDevice;
                 profileAssociation->deviceRefractoryPeriod = valueEntry->deviceRefractoryPeriod;
 
@@ -257,7 +255,7 @@ BaseLib::PVariable VariableProfileManager::activateVariableProfile(const BaseLib
 
         for(auto& valueEntry : profileValues)
         {
-            auto result = setValue(clientInfo, profileId, valueEntry->peerId, valueEntry->channel, valueEntry->variable, valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value, valueEntry->wait);
+            auto result = setValue(clientInfo, profileId, valueEntry->peerId, valueEntry->channel, valueEntry->variable, valueEntry->value, valueEntry->wait);
             if(!result) returnValue = false;
         }
 
@@ -396,20 +394,12 @@ std::list<PVariableProfileValue> VariableProfileManager::getRoleVariables(uint64
                                     }
                                 }
 
-                                bool invert = false;
-                                auto invertIterator = variableElement.second->structValue->find("invert");
-                                if(invertIterator != variableElement.second->structValue->end() && value->type == BaseLib::VariableType::tBoolean)
-                                {
-                                    invert = invertIterator->second->booleanValue;
-                                }
-
                                 auto profileValue = std::make_shared<VariableProfileValue>();
                                 profileValue->peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
                                 profileValue->channel = BaseLib::Math::getNumber(channelStructElement.first);
                                 profileValue->variable = variableElement.first;
                                 profileValue->value = value;
                                 profileValue->wait = wait;
-                                profileValue->invert = invert;
                                 profileValue->ignoreValueFromDevice = ignoreValueFromDevice;
                                 profileValue->deviceRefractoryPeriod = deviceRefractoryPeriod;
 
@@ -476,7 +466,6 @@ BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRp
                 auto variableIterator = valueEntry->structValue->find("variable");
                 auto valueIterator = valueEntry->structValue->find("value");
                 auto waitIterator = valueEntry->structValue->find("wait");
-                auto invertIterator = valueEntry->structValue->find("invert");
                 auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
                 auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
 
@@ -493,7 +482,6 @@ BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRp
                 profileValue->value = valueIterator->second;
                 if(!profileValue->value) continue;
                 profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
-                profileValue->invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
                 if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
                 if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
                 variableProfile->values.emplace_back(std::move(profileValue));
@@ -508,7 +496,7 @@ BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRp
         {
             auto profileAssociation = std::make_shared<VariableProfileAssociation>();
             profileAssociation->profileId = variableProfile->id;
-            profileAssociation->profileValue = valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value;
+            profileAssociation->profileValue = valueEntry->value;
             profileAssociation->ignoreValueFromDevice = valueEntry->ignoreValueFromDevice;
             profileAssociation->deviceRefractoryPeriod = valueEntry->deviceRefractoryPeriod;
 
@@ -592,16 +580,24 @@ BaseLib::PVariable VariableProfileManager::getAllVariableProfiles(const std::str
         profiles->arrayValue->reserve(_variableProfiles.size());
         for(auto& profile : _variableProfiles)
         {
-            std::string name;
-            auto nameIterator = profile.second->name->structValue->find(languageCode);
-            if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en-US");
-            if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
-            if(nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
+            profile.second->profileStruct->structValue->erase("translations");
+            profile.second->profileStruct->structValue->erase("name");
+            if(languageCode.empty())
+            {
+                profile.second->profileStruct->structValue->emplace("translations", profile.second->name);
+            }
+            else
+            {
+                std::string name;
+                auto nameIterator = profile.second->name->structValue->find(languageCode);
+                if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en-US");
+                if(nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
+                if(nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
+                profile.second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
+            }
 
             profile.second->profileStruct->structValue->erase("id");
             profile.second->profileStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(profile.first));
-            profile.second->profileStruct->structValue->erase("name");
-            profile.second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
             profile.second->profileStruct->structValue->erase("isActive");
             profile.second->profileStruct->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(profile.second->isActive));
             profile.second->profileStruct->structValue->erase("totalVariableCount");
@@ -628,16 +624,24 @@ BaseLib::PVariable VariableProfileManager::getVariableProfile(uint64_t id, const
         auto variableProfileIterator = _variableProfiles.find(id);
         if(variableProfileIterator == _variableProfiles.end()) return BaseLib::Variable::createError(-1, "Variable profile not found.");
 
-        std::string name;
-        auto nameIterator = variableProfileIterator->second->name->structValue->find(languageCode);
-        if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en-US");
-        if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
-        if(nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;
+        variableProfileIterator->second->profileStruct->structValue->erase("translations");
+        variableProfileIterator->second->profileStruct->structValue->erase("name");
+        if(languageCode.empty())
+        {
+            variableProfileIterator->second->profileStruct->structValue->emplace("translations", variableProfileIterator->second->name);
+        }
+        else
+        {
+            std::string name;
+            auto nameIterator = variableProfileIterator->second->name->structValue->find(languageCode);
+            if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en-US");
+            if(nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
+            if(nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;
+            variableProfileIterator->second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
+        }
 
         variableProfileIterator->second->profileStruct->structValue->erase("id");
         variableProfileIterator->second->profileStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(variableProfileIterator->first));
-        variableProfileIterator->second->profileStruct->structValue->erase("name");
-        variableProfileIterator->second->profileStruct->structValue->emplace("name", std::make_shared<BaseLib::Variable>(name));
         variableProfileIterator->second->profileStruct->structValue->erase("isActive");
         variableProfileIterator->second->profileStruct->structValue->emplace("isActive", std::make_shared<BaseLib::Variable>(variableProfileIterator->second->isActive));
         variableProfileIterator->second->profileStruct->structValue->erase("totalVariableCount");
@@ -733,7 +737,6 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
                         auto variableIterator = valueEntry->structValue->find("variable");
                         auto valueIterator = valueEntry->structValue->find("value");
                         auto waitIterator = valueEntry->structValue->find("wait");
-                        auto invertIterator = valueEntry->structValue->find("invert");
                         auto ignoreValueFromDeviceIterator = valueEntry->structValue->find("ignoreValueFromDevice");
                         auto deviceRefractoryPeriodIterator = valueEntry->structValue->find("deviceRefractoryPeriod");
 
@@ -752,7 +755,6 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
                         profileValue->variable = variableIterator->second->stringValue;
                         profileValue->value = valueIterator->second;
                         if(!profileValue->value) continue;
-                        profileValue->invert = (invertIterator != valueEntry->structValue->end() && invertIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
                         profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
                         if(ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
                         if(deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
@@ -767,7 +769,7 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             {
                 auto profileAssociation = std::make_shared<VariableProfileAssociation>();
                 profileAssociation->profileId = variableProfile->id;
-                profileAssociation->profileValue = valueEntry->invert ? std::make_shared<BaseLib::Variable>(!valueEntry->value->booleanValue) : valueEntry->value;
+                profileAssociation->profileValue = valueEntry->value;
                 profileAssociation->ignoreValueFromDevice = valueEntry->ignoreValueFromDevice;
                 profileAssociation->deviceRefractoryPeriod = valueEntry->deviceRefractoryPeriod;
 

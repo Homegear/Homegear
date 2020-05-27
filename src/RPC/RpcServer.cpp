@@ -29,6 +29,7 @@
 */
 
 #include "RpcServer.h"
+#include "RpcMethods/BuildingRpcMethods.h"
 #include "RpcMethods/UiRpcMethods.h"
 #include "RpcMethods/VariableProfileRpcMethods.h"
 #include "../GD/GD.h"
@@ -265,6 +266,18 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateRoom", std::make_shared<RPCUpdateRoom>());
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
+
+    { // Buildings
+        _rpcMethods->emplace("addStoryToBuilding", std::make_shared<RpcMethods::RPCAddStoryToBuilding>());
+        _rpcMethods->emplace("createBuilding", std::make_shared<RpcMethods::RPCCreateBuilding>());
+        _rpcMethods->emplace("deleteBuilding", std::make_shared<RpcMethods::RPCDeleteBuilding>());
+        _rpcMethods->emplace("getStoriesInBuilding", std::make_shared<RpcMethods::RPCGetStoriesInBuilding>());
+        _rpcMethods->emplace("getBuildingMetadata", std::make_shared<RpcMethods::RPCGetBuildingMetadata>());
+        _rpcMethods->emplace("getBuildings", std::make_shared<RpcMethods::RPCGetBuildings>());
+        _rpcMethods->emplace("removeStoryFromBuilding", std::make_shared<RpcMethods::RPCRemoveStoryFromBuilding>());
+        _rpcMethods->emplace("setBuildingMetadata", std::make_shared<RpcMethods::RPCSetBuildingMetadata>());
+        _rpcMethods->emplace("updateBuilding", std::make_shared<RpcMethods::RPCUpdateBuilding>());
+    }
 
     { // System variables
         _rpcMethods->emplace("addRoleToSystemVariable", std::make_shared<RPCAddRoleToSystemVariable>());
@@ -1675,23 +1688,25 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                 }
                                 if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
                                 {
+                                    if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by REST server.");
                                     _restServer->process(client, http, client->socket);
                                 }
                                 else if(_info->webServer && (
                                     !_info->xmlrpcServer ||
-                                    http.getHeader().method != "POST" ||
+                                    (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ) && (
                                     !_info->jsonrpcServer ||
-                                    http.getHeader().method != "POST" ||
+                                    (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
                                     http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ))
                                 {
+                                    if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by webserver.");
                                     client->rpcType = BaseLib::RpcType::webserver;
                                     http.getHeader().remoteAddress = client->address;
                                     http.getHeader().remotePort = client->port;
@@ -1703,6 +1718,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                 }
                                 else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
                                 {
+                                    if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by RPC server.");
                                     if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = packetType == PacketType::xmlRequest ? PacketType::jsonRequest : PacketType::jsonResponse;
                                     packetReceived(client, http.getContent(), packetType, http.getHeader().connection & BaseLib::Http::Connection::Enum::keepAlive);
                                 }

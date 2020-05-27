@@ -102,14 +102,18 @@ BaseLib::PVariable RpcGetAllVariableProfiles::invoke(BaseLib::PRpcClientInfo cli
 {
     try
     {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}),
-        }));
-        if(error != ParameterError::Enum::noError) return getError(error);
+        if(!parameters->empty())
+        {
+            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                    std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString})
+            }));
+            if(error != ParameterError::Enum::noError) return getError(error);
+        }
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAllVariableProfiles")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->getAllVariableProfiles(parameters->at(0)->stringValue);
+        std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
+        return GD::variableProfileManager->getAllVariableProfiles(languageCode);
     }
     catch(const std::exception& ex)
     {
@@ -123,13 +127,15 @@ BaseLib::PVariable RpcGetVariableProfile::invoke(BaseLib::PRpcClientInfo clientI
     try
     {
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64}),
                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString}),
         }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("getVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->getVariableProfile((uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
+        std::string languageCode = parameters->size() < 2 ? "" : parameters->at(1)->stringValue;
+        return GD::variableProfileManager->getVariableProfile((uint64_t)parameters->at(0)->integerValue64, languageCode);
     }
     catch(const std::exception& ex)
     {

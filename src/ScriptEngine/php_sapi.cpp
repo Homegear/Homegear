@@ -207,13 +207,13 @@ static const zend_function_entry homegear_functions[] = {
         ZEND_FE(hg_serial_read, NULL)
         ZEND_FE(hg_serial_readline, NULL)
         ZEND_FE(hg_serial_write, NULL)
+        ZEND_FE(hg_getenv, NULL)
+        ZEND_FE(hg_putenv, NULL)
 #ifdef I2CSUPPORT
         ZEND_FE(hg_i2c_open, NULL)
         ZEND_FE(hg_i2c_close, NULL)
         ZEND_FE(hg_i2c_read, NULL)
         ZEND_FE(hg_i2c_write, NULL)
-        ZEND_FE(hg_getenv, NULL)
-        ZEND_FE(hg_putenv, NULL)
 #endif
         {NULL, NULL, NULL}
 };
