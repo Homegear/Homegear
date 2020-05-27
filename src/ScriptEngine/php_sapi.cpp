@@ -2132,7 +2132,7 @@ ZEND_FUNCTION(hg_gpio_poll)
 
     bool debounce = false;
     if(argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearGpio::poll().");
-    else if(argc >= 1)
+    else if(argc == 1)
     {
         if(Z_TYPE(args[0]) != IS_TRUE && Z_TYPE(args[0]) != IS_FALSE) php_error_docref(NULL, E_WARNING, "debounce is not of type bool.");
         else debounce = Z_TYPE(args[0]) == IS_TRUE;

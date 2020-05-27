@@ -69,6 +69,29 @@ SystemVariableController::SystemVariableController()
     }
 }
 
+BaseLib::Role SystemVariableController::parseRoleString(const std::string& roleString)
+{
+    if(roleString.empty()) return {};
+    auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
+    uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
+    BaseLib::RoleDirection direction = parts.size() >= 2 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
+    bool invert = parts.size() >= 3 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
+    bool scale = parts.size() >= 8 ? (bool)BaseLib::Math::getNumber(parts.at(3)) : false;
+    BaseLib::RoleScaleInfo scaleInfo;
+    if(scale)
+    {
+        scaleInfo.valueSet = (bool)BaseLib::Math::getNumber(parts.at(4));
+        if(scaleInfo.valueSet)
+        {
+            scaleInfo.valueMin = BaseLib::Math::getDouble(parts.at(5));
+            scaleInfo.valueMax = BaseLib::Math::getDouble(parts.at(6));
+        }
+        scaleInfo.scaleMin = BaseLib::Math::getDouble(parts.at(7));
+        scaleInfo.scaleMax = BaseLib::Math::getDouble(parts.at(8));
+    }
+    return {roleId, direction, invert, scale, scaleInfo};
+}
+
 BaseLib::PVariable SystemVariableController::erase(std::string& variableId)
 {
     try
@@ -202,12 +225,8 @@ BaseLib::PVariable SystemVariableController::getAll(BaseLib::PRpcClientInfo clie
                 std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(4)->textValue, ',');
                 for(auto& roleString : roleStrings)
                 {
-                    if(roleString.empty()) continue;
-                    auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-                    uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-                    BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-                    bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-                    if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+                    auto role = parseRoleString(roleString);
+                    if(role.id != 0) systemVariable->roles.emplace(role.id, role);
                 }
 
                 systemVariable->flags = (int32_t)i->second.at(5)->intValue;
@@ -390,12 +409,8 @@ BaseLib::Database::PSystemVariable SystemVariableController::getInternal(const s
         std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
         for(auto& roleString : roleStrings)
         {
-            if(roleString.empty()) continue;
-            auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-            uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-            BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-            bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-            if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+            auto role = parseRoleString(roleString);
+            if(role.id != 0) systemVariable->roles.emplace(role.id, role);
         }
 
         systemVariable->flags = (int32_t)rows->at(0).at(4)->intValue;
@@ -466,12 +481,8 @@ std::set<uint64_t> SystemVariableController::getCategoriesInternal(std::string& 
         std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
         for(auto& roleString : roleStrings)
         {
-            if(roleString.empty()) continue;
-            auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-            uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-            BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-            bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-            if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+            auto role = parseRoleString(roleString);
+            if(role.id != 0) systemVariable->roles.emplace(role.id, role);
         }
 
         systemVariable->flags = (int32_t)rows->at(0).at(4)->intValue;
@@ -549,12 +560,8 @@ BaseLib::PVariable SystemVariableController::getRolesInRoom(BaseLib::PRpcClientI
                 std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(3)->textValue, ',');
                 for(auto& roleString : roleStrings)
                 {
-                    if(roleString.empty()) continue;
-                    auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-                    uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-                    BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-                    bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-                    if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+                    auto role = parseRoleString(roleString);
+                    if(role.id != 0) systemVariable->roles.emplace(role.id, role);
                 }
 
                 systemVariable->flags = (int32_t)i->second.at(4)->intValue;
@@ -633,12 +640,8 @@ std::unordered_map<uint64_t, BaseLib::Role> SystemVariableController::getRolesIn
         std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
         for(auto& roleString : roleStrings)
         {
-            if(roleString.empty()) continue;
-            auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-            uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-            BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-            bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-            if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+            auto role = parseRoleString(roleString);
+            if(role.id != 0) systemVariable->roles.emplace(role.id, role);
         }
 
         systemVariable->flags = (int32_t)rows->at(0).at(4)->intValue;
@@ -694,12 +697,8 @@ uint64_t SystemVariableController::getRoomInternal(std::string& variableId)
         std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(3)->textValue, ',');
         for(auto& roleString : roleStrings)
         {
-            if(roleString.empty()) continue;
-            auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-            uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-            BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-            bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-            if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+            auto role = parseRoleString(roleString);
+            if(role.id != 0) systemVariable->roles.emplace(role.id, role);
         }
 
         systemVariable->flags = (int32_t)rows->at(0).at(4)->intValue;
@@ -754,12 +753,8 @@ BaseLib::PVariable SystemVariableController::getVariablesInCategory(BaseLib::PRp
                 std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(4)->textValue, ',');
                 for(auto& roleString : roleStrings)
                 {
-                    if(roleString.empty()) continue;
-                    auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-                    uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-                    BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-                    bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-                    if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+                    auto role = parseRoleString(roleString);
+                    if(role.id != 0) systemVariable->roles.emplace(role.id, role);
                 }
 
                 systemVariable->flags = (int32_t)i->second.at(5)->intValue;
@@ -832,12 +827,8 @@ BaseLib::PVariable SystemVariableController::getVariablesInRole(BaseLib::PRpcCli
                 std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(4)->textValue, ',');
                 for(auto& roleString : roleStrings)
                 {
-                    if(roleString.empty()) continue;
-                    auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-                    uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-                    BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-                    bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-                    if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+                    auto role = parseRoleString(roleString);
+                    if(role.id != 0) systemVariable->roles.emplace(role.id, role);
                 }
 
                 systemVariable->flags = (int32_t)i->second.at(5)->intValue;
@@ -918,12 +909,8 @@ BaseLib::PVariable SystemVariableController::getVariablesInRoom(BaseLib::PRpcCli
                 std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(3)->textValue, ',');
                 for(auto& roleString : roleStrings)
                 {
-                    if(roleString.empty()) continue;
-                    auto parts = BaseLib::HelperFunctions::splitAll(roleString, '-');
-                    uint64_t roleId = BaseLib::Math::getUnsignedNumber64(parts.at(0));
-                    BaseLib::RoleDirection direction = parts.size() > 1 ? (BaseLib::RoleDirection)BaseLib::Math::getNumber(parts.at(1)) : BaseLib::RoleDirection::both;
-                    bool invert = parts.size() > 2 ? (bool)BaseLib::Math::getNumber(parts.at(2)) : false;
-                    if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
+                    auto role = parseRoleString(roleString);
+                    if(role.id != 0) systemVariable->roles.emplace(role.id, role);
                 }
 
                 systemVariable->flags = (int32_t)i->second.at(4)->intValue;
@@ -1096,7 +1083,7 @@ BaseLib::PVariable SystemVariableController::setValue(BaseLib::PRpcClientInfo cl
         std::ostringstream roles;
         for(auto role : systemVariable->roles)
         {
-            roles << std::to_string(role.first) << "-" << std::to_string((int32_t)role.second.direction) << "-" << std::to_string((int32_t)role.second.invert) << ",";
+            roles << std::to_string(role.first) << "-" << std::to_string((int32_t)role.second.direction) << "-" << std::to_string((int32_t)role.second.invert)  << "-" << std::to_string((int32_t)role.second.scaleInfo.valueSet) << "-" << std::to_string((int32_t)role.second.scaleInfo.valueMin) << "-" << std::to_string((int32_t)role.second.scaleInfo.valueMax) << "-" << std::to_string((int32_t)role.second.scaleInfo.scaleMin) << "-" << std::to_string((int32_t)role.second.scaleInfo.scaleMax) << ",";
         }
         std::string roleString = roles.str();
 
@@ -1191,7 +1178,7 @@ BaseLib::PVariable SystemVariableController::setRoles(std::string& variableId, s
         std::ostringstream rolesStream;
         for(auto& role : roles)
         {
-            rolesStream << std::to_string(role.first) << "-" << std::to_string((int32_t)role.second.direction) << "-" << std::to_string((int32_t)role.second.invert) << ",";
+            rolesStream << std::to_string(role.first) << "-" << std::to_string((int32_t)role.second.direction) << "-" << std::to_string((int32_t)role.second.invert)  << "-" << std::to_string((int32_t)role.second.scaleInfo.valueSet) << "-" << std::to_string((int32_t)role.second.scaleInfo.valueMin) << "-" << std::to_string((int32_t)role.second.scaleInfo.valueMax) << "-" << std::to_string((int32_t)role.second.scaleInfo.scaleMin) << "-" << std::to_string((int32_t)role.second.scaleInfo.scaleMax) << ",";
         }
         std::string roleString = rolesStream.str();
 

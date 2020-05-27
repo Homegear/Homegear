@@ -503,7 +503,8 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger}),
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tStruct})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -526,6 +527,30 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
         }
         //}}}
 
+        BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::undefined;
+        bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
+        bool scale = parameters->size() >= 7 ? !parameters->at(6)->structValue->empty() : false;
+        BaseLib::RoleScaleInfo scaleInfo;
+        if(scale)
+        {
+            auto scaleIterator = parameters->at(6)->structValue->find("valueMin");
+            if(scaleIterator != parameters->at(6)->structValue->end())
+            {
+                scaleInfo.valueSet = true;
+                scaleInfo.valueMin = scaleIterator->second->floatValue;
+            }
+            scaleIterator = parameters->at(6)->structValue->find("valueMax");
+            if(scaleIterator != parameters->at(6)->structValue->end())
+            {
+                scaleInfo.valueSet = true;
+                scaleInfo.valueMax = scaleIterator->second->floatValue;
+            }
+            scaleIterator = parameters->at(6)->structValue->find("scaleMin");
+            if(scaleIterator != parameters->at(6)->structValue->end()) scaleInfo.scaleMin = scaleIterator->second->floatValue;
+            scaleIterator = parameters->at(6)->structValue->find("scaleMax");
+            if(scaleIterator != parameters->at(6)->structValue->end()) scaleInfo.scaleMax = scaleIterator->second->floatValue;
+        }
+
         if(parameters->at(0)->integerValue64 == 0) //System variable
         {
             auto systemVariable = GD::systemVariableController->getInternal(parameters->at(2)->stringValue);
@@ -533,11 +558,9 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
             if(checkAcls && !clientInfo->acls->checkSystemVariableWriteAccess(systemVariable)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-            BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::undefined;
-            bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
-            if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
-            if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, std::move(BaseLib::Role(middleGroupRoleId, direction, invert)));
-            if(mainGroupRoleId != 0) systemVariable->roles.emplace(mainGroupRoleId, std::move(BaseLib::Role(mainGroupRoleId, direction, invert)));
+            if(roleId != 0) systemVariable->roles.emplace(roleId, BaseLib::Role(roleId, direction, invert, scale, scaleInfo));
+            if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, BaseLib::Role(middleGroupRoleId, direction, false, false, BaseLib::RoleScaleInfo()));
+            if(mainGroupRoleId != 0) systemVariable->roles.emplace(mainGroupRoleId, BaseLib::Role(mainGroupRoleId, direction, false, false, BaseLib::RoleScaleInfo()));
 
             auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
             if(result->errorStruct)
@@ -588,7 +611,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                         {
                             for(auto& role : *rolesIterator->second->arrayValue)
                             {
-                                if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                                if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false, false, BaseLib::RoleScaleInfo()));
                             }
                         }
                         GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
@@ -615,12 +638,9 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                 if(!clientInfo->acls->checkVariableWriteAccess(peer, parameters->at(1)->integerValue, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
             }
 
-            BaseLib::RoleDirection direction = parameters->size() >= 5 ? (BaseLib::RoleDirection)parameters->at(4)->integerValue : BaseLib::RoleDirection::both;
-            bool invert = parameters->size() >= 6 ? parameters->at(5)->booleanValue : false;
-
-            bool result1 = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, roleId, direction, invert);
-            bool result2 = middleGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, middleGroupRoleId, direction, invert) : true;
-            bool result3 = mainGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, mainGroupRoleId, direction, invert) : true;
+            bool result1 = peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, roleId, direction, invert, scale, scaleInfo);
+            bool result2 = middleGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, middleGroupRoleId, direction, false, false, BaseLib::RoleScaleInfo()) : true;
+            bool result3 = mainGroupRoleId != 0 ? peer->addRoleToVariable(parameters->at(1)->integerValue, parameters->at(2)->stringValue, mainGroupRoleId, direction, false, false, BaseLib::RoleScaleInfo()) : true;
             return std::make_shared<BaseLib::Variable>(result1 || result2 || result3);
         }
 
@@ -1007,7 +1027,8 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger}),
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tStruct})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
@@ -1037,9 +1058,30 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
 
         BaseLib::RoleDirection direction = parameters->size() >= 3 ? (BaseLib::RoleDirection)parameters->at(2)->integerValue : BaseLib::RoleDirection::both;
         bool invert = parameters->size() >= 4 ? parameters->at(3)->booleanValue : false;
-        if(roleId != 0) systemVariable->roles.emplace(roleId, std::move(BaseLib::Role(roleId, direction, invert)));
-        if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, std::move(BaseLib::Role(middleGroupRoleId, direction, invert)));
-        if(mainGroupRoleId != 0) systemVariable->roles.emplace(mainGroupRoleId, std::move(BaseLib::Role(mainGroupRoleId, direction, invert)));
+        bool scale = parameters->size() >= 5 ? !parameters->at(4)->structValue->empty() : false;
+        BaseLib::RoleScaleInfo scaleInfo;
+        if(scale)
+        {
+            auto scaleIterator = parameters->at(4)->structValue->find("valueMin");
+            if(scaleIterator != parameters->at(4)->structValue->end())
+            {
+                scaleInfo.valueSet = true;
+                scaleInfo.valueMin = scaleIterator->second->floatValue;
+            }
+            scaleIterator = parameters->at(4)->structValue->find("valueMax");
+            if(scaleIterator != parameters->at(4)->structValue->end())
+            {
+                scaleInfo.valueSet = true;
+                scaleInfo.valueMax = scaleIterator->second->floatValue;
+            }
+            scaleIterator = parameters->at(4)->structValue->find("scaleMin");
+            if(scaleIterator != parameters->at(4)->structValue->end()) scaleInfo.scaleMin = scaleIterator->second->floatValue;
+            scaleIterator = parameters->at(4)->structValue->find("scaleMax");
+            if(scaleIterator != parameters->at(4)->structValue->end()) scaleInfo.scaleMax = scaleIterator->second->floatValue;
+        }
+        if(roleId != 0) systemVariable->roles.emplace(roleId, BaseLib::Role(roleId, direction, invert, scale, scaleInfo));
+        if(middleGroupRoleId != 0) systemVariable->roles.emplace(middleGroupRoleId, BaseLib::Role(middleGroupRoleId, direction, false, false, BaseLib::RoleScaleInfo()));
+        if(mainGroupRoleId != 0) systemVariable->roles.emplace(mainGroupRoleId, BaseLib::Role(mainGroupRoleId, direction, false, false, BaseLib::RoleScaleInfo()));
 
         auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
         if(result->errorStruct)
@@ -1089,7 +1131,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
                     {
                         for(auto& role : *rolesIterator->second->arrayValue)
                         {
-                            if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, std::move(BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false)));
+                            if(role->integerValue64 != 0) roleSystemVariable->roles.emplace(role->integerValue64, BaseLib::Role(role->integerValue64, BaseLib::RoleDirection::both, false, false, BaseLib::RoleScaleInfo()));
                         }
                     }
                     GD::systemVariableController->setRoles(roleSystemVariable->name, roleSystemVariable->roles);
@@ -7562,7 +7604,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
         std::string serialNumber;
-        uint64_t peerId = (uint64_t) parameters->at(0)->integerValue64;
+        auto peerId = (uint64_t) parameters->at(0)->integerValue64;
         int32_t channel = 0;
         bool useSerialNumber = false;
         if(parameters->at(0)->type == BaseLib::VariableType::tString)

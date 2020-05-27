@@ -623,14 +623,14 @@ bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter
         {
             std::vector<uint8_t> parameterData;
             auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
-            parameter->convertToPacket(std::make_shared<Variable>(_ip), rpcConfigurationParameter.invert(), parameterData);
+            parameter->convertToPacket(std::make_shared<Variable>(_ip), rpcConfigurationParameter.mainRole(), parameterData);
             rpcConfigurationParameter.setBinaryData(parameterData);
         }
         else if(parameter->id == "PEER_ID")
         {
             std::vector<uint8_t> parameterData;
             auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
-            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.invert(), parameterData);
+            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.mainRole(), parameterData);
             rpcConfigurationParameter.setBinaryData(parameterData);
         }
     }
@@ -649,14 +649,14 @@ bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter,
         {
             std::vector<uint8_t> parameterData;
             auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
-            parameter->convertToPacket(std::make_shared<Variable>(_ip), rpcConfigurationParameter.invert(), parameterData);
+            parameter->convertToPacket(std::make_shared<Variable>(_ip), rpcConfigurationParameter.mainRole(), parameterData);
             rpcConfigurationParameter.setBinaryData(parameterData);
         }
         else if(parameter->id == "PEER_ID")
         {
             std::vector<uint8_t> parameterData;
             auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
-            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.invert(), parameterData);
+            parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.mainRole(), parameterData);
             rpcConfigurationParameter.setBinaryData(parameterData);
         }
     }
@@ -737,7 +737,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
                 BaseLib::Systems::RpcConfigurationParameter& parameter = configCentral[channel][i->first];
                 if(!parameter.rpcParameter) continue;
                 if(parameter.rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
-                parameter.rpcParameter->convertToPacket(i->second, clientInfo->addon && clientInfo->peerId == _peerID ? false : parameter.invert(), value);
+                parameter.rpcParameter->convertToPacket(i->second, clientInfo->addon && clientInfo->peerId == _peerID ? Role() : parameter.mainRole(), value);
                 std::vector<uint8_t> shiftedValue = value;
                 parameter.rpcParameter->adjustBitPosition(shiftedValue);
                 int32_t intIndex = (int32_t)parameter.rpcParameter->physical->index;
@@ -818,13 +818,13 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
         if(rpcParameter->physical->operationType == IPhysical::OperationType::Enum::store)
         {
             std::vector<uint8_t> parameterData;
-            rpcParameter->convertToPacket(value, clientInfo->addon && clientInfo->peerId == _peerID ? false : parameter.invert(), parameterData);
+            rpcParameter->convertToPacket(value, clientInfo->addon && clientInfo->peerId == _peerID ? Role() : parameter.mainRole(), parameterData);
             parameter.setBinaryData(parameterData);
             if(parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
             else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
 
             valueKeys->push_back(valueKey);
-            values->push_back(rpcParameter->convertFromPacket(parameterData, clientInfo->addon && clientInfo->peerId == _peerID ? false : parameter.invert(), true));
+            values->push_back(rpcParameter->convertFromPacket(parameterData, clientInfo->addon && clientInfo->peerId == _peerID ? Role() : parameter.mainRole(), true));
             std::string address = _serialNumber + ":" + std::to_string(channel);
             if(clientInfo->scriptEngineServer)
             {
