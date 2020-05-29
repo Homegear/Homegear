@@ -81,148 +81,146 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 	$events = new Events();
 	$events->addChannel($homegearChannel);
 	$events->addChannel($eventChannel);
-	$events->setTimeout(1000000);
+	//$events->setTimeout(1000000);
+	$events->setBlocking(false);
 
 	while(true)
 	{
-		try
+		if($secondsWaited >= $interval)
 		{
-			if($secondsWaited >= $interval)
-			{
-				$secondsWaited = 0;
+			$secondsWaited = 0;
 
-				$config = $hg->getParamset($peerId, 0, "MASTER");
-			    if(!array_key_exists("LANGUAGE_CODE", $config) || !array_key_exists("CITY_ID", $config))
-			    {
-			    	$hg->log(2, "Error: Peer does not seem to be an OpenWeatherMap device.");
-			    	continue;
-			    }
-			    if($config["API_KEY"] == "")
-			    {
-			    	$hg->log(2, "Warning: No API key set.");
-			    	continue;
-			    }
+			$config = $hg->getParamset($peerId, 0, "MASTER");
+		    if(!array_key_exists("LANGUAGE_CODE", $config) || !array_key_exists("CITY_ID", $config))
+		    {
+		    	$hg->log(2, "Error: Peer does not seem to be an OpenWeatherMap device.");
+		    	continue;
+		    }
+		    if($config["API_KEY"] == "")
+		    {
+		    	$hg->log(2, "Warning: No API key set.");
+		    	continue;
+		    }
 
-			    $interval = $config["REQUEST_INTERVAL"];
-			    if($interval < 60) $interval = 60;
-			    else if($interval >86400) $interval = 86400;
+		    $interval = $config["REQUEST_INTERVAL"];
+		    if($interval < 60) $interval = 60;
+		    else if($interval > 86400) $interval = 86400;
 
-			    $url = "http://api.openweathermap.org/data/2.5/weather?id=".$config["CITY_ID"]."&units=metric&cnt=7&lang=".$config["LANGUAGE_CODE"]."&APPID=".$config["API_KEY"];
-			    for($i = 0; $i < 3; $i++)
-			    {
-				    $json = @file_get_contents($url);
-				    if($json) break;
-				}
-				if(!$json)
-			    {
-			        $hg->log(3, "Warning: Response from openweathermap.org is empty.");
-			        continue;
-			    }
-			    $data = json_decode($json, true);
-			    if(!$data || count($data) == 0)
-			    {
-			    	$hg->log(3, "Warning: Response from openweathermap.org is empty.");
-			        continue;
-			    }
-			    if($data["cod"] != "404")
-			    {
-			    	$hg->setValue($peerId, 1, "LAST_DATA", time());
-			        $hg->setValue($peerId, 1, "CITY_LONGITUDE", (double)$data["coord"]["lon"]);
-			        $hg->setValue($peerId, 1, "CITY_LATITUDE", (double)$data["coord"]["lat"]);
-			        $hg->setValue($peerId, 1, "SUNRISE", (integer)$data["sys"]["sunrise"]);
-			        $hg->setValue($peerId, 1, "SUNRISE_STRING", date($config['DATE_FORMAT'], (integer)$data["sys"]["sunrise"]));
-			        $hg->setValue($peerId, 1, "SUNSET", (integer)$data["sys"]["sunset"]);
-			        $hg->setValue($peerId, 1, "SUNSET_STRING", date($config['DATE_FORMAT'], (integer)$data["sys"]["sunset"]));
-			        if(array_key_exists("weather", $data) && count($data["weather"]) > 0)
-			        {
-			            $hg->setValue($peerId, 1, "WEATHER", (string)$data["weather"][0]["main"]);
-			            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", (string)$data["weather"][0]["description"]);
-			            $hg->setValue($peerId, 1, "WEATHER_ICON", (string)$data["weather"][0]["icon"]);
-			            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "http://openweathermap.org/img/w/".$data["weather"][0]["icon"].".png");
-			        }
-			        else
-			        {
-			            $hg->setValue($peerId, 1, "WEATHER", "");
-			            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
-			            $hg->setValue($peerId, 1, "WEATHER_ICON", "");
-			            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
-			        }
-			        $hg->setValue($peerId, 1, "TEMPERATURE", (double)$data["main"]["temp"]);
-			        $hg->setValue($peerId, 1, "HUMIDITY", (integer)$data["main"]["humidity"]);
-			        $hg->setValue($peerId, 1, "PRESSURE", (double)$data["main"]["pressure"]);
-			        $hg->setValue($peerId, 1, "WIND_SPEED", (double)$data["wind"]["speed"]);
-			        $hg->setValue($peerId, 1, "WIND_GUST", array_key_exists("gust", $data["wind"]) ? (double)$data["wind"]["gust"] : 0.0);
-			        $hg->setValue($peerId, 1, "WIND_DIRECTION", array_key_exists("deg", $data["wind"]) ? (double)$data["wind"]["deg"] : 0.0);
-			        $hg->setValue($peerId, 1, "RAIN_3H", array_key_exists("rain", $data) && array_key_exists("3h", $data["rain"]) ? (double)$data["rain"]["3h"] : 0.0);
-			        $hg->setValue($peerId, 1, "SNOW_3H", array_key_exists("snow", $data) && array_key_exists("3h", $data["snow"]) ? (double)$data["snow"]["3h"] : 0.0);
-			        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", (integer)$data["clouds"]["all"]);
-			    }
-			    else
-			    {
-			    	$hg->log(2, "Error: City or country not found.");
-			        $hg->setValue($peerId, 1, "CITY_LONGITUDE", 0.0);
-			        $hg->setValue($peerId, 1, "CITY_LATITUDE", 0.0);
-			        $hg->setValue($peerId, 1, "SUNRISE", 0);
-			        $hg->setValue($peerId, 1, "SUNRISE_STRING", "");
-			        $hg->setValue($peerId, 1, "SUNSET", 0);
-			        $hg->setValue($peerId, 1, "SUNSET_STRING", "");
-			        $hg->setValue($peerId, 1, "WEATHER", "");
-			        $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
-			        $hg->setValue($peerId, 1, "WEATHER_ICON", "");
-			        $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
-			        $hg->setValue($peerId, 1, "TEMPERATURE", 0.0);
-			        $hg->setValue($peerId, 1, "HUMIDITY", 0);
-			        $hg->setValue($peerId, 1, "PRESSURE", 0.0);
-			        $hg->setValue($peerId, 1, "WIND_SPEED", 0.0);
-			        $hg->setValue($peerId, 1, "WIND_GUST", 0.0);
-			        $hg->setValue($peerId, 1, "WIND_DIRECTION", 0.0);
-			        $hg->setValue($peerId, 1, "RAIN_3H", 0.0);
-			        $hg->setValue($peerId, 1, "SNOW_3H", 0.0);
-			        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", 0);
-			    }
+		    $url = "http://api.openweathermap.org/data/2.5/weather?id=".$config["CITY_ID"]."&units=metric&cnt=7&lang=".$config["LANGUAGE_CODE"]."&APPID=".$config["API_KEY"];
+		    for($i = 0; $i < 3; $i++)
+		    {
+			    $json = @file_get_contents($url);
+			    if($json) break;
 			}
+			if(!$json)
+		    {
+		        $hg->log(3, "Warning: Response from openweathermap.org is empty.");
+		        continue;
+		    }
+		    $data = json_decode($json, true);
+		    if(!$data || count($data) == 0)
+		    {
+		    	$hg->log(3, "Warning: Response from openweathermap.org is empty.");
+		        continue;
+		    }
+		    if($data["cod"] != "404")
+		    {
+		    	$hg->setValue($peerId, 1, "LAST_DATA", time());
+		        $hg->setValue($peerId, 1, "CITY_LONGITUDE", (double)$data["coord"]["lon"]);
+		        $hg->setValue($peerId, 1, "CITY_LATITUDE", (double)$data["coord"]["lat"]);
+		        $hg->setValue($peerId, 1, "SUNRISE", (integer)$data["sys"]["sunrise"]);
+		        $hg->setValue($peerId, 1, "SUNRISE_STRING", date($config['DATE_FORMAT'], (integer)$data["sys"]["sunrise"]));
+		        $hg->setValue($peerId, 1, "SUNSET", (integer)$data["sys"]["sunset"]);
+		        $hg->setValue($peerId, 1, "SUNSET_STRING", date($config['DATE_FORMAT'], (integer)$data["sys"]["sunset"]));
+		        if(array_key_exists("weather", $data) && count($data["weather"]) > 0)
+		        {
+		            $hg->setValue($peerId, 1, "WEATHER", (string)$data["weather"][0]["main"]);
+		            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", (string)$data["weather"][0]["description"]);
+		            $hg->setValue($peerId, 1, "WEATHER_ICON", (string)$data["weather"][0]["icon"]);
+		            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "http://openweathermap.org/img/w/".$data["weather"][0]["icon"].".png");
+		        }
+		        else
+		        {
+		            $hg->setValue($peerId, 1, "WEATHER", "");
+		            $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
+		            $hg->setValue($peerId, 1, "WEATHER_ICON", "");
+		            $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
+		        }
+		        $hg->setValue($peerId, 1, "TEMPERATURE", (double)$data["main"]["temp"]);
+		        $hg->setValue($peerId, 1, "HUMIDITY", (integer)$data["main"]["humidity"]);
+		        $hg->setValue($peerId, 1, "PRESSURE", (double)$data["main"]["pressure"]);
+		        $hg->setValue($peerId, 1, "WIND_SPEED", (double)$data["wind"]["speed"]);
+		        $hg->setValue($peerId, 1, "WIND_GUST", array_key_exists("gust", $data["wind"]) ? (double)$data["wind"]["gust"] : 0.0);
+		        $hg->setValue($peerId, 1, "WIND_DIRECTION", array_key_exists("deg", $data["wind"]) ? (double)$data["wind"]["deg"] : 0.0);
+		        $hg->setValue($peerId, 1, "RAIN_3H", array_key_exists("rain", $data) && array_key_exists("3h", $data["rain"]) ? (double)$data["rain"]["3h"] : 0.0);
+		        $hg->setValue($peerId, 1, "SNOW_3H", array_key_exists("snow", $data) && array_key_exists("3h", $data["snow"]) ? (double)$data["snow"]["3h"] : 0.0);
+		        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", (integer)$data["clouds"]["all"]);
+		    }
+		    else
+		    {
+		    	$hg->log(2, "Error: City or country not found.");
+		        $hg->setValue($peerId, 1, "CITY_LONGITUDE", 0.0);
+		        $hg->setValue($peerId, 1, "CITY_LATITUDE", 0.0);
+		        $hg->setValue($peerId, 1, "SUNRISE", 0);
+		        $hg->setValue($peerId, 1, "SUNRISE_STRING", "");
+		        $hg->setValue($peerId, 1, "SUNSET", 0);
+		        $hg->setValue($peerId, 1, "SUNSET_STRING", "");
+		        $hg->setValue($peerId, 1, "WEATHER", "");
+		        $hg->setValue($peerId, 1, "WEATHER_DESCRIPTION", "");
+		        $hg->setValue($peerId, 1, "WEATHER_ICON", "");
+		        $hg->setValue($peerId, 1, "WEATHER_ICON_URL", "");
+		        $hg->setValue($peerId, 1, "TEMPERATURE", 0.0);
+		        $hg->setValue($peerId, 1, "HUMIDITY", 0);
+		        $hg->setValue($peerId, 1, "PRESSURE", 0.0);
+		        $hg->setValue($peerId, 1, "WIND_SPEED", 0.0);
+		        $hg->setValue($peerId, 1, "WIND_GUST", 0.0);
+		        $hg->setValue($peerId, 1, "WIND_DIRECTION", 0.0);
+		        $hg->setValue($peerId, 1, "RAIN_3H", 0.0);
+		        $hg->setValue($peerId, 1, "SNOW_3H", 0.0);
+		        $hg->setValue($peerId, 1, "CLOUD_COVERAGE", 0);
+		    }
+		}
 
-			$event = NULL;
-			do
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event)
 			{
-				$event = $events->poll();
-				if($event)
+				if($event->source == 'mainHomegearChannelPeer'.$peerId)
 				{
-					if($event->source == 'mainHomegearChannelPeer'.$peerId)
+					$events->addChannel($homegearChannel);
+					if($event->type == Event\Type::Read)
 					{
-						$events->addChannel($homegearChannel);
-						if($event->type == Event\Type::Read)
+						if(is_array($event->value) && count($event->value) > 0)
 						{
-							if(is_array($event->value) && count($event->value) > 0)
-							{
-								if($event->value['name'] == 'stop') return true; //Stop
-							}
+							if($event->value['name'] == 'stop') return true; //Stop
 						}
-						else if($event->type == Event\Type::Close) return true; //Stop
 					}
-					else if($event->source == 'eventChannelPeer'.$peerId)
+					else if($event->type == Event\Type::Close) return true; //Stop
+				}
+				else if($event->source == 'eventChannelPeer'.$peerId)
+				{
+					$events->addChannel($eventChannel);
+					if($event->type == Event\Type::Read)
 					{
-						$events->addChannel($eventChannel);
-						if($event->type == Event\Type::Read)
+						if(is_array($event->value) && count($event->value) > 0)
 						{
-							if(is_array($event->value) && count($event->value) > 0)
+							if($event->value['name'] == 'updateDevice' || $event->value['name'] == 'request') 
 							{
-								if($event->value['name'] == 'updateDevice' || $event->value['name'] == 'request') 
-								{
-									$secondsWaited = $interval;
-									break;
-								}
+								$secondsWaited = $interval;
+								break;
 							}
 						}
 					}
 				}
 			}
-			while($event);
 		}
-		catch(Events\Error\Timeout $ex)
-		{
-			$secondsWaited++;
-		}
+		while($event);
+
+		$secondsWaited++;
+		if($secondsWaited >= $interval) continue;
+		sleep(1);
 	}
 
 	return true;
