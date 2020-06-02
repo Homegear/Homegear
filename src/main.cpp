@@ -992,7 +992,8 @@ void startUp()
 
         if(GD::mqtt->enabled())
         {
-            GD::out.printInfo("Starting MQTT client...");;
+            GD::out.printInfo("Starting MQTT client...");
+            GD::mqtt->loadSettings(); //Needs database to be available
             GD::mqtt->start();
         }
 
@@ -1598,7 +1599,6 @@ int main(int argc, char* argv[])
 			GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
 			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 			GD::mqtt.reset(new Mqtt());
-			GD::mqtt->loadSettings();
 		// }}}
 
 		if((chdir(GD::bl->settings.workingDirectory().c_str())) < 0)
