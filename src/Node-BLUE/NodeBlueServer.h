@@ -89,6 +89,12 @@ public:
 
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
 
+	BaseLib::PVariable addNodesToFlow(const std::string& tab, const std::string& tag, const BaseLib::PVariable& nodes);
+
+    BaseLib::PVariable removeNodesFromFlow(const std::string& tab, const std::string& tag);
+
+    BaseLib::PVariable flowHasTag(const std::string& tab, const std::string& tag);
+
 	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
 
 	BaseLib::PVariable getNodesWithFixedInputs();

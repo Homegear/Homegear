@@ -32,6 +32,7 @@
 #include "RpcMethods/BuildingRpcMethods.h"
 #include "RpcMethods/UiRpcMethods.h"
 #include "RpcMethods/VariableProfileRpcMethods.h"
+#include "RpcMethods/NodeBlueRpcMethods.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <gnutls/gnutls.h>
@@ -266,6 +267,12 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateRoom", std::make_shared<RPCUpdateRoom>());
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
+
+    { //Node-BLUE
+        _rpcMethods->emplace("addNodesToFlow", std::make_shared<RpcMethods::RPCAddNodesToFlow>());
+        _rpcMethods->emplace("flowHasTag", std::make_shared<RpcMethods::RPCFlowHasTag>());
+        _rpcMethods->emplace("removeNodesFromFlow", std::make_shared<RpcMethods::RPCRemoveNodesFromFlow>());
+    }
 
     { // Buildings
         _rpcMethods->emplace("addStoryToBuilding", std::make_shared<RpcMethods::RPCAddStoryToBuilding>());

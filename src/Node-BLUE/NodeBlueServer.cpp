@@ -33,6 +33,8 @@
 #include "../RPC/RpcMethods/BuildingRpcMethods.h"
 #include "../RPC/RpcMethods/UiRpcMethods.h"
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
+#include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
+#include "FlowParser.h"
 
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
@@ -177,6 +179,12 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUnsubscribePeers()));
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
+
+    { // Node-BLUE
+        _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
+        _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
+        _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
+    }
 
     { // Buildings
         _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
@@ -1865,14 +1873,10 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-				if(GD::bl->io.fileExists(flowsFile)) fileContent = _bl->io.getBinaryFileContent(flowsFile);
+				if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
 				else
 				{
-					std::string randomString1 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8);
-					BaseLib::HelperFunctions::toLower(randomString1);
-					std::string randomString2 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 1048575), 5);
-					BaseLib::HelperFunctions::toLower(randomString2);
-					std::string tempString = "[{\"id\":\"" + randomString1 + "." + randomString2 + "\",\"label\":\"Flow 1\",\"type\":\"tab\"}]";
+					std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
 					fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
 				}
 			}
@@ -2070,7 +2074,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
 				std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
-				_bl->io.writeFile(filename, flows, flows.size());
+				BaseLib::Io::writeFile(filename, flows, flows.size());
 			}
 
 			responseEncoding = "application/json";
@@ -2082,7 +2086,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			_out.printInfo("Info: Deploying (3)...");
 			GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
 
-			return "{\"rev\": \"" + md5String + "\"}";
+			return R"({"rev": ")" + md5String + "\"}";
 		}
 		else if(path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
         {
@@ -2093,7 +2097,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
             _out.printInfo("Info: Installing node (2)...");
             BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
             auto moduleIterator = json->structValue->find("module");
-            if(moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return "{\"result\":\"error\"}";
+            if(moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return R"({"result":"error"})";
 
             std::string method = "managementInstallNode";
             auto parameters = std::make_shared<BaseLib::Array>();
@@ -3409,6 +3413,120 @@ void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>&
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string& tab, const std::string& tag, const BaseLib::PVariable& nodes)
+{
+    try
+    {
+        std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
+        std::vector<char> fileContent;
+
+        {
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
+            else
+            {
+                std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+                fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+            }
+        }
+
+        BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+
+        auto newFlow = FlowParser::addNodesToFlow(flowsJson, tab, tag, nodes);
+        if(newFlow)
+        {
+            backupFlows();
+
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
+            fileContent.clear();
+            _jsonEncoder->encode(newFlow, fileContent);
+            BaseLib::Io::writeFile(filename, fileContent, fileContent.size());
+            return std::make_shared<BaseLib::Variable>(true);
+        }
+        else
+        {
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::removeNodesFromFlow(const std::string& tab, const std::string& tag)
+{
+    try
+    {
+        std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
+        std::vector<char> fileContent;
+
+        {
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
+            else
+            {
+                std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+                fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+            }
+        }
+
+        BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+
+        auto newFlow = FlowParser::removeNodesFromFlow(flowsJson, tab, tag);
+        if(newFlow)
+        {
+            backupFlows();
+
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
+            fileContent.clear();
+            _jsonEncoder->encode(newFlow, fileContent);
+            BaseLib::Io::writeFile(filename, fileContent, fileContent.size());
+            return std::make_shared<BaseLib::Variable>(true);
+        }
+        else
+        {
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::flowHasTag(const std::string& tab, const std::string& tag)
+{
+    try
+    {
+        std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
+        std::vector<char> fileContent;
+
+        {
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
+            else
+            {
+                std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+                fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+            }
+        }
+
+        BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+
+        return std::make_shared<BaseLib::Variable>(FlowParser::flowHasTag(flowsJson, tab, tag));
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& parameters)
