@@ -14,19 +14,40 @@
             "de-DE": "Licht - Status"
         },
         "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.lightingSwitch",
-                "roleIdsIn": [
-                    [
-                        100001
+            "simpleCreationInfo": [
+                {
+                    "element": "Base.lightingSwitchBrightness",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ]
                     ]
-                ],
-                "roleIdsOut": [
-                    [
-                        100001
+                },
+                {
+                    "element": "Base.lightingSwitch",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ]
                     ]
-                ]
-            },
+                }
+            ],
             "icon": "light_on_1",
             "roleProfileValues": {
                 "type": "select",

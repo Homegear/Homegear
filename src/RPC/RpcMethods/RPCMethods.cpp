@@ -590,7 +590,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
                         {
                             continue;
                         }
-                        std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+                        std::string roleSystemVariableName = parameters->at(2)->stringValue + ".RV." + idIterator->second->stringValue;
                         auto defaultValueIterator = variableInfo->structValue->find("default");
                         auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
                         if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
@@ -1110,7 +1110,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
                     {
                         continue;
                     }
-                    std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+                    std::string roleSystemVariableName = parameters->at(0)->stringValue + ".RV." + idIterator->second->stringValue;
                     auto defaultValueIterator = variableInfo->structValue->find("default");
                     auto roleSystemVariableValue = std::make_shared<BaseLib::Variable>();
                     if(defaultValueIterator != variableInfo->structValue->end()) roleSystemVariableValue = defaultValueIterator->second;
@@ -6201,7 +6201,7 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
                 {
                     continue;
                 }
-                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".BV." + idIterator->second->stringValue;
+                std::string roleSystemVariableName = parameters->at(0)->stringValue + ".RV." + idIterator->second->stringValue;
 
                 GD::systemVariableController->erase(roleSystemVariableName);
             }
@@ -6263,7 +6263,7 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
                     {
                         continue;
                     }
-                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".BV." + idIterator->second->stringValue;
+                    std::string roleSystemVariableName = parameters->at(2)->stringValue + ".RV." + idIterator->second->stringValue;
 
                     GD::systemVariableController->erase(roleSystemVariableName);
                 }
