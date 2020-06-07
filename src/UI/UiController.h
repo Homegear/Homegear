@@ -74,7 +74,7 @@ public:
 
     BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo& clientInfo, uint64_t categoryId, const std::string& language);
 
-    BaseLib::PVariable requestUiRefresh(const BaseLib::PRpcClientInfo& clientInfo, const std::string& id);
+    static BaseLib::PVariable requestUiRefresh(const BaseLib::PRpcClientInfo& clientInfo, const std::string& id);
 
     BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId);
 
@@ -88,13 +88,13 @@ protected:
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByRoom;
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
 
-    void addDataInfo(PUiElement& uiElement, const BaseLib::PVariable& data);
+    static static void addDataInfo(PUiElement& uiElement, const BaseLib::PVariable& data);
 
-    void addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue);
+    static void addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue);
 
     BaseLib::PVariable findRoleVariables(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& uiInfo, const BaseLib::PVariable& variable, uint64_t roomId, BaseLib::PVariable& inputPeers, BaseLib::PVariable& outputPeers);
 
-    bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
+    static bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
 
     std::unordered_set<uint64_t> getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string& variableName);
 };

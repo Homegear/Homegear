@@ -40,10 +40,7 @@ UiController::UiController()
     _descriptions = std::unique_ptr<BaseLib::DeviceDescription::UiElements>(new BaseLib::DeviceDescription::UiElements(GD::bl.get()));
 }
 
-UiController::~UiController()
-{
-
-}
+UiController::~UiController() = default;
 
 void UiController::load()
 {
@@ -593,7 +590,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 fields->arrayValue->resize(1);
                 requestParameters->arrayValue->at(2) = fields;
                 requestParameters->arrayValue->resize(3);
-                std::string methodName = "getDeviceDescription";
+                methodName = "getDeviceDescription";
                 auto deviceDescription = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                 if(deviceDescription->errorStruct)
                 {
@@ -1078,7 +1075,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
                     };
                 }
@@ -1094,7 +1091,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     };
                 }
@@ -1209,7 +1206,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
                     }
                 }
@@ -1225,7 +1222,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     }
                 }
@@ -1296,7 +1293,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
                     }
                 }
@@ -1312,7 +1309,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     }
                 }
