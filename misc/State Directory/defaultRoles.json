@@ -16,6 +16,31 @@
         "ui": {
             "simpleCreationInfo": [
                 {
+                    "element": "Base.lightingSwitchBrightnessTemp",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ],
+                        [
+                            103001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ],
+                        [
+                            103001
+                        ]
+                    ]
+                },
+                {
                     "element": "Base.lightingSwitchBrightness",
                     "roleIdsIn": [
                         [
