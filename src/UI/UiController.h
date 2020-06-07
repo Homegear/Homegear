@@ -88,7 +88,7 @@ protected:
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByRoom;
     std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
 
-    static static void addDataInfo(PUiElement& uiElement, const BaseLib::PVariable& data);
+    static void addDataInfo(PUiElement& uiElement, const BaseLib::PVariable& data);
 
     static void addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue);
 
