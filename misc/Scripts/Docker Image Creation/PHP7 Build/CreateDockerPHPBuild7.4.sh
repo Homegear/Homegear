@@ -159,6 +159,11 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
+if [ "$distver" == "focal" ]; then
+	#When using the default "fakeroot-sysv" PHP package creation fails
+	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
+fi
+
 if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 elif [ "$distver" == "trusty" ]; then
