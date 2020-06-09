@@ -223,10 +223,14 @@ fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
+if [ "$distver" == "focal" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8 libreadline-dev
 else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
+	if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bionic" ]; then
+		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
+	else
+		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
+	fi
 fi
 # }}}
 
