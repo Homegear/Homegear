@@ -292,7 +292,7 @@ cd ..
 mv php7* php7-homegear-dev-${version}
 tar -zcpf php7-homegear-dev_${version}.orig.tar.gz php7-homegear-dev-${version}
 cd php7-homegear-dev-*
-debuild -us -uc
+debuild -us -uc --no-lintian
 cd /
 rm -Rf /PHPBuild/php7-homegear-dev-${version}
 if test -f /PHPBuild/Upload.sh; then

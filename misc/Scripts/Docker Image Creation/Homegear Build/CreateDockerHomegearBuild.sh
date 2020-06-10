@@ -293,10 +293,10 @@ function createPackage {
 	cd $sourcePath
 	[ $? -ne 0 ] && exit 1
 	if [ $4 -eq 1 ]; then
-		debuild -j${buildthreads} -us -uc -sd
+		debuild -j${buildthreads} -us -uc -sd --no-lintian
 		[ $? -ne 0 ] && exit 1
 	else
-		debuild -j${buildthreads} -us -uc
+		debuild -j${buildthreads} -us -uc --no-lintian
 		[ $? -ne 0 ] && exit 1
 	fi
 	cd ..
@@ -333,7 +333,7 @@ function createPackageWithoutAutomake {
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
 	[ $? -ne 0 ] && exit 1
-	debuild -us -uc
+	debuild -us -uc --no-lintian
 	[ $? -ne 0 ] && exit 1
 	cd ..
 	rm -Rf $sourcePath
