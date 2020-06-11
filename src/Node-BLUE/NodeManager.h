@@ -49,17 +49,14 @@ namespace Homegear
 class NodeLoader
 {
 public:
-	NodeLoader(std::string nodeNamespace, std::string type, std::string path);
+	NodeLoader(const std::string& soPath);
 
 	virtual ~NodeLoader();
 
-	Flows::PINode createNode(const std::atomic_bool* nodeEventsEnabled);
+	Flows::PINode createNode(const std::atomic_bool* nodeEventsEnabled, const std::string& nodeNamespace, const std::string& type, const std::string& nodePath);
 
 private:
-	std::string _filename;
-	std::string _path;
-	std::string _namespace;
-	std::string _type;
+	std::string _soPath;
 	void* _handle = nullptr;
 	std::unique_ptr<Flows::NodeFactory> _factory;
 
@@ -128,6 +125,7 @@ public:
 
 private:
 	std::mutex _nodeLoadersMutex;
+    std::unique_ptr<NodeLoader> _pythonNodeLoader;
 	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
 
 	typedef std::string NodeId; //Node ID from Homegear
