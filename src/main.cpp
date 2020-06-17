@@ -990,10 +990,10 @@ void startUp()
 
         startRPCServers();
 
+        GD::mqtt->loadSettings(); //Needs database to be available
         if(GD::mqtt->enabled())
         {
             GD::out.printInfo("Starting MQTT client...");
-            GD::mqtt->loadSettings(); //Needs database to be available
             GD::mqtt->start();
         }
 

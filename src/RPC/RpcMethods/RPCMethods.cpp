@@ -4954,6 +4954,8 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
 
         if(!url.empty() && GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end())
         {
+            //Todo: Remove beginning of 2021
+            GD::out.printWarning("Warning: Using clientAddressesToReplace is deprecated and will be removed in future versions of Homegear.");
             std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
             std::string remoteIP = clientInfo->address;
             if(remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");

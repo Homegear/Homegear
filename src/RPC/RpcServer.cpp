@@ -1518,7 +1518,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                         if(webSocket.getHeader().close)
                         {
                             std::vector<char> response;
-                            webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
+                            BaseLib::WebSocket::encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
                             sendRPCResponseToClient(client, response, false);
                             closeClientConnection(client);
                         }
@@ -1572,8 +1572,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                         else if(webSocket.getHeader().opcode == BaseLib::WebSocket::Header::Opcode::ping)
                         {
                             std::vector<char> response;
-                            webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
-                            sendRPCResponseToClient(client, response, false);
+                            BaseLib::WebSocket::encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
+                            sendRPCResponseToClient(client, response, true);
                         }
                         else
                         {
