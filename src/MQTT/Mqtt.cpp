@@ -66,6 +66,11 @@ void Mqtt::getClientName()
     try
     {
         _clientName = _settings.clientName();
+        if(!GD::bl->db)
+        {
+            _out.printError("Error: Database required but not available at this execution point.");
+            return;
+        }
         if(_clientName.empty() && !GD::bl->db->getHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, _clientName))
         {
             _clientName = BaseLib::HelperFunctions::getTimeUuid();

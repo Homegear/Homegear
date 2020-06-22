@@ -37,19 +37,16 @@
 namespace Homegear
 {
 
-NodeLoader::NodeLoader(std::string nodeNamespace, std::string type, std::string path)
+NodeLoader::NodeLoader(const std::string& soPath)
 {
 	try
 	{
-		_filename = type + ".so";
-		_path = path;
-		_namespace = nodeNamespace;
-		_type = type;
+        _soPath = soPath;
 
-		void* nodeHandle = dlopen(_path.c_str(), RTLD_NOW);
+		void* nodeHandle = dlopen(soPath.c_str(), RTLD_NOW);
 		if(!nodeHandle)
 		{
-			GD::out.printCritical("Critical: Could not open node \"" + _path + "\": " + std::string(dlerror()));
+			GD::out.printCritical("Critical: Could not open node \"" + soPath + "\": " + std::string(dlerror()));
 			return;
 		}
 
@@ -57,7 +54,7 @@ NodeLoader::NodeLoader(std::string nodeNamespace, std::string type, std::string 
 		getFactory = (Flows::NodeFactory* (*)()) dlsym(nodeHandle, "getFactory");
 		if(!getFactory)
 		{
-			GD::out.printCritical("Critical: Could not open node \"" + _path + "\". Symbol \"getFactory\" not found.");
+			GD::out.printCritical("Critical: Could not open node \"" + soPath + R"(". Symbol "getFactory" not found.)");
 			dlclose(nodeHandle);
 			return;
 		}
@@ -75,13 +72,13 @@ NodeLoader::~NodeLoader()
 {
 	try
 	{
-		GD::out.printInfo("Info: Disposing node " + _type);
-		GD::out.printDebug("Debug: Deleting factory pointer of node " + _type);
+		GD::out.printInfo("Info: Disposing node " + _soPath);
+		GD::out.printDebug("Debug: Deleting factory pointer of node " + _soPath);
 		if(_factory) delete _factory.release();
-		GD::out.printDebug("Debug: Closing dynamic library module " + _type);
+		GD::out.printDebug("Debug: Closing dynamic library module " + _soPath);
 		if(_handle) dlclose(_handle);
 		_handle = nullptr;
-		GD::out.printDebug("Debug: Dynamic library " + _type + " disposed");
+		GD::out.printDebug("Debug: Dynamic library " + _soPath + " disposed");
 	}
 	catch(const std::exception& ex)
 	{
@@ -89,10 +86,10 @@ NodeLoader::~NodeLoader()
 	}
 }
 
-Flows::PINode NodeLoader::createNode(const std::atomic_bool* nodeEventsEnabled)
+Flows::PINode NodeLoader::createNode(const std::atomic_bool* nodeEventsEnabled, const std::string& nodeNamespace, const std::string& type, const std::string& nodePath)
 {
 	if(!_factory) return Flows::PINode();
-	return Flows::PINode(_factory->createNode(_path, _namespace, _type, nodeEventsEnabled));
+	return Flows::PINode(_factory->createNode(nodePath, nodeNamespace, type, nodeEventsEnabled));
 }
 
 NodeManager::NodeManager(const std::atomic_bool* nodeEventsEnabled)
@@ -112,6 +109,7 @@ NodeManager::~NodeManager()
 	_nodes.clear();
 	std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
 	_nodeLoaders.clear();
+    _pythonNodeLoader.reset();
 }
 
 Flows::PINode NodeManager::getNode(const std::string& id)
@@ -292,94 +290,113 @@ std::string NodeManager::getNodeLocales(std::string& language)
 int32_t NodeManager::loadNode(const std::string& nodeNamespace, const std::string& type, const std::string& id, Flows::PINode& node)
 {
 	try
-	{
-		std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-		{
-			auto nodesIterator = _nodes.find(id);
-			if(nodesIterator != _nodes.end())
-			{
-				node = nodesIterator->second;
-				return 1;
-			}
-		}
+    {
+        std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+        {
+            auto nodesIterator = _nodes.find(id);
+            if(nodesIterator != _nodes.end())
+            {
+                node = nodesIterator->second;
+                return 1;
+            }
+        }
 
-		std::string path(GD::bl->settings.nodeBluePath() + "nodes/" + nodeNamespace + "/");
-		if(BaseLib::Io::fileExists(path + type + ".so")) //C++ module
-		{
-			GD::out.printInfo("Info: Loading " + type + ".so for node " + id);
-			path = path + type + ".so";
+        std::string path(GD::bl->settings.nodeBluePath() + "nodes/" + nodeNamespace + "/");
+        if(BaseLib::Io::fileExists(path + type + ".so")) //C++ module
+        {
+            GD::out.printInfo("Info: Loading " + type + ".so for node " + id);
+            path = path + type + ".so";
 
-			bool loaderCreated = false;
-			std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
-			if(_nodeLoaders.find(nodeNamespace + "." + type) == _nodeLoaders.end())
-			{
-				loaderCreated = true;
-				_nodeLoaders.emplace(nodeNamespace + "." + type, std::unique_ptr<NodeLoader>(new NodeLoader(nodeNamespace, type, path)));
-			}
+            bool loaderCreated = false;
+            std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
+            if(_nodeLoaders.find(nodeNamespace + "." + type) == _nodeLoaders.end())
+            {
+                loaderCreated = true;
+                _nodeLoaders.emplace(nodeNamespace + "." + type, std::unique_ptr<NodeLoader>(new NodeLoader(path)));
+            }
 
-			node = _nodeLoaders.at(nodeNamespace + "." + type)->createNode(_nodeEventsEnabled);
+            node = _nodeLoaders.at(nodeNamespace + "." + type)->createNode(_nodeEventsEnabled, nodeNamespace, type, path);
 
-			if(node)
-			{
-				auto nodeUsageIterator = _nodesUsage.find(nodeNamespace + "." + type);
-				if(nodeUsageIterator == _nodesUsage.end())
-				{
-					auto result = _nodesUsage.emplace(nodeNamespace + "." + type, std::make_shared<NodeUsageInfo>());
-					if(!result.second)
-					{
-						if(loaderCreated) _nodeLoaders.erase(nodeNamespace + "." + type);
-						return -1;
-					}
-					nodeUsageIterator = result.first;
-				}
+            if(node)
+            {
+                auto nodeUsageIterator = _nodesUsage.find(nodeNamespace + "." + type);
+                if(nodeUsageIterator == _nodesUsage.end())
+                {
+                    auto result = _nodesUsage.emplace(nodeNamespace + "." + type, std::make_shared<NodeUsageInfo>());
+                    if(!result.second)
+                    {
+                        if(loaderCreated) _nodeLoaders.erase(nodeNamespace + "." + type);
+                        return -1;
+                    }
+                    nodeUsageIterator = result.first;
+                }
 
-				nodeUsageIterator->second->referenceCounter++;
-				_nodes.emplace(id, node);
-			}
-			else
-			{
-				if(loaderCreated) _nodeLoaders.erase(nodeNamespace + "." + type);
-				GD::out.printError("Error: Could not load node file " + path + ".");
-				return -3;
-			}
-			return 0;
-		}
+                nodeUsageIterator->second->referenceCounter++;
+                _nodes.emplace(id, node);
+            }
+            else
+            {
+                if(loaderCreated) _nodeLoaders.erase(nodeNamespace + "." + type);
+                GD::out.printError("Error: Could not load node file " + path + ".");
+                return -3;
+            }
+            return 0;
+        }
 #ifndef NO_SCRIPTENGINE
-		else if(BaseLib::Io::fileExists(path + type + ".s.hgn")) //Encrypted PHP
-		{
-			GD::out.printInfo("Info: Loading node " + type + ".s.hgn");
-			node = std::make_shared<StatefulPhpNode>(path + type + ".s.hgn", nodeNamespace, type, _nodeEventsEnabled);
-			_nodes.emplace(id, node);
-			return 0;
-		}
-		else if(BaseLib::Io::fileExists(path + type + ".s.php")) //Unencrypted PHP
-		{
-			GD::out.printInfo("Info: Loading node " + type + ".s.php");
-			node = std::make_shared<StatefulPhpNode>(path + type + ".s.php", nodeNamespace, type, _nodeEventsEnabled);
-			_nodes.emplace(id, node);
-			return 0;
-		}
-		else if(BaseLib::Io::fileExists(path + type + ".hgn")) //Encrypted PHP
-		{
-			GD::out.printInfo("Info: Loading node " + type + ".hgn");
-			node = std::make_shared<SimplePhpNode>(path + type + ".hgn", nodeNamespace, type, _nodeEventsEnabled);
-			_nodes.emplace(id, node);
-			return 0;
-		}
-		else if(BaseLib::Io::fileExists(path + type + ".php")) //Unencrypted PHP
-		{
-			GD::out.printInfo("Info: Loading node " + type + ".php");
-			node = std::make_shared<SimplePhpNode>(path + type + ".php", nodeNamespace, type, _nodeEventsEnabled);
-			_nodes.emplace(id, node);
-			return 0;
-		}
+        else if(BaseLib::Io::fileExists(path + type + ".s.hgn")) //Encrypted PHP
+        {
+            GD::out.printInfo("Info: Loading node " + type + ".s.hgn");
+            node = std::make_shared<StatefulPhpNode>(path + type + ".s.hgn", nodeNamespace, type, _nodeEventsEnabled);
+            _nodes.emplace(id, node);
+            return 0;
+        }
+        else if(BaseLib::Io::fileExists(path + type + ".s.php")) //Unencrypted PHP
+        {
+            GD::out.printInfo("Info: Loading node " + type + ".s.php");
+            node = std::make_shared<StatefulPhpNode>(path + type + ".s.php", nodeNamespace, type, _nodeEventsEnabled);
+            _nodes.emplace(id, node);
+            return 0;
+        }
+        else if(BaseLib::Io::fileExists(path + type + ".hgn")) //Encrypted PHP
+        {
+            GD::out.printInfo("Info: Loading node " + type + ".hgn");
+            node = std::make_shared<SimplePhpNode>(path + type + ".hgn", nodeNamespace, type, _nodeEventsEnabled);
+            _nodes.emplace(id, node);
+            return 0;
+        }
+        else if(BaseLib::Io::fileExists(path + type + ".php")) //Unencrypted PHP
+        {
+            GD::out.printInfo("Info: Loading node " + type + ".php");
+            node = std::make_shared<SimplePhpNode>(path + type + ".php", nodeNamespace, type, _nodeEventsEnabled);
+            _nodes.emplace(id, node);
+            return 0;
+        }
 #endif
-		else
-		{
-			GD::out.printError("Error: No node file starting with \"" + path + type + "\" found (possible endings: \".so\", \".s.hgn\", \".s.php\", \".hgn\" and \".php\".");
-			return -2;
-		}
-	}
+        else if(BaseLib::Io::fileExists(path + type + ".py")) //Python
+        {
+            GD::out.printInfo("Info: Loading python-wrapper.so for node " + id);
+            auto nodePath = path + type + ".py";
+            auto soPath = GD::bl->settings.nodeBluePath() + "nodes/python-wrapper/python-wrapper.so";
+
+            std::lock_guard<std::mutex> nodeLoadersGuard(_nodeLoadersMutex);
+            if(!_pythonNodeLoader) _pythonNodeLoader = std::unique_ptr<NodeLoader>(new NodeLoader(soPath));
+
+            node = _pythonNodeLoader->createNode(_nodeEventsEnabled, nodeNamespace, type, nodePath);
+
+            if(node) _nodes.emplace(id, node);
+            else
+            {
+                GD::out.printError("Error: Could not load node file " + nodePath + ".");
+                return -3;
+            }
+            return 0;
+        }
+        else
+        {
+            GD::out.printError("Error: No node file starting with \"" + path + type + R"(" found (possible endings: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py".)");
+            return -2;
+        }
+    }
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

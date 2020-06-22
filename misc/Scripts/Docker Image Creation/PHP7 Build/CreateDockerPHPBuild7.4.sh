@@ -159,6 +159,11 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
+if [ "$distver" == "focal" ]; then
+	#When using the default "fakeroot-sysv" PHP package creation fails
+	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
+fi
+
 if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php7-src.list
 elif [ "$distver" == "trusty" ]; then
@@ -287,7 +292,7 @@ cd ..
 mv php7* php7-homegear-dev-${version}
 tar -zcpf php7-homegear-dev_${version}.orig.tar.gz php7-homegear-dev-${version}
 cd php7-homegear-dev-*
-debuild -us -uc
+debuild --no-lintian -us -uc
 cd /
 rm -Rf /PHPBuild/php7-homegear-dev-${version}
 if test -f /PHPBuild/Upload.sh; then

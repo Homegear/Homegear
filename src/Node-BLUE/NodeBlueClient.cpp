@@ -1113,8 +1113,9 @@ void NodeBlueClient::queueOutput(const std::string& nodeId, uint32_t index, Flow
 
         if(!synchronous && GD::bl->settings.nodeBlueDebugOutput())
         {
-            if(_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId)
+            if(_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId  && BaseLib::HelperFunctions::getTime() - nodeInfo->lastNodeEvent1 >= 100)
             {
+                nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
                 Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
                 timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
                 nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);

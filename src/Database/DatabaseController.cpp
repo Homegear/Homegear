@@ -315,14 +315,8 @@ void DatabaseController::initializeDatabase()
                 BaseLib::PVariable acl = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 BaseLib::PVariable grantAll = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 grantAll->structValue->emplace("*", std::make_shared<BaseLib::Variable>(true));
-                BaseLib::PVariable eventServerMethods = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                eventServerMethods->structValue->emplace("event", std::make_shared<BaseLib::Variable>(true));
-                eventServerMethods->structValue->emplace("listDevices", std::make_shared<BaseLib::Variable>(true));
-                eventServerMethods->structValue->emplace("newDevices", std::make_shared<BaseLib::Variable>(true));
-                eventServerMethods->structValue->emplace("deleteDevices", std::make_shared<BaseLib::Variable>(true));
-                eventServerMethods->structValue->emplace("updateDevice", std::make_shared<BaseLib::Variable>(true));
                 acl->structValue->emplace("methods", grantAll);
-                acl->structValue->emplace("eventServerMethods", eventServerMethods);
+                acl->structValue->emplace("eventServerMethods", grantAll);
                 acl->structValue->emplace("services", grantAll);
                 std::vector<char> aclBlob;
                 _rpcEncoder->encodeResponse(acl, aclBlob);

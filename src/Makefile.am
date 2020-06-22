@@ -21,7 +21,7 @@ endif
 LIBS += -latomic
 
 bin_PROGRAMS = homegear
-homegear_SOURCES = main.cpp IpcLogger.cpp CLI/CliClient.cpp CLI/CliServer.cpp Database/DatabaseController.cpp Database/SQLite3.cpp Database/SystemVariableController.cpp Events/EventHandler.cpp FamilyModules/FamilyController.cpp FamilyModules/FamilyServer.cpp FamilyModules/SocketCentral.cpp FamilyModules/SocketDeviceFamily.cpp FamilyModules/SocketPeer.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/RpcMethods/BuildingRpcMethods.cpp RPC/RpcMethods/RPCMethods.cpp RPC/RpcMethods/UiRpcMethods.cpp RPC/RpcMethods/VariableProfileRpcMethods.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/Roles.cpp RPC/RpcClient.cpp RPC/RpcServer.cpp UI/UiController.cpp WebServer/WebServer.cpp UPnP/UPnP.cpp User/User.cpp VariableProfiles/VariableProfileManager.cpp
+homegear_SOURCES = main.cpp IpcLogger.cpp CLI/CliClient.cpp CLI/CliServer.cpp Database/DatabaseController.cpp Database/SQLite3.cpp Database/SystemVariableController.cpp Events/EventHandler.cpp FamilyModules/FamilyController.cpp FamilyModules/FamilyServer.cpp FamilyModules/SocketCentral.cpp FamilyModules/SocketDeviceFamily.cpp FamilyModules/SocketPeer.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/FlowParser.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/RpcMethods/BuildingRpcMethods.cpp RPC/RpcMethods/NodeBlueRpcMethods.cpp RPC/RpcMethods/RPCMethods.cpp RPC/RpcMethods/UiRpcMethods.cpp RPC/RpcMethods/VariableProfileRpcMethods.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/Roles.cpp RPC/RpcClient.cpp RPC/RpcServer.cpp UI/UiController.cpp WebServer/WebServer.cpp UPnP/UPnP.cpp User/User.cpp VariableProfiles/VariableProfileManager.cpp
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomegear-node -lhomegear-ipc -lgpg-error -lsqlite3
 
 if BSDSYSTEM
@@ -45,6 +45,10 @@ endif
 
 if WITH_EVENTHANDLER
 AM_CPPFLAGS += -DEVENTHANDLER
+endif
+
+if WITH_I2C
+AM_CPPFLAGS += -DI2CSUPPORT
 endif
 
 if WITH_CCU2

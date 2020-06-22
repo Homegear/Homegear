@@ -45,6 +45,8 @@ private:
 
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
     std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+    BaseLib::Role parseRoleString(const std::string& roleString);
 public:
     SystemVariableController();
 
