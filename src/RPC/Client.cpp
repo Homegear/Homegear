@@ -1136,6 +1136,7 @@ void Client::removeServer(std::pair<std::string, std::string> server)
     }
 }
 
+//Todo: Deprecated. Remove beginning of 2021.
 void Client::disconnectRega()
 {
     try

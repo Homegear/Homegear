@@ -51,7 +51,6 @@ public:
 private:
     BaseLib::Output _out;
     BaseLib::Rpc::PServerInfo _serverInfo;
-    BaseLib::Http _http;
     std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
     std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 

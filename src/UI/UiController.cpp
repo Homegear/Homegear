@@ -1077,7 +1077,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                     {
                         variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
-                    };
+                    }
                 }
             }
 
@@ -1093,7 +1093,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                     {
                         variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
-                    };
+                    }
                 }
             }
             //}}}

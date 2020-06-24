@@ -1509,17 +1509,36 @@ BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, B
         if(!clientInfo || !clientInfo->acls->checkMethodAccess("createDevice")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
         ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                          std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}),
+                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString})
                                                                                                                  }));
         if(error != ParameterError::Enum::noError) return getError(error);
 
-        std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-        if(families.find(parameters->at(0)->integerValue) == families.end())
+        if(parameters->size() == 1)
         {
-            return BaseLib::Variable::createError(-2, "Device family is unknown.");
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(auto& family : families)
+            {
+                auto central = family.second->getCentral();
+                if(!central) continue;
+                auto result = central->createDevice(clientInfo, parameters->at(0)->stringValue);
+                if(!result->errorStruct ||
+                    result->structValue->at("faultCode")->integerValue == -5 ||
+                    result->structValue->at("faultCode")->integerValue == -2) return result;
+            }
+
+            return BaseLib::Variable::createError(-6, "No matching device found.");
         }
-        std::string interfaceId(parameters->size() > 5 ? parameters->at(5)->stringValue : "");
-        return families.at(parameters->at(0)->integerValue)->getCentral()->createDevice(clientInfo, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue, interfaceId);
+        else
+        {
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            if(families.find(parameters->at(0)->integerValue) == families.end())
+            {
+                return BaseLib::Variable::createError(-2, "Device family is unknown.");
+            }
+            std::string interfaceId(parameters->size() > 5 ? parameters->at(5)->stringValue : "");
+            return families.at(parameters->at(0)->integerValue)->getCentral()->createDevice(clientInfo, parameters->at(1)->integerValue, parameters->at(2)->stringValue, parameters->at(3)->integerValue, parameters->at(4)->integerValue, interfaceId);
+        }
     }
     catch(const std::exception& ex)
     {

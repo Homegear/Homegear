@@ -2549,7 +2549,7 @@ void DatabaseController::createDefaultRoles()
                     BaseLib::PVariable roles;
                     try
                     {
-                        roles = jsonDecoder.decode(rawRoles);
+                        roles = BaseLib::Rpc::JsonDecoder::decode(rawRoles);
 
                         //Make sure, file exists and JSON is valid before deleting old roles
                         _db.executeCommand("DELETE FROM roles");

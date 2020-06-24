@@ -42,14 +42,15 @@ namespace Homegear
 class CliClient : public Ipc::IIpcClient
 {
 public:
-	CliClient(std::string socketPath);
+	explicit CliClient(const std::string& socketPath);
 
-	virtual ~CliClient();
+	~CliClient() override;
 
-	int32_t terminal(std::string& command);
+    void stop() override;
 
+	int32_t terminal(const std::string& command);
 private:
-	std::atomic_bool _printEvents;
+	std::atomic_bool _printEvents{false};
 	int32_t _currentFamily = -1;
 	uint64_t _currentPeer = 0;
 
@@ -58,25 +59,26 @@ private:
 	std::mutex _onConnectWaitMutex;
 	std::condition_variable _onConnectConditionVariable;
 
-	std::string getBreadcrumb();
+	std::string getBreadcrumb() const;
 
-	virtual void onConnect();
+	void onConnect() override;
 
-	virtual void onDisconnect();
+	void onDisconnect() override;
+
+	static void loadHistory();
+	static void safeHistory();
+
+	void invokeGeneralCommand(const std::string& command);
 
 	// {{{ RPC methods
-	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters);
+	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters) override;
 
 	Ipc::PVariable output(Ipc::PArray& parameters);
 	// }}}
 
-	void standardOutputReference(std::string& text);
+	void standardOutput(const std::string& text);
 
-	void standardOutput(std::string text);
-
-	void errorOutputReference(std::string& text);
-
-	void errorOutput(std::string text);
+	void errorOutput(const std::string& text);
 };
 
 }
