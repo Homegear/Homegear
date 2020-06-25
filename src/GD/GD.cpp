@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -37,7 +37,9 @@ namespace Homegear
 
 std::unique_ptr<BaseLib::SharedObjects> GD::bl;
 BaseLib::Output GD::out;
-const std::string GD::homegearVersion = VERSION;
+const std::string GD::baseLibVersion = VERSION;
+const std::string GD::nodeLibVersion = LIBHOMEGEARNODE_VERSION;
+const std::string GD::ipcLibVersion = LIBHOMEGEARIPC_VERSION;
 std::string GD::runAsUser = "";
 std::string GD::runAsGroup = "";
 std::string GD::configPath = "/etc/homegear/";
@@ -58,6 +60,7 @@ std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> GD::licensingM
 std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<Mqtt> GD::mqtt;
 std::unique_ptr<UiController> GD::uiController;
+std::unique_ptr<VariableProfileManager> GD::variableProfileManager;
 #ifdef EVENTHANDLER
 std::unique_ptr<EventHandler> GD::eventHandler;
 #endif

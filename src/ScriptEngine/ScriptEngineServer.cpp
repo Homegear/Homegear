@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -32,6 +32,11 @@
 
 #include "ScriptEngineServer.h"
 #include "../GD/GD.h"
+#include "../RPC/RpcMethods/BuildingRpcMethods.h"
+#include "../RPC/RpcMethods/UiRpcMethods.h"
+#include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
+#include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
@@ -171,6 +176,24 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
     _rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
+    { // Node-BLUE
+        _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
+        _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
+        _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
+    }
+
+    { // Buildings
+        _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
+        _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
+        _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
+        _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
+        _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
+        _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
+        _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
+        _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
+        _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+    }
+
     { // Stories
         _rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
         _rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
@@ -247,13 +270,16 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     }
 
     { // UI
-        _rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
-        _rpcMethods.emplace("checkUiElementSimpleCreation", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCheckUiElementSimpleCreation>()));
-        _rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
-        _rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
-        _rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
-        _rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
-        _rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+        _rpcMethods.emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
+        _rpcMethods.emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
+        _rpcMethods.emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
+        _rpcMethods.emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
+        _rpcMethods.emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
+        _rpcMethods.emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
+        _rpcMethods.emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+        _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
+        _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
+        _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
     }
 
     _localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -290,6 +316,15 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
     //}}}
 
+    //{{{ Variable profiles
+    _rpcMethods.emplace("activateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcActivateVariableProfile>()));
+    _rpcMethods.emplace("addVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcAddVariableProfile>()));
+    _rpcMethods.emplace("deleteVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcDeleteVariableProfile>()));
+    _rpcMethods.emplace("getAllVariableProfiles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetAllVariableProfiles>()));
+    _rpcMethods.emplace("getVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetVariableProfile>()));
+    _rpcMethods.emplace("updateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcUpdateVariableProfile>()));
+    //}}}
+
     //{{{ Groups
     _localRpcMethods.emplace("createGroup", std::bind(&ScriptEngineServer::createGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("deleteGroup", std::bind(&ScriptEngineServer::deleteGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -299,19 +334,25 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000)
     _localRpcMethods.emplace("updateGroup", std::bind(&ScriptEngineServer::updateGroup, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     //}}}
 
+    //{{{ Modules
     _localRpcMethods.emplace("listModules", std::bind(&ScriptEngineServer::listModules, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("loadModule", std::bind(&ScriptEngineServer::loadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("unloadModule", std::bind(&ScriptEngineServer::unloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("reloadModule", std::bind(&ScriptEngineServer::reloadModule, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 
+    //{{{ License modules
     _localRpcMethods.emplace("checkLicense", std::bind(&ScriptEngineServer::checkLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("removeLicense", std::bind(&ScriptEngineServer::removeLicense, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("getLicenseStates", std::bind(&ScriptEngineServer::getLicenseStates, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("getTrialStartTime", std::bind(&ScriptEngineServer::getTrialStartTime, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 
+    //{{{ Node-BLUE
     _localRpcMethods.emplace("nodeEvent", std::bind(&ScriptEngineServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("nodeOutput", std::bind(&ScriptEngineServer::nodeOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&ScriptEngineServer::executePhpNodeBaseMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    //}}}
 }
 
 ScriptEngineServer::~ScriptEngineServer()
@@ -698,11 +739,11 @@ uint32_t ScriptEngineServer::scriptCount()
     return 0;
 }
 
-std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
+std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> ScriptEngineServer::getRunningScripts()
 {
     try
     {
-        if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+        if(_shuttingDown) return std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>>();
         std::vector<PScriptEngineClientData> clients;
         {
             std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -713,7 +754,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
             }
         }
 
-        std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts;
+        std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> runningScripts;
         BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
         for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
         {
@@ -721,7 +762,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
             if(runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
             for(auto& script : *(response->arrayValue))
             {
-                runningScripts.push_back(std::tuple<int32_t, uint64_t, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->integerValue, script->arrayValue->at(2)->stringValue));
+                runningScripts.push_back(std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>((int32_t) (*i)->pid, script->arrayValue->at(0)->integerValue64, script->arrayValue->at(1)->stringValue, script->arrayValue->at(2)->integerValue, script->arrayValue->at(3)->stringValue));
             }
         }
         return runningScripts;
@@ -734,7 +775,7 @@ std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> ScriptEngineSer
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>>();
+    return std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>>();
 }
 
 BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray& parameters)
@@ -992,6 +1033,7 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
         }
 
         std::vector<PScriptEngineClientData> clients;
+
         {
             std::lock_guard<std::mutex> stateGuard(_stateMutex);
             for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
@@ -1012,9 +1054,42 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(...)
+}
+
+void ScriptEngineServer::broadcastVariableProfileStateChanged(uint64_t profileId, bool state)
+{
+    try
     {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        if(_shuttingDown) return;
+
+        if(!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("variableProfileStateChanged")) return;
+
+        std::vector<PScriptEngineClientData> clients;
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
+            for(std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->reserve(2);
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
+
+            std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastVariableProfileStateChanged", parameters);
+            if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastVariableProfileStateChanged\". Queue is full.");
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
 }
 

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -80,7 +80,7 @@ public:
 
     uint32_t scriptCount();
 
-    std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> getRunningScripts();
+    std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> getRunningScripts();
 
     void executeScript(PScriptInfo& scriptInfo, bool wait);
 
@@ -97,6 +97,8 @@ public:
     void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 
     void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+
+    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
     BaseLib::PVariable getAllScripts();
 

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -103,7 +103,7 @@ void bindRPCServers()
 		info += "...";
 		GD::out.printInfo(info);
         int32_t listenPort = -1;
-		settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), settings->address, listenPort);
+		settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), 100, settings->address, listenPort);
 		if(settings->socketDescriptor) GD::out.printInfo("Info: Server successfully bound.");
 	}
 }
@@ -464,7 +464,7 @@ void initGnuTls()
 
 void setLimits()
 {
-	struct rlimit limits;
+	struct rlimit limits{};
 	if(!GD::bl->settings.enableCoreDumps()) prctl(PR_SET_DUMPABLE, 0);
 	else
 	{
@@ -474,15 +474,15 @@ void setLimits()
 		GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
 		setrlimit(RLIMIT_CORE, &limits);
 		getrlimit(RLIMIT_CORE, &limits);
-		GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
+        GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
 	}
 #ifdef RLIMIT_RTPRIO //Not existant on BSD systems
 	getrlimit(RLIMIT_RTPRIO, &limits);
 	limits.rlim_cur = limits.rlim_max;
-	GD::out.printInfo("Info: Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+    GD::out.printInfo("Info: Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
 	setrlimit(RLIMIT_RTPRIO, &limits);
 	getrlimit(RLIMIT_RTPRIO, &limits);
-	GD::out.printInfo("Info: Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    GD::out.printInfo("Info: Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
 #endif
 }
 
@@ -570,7 +570,7 @@ void startUp()
 		}
 
     	GD::out.printMessage("Starting Homegear...");
-    	GD::out.printMessage(std::string("Homegear version ") + GD::homegearVersion);
+    	GD::out.printMessage(std::string("Homegear version ") + GD::baseLibVersion);
 
         GD::out.printMessage("Determining maximum thread count...");
         try
@@ -936,6 +936,8 @@ void startUp()
         GD::uiController.reset(new UiController());
 		GD::uiController->load();
 
+        GD::variableProfileManager.reset(new VariableProfileManager());
+
 		GD::ipcLogger.reset(new IpcLogger());
 
 #ifdef EVENTHANDLER
@@ -988,9 +990,10 @@ void startUp()
 
         startRPCServers();
 
+        GD::mqtt->loadSettings(); //Needs database to be available
         if(GD::mqtt->enabled())
         {
-            GD::out.printInfo("Starting MQTT client...");;
+            GD::out.printInfo("Starting MQTT client...");
             GD::mqtt->start();
         }
 
@@ -1022,6 +1025,9 @@ void startUp()
 			}
 		}
 
+        GD::out.printInfo("Starting variable profile manager...");
+        GD::variableProfileManager->load();
+
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
         GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
 
@@ -1029,7 +1035,9 @@ void startUp()
 
         //Wait for all interfaces to connect before setting booting to false
         {
-			for(int32_t i = 0; i < 180; i++)
+            uint32_t maxWait = GD::bl->settings.maxWaitForPhysicalInterfaces();
+            if(maxWait < 1) maxWait = 1;
+			for(int32_t i = 0; i < (signed)maxWait; i++)
 			{
                 if(GD::bl->debugLevel >= 4 && i % 10 == 0) GD::out.printInfo("Info: Waiting for physical interfaces to connect (" + std::to_string(i) + " of 180s" + ").");
 				if(GD::familyController->physicalInterfaceIsOpen())
@@ -1082,11 +1090,23 @@ int main(int argc, char* argv[])
 		else if(BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
 		else GD::configPath = "/etc/homegear/";
 
-    	if(std::string(GD::homegearVersion) != GD::bl->version())
+    	if(std::string(GD::baseLibVersion) != GD::bl->version())
     	{
-    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + GD::homegearVersion + " but got version " + GD::bl->version());
+    		GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + GD::baseLibVersion + " but got version " + GD::bl->version());
     		exit(1);
     	}
+
+        if(std::string(GD::nodeLibVersion) != Flows::INode::version())
+        {
+            GD::out.printCritical(std::string("Node library has wrong version. Expected version ") + GD::nodeLibVersion + " but got version " + Flows::INode::version());
+            exit(1);
+        }
+
+        if(std::string(GD::ipcLibVersion) != Ipc::IIpcClient::version())
+        {
+            GD::out.printCritical(std::string("IPC library has wrong version. Expected version ") + GD::ipcLibVersion + " but got version " + Ipc::IIpcClient::version());
+            exit(1);
+        }
 
     	for(int32_t i = 1; i < argc; i++)
     	{
@@ -1508,11 +1528,15 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-v")
     		{
-    			std::cout << "Homegear version " << GD::homegearVersion << std::endl;
-    			std::cout << "Copyright (c) 2013-2019 Homegear GmbH" << std::endl << std::endl;
+    			std::cout << "Homegear version " << GD::baseLibVersion << std::endl;
+                std::cout << "Copyright (c) 2013-2020 Homegear GmbH" << std::endl << std::endl;
+                std::cout << "Required library versions:" << std::endl;
+                std::cout << "  - libhomegear-base: " << GD::baseLibVersion << std::endl;
+                std::cout << "  - libhomegear-node: " << GD::nodeLibVersion << std::endl;
+                std::cout << "  - libhomegear-ipc:  " << GD::ipcLibVersion << std::endl << std::endl;
     			std::cout << "PHP (License: PHP License):" << std::endl;
     			std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-    			std::cout << "Copyright (c) 1999-2019 The PHP Group. All rights reserved." << std::endl << std::endl;
+    			std::cout << "Copyright (c) 1999-2020 The PHP Group. All rights reserved." << std::endl << std::endl;
 
     			exit(0);
     		}
@@ -1575,7 +1599,6 @@ int main(int argc, char* argv[])
 			GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
 			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 			GD::mqtt.reset(new Mqtt());
-			GD::mqtt->loadSettings();
 		// }}}
 
 		if((chdir(GD::bl->settings.workingDirectory().c_str())) < 0)

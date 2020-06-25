@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -242,9 +242,10 @@ void FamilyController::onEvent(std::string source, uint64_t peerID, int32_t chan
         GD::eventHandler->trigger(peerID, channel, variables, values);
 #endif
 #ifndef NO_SCRIPTENGINE
-        GD::scriptEngineServer->broadcastEvent(source, peerID, channel, variables, values);
+        if(GD::scriptEngineServer) GD::scriptEngineServer->broadcastEvent(source, peerID, channel, variables, values);
 #endif
         if(GD::ipcServer) GD::ipcServer->broadcastEvent(source, peerID, channel, variables, values);
+        if(GD::variableProfileManager) GD::variableProfileManager->variableEvent(source, peerID, channel, variables, values);
     }
     catch(const std::exception& ex)
     {

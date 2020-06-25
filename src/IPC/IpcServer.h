@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,6 +35,8 @@
 
 #include <homegear-base/BaseLib.h>
 
+#include <utility>
+
 namespace Homegear
 {
 
@@ -61,6 +63,8 @@ public:
 
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
+    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+
 	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
 
     BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
@@ -79,23 +83,23 @@ private:
 			broadcast
 		};
 
-		QueueEntry() {}
+		QueueEntry() = default;
 
 		QueueEntry(PIpcClientData clientData, std::vector<char>& packet)
 		{
-			this->clientData = clientData;
+			this->clientData = std::move(clientData);
 			this->packet = packet;
 		}
 
 		QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters)
 		{
 			type = QueueEntryType::broadcast;
-			this->clientData = clientData;
-			this->methodName = methodName;
-			this->parameters = parameters;
+			this->clientData = std::move(clientData);
+			this->methodName = std::move(methodName);
+			this->parameters = std::move(parameters);
 		}
 
-		virtual ~QueueEntry() {}
+		~QueueEntry() override = default;
 
 		QueueEntryType type = QueueEntryType::defaultType;
 		PIpcClientData clientData;
@@ -153,7 +157,7 @@ private:
 
 	void closeClientConnection(PIpcClientData client);
 
-	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry) override;
 
 	// {{{ RPC methods
     BaseLib::PVariable getHomegearPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);

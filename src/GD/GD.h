@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -40,6 +40,7 @@
 #include "../FamilyModules/FamilyServer.h"
 #include "../Database/DatabaseController.h"
 #include "../UI/UiController.h"
+#include "../VariableProfiles/VariableProfileManager.h"
 #include "../RPC/RpcServer.h"
 #include "../RPC/Client.h"
 #include "../MQTT/Mqtt.h"
@@ -64,7 +65,9 @@ class GD
 public:
 	static std::unique_ptr<BaseLib::SharedObjects> bl;
 	static BaseLib::Output out;
-	static const std::string homegearVersion;
+	static const std::string baseLibVersion;
+    static const std::string nodeLibVersion;
+    static const std::string ipcLibVersion;
 	static std::string runAsUser;
 	static std::string runAsGroup;
 	static std::string configPath;
@@ -91,6 +94,7 @@ public:
 	static std::unique_ptr<UPnP> uPnP;
 	static std::unique_ptr<Mqtt> mqtt;
 	static std::unique_ptr<UiController> uiController;
+	static std::unique_ptr<VariableProfileManager> variableProfileManager;
     static std::unique_ptr<SystemVariableController> systemVariableController;
 	static std::unique_ptr<IpcLogger> ipcLogger;
 #ifdef EVENTHANDLER

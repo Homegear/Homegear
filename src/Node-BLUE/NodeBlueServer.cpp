@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -30,6 +30,12 @@
 
 #include "NodeBlueServer.h"
 #include "../GD/GD.h"
+#include "../RPC/RpcMethods/BuildingRpcMethods.h"
+#include "../RPC/RpcMethods/UiRpcMethods.h"
+#include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
+#include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
+#include "FlowParser.h"
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
@@ -174,6 +180,24 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
+    { // Node-BLUE
+        _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
+        _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
+        _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
+    }
+
+    { // Buildings
+        _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
+        _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
+        _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
+        _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
+        _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
+        _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
+        _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
+        _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
+        _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+    }
+
 	{ // Stories
 		_rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
 		_rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
@@ -250,13 +274,16 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
 	}
 
 	{ // UI
-		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
-        _rpcMethods.emplace("checkUiElementSimpleCreation", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCheckUiElementSimpleCreation>()));
-		_rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
-		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
-		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
-		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
-		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+        _rpcMethods.emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
+        _rpcMethods.emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
+        _rpcMethods.emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
+        _rpcMethods.emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
+        _rpcMethods.emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
+        _rpcMethods.emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
+        _rpcMethods.emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+        _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
+        _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
+        _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
 	}
 
 	{ // Users
@@ -268,6 +295,15 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("deleteUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteUserData>()));
     _rpcMethods.emplace("getUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetUserData>()));
     _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
+    //}}}
+
+    //{{{ Variable profiles
+    _rpcMethods.emplace("activateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcActivateVariableProfile>()));
+    _rpcMethods.emplace("addVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcAddVariableProfile>()));
+    _rpcMethods.emplace("deleteVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcDeleteVariableProfile>()));
+    _rpcMethods.emplace("getAllVariableProfiles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetAllVariableProfiles>()));
+    _rpcMethods.emplace("getVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetVariableProfile>()));
+    _rpcMethods.emplace("updateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcUpdateVariableProfile>()));
     //}}}
 
 #ifndef NO_SCRIPTENGINE
@@ -1837,14 +1873,10 @@ std::string NodeBlueServer::handleGet(std::string& path, BaseLib::Http& http, st
 
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-				if(GD::bl->io.fileExists(flowsFile)) fileContent = _bl->io.getBinaryFileContent(flowsFile);
+				if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
 				else
 				{
-					std::string randomString1 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(-2147483648, 2147483647), 8);
-					BaseLib::HelperFunctions::toLower(randomString1);
-					std::string randomString2 = BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomNumber(0, 1048575), 5);
-					BaseLib::HelperFunctions::toLower(randomString2);
-					std::string tempString = "[{\"id\":\"" + randomString1 + "." + randomString2 + "\",\"label\":\"Flow 1\",\"type\":\"tab\"}]";
+					std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
 					fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
 				}
 			}
@@ -2042,7 +2074,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			{
 				std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
 				std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
-				_bl->io.writeFile(filename, flows, flows.size());
+				BaseLib::Io::writeFile(filename, flows, flows.size());
 			}
 
 			responseEncoding = "application/json";
@@ -2054,7 +2086,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
 			_out.printInfo("Info: Deploying (3)...");
 			GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
 
-			return "{\"rev\": \"" + md5String + "\"}";
+			return R"({"rev": ")" + md5String + "\"}";
 		}
 		else if(path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty())
         {
@@ -2065,7 +2097,7 @@ std::string NodeBlueServer::handlePost(std::string& path, BaseLib::Http& http, s
             _out.printInfo("Info: Installing node (2)...");
             BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
             auto moduleIterator = json->structValue->find("module");
-            if(moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return "{\"result\":\"error\"}";
+            if(moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return R"({"result":"error"})";
 
             std::string method = "managementInstallNode";
             auto parameters = std::make_shared<BaseLib::Array>();
@@ -2251,18 +2283,21 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 
 		bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 		std::shared_ptr<BaseLib::Systems::Peer> peer;
+
+		if(id != 0)
+        {
+            std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+            for(auto& family : families)
+            {
+                std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+                if(central) peer = central->getPeer(id);
+                if(peer) break;
+            }
+            if(!peer) return;
+        }
+
 		if(checkAcls)
 		{
-			std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-			for(std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i)
-			{
-				std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
-				if(central) peer = central->getPeer(id);
-				if(peer) break;
-			}
-
-			if(!peer) return;
-
 			std::shared_ptr<std::vector<std::string>> newVariables;
 			BaseLib::PArray newValues;
 			newVariables->reserve(variables->size());
@@ -2295,23 +2330,126 @@ void NodeBlueServer::broadcastEvent(std::string& source, uint64_t id, int32_t ch
 		{
 			std::lock_guard<std::mutex> stateGuard(_stateMutex);
 			clients.reserve(_clients.size());
-			for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+			for(auto& client : _clients)
 			{
-				if(i->second->closed) continue;
-				clients.push_back(i->second);
+				if(client.second->closed) continue;
+				clients.push_back(client.second);
 			}
 		}
 
-		for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+		for(auto& client : clients)
 		{
+		    auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            if(peer)
+            {
+                metadata->structValue->emplace("name", std::make_shared<BaseLib::Variable>(peer->getName()));
+                metadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(peer->getRoom(-1)));
+
+                {
+                    auto categories = peer->getCategories(-1);
+                    auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    categoryArray->arrayValue->reserve(categories.size());
+                    for(auto category : categories)
+                    {
+                        categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+                    }
+                    metadata->structValue->emplace("categories", categoryArray);
+                }
+
+                if(channel != -1)
+                {
+                    metadata->structValue->emplace("channelName", std::make_shared<BaseLib::Variable>(peer->getName(channel)));
+                    metadata->structValue->emplace("channelRoom", std::make_shared<BaseLib::Variable>(peer->getRoom(channel)));
+
+                    {
+                        auto categories = peer->getCategories(channel);
+                        auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                        categoryArray->arrayValue->reserve(categories.size());
+                        for(auto category : categories)
+                        {
+                            categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+                        }
+                        metadata->structValue->emplace("channelCategories", categoryArray);
+                    }
+
+                    auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    metadata->structValue->emplace("variableMetadata", variableMetadata);
+
+                    for(auto& variable : *variables)
+                    {
+                        auto room = peer->getVariableRoom(channel, variable);
+                        variableMetadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(room));
+
+                        {
+                            auto categories = peer->getVariableCategories(channel, variable);
+                            auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                            categoryArray->arrayValue->reserve(categories.size());
+                            for(auto category : categories)
+                            {
+                                categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+                            }
+                            variableMetadata->structValue->emplace("categories", categoryArray);
+                        }
+
+                        {
+                            auto roles = peer->getVariableRoles(channel, variable);
+                            auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                            for(auto& role : roles)
+                            {
+                                auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
+                                roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
+                                if(role.second.invert) roleStruct->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(role.second.invert));
+                                rolesArray->arrayValue->emplace_back(std::move(roleStruct));
+                            }
+                            variableMetadata->structValue->emplace("roles", rolesArray);
+                        }
+                    }
+                }
+            }
+            else if(id == 0)
+            {
+                //System variables
+                auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                metadata->structValue->emplace("variableMetadata", variableMetadata);
+
+                for(auto& variable : *variables)
+                {
+                    auto systemVariable = GD::systemVariableController->getInternal(variable);
+                    if(!systemVariable) continue;
+
+                    variableMetadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(systemVariable->room));
+
+                    auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    categoryArray->arrayValue->reserve(systemVariable->categories.size());
+                    for(auto category : systemVariable->categories)
+                    {
+                        categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+                    }
+                    variableMetadata->structValue->emplace("categories", categoryArray);
+
+                    auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                    for(auto& role : systemVariable->roles)
+                    {
+                        auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                        roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
+                        roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
+                        if(role.second.invert) roleStruct->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(role.second.invert));
+                        rolesArray->arrayValue->emplace_back(std::move(roleStruct));
+                    }
+                    variableMetadata->structValue->emplace("roles", rolesArray);
+                }
+            }
+
 			auto parameters = std::make_shared<BaseLib::Array>();
-			parameters->reserve(5);
+			parameters->reserve(6);
 			parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
 			parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
 			parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
 			parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
 			parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
-			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
+            parameters->emplace_back(metadata);
+			std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastEvent", parameters);
 			if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
 		}
 	}
@@ -2528,10 +2666,42 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+}
+
+void NodeBlueServer::broadcastVariableProfileStateChanged(uint64_t profileId, bool state)
+{
+    try
+    {
+        if(_shuttingDown || _flowsRestarting) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("variableProfileStateChanged")) return;
+
+        std::vector<PNodeBlueClientData> clients;
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
+            for(std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->reserve(2);
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
+
+            std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastVariableProfileStateChanged", parameters);
+            if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastVariableProfileStateChanged\". Queue is full.");
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 void NodeBlueServer::closeClientConnection(PNodeBlueClientData client)
@@ -3243,6 +3413,120 @@ void NodeBlueServer::startFlow(PFlowInfoServer& flowInfo, std::set<std::string>&
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string& tab, const std::string& tag, const BaseLib::PVariable& nodes)
+{
+    try
+    {
+        std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
+        std::vector<char> fileContent;
+
+        {
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
+            else
+            {
+                std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+                fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+            }
+        }
+
+        BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+
+        auto newFlow = FlowParser::addNodesToFlow(flowsJson, tab, tag, nodes);
+        if(newFlow)
+        {
+            backupFlows();
+
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
+            fileContent.clear();
+            _jsonEncoder->encode(newFlow, fileContent);
+            BaseLib::Io::writeFile(filename, fileContent, fileContent.size());
+            return std::make_shared<BaseLib::Variable>(true);
+        }
+        else
+        {
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::removeNodesFromFlow(const std::string& tab, const std::string& tag)
+{
+    try
+    {
+        std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
+        std::vector<char> fileContent;
+
+        {
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
+            else
+            {
+                std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+                fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+            }
+        }
+
+        BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+
+        auto newFlow = FlowParser::removeNodesFromFlow(flowsJson, tab, tag);
+        if(newFlow)
+        {
+            backupFlows();
+
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
+            fileContent.clear();
+            _jsonEncoder->encode(newFlow, fileContent);
+            BaseLib::Io::writeFile(filename, fileContent, fileContent.size());
+            return std::make_shared<BaseLib::Variable>(true);
+        }
+        else
+        {
+            return std::make_shared<BaseLib::Variable>(false);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::flowHasTag(const std::string& tab, const std::string& tag)
+{
+    try
+    {
+        std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
+        std::vector<char> fileContent;
+
+        {
+            std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+            if(BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
+            else
+            {
+                std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+                fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
+            }
+        }
+
+        BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
+
+        return std::make_shared<BaseLib::Variable>(FlowParser::flowHasTag(flowsJson, tab, tag));
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray& parameters)

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -29,6 +29,10 @@
 */
 
 #include "RpcServer.h"
+#include "RpcMethods/BuildingRpcMethods.h"
+#include "RpcMethods/UiRpcMethods.h"
+#include "RpcMethods/VariableProfileRpcMethods.h"
+#include "RpcMethods/NodeBlueRpcMethods.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 #include <gnutls/gnutls.h>
@@ -264,6 +268,24 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("updateStory", std::make_shared<RPCUpdateStory>());
     _rpcMethods->emplace("writeLog", std::make_shared<RPCWriteLog>());
 
+    { //Node-BLUE
+        _rpcMethods->emplace("addNodesToFlow", std::make_shared<RpcMethods::RPCAddNodesToFlow>());
+        _rpcMethods->emplace("flowHasTag", std::make_shared<RpcMethods::RPCFlowHasTag>());
+        _rpcMethods->emplace("removeNodesFromFlow", std::make_shared<RpcMethods::RPCRemoveNodesFromFlow>());
+    }
+
+    { // Buildings
+        _rpcMethods->emplace("addStoryToBuilding", std::make_shared<RpcMethods::RPCAddStoryToBuilding>());
+        _rpcMethods->emplace("createBuilding", std::make_shared<RpcMethods::RPCCreateBuilding>());
+        _rpcMethods->emplace("deleteBuilding", std::make_shared<RpcMethods::RPCDeleteBuilding>());
+        _rpcMethods->emplace("getStoriesInBuilding", std::make_shared<RpcMethods::RPCGetStoriesInBuilding>());
+        _rpcMethods->emplace("getBuildingMetadata", std::make_shared<RpcMethods::RPCGetBuildingMetadata>());
+        _rpcMethods->emplace("getBuildings", std::make_shared<RpcMethods::RPCGetBuildings>());
+        _rpcMethods->emplace("removeStoryFromBuilding", std::make_shared<RpcMethods::RPCRemoveStoryFromBuilding>());
+        _rpcMethods->emplace("setBuildingMetadata", std::make_shared<RpcMethods::RPCSetBuildingMetadata>());
+        _rpcMethods->emplace("updateBuilding", std::make_shared<RpcMethods::RPCUpdateBuilding>());
+    }
+
     { // System variables
         _rpcMethods->emplace("addRoleToSystemVariable", std::make_shared<RPCAddRoleToSystemVariable>());
         _rpcMethods->emplace("getSystemVariablesInRole", std::make_shared<RPCGetSystemVariablesInRole>());
@@ -286,13 +308,16 @@ RpcServer::RpcServer()
     }
     
     //{{{ UI
-        _rpcMethods->emplace("addUiElement", std::make_shared<RPCAddUiElement>());
-        _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RPCCheckUiElementSimpleCreation>());
-        _rpcMethods->emplace("getAllUiElements", std::make_shared<RPCGetAllUiElements>());
-        _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RPCGetAvailableUiElements>());
-        _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RPCGetCategoryUiElements>());
-        _rpcMethods->emplace("getRoomUiElements", std::make_shared<RPCGetRoomUiElements>());
-        _rpcMethods->emplace("removeUiElement", std::make_shared<RPCRemoveUiElement>());
+        _rpcMethods->emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
+        _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
+        _rpcMethods->emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
+        _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
+        _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
+        _rpcMethods->emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
+        _rpcMethods->emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+        _rpcMethods->emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
+        _rpcMethods->emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
+        _rpcMethods->emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
     //}}}
 
     //{{{ Users
@@ -304,6 +329,15 @@ RpcServer::RpcServer()
     _rpcMethods->emplace("deleteUserData", std::make_shared<RPCDeleteUserData>());
     _rpcMethods->emplace("getUserData", std::make_shared<RPCGetUserData>());
     _rpcMethods->emplace("setUserData", std::make_shared<RPCSetUserData>());
+    //}}}
+
+    //{{{ Variable profiles
+    _rpcMethods->emplace("activateVariableProfile", std::make_shared<RpcMethods::RpcActivateVariableProfile>());
+    _rpcMethods->emplace("addVariableProfile", std::make_shared<RpcMethods::RpcAddVariableProfile>());
+    _rpcMethods->emplace("deleteVariableProfile", std::make_shared<RpcMethods::RpcDeleteVariableProfile>());
+    _rpcMethods->emplace("getAllVariableProfiles", std::make_shared<RpcMethods::RpcGetAllVariableProfiles>());
+    _rpcMethods->emplace("getVariableProfile", std::make_shared<RpcMethods::RpcGetVariableProfile>());
+    _rpcMethods->emplace("updateVariableProfile", std::make_shared<RpcMethods::RpcUpdateVariableProfile>());
     //}}}
 }
 
@@ -898,7 +932,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
             data.insert(data.begin(), header.begin(), header.end());
             if(GD::bl->debugLevel >= 5)
             {
-                _out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
+                _out.printDebug("Response packet: " + std::string(data.data(), data.size()));
             }
         }
         else if(responseType == PacketType::Enum::binaryResponse)
@@ -906,8 +940,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
             _rpcEncoder->encodeResponse(variable, data);
             if(GD::bl->debugLevel >= 5)
             {
-                _out.printDebug("Response binary:");
-                _out.printBinary(data);
+                _out.printDebug("Response binary: " + BaseLib::HelperFunctions::getHexString(data));
             }
         }
         else if(responseType == PacketType::Enum::jsonResponse)
@@ -929,8 +962,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, BaseLib:
             BaseLib::WebSocket::encode(json, BaseLib::WebSocket::Header::Opcode::text, data);
             if(GD::bl->debugLevel >= 5)
             {
-                _out.printDebug("Response WebSocket packet: ");
-                _out.printBinary(data);
+                _out.printDebug("Response WebSocket packet: " + BaseLib::HelperFunctions::getHexString(data));
             }
         }
         sendRPCResponseToClient(client, data, keepAlive);
@@ -964,7 +996,7 @@ bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& me
     return false;
 }
 
-BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, std::string& methodName, BaseLib::PVariable& parameters)
+BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PVariable& parameters)
 {
     try
     {
@@ -1111,15 +1143,18 @@ void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client, const std::ve
         std::unique_lock<std::mutex> requestLock(client->requestMutex);
         if(packetType == PacketType::Enum::binaryResponse)
         {
+            if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Decoding binary response...");
             if(client->clientType == BaseLib::RpcClientType::ccu2) client->rpcResponse = _rpcDecoderAnsi->decodeResponse(packet);
             else client->rpcResponse = _rpcDecoder->decodeResponse(packet);
         }
         else if(packetType == PacketType::Enum::xmlResponse)
         {
+            if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Decoding XML-RPC response...");
             client->rpcResponse = _xmlRpcDecoder->decodeResponse(packet);
         }
         else if(packetType == PacketType::Enum::jsonResponse || packetType == PacketType::Enum::webSocketResponse)
         {
+            if(GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Decoding JSON-RPC or WebSocket response...");
             auto jsonStruct = _jsonDecoder->decode(packet);
             auto resultIterator = jsonStruct->structValue->find("result");
             if(resultIterator == jsonStruct->structValue->end()) client->rpcResponse = std::make_shared<BaseLib::Variable>();
@@ -1483,7 +1518,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                         if(webSocket.getHeader().close)
                         {
                             std::vector<char> response;
-                            webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
+                            BaseLib::WebSocket::encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::close, response);
                             sendRPCResponseToClient(client, response, false);
                             closeClientConnection(client);
                         }
@@ -1537,8 +1572,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                         else if(webSocket.getHeader().opcode == BaseLib::WebSocket::Header::Opcode::ping)
                         {
                             std::vector<char> response;
-                            webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
-                            sendRPCResponseToClient(client, response, false);
+                            BaseLib::WebSocket::encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, response);
+                            sendRPCResponseToClient(client, response, true);
                         }
                         else
                         {
@@ -1660,23 +1695,25 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                 }
                                 if(_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0)
                                 {
+                                    if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by REST server.");
                                     _restServer->process(client, http, client->socket);
                                 }
                                 else if(_info->webServer && (
                                     !_info->xmlrpcServer ||
-                                    http.getHeader().method != "POST" ||
+                                    (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ) && (
                                     !_info->jsonrpcServer ||
-                                    http.getHeader().method != "POST" ||
+                                    (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
                                     (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
                                     http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                                     http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                                     http.getHeader().path.compare(0, 7, "/admin/") == 0
                                 ))
                                 {
+                                    if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by webserver.");
                                     client->rpcType = BaseLib::RpcType::webserver;
                                     http.getHeader().remoteAddress = client->address;
                                     http.getHeader().remotePort = client->port;
@@ -1688,6 +1725,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
                                 }
                                 else if(http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer))
                                 {
+                                    if(GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by RPC server.");
                                     if(http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{') packetType = packetType == PacketType::xmlRequest ? PacketType::jsonRequest : PacketType::jsonResponse;
                                     packetReceived(client, http.getContent(), packetType, http.getHeader().connection & BaseLib::Http::Connection::Enum::keepAlive);
                                 }

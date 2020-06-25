@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -45,6 +45,8 @@ private:
 
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
     std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+
+    BaseLib::Role parseRoleString(const std::string& roleString);
 public:
     SystemVariableController();
 

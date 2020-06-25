@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -100,12 +100,40 @@ public:
 	// }}}
 
 	// {{{ UI
-	uint64_t addUiElement(std::string& elementId, BaseLib::PVariable data) override;
+	uint64_t addUiElement(const std::string& elementStringId, const BaseLib::PVariable& data, const BaseLib::PVariable& metadata) override;
 
 	std::shared_ptr<BaseLib::Database::DataTable> getUiElements() override;
 
+    BaseLib::PVariable getUiElementMetadata(uint64_t databaseId) override;
+
 	void removeUiElement(uint64_t databaseId) override;
+
+    BaseLib::PVariable setUiElementMetadata(uint64_t databaseId, const BaseLib::PVariable& metadata) override;
 	// }}}
+
+    // {{{ Buildings
+    BaseLib::PVariable addStoryToBuilding(uint64_t buildingId, uint64_t storyId) override;
+
+    BaseLib::PVariable createBuilding(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+
+    BaseLib::PVariable deleteBuilding(uint64_t storyId) override;
+
+    BaseLib::PVariable getStoriesInBuilding(BaseLib::PRpcClientInfo clientInfo, uint64_t buildingId, bool checkAcls) override;
+
+    BaseLib::PVariable getBuildingMetadata(uint64_t buildingId) override;
+
+    BaseLib::PVariable getBuildings(std::string languageCode) override;
+
+    BaseLib::PVariable removeStoryFromBuildings(uint64_t storyId) override;
+
+    BaseLib::PVariable removeStoryFromBuilding(uint64_t buildingId, uint64_t storyId) override;
+
+    bool buildingExists(uint64_t buildingId) override;
+
+    BaseLib::PVariable setBuildingMetadata(uint64_t buildingId, BaseLib::PVariable metadata) override;
+
+    BaseLib::PVariable updateBuilding(uint64_t buildingId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+    // }}}
 
 	// {{{ Stories
 	BaseLib::PVariable addRoomToStory(uint64_t storyId, uint64_t roomId) override;
@@ -322,6 +350,8 @@ public:
 
 	uint64_t savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string& serialNumber, uint32_t type) override;
 
+    uint64_t savePeerParameterSynchronous(BaseLib::Database::DataRow& data) override;
+
 	void savePeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
 
 	void saveSpecialPeerParameterAsynchronous(BaseLib::Database::DataRow& data) override;
@@ -367,6 +397,16 @@ public:
 
 	void deleteLicenseVariable(int32_t moduleId, uint64_t mapKey) override;
 	// }}}
+
+    // {{{ Variable profiles
+    uint64_t addVariableProfile(const BaseLib::PVariable& translations, const BaseLib::PVariable& profile) override;
+
+    void deleteVariableProfile(uint64_t profileId) override;
+
+    std::shared_ptr<BaseLib::Database::DataTable> getVariableProfiles() override;
+
+    bool updateVariableProfile(uint64_t profileId, const BaseLib::PVariable& translations, const BaseLib::PVariable& profile) override;
+    // }}}
 protected:
 	std::atomic_bool _disposing;
 

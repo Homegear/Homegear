@@ -8,31 +8,82 @@
     },
     {
         "id": 100001,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "light - state",
             "de-DE": "Licht - Status"
         },
         "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.lightingSwitch",
-                "roleIdsIn": [
-                    [
-                        100001
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        100001
-                    ]
-                ]
-            },
-            "icon": "light_on_1",
-            "invokeOutputs": [
+            "simpleCreationInfo": [
                 {
-                    "value": 0,
-                    "buttonText": "Zentral aus"
+                    "element": "Base.lightingSwitchBrightnessTemp",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ],
+                        [
+                            103001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ],
+                        [
+                            103001
+                        ]
+                    ]
+                },
+                {
+                    "element": "Base.lightingSwitchBrightness",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ]
+                    ]
+                },
+                {
+                    "element": "Base.lightingSwitch",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ]
+                    ]
                 }
             ],
+            "icon": "light_on_1",
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "an",
+                    "false": "aus"
+                }
+            },
             "label": {
                 "en-US": "Lighting",
                 "de-DE": "Beleuchtung"
@@ -50,32 +101,64 @@
         }
     },
     {
-        "id": 101000,
+        "id": 101001,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "light - brightness",
             "de-DE": "Licht - Helligkeit"
         },
         "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.lightingBrightness",
-                "roleIdsIn": [
-                    [
-                        101000
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        101000
-                    ]
-                ]
-            },
-            "icon": "light_dim_1",
-            "invokeOutputs": [
+            "simpleCreationInfo": [
                 {
-                    "value": 0,
-                    "buttonText": "Zentral aus"
+                    "element": "Base.lightingSwitchBrightness",
+                    "roleIdsIn": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            100001
+                        ],
+                        [
+                            101001
+                        ]
+                    ]
+                },
+                {
+                    "element": "Base.lightingBrightness",
+                    "roleIdsIn": [
+                        [
+                            101001
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            101001
+                        ]
+                    ]
                 }
             ],
+            "icon": "light_dim_1",
+            "aggregationType": 1,
+            "l2_status": false,
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "an",
+                    "false": "aus"
+                }
+            },
+            "label": {
+                "en-US": "Lighting - brightness",
+                "de-DE": "Beleuchtung - Helligkeit"
+            },
             "translations": {
                 "de-DE": {
                     "0": "aus",
@@ -97,6 +180,9 @@
     },
     {
         "id": 102001,
+        "types": [
+            "int"
+        ],
         "translations": {
             "en-US": "light - color - RGB",
             "de-DE": "Licht - Farbe - RGB"
@@ -104,6 +190,10 @@
     },
     {
         "id": 102002,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "light - color - hue",
             "de-DE": "Licht - Farbe - Farbton"
@@ -111,6 +201,10 @@
     },
     {
         "id": 102003,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "light - color - saturation",
             "de-DE": "Licht - Farbe - Sättigung"
@@ -125,6 +219,10 @@
     },
     {
         "id": 103000,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "light - cold white/warm white",
             "de-DE": "Licht - Kaltweiß/warmweiß"
@@ -132,6 +230,10 @@
     },
     {
         "id": 103001,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "light - color temperature white",
             "de-DE": "Licht - Farbtemperatur weiß"
@@ -152,23 +254,14 @@
         },
         "ui": {
             "icon": "heater_1",
-            "invokeOutputs": [
-                {
-                    "roleId": 201003,
-                    "value": 0,
-                    "buttonText": "Zentral Frostschutz"
-                },
-                {
-                    "roleId": 201003,
-                    "value": 1,
-                    "buttonText": "Zentral Komfort"
-                },
-                {
-                    "roleId": 201003,
-                    "value": 2,
-                    "buttonText": "Zentral Spar"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "0": "Frostschutz",
+                    "1": "Komfort",
+                    "2": "Spar"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Heating",
                 "de-DE": "Heizung"
@@ -197,6 +290,9 @@
     },
     {
         "id": 201001,
+        "types": [
+            "float"
+        ],
         "translations": {
             "en-US": "heating - current temperature",
             "de-DE": "Heizung - Ist-Temperatur"
@@ -214,6 +310,9 @@
     },
     {
         "id": 201002,
+        "types": [
+            "float"
+        ],
         "translations": {
             "en-US": "heating - setpoint temperature",
             "de-DE": "Heizung - Soll-Temperatur"
@@ -226,6 +325,7 @@
                 "max": 30.0,
                 "default": 21.0,
                 "roles": [
+                    200000,
                     201000,
                     201004
                 ]
@@ -237,6 +337,7 @@
                 "max": 30.0,
                 "default": 18.0,
                 "roles": [
+                    200000,
                     201000,
                     201005
                 ]
@@ -248,6 +349,7 @@
                 "max": 30.0,
                 "default": 5.0,
                 "roles": [
+                    200000,
                     201000,
                     201006
                 ]
@@ -263,6 +365,7 @@
                     "eco"
                 ],
                 "roles": [
+                    200000,
                     201000,
                     201003
                 ]
@@ -270,31 +373,6 @@
         ],
         "ui": {
             "simpleCreationInfo": [
-                {
-                    "element": "Base.heatingIsStateSliderMode",
-                    "roleIdsIn": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ]
-                    ]
-                },
                 {
                     "element": "Base.heatingIsStateSliderModeWindow",
                     "roleIdsIn": [
@@ -325,6 +403,31 @@
                             301002
                         ]
                     ]
+                },
+                {
+                    "element": "Base.heatingIsStateSliderMode",
+                    "roleIdsIn": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            201001
+                        ],
+                        [
+                            201002
+                        ],
+                        [
+                            201003
+                        ]
+                    ]
                 }
             ],
             "translations": {
@@ -339,6 +442,9 @@
     },
     {
         "id": 201003,
+        "types": [
+            "int"
+        ],
         "translations": {
             "en-US": "heating - temperature mode",
             "de-DE": "Heizung - Temperaturmodus"
@@ -360,6 +466,9 @@
     },
     {
         "id": 201004,
+        "types": [
+            "float"
+        ],
         "translations": {
             "en-US": "heating - comfort temperature",
             "de-DE": "Heizung - Komforttemperatur"
@@ -377,6 +486,9 @@
     },
     {
         "id": 201005,
+        "types": [
+            "float"
+        ],
         "translations": {
             "en-US": "heating - eco temperature",
             "de-DE": "Heizung - Absenktemperatur"
@@ -394,6 +506,9 @@
     },
     {
         "id": 201006,
+        "types": [
+            "float"
+        ],
         "translations": {
             "en-US": "heating - frost protection temperature",
             "de-DE": "Heizung - Frostschutztemperatur"
@@ -405,6 +520,54 @@
                 },
                 "en-US": {
                     "0": "Frost"
+                }
+            }
+        }
+    },
+    {
+        "id": 202000,
+        "translations": {
+            "en-US": "ventilation",
+            "de-DE": "Lüftung"
+        }
+    },
+    {
+        "id": 202001,
+        "translations": {
+            "en-US": "ventilation level",
+            "de-DE": "Lüftungsstufe"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.ventilationMode",
+                "roleIdsIn": [
+                    [
+                        202001
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        202001
+                    ]
+                ]
+            },
+            "icon": "ventilator_2",
+            "label": {
+                "en-US": "Ventilation",
+                "de-DE": "Lüftung"
+            },
+            "translations": {
+                "de-DE": {
+                    "0": "Stufe 1",
+                    "1": "Stufe 2",
+                    "2": "Stufe 3",
+                    "3": "Stufe 4"
+                },
+                "en-US": {
+                    "0": "Level 1",
+                    "1": "Level 2",
+                    "2": "Level 3",
+                    "3": "Level 4"
                 }
             }
         }
@@ -425,11 +588,24 @@
     },
     {
         "id": 301001,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "security - Door state",
             "de-DE": "Sicherheit - Türzustand"
         },
         "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.doorContact",
+                "roleIdsIn": [
+                    [
+                        301001
+                    ]
+                ],
+                "roleIdsOut": []
+            },
             "icon": "door_open_2",
             "translations": {
                 "de-DE": {
@@ -445,6 +621,10 @@
     },
     {
         "id": 301002,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "security - Window state",
             "de-DE": "Sicherheit - Fensterzustand"
@@ -457,11 +637,7 @@
                         301002
                     ]
                 ],
-                "roleIdsOut": [
-                    [
-                        301002
-                    ]
-                ]
+                "roleIdsOut": []
             },
             "icon": "window_1",
             "label": {
@@ -482,6 +658,10 @@
     },
     {
         "id": 301003,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "security - Door lock",
             "de-DE": "Sicherheit - Türschloss"
@@ -494,11 +674,7 @@
                         301003
                     ]
                 ],
-                "roleIdsOut": [
-                    [
-                        301003
-                    ]
-                ]
+                "roleIdsOut": []
             },
             "icon": "door-handle_1",
             "label": {
@@ -526,6 +702,10 @@
     },
     {
         "id": 400001,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "socket - state",
             "de-DE": "Steckdose - Zustand"
@@ -545,12 +725,13 @@
                 ]
             },
             "icon": "socket_1",
-            "invokeOutputs": [
-                {
-                    "value": 0,
-                    "buttonText": "Zentral aus"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "an",
+                    "false": "aus"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Sockets",
                 "de-DE": "Steckdosen"
@@ -619,21 +800,58 @@
                             501002
                         ]
                     ]
+                },
+                {
+                    "element": "shadingButtonsSingleStepButtonsUpDownPositionPositionSlatsWindalarm",
+                    "roleIdsIn": [
+                        [],
+                        [
+                            501004
+                        ],
+                        [
+                            501007
+                        ],
+                        [
+                            501008
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            {
+                                "id": 501005,
+                                "value": false
+                            },
+                            {
+                                "id": 501006,
+                                "value": false
+                            },
+                            {
+                                "id": 501006,
+                                "value": true
+                            },
+                            {
+                                "id": 501005,
+                                "value": true
+                            }
+                        ],
+                        [
+                            501004
+                        ],
+                        [
+                            501007
+                        ],
+                        []
+                    ]
                 }
             ],
             "icon": "blind_1",
-            "invokeOutputs": [
-                {
-                    "roleId": 501001,
-                    "value": false,
-                    "buttonText": "Zentral auf"
-                },
-                {
-                    "roleId": 501002,
-                    "value": true,
-                    "buttonText": "Zentral ab"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "einfahren",
+                    "false": "ausfahren"
                 }
-            ],
+            },
             "label": {
                 "en-US": "Shading",
                 "de-DE": "Beschattung"
@@ -650,6 +868,13 @@
             },
             "rolesInclude": [
                 {
+                    "aggregationType": 2,
+                    "roles": [
+                        501001,
+                        501002
+                    ]
+                },
+                {
                     "aggregationType": 1,
                     "roles": [
                         501004
@@ -660,6 +885,10 @@
     },
     {
         "id": 501001,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "shading - blind - up",
             "de-DE": "Beschattung - hoch"
@@ -678,6 +907,10 @@
     },
     {
         "id": 501002,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "shading - blind - down",
             "de-DE": "Beschattung - runter"
@@ -696,6 +929,10 @@
     },
     {
         "id": 501003,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "shading - blind - stop",
             "de-DE": "Beschattung - Stopp"
@@ -714,9 +951,85 @@
     },
     {
         "id": 501004,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "shading - blind - position",
             "de-DE": "Beschattung - Position"
+        },
+        "uiRef": 501000
+    },
+    {
+        "id": 501005,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - blind - up and down",
+            "de-DE": "Beschattung - hoch und runter"
+        },
+        "uiRef": 501000,
+        "ui": {
+            "translations": {
+                "de-DE": {
+                    "0": "Hoch",
+                    "1": "Runter"
+                },
+                "en-US": {
+                    "0": "Up",
+                    "1": "Down"
+                }
+            }
+        }
+    },
+    {
+        "id": 501006,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - blind - step",
+            "de-DE": "Beschattung - Stufe"
+        },
+        "uiRef": 501000,
+        "ui": {
+            "translations": {
+                "de-DE": {
+                    "0": "Hoch",
+                    "1": "Runter"
+                },
+                "en-US": {
+                    "0": "Up",
+                    "1": "Down"
+                }
+            }
+        }
+    },
+    {
+        "id": 501007,
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "shading - slats - position",
+            "de-DE": "Beschattung - Lamellenposition"
+        },
+        "uiRef": 501000
+    },
+    {
+        "id": 501008,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - windalert",
+            "de-DE": "Beschattung - Windalarm"
         },
         "uiRef": 501000
     },
@@ -766,18 +1079,13 @@
                 }
             ],
             "icon": "awning_1",
-            "invokeOutputs": [
-                {
-                    "roleId": 502001,
-                    "value": false,
-                    "buttonText": "Zentral auf"
-                },
-                {
-                    "roleId": 502002,
-                    "value": true,
-                    "buttonText": "Zentral ab"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "ausfahren",
+                    "false": "einfahren"
                 }
-            ],
+            },
             "translations": {
                 "de-DE": {
                     "falseCount": "eingefahren",
@@ -800,6 +1108,10 @@
     },
     {
         "id": 502001,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "shading - awning - retract",
             "de-DE": "Beschattung - Markise - einfahren"
@@ -818,6 +1130,10 @@
     },
     {
         "id": 502002,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "shading - awning - extend",
             "de-DE": "Beschattung - Markise - ausfahren"
@@ -836,6 +1152,10 @@
     },
     {
         "id": 502003,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "shading - awning - stop",
             "de-DE": "Beschattung - Markise - Stopp"
@@ -854,6 +1174,10 @@
     },
     {
         "id": 502004,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "shading - awning - position",
             "de-DE": "Beschattung - Markise - Position"
@@ -885,18 +1209,14 @@
                 }
             ],
             "icon": "window_2",
-            "invokeOutputs": [
-                {
-                    "roleId": 600001,
-                    "value": false,
-                    "buttonText": "Zentral auf"
-                },
-                {
-                    "roleId": 600002,
-                    "value": true,
-                    "buttonText": "Zentral ab"
+            "l2_status": false,
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "schließen",
+                    "false": "öffnen"
                 }
-            ],
+            },
             "translations": {
                 "de-DE": {
                     "falseCount": "geöffnet",
@@ -919,6 +1239,10 @@
     },
     {
         "id": 600001,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "window - up",
             "de-DE": "Fenster - hoch"
@@ -937,6 +1261,10 @@
     },
     {
         "id": 600002,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "window - down",
             "de-DE": "Fenster - runter"
@@ -955,6 +1283,10 @@
     },
     {
         "id": 600003,
+        "types": [
+            "bool",
+            "int"
+        ],
         "translations": {
             "en-US": "window - stop",
             "de-DE": "Fenster - Stopp"
@@ -973,10 +1305,376 @@
     },
     {
         "id": 600004,
+        "types": [
+            "int",
+            "float"
+        ],
         "translations": {
             "en-US": "window - position",
             "de-DE": "Fenster - Position"
         },
         "uiRef": 600000
+    },
+    {
+        "id": "70.00.00",
+        "translations": {
+            "en-US": "weather",
+            "de-DE": "Wetter"
+        }
+    },
+    {
+        "id": "70.00.01",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "weather - city",
+            "de-DE": "Wetter - Stadt"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateCity",
+                "roleIdsIn": [
+                    [
+                        700001
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700001
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.02",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - cloudcoverage",
+            "de-DE": "Wetter - Bewölkung"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateCloudcoverage",
+                "roleIdsIn": [
+                    [
+                        700002
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700002
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.03",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "weather - datetime",
+            "de-DE": "Wetter - Datum Zeit"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateDate",
+                "roleIdsIn": [
+                    [
+                        700003
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700003
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.04",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - humidity",
+            "de-DE": "Wetter - Luftfeuchtigkeit"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.humidity",
+                "roleIdsIn": [
+                    [
+                        700004
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700004
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.05",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - pressure",
+            "de-DE": "Wetter - Luftdruck"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climatePressure",
+                "roleIdsIn": [
+                    [
+                        700005
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700005
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.06",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - rain forecast 3h",
+            "de-DE": "Wetter - Regenvorhersage 3h"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateRain3h",
+                "roleIdsIn": [
+                    [
+                        700006
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700006
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.07",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - snow forecast 3h",
+            "de-DE": "Wetter - Schneevorhersage 3h"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateSnow3h",
+                "roleIdsIn": [
+                    [
+                        700007
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700007
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.08",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "weather - sunrise",
+            "de-DE": "Wetter - Sonnenaufgang"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateSunrise",
+                "roleIdsIn": [
+                    [
+                        700008
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700008
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.09",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "weather - sunset",
+            "de-DE": "Wetter - Sonnenuntergang"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateSunset",
+                "roleIdsIn": [
+                    [
+                        700009
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700009
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.10",
+        "types": [
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - temperature",
+            "de-DE": "Wetter - Temperatur"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.temperature",
+                "roleIdsIn": [
+                    [
+                        700010
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700010
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.11",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "weather - weather",
+            "de-DE": "Wetter - Wetter"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWeather",
+                "roleIdsIn": [
+                    [
+                        700011
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700011
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.12",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "weather - wind direction",
+            "de-DE": "Wetter - Windrichtung"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWinddirection",
+                "roleIdsIn": [
+                    [
+                        700012
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700012
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.13",
+        "types": [
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - wind gust",
+            "de-DE": "Wetter - Windböen"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWindgust",
+                "roleIdsIn": [
+                    [
+                        700013
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700013
+                    ]
+                ]
+            }
+        }
+    },
+    {
+        "id": "70.00.14",
+        "types": [
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - wind speed",
+            "de-DE": "Wetter - Windgeschwindigkeit"
+        },
+        "ui": {
+            "simpleCreationInfo": {
+                "element": "Base.climateWindspeed",
+                "roleIdsIn": [
+                    [
+                        700014
+                    ]
+                ],
+                "roleIdsOut": [
+                    [
+                        700014
+                    ]
+                ]
+            }
+        }
     }
 ]

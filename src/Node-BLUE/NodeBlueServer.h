@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -79,6 +79,8 @@ public:
 
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
+    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+
 	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 
 	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
@@ -86,6 +88,12 @@ public:
     std::string handleDelete(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
 
 	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
+
+	BaseLib::PVariable addNodesToFlow(const std::string& tab, const std::string& tag, const BaseLib::PVariable& nodes);
+
+    BaseLib::PVariable removeNodesFromFlow(const std::string& tab, const std::string& tag);
+
+    BaseLib::PVariable flowHasTag(const std::string& tab, const std::string& tag);
 
 	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
 

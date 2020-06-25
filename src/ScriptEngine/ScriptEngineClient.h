@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -70,6 +70,7 @@ private:
         std::atomic_bool running;
         std::string filename;
         uint64_t peerId = 0;
+        std::string nodeId;
 
         ThreadInfo() : running(true) {}
     };
@@ -281,6 +282,8 @@ private:
     BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray& parameters);
 
     BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray& parameters);
+
+    BaseLib::PVariable broadcastVariableProfileStateChanged(BaseLib::PArray& parameters);
     // }}}
 };
 

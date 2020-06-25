@@ -3,7 +3,7 @@ project(Homegear)
 
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories(/usr/include/php7-homegear/ext /usr/include/php7-homegear/main /usr/include/php7-homegear/sapi /usr/include/php7-homegear/TSRM /usr/include/php7-homegear/Zend)
+include_directories(/usr/include/php7-homegear /usr/include/php7-homegear/main /usr/include/php7-homegear/sapi /usr/include/php7-homegear/TSRM /usr/include/php7-homegear/Zend /usr/include/php7-homegear/php /usr/include/php7-homegear/php/main /usr/include/php7-homegear/php/sapi /usr/include/php7-homegear/php/TSRM /usr/include/php7-homegear/php/Zend)
 
 set(SOURCE_FILES
         homegear-miscellaneous/src/Factory.cpp
@@ -82,8 +82,8 @@ set(SOURCE_FILES
         src/RPC/Roles.h
         src/RPC/RpcClient.cpp
         src/RPC/RpcClient.h
-        src/RPC/RPCMethods.cpp
-        src/RPC/RPCMethods.h
+        src/RPC/RpcMethods/RPCMethods.cpp
+        src/RPC/RpcMethods/RPCMethods.h
         src/RPC/RpcServer.cpp
         src/RPC/RpcServer.h
         src/ScriptEngine/CacheInfo.h
@@ -120,7 +120,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/IpcLogger.cpp
         src/IpcLogger.h
-        config.h src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h)
+        src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h src/VariableProfiles/VariableProfileManager.cpp src/VariableProfiles/VariableProfileManager.h src/RPC/RpcMethods/VariableProfileRpcMethods.cpp src/RPC/RpcMethods/VariableProfileRpcMethods.h src/RPC/RpcMethods/UiRpcMethods.cpp src/RPC/RpcMethods/UiRpcMethods.h src/RPC/RpcMethods/BuildingRpcMethods.cpp src/RPC/RpcMethods/BuildingRpcMethods.h src/Node-BLUE/FlowParser.cpp src/Node-BLUE/FlowParser.h src/RPC/RpcMethods/NodeBlueRpcMethods.cpp src/RPC/RpcMethods/NodeBlueRpcMethods.h)
 
 add_custom_target(homegear COMMAND ../../devscripts/makeAll.sh SOURCES ${SOURCE_FILES})
 

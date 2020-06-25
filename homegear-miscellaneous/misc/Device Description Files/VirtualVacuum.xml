@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<device id="VirtualVacuum">
+			<description>VirtualVacuum</description>
+			<typeNumber>0xF006</typeNumber>
+		</device>
+	</supportedDevices>
+	<properties/>
+	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+			<properties>
+				<internal>true</internal>
+			</properties>
+			<configParameters>config</configParameters>
+			<variables>maint_ch0_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualVacuum">
+			<variables>custom_ch1_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="2" type="VirtualVacuum">
+			<variables>custom_ch2_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="3" type="VirtualVacuum">
+			<variables>custom_ch3_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="4" type="VirtualVacuum">
+			<variables>custom_ch4_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="5" type="VirtualVacuum">
+			<variables>custom_ch5_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="6" type="VirtualVacuum">
+			<variables>custom_ch6_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="7" type="VirtualVacuum">
+			<variables>custom_ch7_values</variables>
+		</function>
+	</functions>
+	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<configParameters id="config"/>
+		<variables id="maint_ch0_values">
+			<parameter id="LOWBAT">
+				<properties>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		    <parameter id="UNREACH">
+		       <properties>
+		         <readable>true</readable>
+		         <writeable>true</writeable>
+		         <service>true</service>
+		     </properties>
+		       <logicalBoolean />
+		       <physicalBoolean>
+		         <operationType>internal</operationType>
+		       </physicalBoolean>
+		  </parameter>
+	      <parameter id="STICKY_UNREACH">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <service>true</service>
+	          <sticky>true</sticky>
+	        </properties>
+	        <logicalBoolean />
+	        <physicalBoolean>
+	          <operationType>internal</operationType>
+	        </physicalBoolean>
+	      </parameter>
+		</variables>
+		<variables id="custom_ch1_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+	      <parameter id="IMAGE_URL">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+	      <parameter id="BINARY_IMAGE">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <formFieldType>text</formFieldType>
+	          <formPosition>0</formPosition>
+	          <casts>
+	            <rpcBinary />
+	          </casts>
+	        </properties>
+	        <logicalString />
+			<physicalNone>
+					<operationType>store</operationType>
+			</physicalNone>
+	      </parameter>
+			<parameter id="BATTERY">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalDecimal/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="MODE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="INFO">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="CUSTOM_COMMANDS">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+				<parameter id="SEND_COMMAD">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="STOP">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="START">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="GOHOME">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="GO_TO_POINT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>			
+			<parameter id="CLEAN">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="FAN_SPEED">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="LOCATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="PAUSE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="CLEANING_TIME">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="CLEANING_COUNT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="MAIN_BRUSH">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="SIDE_BRUSH">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="FILTER">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="SENSOR">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="LAST_FINISHED">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch2_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch3_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch4_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch5_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+		<variables id="custom_ch6_values">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>

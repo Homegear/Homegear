@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -698,6 +698,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 			stringStream << "Done." << std::endl;
 			return std::make_shared<BaseLib::Variable>(stringStream.str());
 		}
+		//Todo: Deprecated. Remove beginning of 2021.
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "disconnect", "dcr", "", 0, arguments, showHelp))
 		{
 			GD::rpcClient->disconnectRega();
@@ -855,16 +856,16 @@ BaseLib::PVariable CliServer::generalCommand(std::string& command)
 				return std::make_shared<BaseLib::Variable>(stringStream.str());
 			}
 
-			std::vector<std::tuple<int32_t, uint64_t, int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
+			std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> runningScripts = GD::scriptEngineServer->getRunningScripts();
 			if(runningScripts.empty()) return std::make_shared<BaseLib::Variable>(std::string("No scripts are being executed.\n"));
 
 			stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID"
-						 << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
+                         << std::setw(17) << "Node ID" << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
 			for(auto& script : runningScripts)
 			{
 				stringStream << std::setw(10) << std::get<0>(script) << std::setw(10)
-							 << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(10)
-							 << std::get<2>(script) << std::setw(80) << std::get<3>(script) << std::endl;
+							 << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(17)
+                             << std::get<2>(script) << std::setw(10) << std::get<3>(script) << std::setw(80) << std::get<4>(script) << std::endl;
 			}
 
 			return std::make_shared<BaseLib::Variable>(stringStream.str());

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
 *
 * Homegear is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -197,14 +197,12 @@ void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval* output
         else if(input->type == BaseLib::VariableType::tString || input->type == BaseLib::VariableType::tBase64)
         {
             if(input->stringValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
-            else
-                ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size());
+            else ZVAL_STRINGL(output, input->stringValue.c_str(), input->stringValue.size());
         }
         else if(input->type == BaseLib::VariableType::tBinary)
         {
             if(input->binaryValue.empty()) ZVAL_STRINGL(output, "", 0); //At least once, input->stringValue.c_str() on an empty string was a nullptr causing a segementation fault, so check for empty string
-            else
-                ZVAL_STRINGL(output, (char*) input->binaryValue.data(), input->binaryValue.size());
+            else ZVAL_STRINGL(output, (char*) input->binaryValue.data(), input->binaryValue.size());
         }
         else
         {

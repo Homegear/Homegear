@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,6 +31,10 @@
 #include "IpcServer.h"
 #include "../GD/GD.h"
 #include "../CLI/CliServer.h"
+#include "../RPC/RpcMethods/BuildingRpcMethods.h"
+#include "../RPC/RpcMethods/UiRpcMethods.h"
+#include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
+#include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
 
 namespace Homegear
 {
@@ -163,6 +167,24 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	_rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
 	_rpcMethods.emplace("writeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCWriteLog()));
 
+    { // Node-BLUE
+        _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
+        _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
+        _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
+    }
+
+    { // Buildings
+        _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
+        _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
+        _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
+        _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
+        _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
+        _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
+        _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
+        _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
+        _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+    }
+
 	{ // Stories
 		_rpcMethods.emplace("addRoomToStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddRoomToStory()));
 		_rpcMethods.emplace("createStory", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCreateStory()));
@@ -239,13 +261,16 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
 	}
 
 	{ // UI
-		_rpcMethods.emplace("addUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddUiElement()));
-        _rpcMethods.emplace("checkUiElementSimpleCreation", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCCheckUiElementSimpleCreation>()));
-		_rpcMethods.emplace("getAllUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAllUiElements()));
-		_rpcMethods.emplace("getAvailableUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetAvailableUiElements()));
-		_rpcMethods.emplace("getCategoryUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetCategoryUiElements()));
-		_rpcMethods.emplace("getRoomUiElements", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetRoomUiElements()));
-		_rpcMethods.emplace("removeUiElement", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveUiElement()));
+        _rpcMethods.emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
+        _rpcMethods.emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
+        _rpcMethods.emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
+        _rpcMethods.emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
+        _rpcMethods.emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
+        _rpcMethods.emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
+        _rpcMethods.emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+        _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
+        _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
+        _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
 	}
 
 	{ // Users
@@ -257,6 +282,15 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000)
     _rpcMethods.emplace("deleteUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCDeleteUserData>()));
     _rpcMethods.emplace("getUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCGetUserData>()));
     _rpcMethods.emplace("setUserData", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<Rpc::RPCSetUserData>()));
+    //}}}
+
+    //{{{ Variable profiles
+    _rpcMethods.emplace("activateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcActivateVariableProfile>()));
+    _rpcMethods.emplace("addVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcAddVariableProfile>()));
+    _rpcMethods.emplace("deleteVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcDeleteVariableProfile>()));
+    _rpcMethods.emplace("getAllVariableProfiles", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetAllVariableProfiles>()));
+    _rpcMethods.emplace("getVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetVariableProfile>()));
+    _rpcMethods.emplace("updateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcUpdateVariableProfile>()));
     //}}}
 
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters)>>("getHomegearPid", std::bind(&IpcServer::getHomegearPid, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
@@ -664,10 +698,43 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
 	{
 		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(...)
-	{
-		_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+}
+
+void IpcServer::broadcastVariableProfileStateChanged(uint64_t profileId, bool state)
+{
+    try
+    {
+        if(_shuttingDown) return;
+
+        if(!_dummyClientInfo->acls->checkEventServerMethodAccess("variableProfileStateChanged")) return;
+
+        std::vector<PIpcClientData> clients;
+
+        {
+            std::lock_guard<std::mutex> stateGuard(_stateMutex);
+            clients.reserve(_clients.size());
+            for(std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i)
+            {
+                if(i->second->closed) continue;
+                clients.push_back(i->second);
+            }
+        }
+
+        for(std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i)
+        {
+            auto parameters = std::make_shared<BaseLib::Array>();
+            parameters->reserve(2);
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
+            parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
+
+            std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastVariableProfileStateChanged", parameters);
+            if(!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastVariableProfileStateChanged\". Queue is full.");
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 void IpcServer::closeClientConnection(PIpcClientData client)

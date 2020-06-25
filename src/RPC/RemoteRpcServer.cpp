@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -229,7 +229,7 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 			if(json) _jsonEncoder->encodeRequest(methodName, parameters, encodedPacket);
 			else _xmlRpcEncoder->encodeRequest(methodName, parameters, encodedPacket);
 
-			const std::string header = "POST " + path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::homegearVersion + "\r\nHost: " + hostname + ":" + address.second + "\r\nContent-Type: " + (json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(encodedPacket.size() + 2) + "\r\nConnection: Keep-Alive\r\n\r\n";
+			const std::string header = "POST " + path + " HTTP/1.1\r\nUser-Agent: Homegear " + GD::baseLibVersion + "\r\nHost: " + hostname + ":" + address.second + "\r\nContent-Type: " + (json ? "application/json" : "text/xml") + "\r\nContent-Length: " + std::to_string(encodedPacket.size() + 2) + "\r\nConnection: Keep-Alive\r\n\r\n";
 			encodedPacket.reserve(encodedPacket.size() + header.size() + 2);
 			encodedPacket.push_back('\r');
 			encodedPacket.push_back('\n');
@@ -239,14 +239,13 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string& methodName, 
 
 		_serverClientInfo->socket->proofwrite(encodedPacket);
 
-		int32_t i = 0;
+		auto startTime = BaseLib::HelperFunctions::getTime();
 		while(!_serverClientInfo->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(1000), [&]
 		{
-			i++;
-			return _serverClientInfo->rpcResponse || _serverClientInfo->closed || i == 10;
+			return _serverClientInfo->rpcResponse || _serverClientInfo->closed || BaseLib::HelperFunctions::getTime() - startTime > 10000;
 		}));
 		_serverClientInfo->waitForResponse = false;
-		if(i == 10 || !_serverClientInfo->rpcResponse) return BaseLib::Variable::createError(-32500, "No RPC response received.");
+		if(!_serverClientInfo->rpcResponse) return BaseLib::Variable::createError(-32500, "No RPC response received.");
 
 		if(_serverClientInfo->closed) removed = true;
 

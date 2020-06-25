@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -331,6 +331,8 @@ private:
 	Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);
 
 	Flows::PVariable broadcastUpdateDevice(Flows::PArray& parameters);
+
+    Flows::PVariable broadcastVariableProfileStateChanged(Flows::PArray& parameters);
 	// }}}
 };
 

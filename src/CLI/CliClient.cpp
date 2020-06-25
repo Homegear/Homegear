@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -37,16 +37,65 @@
 namespace Homegear
 {
 
-CliClient::CliClient(std::string socketPath) : IIpcClient(socketPath)
+CliClient::CliClient(const std::string& socketPath) : IIpcClient(socketPath)
 {
     _localRpcMethods.emplace("broadcastEvent", std::bind(&CliClient::broadcastEvent, this, std::placeholders::_1));
     _localRpcMethods.emplace("cliOutput", std::bind(&CliClient::output, this, std::placeholders::_1));
-
-    _printEvents = false;
 }
 
 CliClient::~CliClient()
 {
+    safeHistory();
+}
+
+void CliClient::safeHistory()
+{
+    try
+    {
+        HISTORY_STATE* historyState = history_get_history_state();
+        HIST_ENTRY** historyList = history_list();
+
+        std::ostringstream ostringstream;
+        for(int32_t i = 0; i < historyState->length; i++)
+        {
+            ostringstream << historyList[i]->line << std::endl;
+        }
+
+        free(historyState);
+
+        BaseLib::Io::writeFile(GD::bl->settings.dataPath() + ".cli-history", ostringstream.str());
+    }
+    catch(const std::exception& ex)
+    {
+        std::cerr << "Could not safe history to \"" + GD::bl->settings.dataPath() + ".cli-history\". Make sure the file is writeable." << std::endl;
+    }
+}
+
+void CliClient::loadHistory()
+{
+    try
+    {
+        if(!BaseLib::Io::fileExists(GD::bl->settings.dataPath() + ".cli-history")) return;
+
+        auto content = BaseLib::Io::getFileContent(GD::bl->settings.dataPath() + ".cli-history");
+        std::istringstream istringstream(content);
+        std::string line;
+        while(std::getline(istringstream, line))
+        {
+            add_history(line.c_str());
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void CliClient::stop()
+{
+    IIpcClient::stop();
+
+    safeHistory();
 }
 
 void CliClient::onConnect()
@@ -123,10 +172,11 @@ void CliClient::onDisconnect()
     //}}}
 
     standardOutput("Disconnected from Homegear.\n");
+    safeHistory();
     exit(6);
 }
 
-std::string CliClient::getBreadcrumb()
+std::string CliClient::getBreadcrumb() const
 {
     if(_currentFamily != -1)
     {
@@ -137,7 +187,7 @@ std::string CliClient::getBreadcrumb()
     else return "";
 }
 
-int32_t CliClient::terminal(std::string& command)
+int32_t CliClient::terminal(const std::string& command)
 {
     try
     {
@@ -159,18 +209,21 @@ int32_t CliClient::terminal(std::string& command)
 
         if(command.empty())
         {
-            standardOutput("Connected to Homegear (version " + GD::homegearVersion + ").\n\n");
+            standardOutput("Connected to Homegear (version " + GD::baseLibVersion + ").\n\n");
             standardOutput("Please type >>help<< to list all available commands.\n");
         }
 
+        using_history();
+        loadHistory();
+        stifle_history(10000);
         rl_bind_key('\t', rl_abort); //no autocompletion
 
-        std::string level = "";
+        std::string level;
         std::string lastCommand;
         std::string currentCommand;
         char* sendBuffer;
         int32_t bytes = 0;
-        while(!command.empty() || (sendBuffer = readline((getBreadcrumb() + "> ").c_str())) != NULL)
+        while(!command.empty() || (sendBuffer = readline((getBreadcrumb() + "> ").c_str())) != nullptr)
         {
             if(command.empty())
             {
@@ -196,11 +249,8 @@ int32_t CliClient::terminal(std::string& command)
                     lastCommand = currentCommand;
                     add_history(sendBuffer); //Sets sendBuffer to nullptr
                 }
-                else
-                {
-                    free(sendBuffer);
-                    sendBuffer = nullptr;
-                }
+                free(sendBuffer);
+                sendBuffer = nullptr;
             }
             else currentCommand = command;
 
@@ -257,7 +307,7 @@ int32_t CliClient::terminal(std::string& command)
                 }
                 else
                 {
-                    uint64_t peerId = (uint64_t) BaseLib::Math::getNumber64(arguments.at(0));
+                    auto peerId = (uint64_t)BaseLib::Math::getNumber64(arguments.at(0));
 
                     Ipc::PArray parameters = std::make_shared<Ipc::Array>();
                     parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
@@ -301,7 +351,7 @@ int32_t CliClient::terminal(std::string& command)
 
                     _printEvents = true;
 
-                    int charCode = -1;
+                    int charCode;
                     do
                     {
                         charCode = std::getchar();
@@ -317,6 +367,11 @@ int32_t CliClient::terminal(std::string& command)
                     //}}}
                 }
             }
+            else if(BaseLib::HelperFunctions::checkCliCommand(currentCommand, "runscript", "rs", "", 0, arguments, showHelp) ||
+                    BaseLib::HelperFunctions::checkCliCommand(currentCommand, "runcommand", "rc", "", 0, arguments, showHelp))
+            {
+                invokeGeneralCommand(currentCommand);
+            }
             else if(_currentPeer != 0)
             {
                 Ipc::PArray parameters = std::make_shared<Ipc::Array>();
@@ -328,7 +383,7 @@ int32_t CliClient::terminal(std::string& command)
                 {
                     errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                 }
-                else standardOutputReference(result->stringValue);
+                else standardOutput(result->stringValue);
             }
             else if(_currentFamily != -1)
             {
@@ -341,7 +396,7 @@ int32_t CliClient::terminal(std::string& command)
                 {
                     errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
                 }
-                else standardOutputReference(result->stringValue);
+                else standardOutput(result->stringValue);
             }
             else
             {
@@ -354,11 +409,11 @@ int32_t CliClient::terminal(std::string& command)
                 }
                 else
                 {
-                    if(result->type == Ipc::VariableType::tString) standardOutputReference(result->stringValue);
+                    if(result->type == Ipc::VariableType::tString) standardOutput(result->stringValue);
                     else if(result->type == Ipc::VariableType::tStruct)
                     {
                         auto outputIterator = result->structValue->find("output");
-                        if(outputIterator != result->structValue->end()) standardOutputReference(outputIterator->second->stringValue);
+                        if(outputIterator != result->structValue->end()) standardOutput(outputIterator->second->stringValue);
 
                         if(!command.empty())
                         {
@@ -378,10 +433,31 @@ int32_t CliClient::terminal(std::string& command)
     {
         Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
+    safeHistory();
     return 0;
 }
 
-void CliClient::standardOutputReference(std::string& text)
+void CliClient::invokeGeneralCommand(const std::string& command)
+{
+    Ipc::PArray parameters = std::make_shared<Ipc::Array>();
+    parameters->push_back(std::make_shared<Ipc::Variable>(command));
+    Ipc::PVariable result = invoke("cliGeneralCommand", parameters);
+    if(result->errorStruct)
+    {
+        errorOutput("Error executing command: " + result->structValue->at("faultString")->stringValue + "\n");
+    }
+    else
+    {
+        if(result->type == Ipc::VariableType::tString) standardOutput(result->stringValue);
+        else if(result->type == Ipc::VariableType::tStruct)
+        {
+            auto outputIterator = result->structValue->find("output");
+            if(outputIterator != result->structValue->end()) standardOutput(outputIterator->second->stringValue);
+        }
+    }
+}
+
+void CliClient::standardOutput(const std::string& text)
 {
     try
     {
@@ -394,33 +470,7 @@ void CliClient::standardOutputReference(std::string& text)
     }
 }
 
-void CliClient::standardOutput(std::string text)
-{
-    try
-    {
-        std::lock_guard<std::mutex> outputGuard(_outputMutex);
-        std::cout << text;
-    }
-    catch(const std::exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-}
-
-void CliClient::errorOutputReference(std::string& text)
-{
-    try
-    {
-        std::lock_guard<std::mutex> outputGuard(_outputMutex);
-        std::cerr << text;
-    }
-    catch(const std::exception& ex)
-    {
-        Ipc::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-}
-
-void CliClient::errorOutput(std::string text)
+void CliClient::errorOutput(const std::string& text)
 {
     try
     {
@@ -469,20 +519,20 @@ Ipc::PVariable CliClient::broadcastEvent(Ipc::PArray& parameters)
 
         if(_printEvents)
         {
-            uint64_t peerId = (uint64_t) parameters->at(1)->integerValue64;
+            auto peerId = (uint64_t) parameters->at(1)->integerValue64;
 
             if(_currentPeer != 0 && peerId != _currentPeer) return std::make_shared<Ipc::Variable>();
             else if(_currentFamily != -1)
             {
                 if(peerId == 0) return std::make_shared<Ipc::Variable>();
-                auto parameters = std::make_shared<Ipc::Array>();
-                parameters->reserve(3);
-                parameters->push_back(std::make_shared<Ipc::Variable>(peerId));
-                parameters->push_back(std::make_shared<Ipc::Variable>(-1));
+                auto requestParameters = std::make_shared<Ipc::Array>();
+                requestParameters->reserve(3);
+                requestParameters->push_back(std::make_shared<Ipc::Variable>(peerId));
+                requestParameters->push_back(std::make_shared<Ipc::Variable>(-1));
                 auto fields = std::make_shared<Ipc::Variable>(Ipc::VariableType::tArray);
                 fields->arrayValue->push_back(std::make_shared<Ipc::Variable>(std::string("FAMILY")));
-                parameters->push_back(fields);
-                auto result = invoke("getDeviceDescription", parameters);
+                requestParameters->push_back(fields);
+                auto result = invoke("getDeviceDescription", requestParameters);
                 if(result->errorStruct || result->structValue->at("FAMILY")->integerValue != _currentFamily) return std::make_shared<Ipc::Variable>();
             }
 

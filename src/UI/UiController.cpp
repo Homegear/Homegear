@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -40,10 +40,7 @@ UiController::UiController()
     _descriptions = std::unique_ptr<BaseLib::DeviceDescription::UiElements>(new BaseLib::DeviceDescription::UiElements(GD::bl.get()));
 }
 
-UiController::~UiController()
-{
-
-}
+UiController::~UiController() = default;
 
 void UiController::load()
 {
@@ -60,6 +57,7 @@ void UiController::load()
             uiElement->databaseId = (uint64_t) row.second.at(0)->intValue;
             uiElement->elementId = row.second.at(1)->textValue;
             uiElement->data = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+            uiElement->metadata = row.second.at(3)->binaryValue->empty() ? std::make_shared<BaseLib::Variable>() : _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
 
             if(uiElement->databaseId == 0 || uiElement->elementId.empty()) continue;
 
@@ -79,24 +77,37 @@ void UiController::load()
     }
 }
 
-BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data)
+BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo, const std::string& elementId, const BaseLib::PVariable& data, const BaseLib::PVariable& metadata)
 {
     try
     {
         if(elementId.empty()) return BaseLib::Variable::createError(-1, "elementId is empty.");
         if(data->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "data is not of type Struct.");
 
+        BaseLib::PVariable dataCopy = data;
+        BaseLib::PVariable dynamicMetadata = metadata;
+        if(!dynamicMetadata || dynamicMetadata->structValue->empty())
+        {
+            auto metadataIterator = dataCopy->structValue->find("dynamicMetadata");
+            if(metadataIterator != dataCopy->structValue->end())
+            {
+                dynamicMetadata = metadataIterator->second;
+                dataCopy->structValue->erase("dynamicMetadata");
+            }
+        }
+
         std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
-        auto databaseId = GD::bl->db->addUiElement(elementId, data);
+        auto databaseId = GD::bl->db->addUiElement(elementId, dataCopy, dynamicMetadata);
 
         if(databaseId == 0) return BaseLib::Variable::createError(-1, "Error adding element to database.");
 
         auto uiElement = std::make_shared<UiElement>();
         uiElement->databaseId = databaseId;
         uiElement->elementId = elementId;
-        uiElement->data = data;
+        uiElement->data = dataCopy;
+        uiElement->metadata = dynamicMetadata;
 
-        addDataInfo(uiElement, data);
+        addDataInfo(uiElement, dataCopy);
 
         _uiElements.emplace(uiElement->databaseId, uiElement);
         _uiElementsByRoom[uiElement->roomId].emplace(uiElement);
@@ -104,6 +115,8 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
         {
             _uiElementsByCategory[categoryId].emplace(uiElement);
         }
+
+        requestUiRefresh(clientInfo, "");
 
         return std::make_shared<BaseLib::Variable>(databaseId);
     }
@@ -119,7 +132,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
     try
     {
         std::list<std::list<uint64_t>> roleIdsIn;
-        std::list<std::list<uint64_t>> roleIdsOut;
+        std::list<std::list<std::pair<uint64_t, BaseLib::PVariable>>> roleIdsOut;
 
         { //Get required role Ids
             auto roleIdsInIterator = uiInfo->structValue->find("roleIdsIn");
@@ -142,10 +155,20 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
             {
                 for(auto& roleIdOuter : *roleIdsOutIterator->second->arrayValue)
                 {
-                    std::list<uint64_t> roleIds;
+                    std::list<std::pair<uint64_t, BaseLib::PVariable>> roleIds;
                     for(auto& roleId : *roleIdOuter->arrayValue)
                     {
-                        roleIds.push_back(roleId->integerValue64);
+                        if(roleId->type == BaseLib::VariableType::tStruct)
+                        {
+                            auto roleIdIterator = roleId->structValue->find("id");
+                            auto valueIterator = roleId->structValue->find("value");
+                            if(roleIdIterator != roleId->structValue->end())
+                            {
+                                auto value = (valueIterator == roleId->structValue->end() ? BaseLib::PVariable() : valueIterator->second);
+                                roleIds.emplace_back(roleIdIterator->second->integerValue64, value);
+                            }
+                        }
+                        else roleIds.emplace_back(roleId->integerValue64, BaseLib::PVariable());
                     }
                     roleIdsOut.emplace_back(std::move(roleIds));
                 }
@@ -170,61 +193,99 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables for roles required by UI element.");
 
+                    size_t roleCount = 0;
+
                     auto channelIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
                     if(channelIterator != variables->structValue->end() && !channelIterator->second->structValue->empty())
                     {
-                        size_t roleCount = 0;
-
-                        for(auto& variableIterator : *channelIterator->second->structValue)
+                        auto variableIterator = channelIterator->second->structValue->find(variable->arrayValue->at(2)->stringValue);
+                        if(variableIterator != channelIterator->second->structValue->end())
                         {
-                            auto directionIterator = variableIterator.second->structValue->find("direction");
-                            if(directionIterator != variableIterator.second->structValue->end())
+                            bool wrongDirection = false;
+                            auto directionIterator = variableIterator->second->structValue->find("direction");
+                            if(directionIterator != variableIterator->second->structValue->end())
                             {
                                 if(directionIterator->second->integerValue64 == 1)
                                 {
-                                    GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input). Simple UI element creation is not possible.");
-                                    continue;
+                                    GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator->first + " does not have required direction (input). Simple UI element creation is not possible.");
+                                    wrongDirection = true;
                                 }
                             }
 
-                            roleCount++;
+                            if(!wrongDirection)
+                            {
+                                roleCount++;
 
-                            //Role in channel
-                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                //Role in variable
+                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator->first));
+                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                            }
+                        }
+
+                        if(roleCount == 0)
+                        {
+                            //Variable not found, look for alternative in channel
+                            for(auto& variableIterator2 : *channelIterator->second->structValue)
+                            {
+                                bool wrongDirection = false;
+                                auto directionIterator = variableIterator2.second->structValue->find("direction");
+                                if(directionIterator != variableIterator2.second->structValue->end())
+                                {
+                                    if(directionIterator->second->integerValue64 == 1)
+                                    {
+                                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator2.first + " does not have required direction (input). Simple UI element creation is not possible.");
+                                        wrongDirection = true;
+                                    }
+                                }
+
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
+
+                                    //Role in channel
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
+                            }
                         }
 
                         if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role (" + std::to_string(roleId) + ") exists multiple times in channel. Simple UI element creation is not possible.");
                     }
-                    else
+
+                    if(roleCount == 0)
                     {
                         //Role not in channel
-                        size_t roleCount = 0;
-
                         for(auto& channelIterator2 : *variables->structValue)
                         {
                             for(auto& variableIterator : *channelIterator2.second->structValue)
                             {
+                                bool wrongDirection = false;
                                 auto directionIterator = variableIterator.second->structValue->find("direction");
                                 if(directionIterator != variableIterator.second->structValue->end())
                                 {
                                     if(directionIterator->second->integerValue64 == 1)
                                     {
                                         GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
-                                        continue;
+                                        wrongDirection = true;
                                     }
                                 }
 
-                                roleCount++;
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
 
-                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
                             }
                         }
 
@@ -235,33 +296,37 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                             //Role not in device, try to find role in room
                             requestParameters->arrayValue->resize(1);
                             requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
-                            std::string methodName = "getRolesInRoom";
-                            auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                            if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
+                            std::string methodName2 = "getRolesInRoom";
+                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName2, requestParameters);
+                            if(variables2->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
 
-                            for(auto& deviceIterator : *variables->structValue)
+                            for(auto& deviceIterator : *variables2->structValue)
                             {
                                 for(auto& channelIterator2 : *deviceIterator.second->structValue)
                                 {
                                     for(auto& variableIterator : *channelIterator2.second->structValue)
                                     {
+                                        bool wrongDirection = false;
                                         auto directionIterator = variableIterator.second->structValue->find("direction");
                                         if(directionIterator != variableIterator.second->structValue->end())
                                         {
                                             if(directionIterator->second->integerValue64 == 1)
                                             {
                                                 GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + " of device " + deviceIterator.first + ". Simple UI element creation is not possible.");
-                                                continue;
+                                                wrongDirection = true;
                                             }
                                         }
 
-                                        roleCount++;
+                                        if(!wrongDirection)
+                                        {
+                                            roleCount++;
 
-                                        auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                        roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                        roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                        roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                        outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                        }
                                     }
                                 }
                             }
@@ -278,7 +343,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 inputPeers->arrayValue->emplace_back(std::move(outerArray));
             }
 
-            for(auto roleIdOuter : roleIdsOut)
+            for(const auto& roleIdOuter : roleIdsOut)
             {
                 auto outerArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 outerArray->arrayValue->reserve(roleIdOuter.size());
@@ -286,67 +351,107 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 {
                     BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                     requestParameters->arrayValue->reserve(2);
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
+                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId.first));
                     requestParameters->arrayValue->push_back(variable->arrayValue->at(0));
                     std::string methodName = "getVariablesInRole";
                     auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables for roles required by UI element.");
 
+                    size_t roleCount = 0;
+
                     auto channelIterator = variables->structValue->find(std::to_string(variable->arrayValue->at(1)->integerValue64));
                     if(channelIterator != variables->structValue->end() && !channelIterator->second->structValue->empty())
                     {
-                        size_t roleCount = 0;
-
-                        for(auto& variableIterator : *channelIterator->second->structValue)
+                        auto variableIterator = channelIterator->second->structValue->find(variable->arrayValue->at(2)->stringValue);
+                        if(variableIterator != channelIterator->second->structValue->end())
                         {
-                            auto directionIterator = variableIterator.second->structValue->find("direction");
-                            if(directionIterator != variableIterator.second->structValue->end())
+                            bool wrongDirection = false;
+                            auto directionIterator = variableIterator->second->structValue->find("direction");
+                            if(directionIterator != variableIterator->second->structValue->end())
                             {
                                 if(directionIterator->second->integerValue64 == 0)
                                 {
-                                    GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (output). Simple UI element creation is not possible.");
-                                    continue;
+                                    GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator->first + " does not have required direction (output). Simple UI element creation is not possible.");
+                                    wrongDirection = true;
                                 }
                             }
 
-                            roleCount++;
+                            if(!wrongDirection)
+                            {
+                                roleCount++;
 
-                            //Role in channel
-                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                //Role in channel
+                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator->first));
+                                if(roleId.second) roleVariable->structValue->emplace("value", roleId.second);
+                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                            }
                         }
 
-                        if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role (" + std::to_string(roleId) + ") exists multiple times in channel. Simple UI element creation is not possible.");
+                        if(roleCount == 0)
+                        {
+                            for(auto& variableIterator2 : *channelIterator->second->structValue)
+                            {
+                                bool wrongDirection = false;
+                                auto directionIterator = variableIterator2.second->structValue->find("direction");
+                                if(directionIterator != variableIterator2.second->structValue->end())
+                                {
+                                    if(directionIterator->second->integerValue64 == 0)
+                                    {
+                                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator2.first + " does not have required direction (output). Simple UI element creation is not possible.");
+                                        wrongDirection = true;
+                                    }
+                                }
+
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
+
+                                    //Role in channel
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                                    if(roleId.second) roleVariable->structValue->emplace("value", roleId.second);
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
+                            }
+                        }
+
+                        if(roleCount > 1) return BaseLib::Variable::createError(-1, "Required role (" + std::to_string(roleId.first) + ") exists multiple times in channel. Simple UI element creation is not possible.");
                     }
-                    else
+
+                    if(roleCount == 0)
                     {
                         //Role not in channel
-                        size_t roleCount = 0;
-
                         for(auto& channelIterator2 : *variables->structValue)
                         {
                             for(auto& variableIterator : *channelIterator2.second->structValue)
                             {
+                                bool wrongDirection = false;
                                 auto directionIterator = variableIterator.second->structValue->find("direction");
                                 if(directionIterator != variableIterator.second->structValue->end())
                                 {
                                     if(directionIterator->second->integerValue64 == 0)
                                     {
-                                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
-                                        continue;
+                                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
+                                        wrongDirection = true;
                                     }
                                 }
 
-                                roleCount++;
+                                if(!wrongDirection)
+                                {
+                                    roleCount++;
 
-                                auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                    if(roleId.second) roleVariable->structValue->emplace("value", roleId.second);
+                                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                }
                             }
                         }
 
@@ -357,33 +462,38 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                             //Role not in device, try to find role in room
                             requestParameters->arrayValue->resize(1);
                             requestParameters->arrayValue->at(0) = std::make_shared<BaseLib::Variable>(roomId);
-                            std::string methodName = "getRolesInRoom";
-                            auto variables = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                            if(variables->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
+                            std::string methodName2 = "getRolesInRoom";
+                            auto variables2 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName2, requestParameters);
+                            if(variables2->errorStruct) return BaseLib::Variable::createError(-1, "Error getting roles in room.");
 
-                            for(auto& deviceIterator : *variables->structValue)
+                            for(auto& deviceIterator : *variables2->structValue)
                             {
                                 for(auto& channelIterator2 : *deviceIterator.second->structValue)
                                 {
                                     for(auto& variableIterator : *channelIterator2.second->structValue)
                                     {
+                                        bool wrongDirection = false;
                                         auto directionIterator = variableIterator.second->structValue->find("direction");
                                         if(directionIterator != variableIterator.second->structValue->end())
                                         {
                                             if(directionIterator->second->integerValue64 == 0)
                                             {
-                                                GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first + ". Simple UI element creation is not possible.");
-                                                continue;
+                                                GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first + ". Simple UI element creation is not possible.");
+                                                wrongDirection = true;
                                             }
                                         }
 
-                                        roleCount++;
+                                        if(!wrongDirection)
+                                        {
+                                            roleCount++;
 
-                                        auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                        roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                                        roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                                        roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                                        outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                            auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                            roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                                            roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                                            roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                                            if(roleId.second) roleVariable->structValue->emplace("value", roleId.second);
+                                            outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                                        }
                                     }
                                 }
                             }
@@ -393,7 +503,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
 
                         if(roleCount == 0)
                         {
-                            return BaseLib::Variable::createError(-1, "Required role \"" + std::to_string(roleId) + "\" not found in device or room. Simple UI element creation is not possible.");
+                            return BaseLib::Variable::createError(-1, "Required role \"" + std::to_string(roleId.first) + "\" not found in device or room. Simple UI element creation is not possible.");
                         }
                     }
                 }
@@ -414,9 +524,21 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
 {
     try
     {
+        BaseLib::PVariable dryrunStruct;
+        if(dryRun)
+        {
+            dryrunStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            dryrunStruct->structValue->emplace("visualizable", std::make_shared<BaseLib::Variable>(false));
+        }
+
         if(variable->arrayValue->size() < 3)
         {
-            return BaseLib::Variable::createError(-1, "No variables were passed.");
+            if(dryRun)
+            {
+                dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("No variables were passed."));
+                return dryrunStruct;
+            }
+            else return BaseLib::Variable::createError(-1, "No variables were passed.");
         }
 
         std::set<uint64_t> roleIds;
@@ -434,9 +556,25 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
             requestParameters->arrayValue->push_back(fields);
             std::string methodName = "getVariableDescription";
             auto variableDescription = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-            if(variableDescription->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variable description. Are you authorized to access the variable?");
+            if(variableDescription->errorStruct)
+            {
+                if(dryRun)
+                {
+                    dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Error getting variable description. Are you authorized to access the variable?"));
+                    return dryrunStruct;
+                }
+                else return BaseLib::Variable::createError(-1, "Error getting variable description. Are you authorized to access the variable?");
+            }
             auto rolesIterator = variableDescription->structValue->find("ROLES");
-            if(rolesIterator == variableDescription->structValue->end() || rolesIterator->second->arrayValue->empty()) return BaseLib::Variable::createError(-1, "Variable has no roles.");
+            if(rolesIterator == variableDescription->structValue->end() || rolesIterator->second->arrayValue->empty())
+            {
+                if(dryRun)
+                {
+                    dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Variable has no roles."));
+                    return dryrunStruct;
+                }
+                else return BaseLib::Variable::createError(-1, "Variable has no roles.");
+            }
             for(auto& role : *rolesIterator->second->arrayValue)
             {
                 auto idIterator = role->structValue->find("id");
@@ -452,9 +590,17 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 fields->arrayValue->resize(1);
                 requestParameters->arrayValue->at(2) = fields;
                 requestParameters->arrayValue->resize(3);
-                std::string methodName = "getDeviceDescription";
+                methodName = "getDeviceDescription";
                 auto deviceDescription = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                if(deviceDescription->errorStruct) return BaseLib::Variable::createError(-1, "Error getting device description. Are you authorized to access the device?");
+                if(deviceDescription->errorStruct)
+                {
+                    if(dryRun)
+                    {
+                        dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Error getting device description. Are you authorized to access the device?"));
+                        return dryrunStruct;
+                    }
+                    else return BaseLib::Variable::createError(-1, "Error getting device description. Are you authorized to access the device?");
+                }
                 roomIterator = deviceDescription->structValue->find("ROOM");
                 if(roomIterator != deviceDescription->structValue->end() && roomIterator->second->integerValue64 > 0)
                 {
@@ -464,7 +610,15 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 {
                     requestParameters->arrayValue->at(1) = std::make_shared<BaseLib::Variable>(-1);
                     deviceDescription = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                    if(deviceDescription->errorStruct) return BaseLib::Variable::createError(-1, "Error getting device description. Are you authorized to access the device?");
+                    if(deviceDescription->errorStruct)
+                    {
+                        if(dryRun)
+                        {
+                            dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Error getting device description. Are you authorized to access the device?"));
+                            return dryrunStruct;
+                        }
+                        else return BaseLib::Variable::createError(-1, "Error getting device description. Are you authorized to access the device?");
+                    }
                     roomIterator = deviceDescription->structValue->find("ROOM");
                     if(roomIterator != deviceDescription->structValue->end())
                     {
@@ -474,7 +628,15 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
             }
         }
 
-        if(roomId == 0) return BaseLib::Variable::createError(-1, "Variable, channel and device have no room assigned.");
+        if(roomId == 0)
+        {
+            if(dryRun)
+            {
+                dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Variable, channel and device have no room assigned."));
+                return dryrunStruct;
+            }
+            else return BaseLib::Variable::createError(-1, "Variable, channel and device have no room assigned.");
+        }
 
         BaseLib::PVariable roleMetadata;
         BaseLib::PVariable uiInfo;
@@ -494,9 +656,25 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
             if(simpleCreationIterator == uiIterator->second->structValue->end()) continue;
             if(uiRole == 0) uiRole = roleId;
             if(!uiInfo) uiInfo = simpleCreationIterator->second;
-            else if(uiRole != roleId) return BaseLib::Variable::createError(-1, "Variable has more than one role with UI definition. UI element creation is not possible.");
+            else if(uiRole != roleId)
+            {
+                if(dryRun)
+                {
+                    dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Variable has more than one role with UI definition."));
+                    return dryrunStruct;
+                }
+                else return BaseLib::Variable::createError(-1, "Variable has more than one role with UI definition. UI element creation is not possible.");
+            }
         }
-        if(!uiInfo) return BaseLib::Variable::createError(-1, "Role has no UI definition.");
+        if(!uiInfo)
+        {
+            if(dryRun)
+            {
+                dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Role has no UI definition."));
+                return dryrunStruct;
+            }
+            else return BaseLib::Variable::createError(-1, "Role has no UI definition.");
+        }
 
         auto inputPeers = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
         auto outputPeers = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
@@ -515,15 +693,38 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 }
                 else GD::out.printInfo("Info: No match for UI definition. Reason: " + result->structValue->at("faultString")->stringValue);
             }
-            if(!found) return BaseLib::Variable::createError(-1, "Could not find a matching variable set.");
-
+            if(!found)
+            {
+                if(dryRun)
+                {
+                    dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Could not find a matching variable set."));
+                    return dryrunStruct;
+                }
+                else return BaseLib::Variable::createError(-1, "Could not find a matching variable set.");
+            }
         }
         else if(uiInfo->type == BaseLib::VariableType::tStruct)
         {
             auto result = findRoleVariables(clientInfo, uiInfo, variable, roomId, inputPeers, outputPeers);
-            if(result->errorStruct) return result;
+            if(result->errorStruct)
+            {
+                if(dryRun)
+                {
+                    dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>(result->structValue->at("faultString")->stringValue));
+                    return dryrunStruct;
+                }
+                else return result;
+            }
         }
-        else return BaseLib::Variable::createError(-1, "UI definition has unknown type.");
+        else
+        {
+            if(dryRun)
+            {
+                dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("UI definition has unknown type."));
+                return dryrunStruct;
+            }
+            else return BaseLib::Variable::createError(-1, "UI definition has unknown type.");
+        }
 
         std::string elementId;
 
@@ -531,7 +732,12 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
             auto elementIdIterator = uiInfo->structValue->find("element");
             if(elementIdIterator == uiInfo->structValue->end() || elementIdIterator->second->stringValue.empty())
             {
-                return BaseLib::Variable::createError(-1, "Role is missing key \"element\" containing the UI element ID.");
+                if(dryRun)
+                {
+                    dryrunStruct->structValue->emplace("reason", std::make_shared<BaseLib::Variable>("Role is missing key \"element\" containing the UI element ID."));
+                    return dryrunStruct;
+                }
+                else return BaseLib::Variable::createError(-1, "Role is missing key \"element\" containing the UI element ID.");
             }
             elementId = elementIdIterator->second->stringValue;
         }
@@ -555,9 +761,25 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
                 addUiElementData->structValue->emplace("metadata", metadata);
             }
 
-            return addUiElement(clientInfo, elementId, addUiElementData);
+            return addUiElement(clientInfo, elementId, addUiElementData, std::make_shared<BaseLib::Variable>());
         }
-        else return std::make_shared<BaseLib::Variable>();
+        else
+        {
+            dryrunStruct->structValue->at("visualizable")->booleanValue = true;
+            auto uiElementsWithVariable = getUiElementsWithVariable(variable->arrayValue->at(0)->integerValue64, variable->arrayValue->at(1)->integerValue, variable->arrayValue->at(2)->stringValue);
+            dryrunStruct->structValue->emplace("visualized", std::make_shared<BaseLib::Variable>(!uiElementsWithVariable.empty()));
+            if(!uiElementsWithVariable.empty())
+            {
+                auto uiElementsWithVariableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                uiElementsWithVariableArray->arrayValue->reserve(uiElementsWithVariable.size());
+                for(auto& element : uiElementsWithVariable)
+                {
+                    uiElementsWithVariableArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(element));
+                }
+                dryrunStruct->structValue->emplace("uiElements", uiElementsWithVariableArray);
+            }
+            return dryrunStruct;
+        }
     }
     catch(const std::exception& ex)
     {
@@ -566,7 +788,7 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void UiController::addDataInfo(UiController::PUiElement& uiElement, BaseLib::PVariable& data)
+void UiController::addDataInfo(UiController::PUiElement& uiElement, const BaseLib::PVariable& data)
 {
     try
     {
@@ -853,9 +1075,9 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
-                    };
+                    }
                 }
             }
 
@@ -869,9 +1091,9 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
-                    };
+                    }
                 }
             }
             //}}}
@@ -887,6 +1109,8 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo&
                     metadataIterator->second->structValue->emplace(metadataElement);
                 }
             }
+
+            elementInfo->structValue->emplace("dynamicMetadata", uiElement->metadata);
 
             uiElements->arrayValue->emplace_back(elementInfo);
         }
@@ -905,6 +1129,23 @@ BaseLib::PVariable UiController::getAvailableUiElements(const BaseLib::PRpcClien
     try
     {
         return _descriptions->getUiElements(language);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::getUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId)
+{
+    try
+    {
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+        auto elementIterator = _uiElements.find(databaseId);
+        if(elementIterator == _uiElements.end()) return BaseLib::Variable::createError(-2, "Unknown element.");
+
+        return elementIterator->second->metadata;
     }
     catch(const std::exception& ex)
     {
@@ -965,7 +1206,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
                     }
                 }
@@ -981,7 +1222,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     }
                 }
@@ -1052,7 +1293,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableInputsIterator = control->structValue->find("variableInputs");
+                        variableInputsIterator= control->structValue->find("variableInputs");
                         if(variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
                     }
                 }
@@ -1068,7 +1309,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
                 {
                     for(auto& control : *controlsIterator->second->arrayValue)
                     {
-                        auto variableOutputsIterator = control->structValue->find("variableOutputs");
+                        variableOutputsIterator= control->structValue->find("variableOutputs");
                         if(variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
                     }
                 }
@@ -1152,6 +1393,21 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo,
     return false;
 }
 
+BaseLib::PVariable UiController::requestUiRefresh(const BaseLib::PRpcClientInfo& clientInfo, const std::string& id)
+{
+    try
+    {
+        GD::rpcClient->broadcastRequestUiRefresh(id);
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId)
 {
     try
@@ -1197,6 +1453,8 @@ BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo& 
 
         _uiElements.erase(elementIterator);
 
+        requestUiRefresh(clientInfo, "");
+
         return std::make_shared<BaseLib::Variable>();
     }
     catch(const std::exception& ex)
@@ -1204,6 +1462,74 @@ BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo& 
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId, const BaseLib::PVariable& metadata)
+{
+    try
+    {
+        {
+            std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+            auto elementIterator = _uiElements.find(databaseId);
+            if(elementIterator == _uiElements.end()) return BaseLib::Variable::createError(-2, "Unknown element.");
+
+            elementIterator->second->metadata = metadata;
+        }
+
+        GD::bl->db->setUiElementMetadata(databaseId, metadata);
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::unordered_set<uint64_t> UiController::getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string& variableName)
+{
+    try
+    {
+        std::unordered_set<uint64_t> result;
+
+        std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+        for(auto& uiElement : _uiElements)
+        {
+            bool found = false;
+            for(auto& inputPeers : uiElement.second->peerInfo->inputPeers)
+            {
+                for(auto& inputPeer : inputPeers)
+                {
+                    if(inputPeer->peerId == peerId && inputPeer->channel == channel && inputPeer->name == variableName)
+                    {
+                        result.emplace(uiElement.first);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if(found) continue;
+
+            for(auto& outputPeers : uiElement.second->peerInfo->outputPeers)
+            {
+                for(auto& outputPeer : outputPeers)
+                {
+                    if(outputPeer->peerId == peerId && outputPeer->channel == channel && outputPeer->name == variableName)
+                    {
+                        result.emplace(uiElement.first);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return std::unordered_set<uint64_t>();
 }
 
 }

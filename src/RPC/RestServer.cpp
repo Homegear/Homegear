@@ -1,6 +1,8 @@
 #include "../GD/GD.h"
 #include "RestServer.h"
 
+#include <memory>
+
 namespace Homegear
 {
 
@@ -19,18 +21,16 @@ RestServer::RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverIn
     _out.setPrefix("REST server (Port " + std::to_string(serverInfo->port) + "): ");
 }
 
-RestServer::~RestServer()
-{
-}
+RestServer::~RestServer() = default;
 
 void RestServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content)
 {
     try
     {
         std::vector<std::string> additionalHeaders;
-        std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::homegearVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
+        std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::baseLibVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
         std::string header;
-        _http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
+        BaseLib::Http::constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
         content.insert(content.end(), header.begin(), header.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
     }
@@ -48,9 +48,9 @@ void RestServer::getError(int32_t code, std::string codeDescription, std::string
 {
     try
     {
-        std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::homegearVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
+        std::string contentString = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear " + GD::baseLibVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
         std::string header;
-        _http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
+        BaseLib::Http::constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
         content.insert(content.end(), header.begin(), header.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
     }
@@ -92,8 +92,8 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
 
         if(parts.at(2) != "v1")
         {
-            contentString = "{\"result\":\"error\",\"message\":\"Unknown API version.\"}";
-            _http.constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
+            contentString = R"({"result":"error","message":"Unknown API version."})";
+            BaseLib::Http::constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
             content.insert(content.end(), header.begin(), header.end());
             content.insert(content.end(), contentString.begin(), contentString.end());
             send(socket, content);
@@ -120,12 +120,12 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 GD::out.printInfo("Info: REST RPC call received. Method: getValue");
                 BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                 parameters->arrayValue->reserve(3);
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>((uint32_t) peerId));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(typeOrVariable));
                 std::string methodName = "getValue";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
+                if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
                 else
                 {
                     BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -150,12 +150,12 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 GD::out.printInfo("Info: REST RPC call received. Method: getParamset");
                 BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                 parameters->arrayValue->reserve(3);
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));;
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>((uint32_t) peerId));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(typeOrVariable));
                 std::string methodName = "getParamset";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
+                if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
                 else
                 {
                     BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -170,7 +170,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                 std::string methodName = "listFamilies";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
+                if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
                 else
                 {
                     BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -181,19 +181,81 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
             }
             else if(request == "devices")
             {
-                GD::out.printInfo("Info: REST RPC call received. Method: listDevices");
-                BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                parameters->arrayValue->reserve(1);
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(false)));
-                std::string methodName = "listDevices";
-                BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
+                if(parts.size() > 4)
+                {
+                    if(parts.at(4) == "create")
+                    {
+                        auto queryParameters = http.getParsedQueryString();
+                        auto queryParameter = queryParameters.find("devicecode");
+                        if(queryParameter != queryParameters.end() && !queryParameter->second.empty())
+                        {
+                            GD::out.printInfo("Info: REST RPC call received. Method: createDevice");
+                            BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+                            parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::Http::decodeURL(queryParameter->second)));
+                            std::string methodName = "createDevice";
+                            BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                            //if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
+                            //else
+                            //{
+                                queryParameter = queryParameters.find("redirectToAdminUi");
+                                if(queryParameter != queryParameters.end())
+                                {
+                                    std::string redirectResponse = "HTTP/1.1 302 Found\r\nLocation: /admin/inventory/devices/edit/config/" + std::to_string((uint64_t)response->integerValue64) + "\r\n\r\n";
+                                    std::vector<char> redirectPacket(redirectResponse.begin(), redirectResponse.end());
+                                    send(socket, redirectPacket);
+                                    return;
+                                }
+                                else
+                                {
+                                    queryParameter = queryParameters.find("redirectToApp");
+                                    if(queryParameter != queryParameters.end())
+                                    {
+                                        std::string resultString = "success";
+                                        if(response->errorStruct)
+                                        {
+                                            if(response->structValue->at("faultCode")->integerValue == -5)
+                                            {
+                                                resultString = "alreadyPaired";
+                                            }
+                                            else if(response->structValue->at("faultCode")->integerValue == -2)
+                                            {
+                                                resultString = "startedInBackground";
+                                            }
+                                            else resultString = "error";
+                                        }
+                                        else resultString = "success&peerId=" + std::to_string((uint64_t)response->integerValue64);
+                                        std::string redirectResponse = "HTTP/1.1 302 Found\r\nLocation: hgscan://hgaccess/?result=" + resultString + "\r\n\r\n";
+                                        std::vector<char> redirectPacket(redirectResponse.begin(), redirectResponse.end());
+                                        send(socket, redirectPacket);
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                        responseJson->structValue->emplace("result", std::make_shared<BaseLib::Variable>("success"));
+                                        responseJson->structValue->emplace("value", response);
+                                        _jsonEncoder->encode(responseJson, contentString);
+                                    }
+                                }
+                            //}
+                        }
+                    }
+                }
                 else
                 {
-                    BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                    responseJson->structValue->emplace("result", std::make_shared<BaseLib::Variable>("success"));
-                    responseJson->structValue->emplace("value", response);
-                    _jsonEncoder->encode(responseJson, contentString);
+                    GD::out.printInfo("Info: REST RPC call received. Method: listDevices");
+                    BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+                    parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(false));
+                    std::string methodName = "listDevices";
+                    BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
+                    if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
+                    else
+                    {
+                        BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                        responseJson->structValue->emplace("result", std::make_shared<BaseLib::Variable>("success"));
+                        responseJson->structValue->emplace("value", response);
+                        _jsonEncoder->encode(responseJson, contentString);
+                    }
                 }
             }
             else if(request == "channels")
@@ -201,10 +263,10 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 GD::out.printInfo("Info: REST RPC call received. Method: listDevices (with channels)");
                 BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                 parameters->arrayValue->reserve(1);
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(true)));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(true));
                 std::string methodName = "listDevices";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
+                if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
                 else
                 {
                     BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -228,9 +290,9 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 GD::out.printInfo("Info: REST RPC call received. Method: getParamset");
                 BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                 parameters->arrayValue->reserve(3);
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(peerId)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable("MASTER")));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerId));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("MASTER"));
                 std::string methodName = "getParamsetDescription";
                 BaseLib::PVariable response1 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
                 parameters->arrayValue->at(2)->stringValue = "LINK";
@@ -238,7 +300,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 parameters->arrayValue->at(2)->stringValue = "VALUES";
                 BaseLib::PVariable response3 = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
 
-                if(response1->errorStruct && response2->errorStruct && response3->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response1->structValue->at("faultString")->stringValue + "\"}";
+                if(response1->errorStruct && response2->errorStruct && response3->errorStruct) contentString = R"({"result":"error","message":")" + response1->structValue->at("faultString")->stringValue + "\"}";
                 else
                 {
                     if(response1->errorStruct) response1 = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -258,7 +320,7 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
             }
             else
             {
-                contentString = "{\"result\":\"error\",\"message\":\"Unknown method.\"}";
+                contentString = R"({"result":"error","message":"Unknown method."})";
             }
         }
         else if(http.getHeader().method == "POST" || http.getHeader().method == "PUT")
@@ -292,19 +354,19 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 GD::out.printInfo("Info: REST RPC call received. Method: setValue");
 
                 auto structIterator = json->structValue->find("value");
-                if(structIterator == json->structValue->end()) contentString = "{\"result\":\"error\",\"message\":\"No value specified.\"}";
+                if(structIterator == json->structValue->end()) contentString = R"({"result":"error","message":"No value specified."})";
                 else
                 {
                     BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                     parameters->arrayValue->reserve(4);
-                    parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
-                    parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                    parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
+                    parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>((uint32_t) peerId));
+                    parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
+                    parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(typeOrVariable));
                     parameters->arrayValue->push_back(structIterator->second);
                     std::string methodName = "setValue";
                     BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                    if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
-                    else contentString = "{\"result\":\"success\"}";
+                    if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
+                    else contentString = R"({"result":"success"})";
                 }
             }
             else if(request == "config")
@@ -323,22 +385,22 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                 GD::out.printInfo("Info: REST RPC call received. Method: putParamset");
                 BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
                 parameters->arrayValue->reserve(4);
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((uint32_t) peerId)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-                parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(typeOrVariable)));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>((uint32_t) peerId));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channel));
+                parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(typeOrVariable));
                 parameters->arrayValue->push_back(json);
                 std::string methodName = "putParamset";
                 BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                if(response->errorStruct) contentString = "{\"result\":\"error\",\"message\":\"" + response->structValue->at("faultString")->stringValue + "\"}";
-                else contentString = "{\"result\":\"success\"}";
+                if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
+                else contentString = R"({"result":"success"})";
             }
             else
             {
-                contentString = "{\"result\":\"error\",\"message\":\"Unknown method.\"}";
+                contentString = R"({"result":"error","message":"Unknown method."})";
             }
         }
 
-        _http.constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
+        BaseLib::Http::constructHeader(contentString.size(), contentType, 200, "OK", headers, header);
         content.insert(content.end(), header.begin(), header.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
         send(socket, content);

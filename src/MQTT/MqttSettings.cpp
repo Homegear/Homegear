@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -48,6 +48,7 @@ void MqttSettings::reset()
 	_homegearId = "";
 	_username = "";
 	_password = "";
+	_qos = 1;
 	_retain = true;
 	_enableSSL = false;
 	_caFile = "";
@@ -162,6 +163,12 @@ void MqttSettings::load(std::string filename)
 					_password = value;
 					GD::bl->out.printDebug("Debug (MQTT settings): password set to " + _password);
 				}
+                else if(name == "qos")
+                {
+                    _qos = BaseLib::Math::getUnsignedNumber(value);
+                    if(_qos > 1) _qos = 1;
+                    GD::bl->out.printDebug("Debug (MQTT settings): qos set to " + std::to_string(_qos));
+                }
 				else if(name == "retain")
 				{
 					if(BaseLib::HelperFunctions::toLower(value) == "false") _retain = false;
