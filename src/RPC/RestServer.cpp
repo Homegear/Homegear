@@ -194,9 +194,9 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                             parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::Http::decodeURL(queryParameter->second)));
                             std::string methodName = "createDevice";
                             BaseLib::PVariable response = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, parameters);
-                            if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
-                            else
-                            {
+                            //if(response->errorStruct) contentString = R"({"result":"error","message":")" + response->structValue->at("faultString")->stringValue + "\"}";
+                            //else
+                            //{
                                 queryParameter = queryParameters.find("redirectToAdminUi");
                                 if(queryParameter != queryParameters.end())
                                 {
@@ -207,12 +207,37 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http
                                 }
                                 else
                                 {
-                                    BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                                    responseJson->structValue->emplace("result", std::make_shared<BaseLib::Variable>("success"));
-                                    responseJson->structValue->emplace("value", response);
-                                    _jsonEncoder->encode(responseJson, contentString);
+                                    queryParameter = queryParameters.find("redirectToApp");
+                                    if(queryParameter != queryParameters.end())
+                                    {
+                                        std::string resultString = "success";
+                                        if(response->errorStruct)
+                                        {
+                                            if(response->structValue->at("faultCode")->integerValue == -5)
+                                            {
+                                                resultString = "alreadyPaired";
+                                            }
+                                            else if(response->structValue->at("faultCode")->integerValue == -2)
+                                            {
+                                                resultString = "startedInBackground";
+                                            }
+                                            else resultString = "error";
+                                        }
+                                        else resultString = "success&peerId=" + std::to_string((uint64_t)response->integerValue64);
+                                        std::string redirectResponse = "HTTP/1.1 302 Found\r\nLocation: hgscan://hgaccess/?result=" + resultString + "\r\n\r\n";
+                                        std::vector<char> redirectPacket(redirectResponse.begin(), redirectResponse.end());
+                                        send(socket, redirectPacket);
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        BaseLib::PVariable responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                                        responseJson->structValue->emplace("result", std::make_shared<BaseLib::Variable>("success"));
+                                        responseJson->structValue->emplace("value", response);
+                                        _jsonEncoder->encode(responseJson, contentString);
+                                    }
                                 }
-                            }
+                            //}
                         }
                     }
                 }
