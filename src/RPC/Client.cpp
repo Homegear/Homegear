@@ -31,6 +31,8 @@
 #include "Client.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
+
+#include <memory>
 #include "../MQTT/Mqtt.h"
 
 namespace Homegear
@@ -522,13 +524,13 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string>& address)
     }
 }
 
-void Client::sendError(std::pair<std::string, std::string> address, int32_t level, std::string message)
+void Client::sendError(const std::pair<std::string, std::string>& address, int32_t level, const std::string& message)
 {
     try
     {
         std::shared_ptr<RemoteRpcServer> server = getServer(address);
         if(!server) return;
-        if(!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end()) return;
+        if(!server->newFormat || (!server->knownMethods.empty() && server->knownMethods.find("error") == server->knownMethods.end())) return;
         if(!server->getServerClientInfo()->acls->checkEventServerMethodAccess("error")) return;
         std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
         if(!server->getServerClientInfo()->sendEventsToRpcServer)
@@ -536,9 +538,9 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
             parameters->push_back(std::make_shared<BaseLib::Variable>(server->id));
         }
         else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
-        parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
-        parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(message)));
-        server->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("error", parameters)));
+        parameters->push_back(std::make_shared<BaseLib::Variable>(level));
+        parameters->push_back(std::make_shared<BaseLib::Variable>(message));
+        server->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("error", parameters));
     }
     catch(const std::exception& ex)
     {
@@ -546,14 +548,14 @@ void Client::sendError(std::pair<std::string, std::string> address, int32_t leve
     }
 }
 
-void Client::broadcastError(int32_t level, std::string message)
+void Client::broadcastError(int32_t level, const std::string& message)
 {
     try
     {
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
+            if(!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("error") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("error")) continue;
             std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
             if(!server->second->getServerClientInfo()->sendEventsToRpcServer)
@@ -561,9 +563,9 @@ void Client::broadcastError(int32_t level, std::string message)
                 parameters->push_back(std::make_shared<BaseLib::Variable>(server->second->id));
             }
             else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(level)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(message)));
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("error", parameters)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(level));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(message));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("error", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -649,7 +651,7 @@ void Client::broadcastNewEvent(BaseLib::PVariable eventDescription)
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("newEvent") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("newEvent")) continue;
             std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
             parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
@@ -688,7 +690,7 @@ void Client::broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariab
             else parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
             if(server->second->newFormat) parameters->push_back(deviceInfo);
             else parameters->push_back(deviceAddresses);
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("deleteDevices", parameters)));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("deleteDevices", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -705,16 +707,16 @@ void Client::broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID,
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("deleteEvent") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("deleteEvent")) continue;
             std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
             parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) type)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) peerID)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(channel)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(variable)));
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("deleteEvent", parameters)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(id));
+            parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t) type));
+            parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t) peerID));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(channel));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(variable));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("deleteEvent", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -785,12 +787,12 @@ void Client::broadcastVariableProfileStateChanged(uint64_t profileId, bool state
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("variableProfileStateChanged") == server->second->knownMethods.end())) continue;
+            if(!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("variableProfileStateChanged") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("variableProfileStateChanged")) continue;
             auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
             parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
             parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("variableProfileStateChanged", parameters)));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("variableProfileStateChanged", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -806,11 +808,11 @@ void Client::broadcastRequestUiRefresh(const std::string& id)
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("requestUiRefresh") == server->second->knownMethods.end())) continue;
+            if(!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("requestUiRefresh") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("requestUiRefresh")) continue;
             auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
             parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("requestUiRefresh", parameters)));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("requestUiRefresh", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -827,16 +829,16 @@ void Client::broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID,
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateEvent") == server->second->knownMethods.end())) continue;
+            if(!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("updateEvent") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("updateEvent")) continue;
             std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
             parameters->push_back(std::make_shared<BaseLib::Variable>("homegear"));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(id)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) type)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) peerID)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) channel)));
-            parameters->push_back(BaseLib::PVariable(new BaseLib::Variable(variable)));
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("updateEvent", parameters)));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(id));
+            parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t) type));
+            parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t) peerID));
+            parameters->push_back(std::make_shared<BaseLib::Variable>((int32_t) channel));
+            parameters->push_back(std::make_shared<BaseLib::Variable>(variable));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("updateEvent", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -853,11 +855,11 @@ void Client::broadcastPtyOutput(std::string& output)
         std::lock_guard<std::mutex> serversGuard(_serversMutex);
         for(std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server)
         {
-            if(!server->second->webSocket || !server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("ptyOutput") == server->second->knownMethods.end())) continue;
+            if(!server->second->webSocket || !server->second->newFormat || !server->second->initialized || (!server->second->knownMethods.empty() && server->second->knownMethods.find("ptyOutput") == server->second->knownMethods.end())) continue;
             if(!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("ptyOutput")) continue;
             std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
             parameters->push_back(std::make_shared<BaseLib::Variable>(output));
-            server->second->queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(new std::pair<std::string, std::shared_ptr<BaseLib::List>>("ptyOutput", parameters)));
+            server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("ptyOutput", parameters));
         }
     }
     catch(const std::exception& ex)
@@ -1233,24 +1235,24 @@ BaseLib::PVariable Client::listClientServers(std::string id)
         for(std::vector<std::shared_ptr<RemoteRpcServer>>::iterator i = servers.begin(); i != servers.end(); ++i)
         {
             BaseLib::PVariable serverInfo(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-            serverInfo->structValue->insert(BaseLib::StructElement("INTERFACE_ID", BaseLib::PVariable(new BaseLib::Variable((*i)->id))));
-            serverInfo->structValue->insert(BaseLib::StructElement("HOSTNAME", BaseLib::PVariable(new BaseLib::Variable((*i)->hostname))));
-            serverInfo->structValue->insert(BaseLib::StructElement("PORT", BaseLib::PVariable(new BaseLib::Variable((*i)->address.second))));
-            serverInfo->structValue->insert(BaseLib::StructElement("PATH", BaseLib::PVariable(new BaseLib::Variable((*i)->path))));
-            serverInfo->structValue->insert(BaseLib::StructElement("SINGLE_CONNECTION", BaseLib::PVariable(new BaseLib::Variable((*i)->getServerClientInfo()->sendEventsToRpcServer))));
-            serverInfo->structValue->insert(BaseLib::StructElement("SSL", BaseLib::PVariable(new BaseLib::Variable((*i)->useSSL))));
-            serverInfo->structValue->insert(BaseLib::StructElement("BINARY", BaseLib::PVariable(new BaseLib::Variable((*i)->binary))));
-            serverInfo->structValue->insert(BaseLib::StructElement("WEBSOCKET", BaseLib::PVariable(new BaseLib::Variable((*i)->webSocket))));
-            serverInfo->structValue->insert(BaseLib::StructElement("KEEP_ALIVE", BaseLib::PVariable(new BaseLib::Variable((*i)->keepAlive))));
-            serverInfo->structValue->insert(BaseLib::StructElement("NEW_FORMAT", BaseLib::PVariable(new BaseLib::Variable((*i)->newFormat))));
+            serverInfo->structValue->insert(BaseLib::StructElement("INTERFACE_ID", std::make_shared<BaseLib::Variable>((*i)->id)));
+            serverInfo->structValue->insert(BaseLib::StructElement("HOSTNAME", std::make_shared<BaseLib::Variable>((*i)->hostname)));
+            serverInfo->structValue->insert(BaseLib::StructElement("PORT", std::make_shared<BaseLib::Variable>((*i)->address.second)));
+            serverInfo->structValue->insert(BaseLib::StructElement("PATH", std::make_shared<BaseLib::Variable>((*i)->path)));
+            serverInfo->structValue->insert(BaseLib::StructElement("SINGLE_CONNECTION", std::make_shared<BaseLib::Variable>((*i)->getServerClientInfo()->sendEventsToRpcServer)));
+            serverInfo->structValue->insert(BaseLib::StructElement("SSL", std::make_shared<BaseLib::Variable>((*i)->useSSL)));
+            serverInfo->structValue->insert(BaseLib::StructElement("BINARY", std::make_shared<BaseLib::Variable>((*i)->binary)));
+            serverInfo->structValue->insert(BaseLib::StructElement("WEBSOCKET", std::make_shared<BaseLib::Variable>((*i)->webSocket)));
+            serverInfo->structValue->insert(BaseLib::StructElement("KEEP_ALIVE", std::make_shared<BaseLib::Variable>((*i)->keepAlive)));
+            serverInfo->structValue->insert(BaseLib::StructElement("NEW_FORMAT", std::make_shared<BaseLib::Variable>((*i)->newFormat)));
             if((*i)->settings)
             {
-                serverInfo->structValue->insert(BaseLib::StructElement("FORCESSL", BaseLib::PVariable(new BaseLib::Variable((*i)->settings->forceSSL))));
-                serverInfo->structValue->insert(BaseLib::StructElement("AUTH_TYPE", BaseLib::PVariable(new BaseLib::Variable((uint32_t) (*i)->settings->authType))));
-                serverInfo->structValue->insert(BaseLib::StructElement("VERIFICATION_HOSTNAME", BaseLib::PVariable(new BaseLib::Variable((*i)->settings->hostname))));
-                serverInfo->structValue->insert(BaseLib::StructElement("VERIFY_CERTIFICATE", BaseLib::PVariable(new BaseLib::Variable((*i)->settings->verifyCertificate))));
+                serverInfo->structValue->insert(BaseLib::StructElement("FORCESSL", std::make_shared<BaseLib::Variable>((*i)->settings->forceSSL)));
+                serverInfo->structValue->insert(BaseLib::StructElement("AUTH_TYPE", std::make_shared<BaseLib::Variable>((uint32_t) (*i)->settings->authType)));
+                serverInfo->structValue->insert(BaseLib::StructElement("VERIFICATION_HOSTNAME", std::make_shared<BaseLib::Variable>((*i)->settings->hostname)));
+                serverInfo->structValue->insert(BaseLib::StructElement("VERIFY_CERTIFICATE", std::make_shared<BaseLib::Variable>((*i)->settings->verifyCertificate)));
             }
-            serverInfo->structValue->insert(BaseLib::StructElement("LASTPACKETSENT", BaseLib::PVariable(new BaseLib::Variable((*i)->lastPacketSent))));
+            serverInfo->structValue->insert(BaseLib::StructElement("LASTPACKETSENT", std::make_shared<BaseLib::Variable>((*i)->lastPacketSent)));
 
             serverInfos->arrayValue->push_back(serverInfo);
         }
