@@ -91,7 +91,7 @@ public:
 
 	void listDevices(std::pair<std::string, std::string>& address);
 
-	void broadcastError(int32_t level, std::string message);
+	void broadcastError(int32_t level, const std::string& message);
 
 	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
 
@@ -113,7 +113,7 @@ public:
 
 	void sendUnknownDevices(std::pair<std::string, std::string>& address);
 
-	void sendError(std::pair<std::string, std::string> address, int32_t level, std::string message);
+	void sendError(const std::pair<std::string, std::string>& address, int32_t level, const std::string& message);
 
 	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string path, std::string id);
 
