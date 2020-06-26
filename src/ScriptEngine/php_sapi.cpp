@@ -727,7 +727,11 @@ static void php_homegear_register_variables(zval* track_vars_array)
         }
         if(scriptInfo->clientInfo)
         {
-            if(scriptInfo->clientInfo->authenticated) php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"true", 4, track_vars_array);
+            if(scriptInfo->clientInfo->authenticated)
+            {
+                php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"true", 4, track_vars_array);
+                if(!scriptInfo->clientInfo->user.empty()) php_register_variable_safe((char*)"CLIENT_VERIFIED_USERNAME", (char*) scriptInfo->clientInfo->user.c_str(), scriptInfo->clientInfo->user.size(), track_vars_array);
+            }
             else php_register_variable_safe((char*)"CLIENT_AUTHENTICATED", (char*)"false", 5, track_vars_array);
             if(scriptInfo->clientInfo->hasClientCertificate)
             {

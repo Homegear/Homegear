@@ -551,7 +551,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
                     return;
                 }
             }
-            if((result = gnutls_priority_init(&_tlsPriorityCache, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
+            if((result = gnutls_priority_init(&_tlsPriorityCache, "NORMAL", nullptr)) != GNUTLS_E_SUCCESS)
             {
                 _out.printError("Error: Could not initialize cipher priorities: " + std::string(gnutls_strerror(result)));
                 gnutls_certificate_free_credentials(_x509Cred);
@@ -564,6 +564,30 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo& info)
             }
             gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
         }
+
+        //{{{ Load cloud user map
+        if(_info->interface == "::1" || _info->interface == "127.0.0.1")
+        {
+            if(BaseLib::Io::fileExists(GD::bl->settings.cloudUserMapPath()))
+            {
+                auto content = BaseLib::Io::getFileContent(GD::bl->settings.cloudUserMapPath());
+                try
+                {
+                    auto userMapJson = BaseLib::Rpc::JsonDecoder::decode(content);
+                    for(auto& element : *userMapJson->structValue)
+                    {
+                        cloudUserMap.emplace(element.first, element.second->stringValue);
+                    }
+                }
+                catch(const std::exception& ex)
+                {
+                    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+                }
+
+            }
+        }
+        //}}}
+
         _webServer.reset(new WebServer::WebServer(_info));
         _restServer.reset(new RestServer(_info));
         GD::bl->threadManager.start(_mainThread, true, _threadPriority, _threadPolicy, &RpcServer::mainThread, this);
@@ -764,19 +788,11 @@ void RpcServer::mainThread()
             {
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
             }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
         }
     }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     if(!_info->socketDescriptor) GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 }
@@ -1397,15 +1413,14 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
     try
     {
         if(!client) return;
-        std::array<char, 1025> buffer;
-        //Make sure the buffer is null terminated.
-        buffer.at(buffer.size() - 1) = '\0';
+        std::array<char, 1025> buffer{};
         int32_t processedBytes = 0;
         int32_t bytesRead = 0;
         PacketType::Enum packetType = PacketType::binaryRequest;
         BaseLib::Rpc::BinaryRpc binaryRpc(GD::bl.get());
         BaseLib::Http http;
         BaseLib::WebSocket webSocket;
+        bool firstHttpPacket = true;
 
         _out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
         while(!_stopServer)
@@ -1652,6 +1667,28 @@ void RpcServer::readClient(std::shared_ptr<Client> client)
 
                             if(http.isFinished())
                             {
+                                //{{{ Cloud authentication
+                                if(firstHttpPacket)
+                                {
+                                    firstHttpPacket = false;
+                                    auto header = http.getHeader();
+                                    auto headerIterator = header.fields.find("ibs-userid");
+                                    if(headerIterator != header.fields.end())
+                                    {
+                                        auto userMapIterator = cloudUserMap.find(headerIterator->second);
+                                        if(userMapIterator != cloudUserMap.end())
+                                        {
+                                            if(client->acls->fromUser(userMapIterator->second))
+                                            {
+                                                client->user = userMapIterator->second;
+                                                client->authenticated = true;
+                                                _out.printInfo("Info: Client successfully authorized as user [" + client->user + "] using cloud authentication. Cloud user ID is: " + userMapIterator->first);
+                                            }
+                                        }
+                                    }
+                                }
+                                //}}}
+
                                 if(_info->webSocket && (http.getHeader().connection & BaseLib::Http::Connection::upgrade))
                                 {
                                     //Do this before basic auth, because currently basic auth is not supported by WebSockets. Authorization takes place after the upgrade.

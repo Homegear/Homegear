@@ -92,7 +92,7 @@ public:
 
     const std::vector<BaseLib::PRpcClientInfo> getClientInfo();
 
-    const BaseLib::Rpc::PServerInfo getInfo() { return _info; }
+    BaseLib::Rpc::PServerInfo getInfo() { return _info; }
 
     bool lifetick();
 
@@ -113,7 +113,6 @@ public:
     BaseLib::PEventHandler addWebserverEventHandler(BaseLib::Rpc::IWebserverEventSink* eventHandler);
 
     void removeWebserverEventHandler(BaseLib::PEventHandler eventHandler);
-
 protected:
 private:
     BaseLib::Output _out;
@@ -147,6 +146,7 @@ private:
     std::pair<int64_t, bool> _lifetick1;
     std::mutex _lifetick2Mutex;
     std::pair<int64_t, bool> _lifetick2;
+    std::unordered_map<std::string, std::string> cloudUserMap;
 
     void collectGarbage();
 
