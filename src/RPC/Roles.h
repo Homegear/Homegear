@@ -52,10 +52,9 @@ enum class RoleAggregationType
 struct RoleVariableInfo
 {
     RoleVariableInfo() = default;
-    RoleVariableInfo(const std::string& name, bool invert) : name(name), invert(invert) {}
+    RoleVariableInfo(const std::string& name) : name(name) {}
 
     std::string name;
-    bool invert = false;
 };
 
 class Roles

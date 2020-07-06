@@ -110,13 +110,6 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
                                 }
                             }
 
-                            bool invert = false;
-                            auto invertIterator = variableElement.second->structValue->find("invert");
-                            if(invertIterator != variableElement.second->structValue->end())
-                            {
-                                invert = invertIterator->second->booleanValue;
-                            }
-
                             uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
                             int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
                             std::string variable = variableElement.first;
@@ -131,7 +124,7 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, R
                                 if(variableIterator == channelIterator->second.end()) continue;
                             }
 
-                            variables[peerId][channel].emplace_back(std::move(RoleVariableInfo(variable, invert)));
+                            variables[peerId][channel].emplace_back(std::move(RoleVariableInfo(variable)));
                         }
                     }
                 }
@@ -176,10 +169,7 @@ BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo& clientInfo, c
                     if(result->errorStruct) continue;
                     variableCount++;
 
-                    bool value = (bool)(*result);
-                    if(variable.invert) value = !value;
-
-                    bool isTrue = value;
+                    bool isTrue = (bool)(*result);
                     if(isTrue) trueCount++;
                 }
             }
@@ -220,12 +210,7 @@ BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInf
                     auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
                     if(result->errorStruct) continue;
                     variableCount++;
-                    if(result->type == BaseLib::VariableType::tBoolean)
-                    {
-                        bool value = result->booleanValue;
-                        if(variable.invert) value = !value;
-                        counts[(int64_t)value]++;
-                    }
+                    if(result->type == BaseLib::VariableType::tBoolean) counts[(int64_t)result->booleanValue]++;
                     else counts[result->integerValue64]++;
                 }
             }
@@ -289,9 +274,7 @@ BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo
                     bool isMin = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
-                        bool booleanValue = value->booleanValue;
-                        if(variable.invert) booleanValue = !booleanValue;
-                        isMin = (booleanValue == false);
+                        isMin = !value->booleanValue;
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
                     {
@@ -365,9 +348,7 @@ BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo
                     bool isMax = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
-                        bool booleanValue = value->booleanValue;
-                        if(variable.invert) booleanValue = !booleanValue;
-                        isMax = !booleanValue;
+                        isMax = value->booleanValue;
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
                     {
@@ -432,16 +413,13 @@ BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& cli
                     bool isBelowThreshold = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
-                        bool booleanValue = value->booleanValue;
-                        if(variable.invert) booleanValue = !booleanValue;
-
                         if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
                         {
-                            isBelowThreshold = ((int64_t)booleanValue < threshold->integerValue64);
+                            isBelowThreshold = ((int64_t)value->booleanValue < threshold->integerValue64);
                         }
                         else if(threshold->type == BaseLib::VariableType::tFloat)
                         {
-                            isBelowThreshold = ((double)booleanValue < threshold->floatValue);
+                            isBelowThreshold = ((double)value->booleanValue < threshold->floatValue);
                         }
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
@@ -521,16 +499,13 @@ BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo& cli
                     bool isAboveThreshold = false;
                     if(value->type == BaseLib::VariableType::tBoolean)
                     {
-                        bool booleanValue = value->booleanValue;
-                        if(variable.invert) booleanValue = !booleanValue;
-
                         if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
                         {
-                            isAboveThreshold = ((int64_t)booleanValue > threshold->integerValue64);
+                            isAboveThreshold = ((int64_t)value->booleanValue > threshold->integerValue64);
                         }
                         else if(threshold->type == BaseLib::VariableType::tFloat)
                         {
-                            isAboveThreshold = ((double)booleanValue > threshold->floatValue);
+                            isAboveThreshold = ((double)value->booleanValue > threshold->floatValue);
                         }
                     }
                     else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
