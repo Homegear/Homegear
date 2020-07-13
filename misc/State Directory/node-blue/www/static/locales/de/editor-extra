@@ -18,6 +18,17 @@
              "loadCatalogManagementError": "<p>Systemarchitektur konnte nicht ermittelt werden. Ist homegear-management installiert?</p>"
         }
     },
+    "deploy" : {
+        "deploy": "Implementieren",
+        "deployFailed" : "Implementierung fehlgeschlagen: __message__",
+        "confirm" : {
+            "button" : {
+                "confirm" : "Implementierung bestätigen",
+                "overwrite": "Ignorieren & implementieren"
+            },
+            "confirm" : "Sind Sie sicher, dass Sie implementieren möchten?"
+        }
+    },
     "editor" : {
         "nodesUse_plural" : "__count__ Knoten verwenden diese Konfiguration",
         "addNewConfig" : "Neuen __type__-Konfigurationsknoten hinzufügen",
