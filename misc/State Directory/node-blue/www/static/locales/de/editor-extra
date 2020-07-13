@@ -52,7 +52,8 @@
             "time" : "Zeit",
             "homegear": "Homegear",
             "io": "IO",
-            "network": "Netzwerk"
+            "network": "Netzwerk",
+            "multimedia": "Multimedia"
         },
         "editor": {
             "times": {

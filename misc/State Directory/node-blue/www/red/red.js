@@ -829,7 +829,7 @@ RED.i18n = (function() {
                     namespaces: ["editor","node-red","jsonata","infotips"],
                     defaultNs: "editor"
                 },
-                fallbackLng: ['en-US'],
+                fallbackLng: locale ? locale : ['en-US'],
                 fallbackNS: ['node-red', 'editor'],
                 useCookie: false,
                 returnObjectTrees: true
