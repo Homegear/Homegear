@@ -22,6 +22,7 @@ mkdir -p /var/lib/homegear/db
 chown -R homegear:homegear /var/lib/homegear
 
 sed -i "/^exit 0/d" /lib/systemd/scripts/setup-tmpfs.sh
+sed -i "s/modprobe zram num_devices=2/modprobe zram num_devices=3/g" /lib/systemd/scripts/setup-tmpfs.sh
 cat >> "/lib/systemd/scripts/setup-tmpfs.sh" <<'EOG'
 
 # Homegear
@@ -30,6 +31,16 @@ mkfs.ext4 /dev/zram2
 mount /dev/zram2 /var/lib/homegear/db
 chmod 770 /var/lib/homegear/db
 chown homegear:homegear /var/lib/homegear/db
+
+mkdir /var/log/homegear
+mkdir /var/log/homegear-dc-connector
+mkdir /var/log/homegear-influxdb
+mkdir /var/log/homegear-webssh
+mkdir /var/log/homegear-management
+chown homegear:homegear /var/log/homegear*
+
+touch /var/log/mosquitto.log
+chown mosquitto:mosquitto /var/log/mosquitto.log
 
 mkdir -p /var/tmp/homegear
 chown homegear:homegear /var/tmp/homegear

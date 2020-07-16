@@ -31,524 +31,488 @@
 #include "Roles.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
-BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo& clientInfo, RoleAggregationType aggregationType, const BaseLib::PVariable& aggregationParameters, const BaseLib::PArray& roles, uint64_t roomId)
-{
-    try
-    {
-        std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>> variablesInRoom;
-        //{{{ Get variables in room
-            if(roomId != 0)
-            {
-                if(!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
+BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
+                                    RoleAggregationType aggregationType,
+                                    const BaseLib::PVariable &aggregationParameters,
+                                    const BaseLib::PArray &roles,
+                                    uint64_t roomId) {
+  try {
+    std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>> variablesInRoom;
+    //{{{ Get variables in room
+    if (roomId != 0) {
+      if (!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
-                BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roomId));
-                std::string methodName = "getVariablesInRoom";
-                auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                if(result->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables in room: " + result->structValue->at("faultString")->stringValue);
+      BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+      requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roomId));
+      std::string methodName = "getVariablesInRoom";
+      auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+      if (result->errorStruct)
+        return BaseLib::Variable::createError(-1,
+                                              "Error getting variables in room: "
+                                                  + result->structValue->at("faultString")->stringValue);
 
-                for(auto& peerStructElement : *result->structValue)
-                {
-                    for(auto& channelStructElement : *peerStructElement.second->structValue)
-                    {
-                        for(auto& variableElement : *channelStructElement.second->arrayValue)
-                        {
-                            uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
-                            int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
-                            std::string variable = variableElement->stringValue;
+      for (auto &peerStructElement : *result->structValue) {
+        for (auto &channelStructElement : *peerStructElement.second->structValue) {
+          for (auto &variableElement : *channelStructElement.second->arrayValue) {
+            uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
+            int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
+            std::string variable = variableElement->stringValue;
 
-                            variablesInRoom[peerId][channel].emplace(variable);
-                        }
-                    }
-                }
-            }
-        //}}}
-
-        //{{{ Get variables in role filtered by room
-            std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> variables;
-            for(auto& roleStruct : *roles)
-            {
-                uint64_t roleId = 0;
-                BaseLib::RoleDirection direction = BaseLib::RoleDirection::input;
-                if(roleStruct->type == BaseLib::VariableType::tInteger64) roleId = roleStruct->integerValue64;
-                else
-                {
-                    auto idIterator = roleStruct->structValue->find("id");
-                    if(idIterator == roleStruct->structValue->end()) return BaseLib::Variable::createError(-1, "Invalid role struct.");
-                    roleId = idIterator->second->integerValue64;
-
-                    auto directionIterator = roleStruct->structValue->find("direction");
-                    if(directionIterator != roleStruct->structValue->end()) direction = (BaseLib::RoleDirection)directionIterator->second->integerValue64;
-                }
-                if(!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "At least one role ID is unknown.");
-
-                auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
-                std::string methodName = "getVariablesInRole";
-                auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                if(result->errorStruct) continue;
-
-                for(auto& peerStructElement : *result->structValue)
-                {
-                    for(auto& channelStructElement : *peerStructElement.second->structValue)
-                    {
-                        for(auto& variableElement : *channelStructElement.second->structValue)
-                        {
-                            auto directionIterator = variableElement.second->structValue->find("direction");
-                            if(directionIterator != variableElement.second->structValue->end())
-                            {
-                                if((direction == BaseLib::RoleDirection::input && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::output) ||
-                                        (direction == BaseLib::RoleDirection::output && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::input))
-                                {
-                                    continue;
-                                }
-                            }
-
-                            uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
-                            int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
-                            std::string variable = variableElement.first;
-
-                            if(roomId != 0) //Check if role variable is in room
-                            {
-                                auto peerIterator = variablesInRoom.find(peerId);
-                                if(peerIterator == variablesInRoom.end()) continue;
-                                auto channelIterator = peerIterator->second.find(channel);
-                                if(channelIterator == peerIterator->second.end()) continue;
-                                auto variableIterator = channelIterator->second.find(variable);
-                                if(variableIterator == channelIterator->second.end()) continue;
-                            }
-
-                            variables[peerId][channel].emplace_back(std::move(RoleVariableInfo(variable)));
-                        }
-                    }
-                }
-            }
-        //}}}
-
-        if(aggregationType == RoleAggregationType::countTrue) return countTrue(clientInfo, variables);
-        else if(aggregationType == RoleAggregationType::countDistinct) return countDistinct(clientInfo, variables);
-        else if(aggregationType == RoleAggregationType::countMinimum) return countMinimum(clientInfo, variables);
-        else if(aggregationType == RoleAggregationType::countMaximum) return countMaximum(clientInfo, variables);
-        else if(aggregationType == RoleAggregationType::countBelowThreshold) return countBelowThreshold(clientInfo, variables, aggregationParameters);
-        else if(aggregationType == RoleAggregationType::countAboveThreshold) return countAboveThreshold(clientInfo, variables, aggregationParameters);
-        else return BaseLib::Variable::createError(-1, "Unknown aggregation type.");
+            variablesInRoom[peerId][channel].emplace(variable);
+          }
+        }
+      }
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    //}}}
+
+    //{{{ Get variables in role filtered by room
+    std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> variables;
+    for (auto &roleStruct : *roles) {
+      uint64_t roleId = 0;
+      BaseLib::RoleDirection direction = BaseLib::RoleDirection::input;
+      if (roleStruct->type == BaseLib::VariableType::tInteger64) roleId = roleStruct->integerValue64;
+      else {
+        auto idIterator = roleStruct->structValue->find("id");
+        if (idIterator == roleStruct->structValue->end())
+          return BaseLib::Variable::createError(-1,
+                                                "Invalid role struct.");
+        roleId = idIterator->second->integerValue64;
+
+        auto directionIterator = roleStruct->structValue->find("direction");
+        if (directionIterator != roleStruct->structValue->end())
+          direction = (BaseLib::RoleDirection)directionIterator->second->integerValue64;
+      }
+      if (!GD::bl->db->roleExists(roleId))
+        return BaseLib::Variable::createError(-1,
+                                              "At least one role ID is unknown.");
+
+      auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+      requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
+      std::string methodName = "getVariablesInRole";
+      auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+      if (result->errorStruct) continue;
+
+      for (auto &peerStructElement : *result->structValue) {
+        for (auto &channelStructElement : *peerStructElement.second->structValue) {
+          for (auto &variableElement : *channelStructElement.second->structValue) {
+            auto directionIterator = variableElement.second->structValue->find("direction");
+            if (directionIterator != variableElement.second->structValue->end()) {
+              if ((direction == BaseLib::RoleDirection::input
+                  && (BaseLib::RoleDirection)directionIterator->second->integerValue64
+                      == BaseLib::RoleDirection::output) ||
+                  (direction == BaseLib::RoleDirection::output
+                      && (BaseLib::RoleDirection)directionIterator->second->integerValue64
+                          == BaseLib::RoleDirection::input)) {
+                continue;
+              }
+            }
+
+            uint64_t peerId = BaseLib::Math::getUnsignedNumber64(peerStructElement.first);
+            int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
+            std::string variable = variableElement.first;
+
+            if (roomId != 0) //Check if role variable is in room
+            {
+              auto peerIterator = variablesInRoom.find(peerId);
+              if (peerIterator == variablesInRoom.end()) continue;
+              auto channelIterator = peerIterator->second.find(channel);
+              if (channelIterator == peerIterator->second.end()) continue;
+              auto variableIterator = channelIterator->second.find(variable);
+              if (variableIterator == channelIterator->second.end()) continue;
+            }
+
+            variables[peerId][channel].emplace_back(std::move(RoleVariableInfo(variable)));
+          }
+        }
+      }
     }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    //}}}
+
+    if (aggregationType == RoleAggregationType::countTrue) return countTrue(clientInfo, variables);
+    else if (aggregationType == RoleAggregationType::countDistinct) return countDistinct(clientInfo, variables);
+    else if (aggregationType == RoleAggregationType::countMinimum) return countMinimum(clientInfo, variables);
+    else if (aggregationType == RoleAggregationType::countMaximum) return countMaximum(clientInfo, variables);
+    else if (aggregationType == RoleAggregationType::countBelowThreshold)
+      return countBelowThreshold(clientInfo,
+                                 variables,
+                                 aggregationParameters);
+    else if (aggregationType == RoleAggregationType::countAboveThreshold)
+      return countAboveThreshold(clientInfo,
+                                 variables,
+                                 aggregationParameters);
+    else return BaseLib::Variable::createError(-1, "Unknown aggregation type.");
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
-{
-    try
-    {
-        uint64_t variableCount = 0;
-        uint64_t trueCount = 0;
+BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo &clientInfo,
+                                    const std::unordered_map<uint64_t,
+                                                             std::unordered_map<int32_t,
+                                                                                std::list<RoleVariableInfo>>> &variables) {
+  try {
+    uint64_t variableCount = 0;
+    uint64_t trueCount = 0;
 
-        for(auto& peerIterator : variables)
-        {
-            for(auto& channelIterator : peerIterator.second)
-            {
-                for(auto& variable : channelIterator.second)
-                {
-                    BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                    requestParameters->arrayValue->reserve(3);
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                    std::string methodName = "getValue";
-                    auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                    if(result->errorStruct) continue;
-                    variableCount++;
+    for (auto &peerIterator : variables) {
+      for (auto &channelIterator : peerIterator.second) {
+        for (auto &variable : channelIterator.second) {
+          BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+          requestParameters->arrayValue->reserve(3);
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+          std::string methodName = "getValue";
+          auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+          if (result->errorStruct) continue;
+          variableCount++;
 
-                    bool isTrue = (bool)(*result);
-                    if(isTrue) trueCount++;
-                }
-            }
+          bool isTrue = (bool)(*result);
+          if (isTrue) trueCount++;
         }
+      }
+    }
 
-        auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
-        response->structValue->emplace("trueCount", std::make_shared<BaseLib::Variable>(trueCount));
-        response->structValue->emplace("falseCount", std::make_shared<BaseLib::Variable>(variableCount - trueCount));
-        return response;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
+    response->structValue->emplace("trueCount", std::make_shared<BaseLib::Variable>(trueCount));
+    response->structValue->emplace("falseCount", std::make_shared<BaseLib::Variable>(variableCount - trueCount));
+    return response;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
-{
-    try
-    {
-        uint64_t variableCount = 0;
-        std::unordered_map<uint64_t, uint64_t> counts;
+BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo &clientInfo,
+                                        const std::unordered_map<uint64_t,
+                                                                 std::unordered_map<int32_t,
+                                                                                    std::list<RoleVariableInfo>>> &variables) {
+  try {
+    uint64_t variableCount = 0;
+    std::unordered_map<uint64_t, uint64_t> counts;
 
-        for(auto& peerIterator : variables)
-        {
-            for(auto& channelIterator : peerIterator.second)
-            {
-                for(auto& variable : channelIterator.second)
-                {
-                    BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                    requestParameters->arrayValue->reserve(3);
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                    std::string methodName = "getValue";
-                    auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                    if(result->errorStruct) continue;
-                    variableCount++;
-                    if(result->type == BaseLib::VariableType::tBoolean) counts[(int64_t)result->booleanValue]++;
-                    else counts[result->integerValue64]++;
-                }
-            }
+    for (auto &peerIterator : variables) {
+      for (auto &channelIterator : peerIterator.second) {
+        for (auto &variable : channelIterator.second) {
+          BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+          requestParameters->arrayValue->reserve(3);
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+          std::string methodName = "getValue";
+          auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+          if (result->errorStruct) continue;
+          variableCount++;
+          if (result->type == BaseLib::VariableType::tBoolean) counts[(int64_t)result->booleanValue]++;
+          else counts[result->integerValue64]++;
         }
+      }
+    }
 
-        auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
-        for(auto element : counts)
-        {
-            response->structValue->emplace(std::to_string(element.first), std::make_shared<BaseLib::Variable>(element.second));
-        }
-        return response;
+    auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
+    for (auto element : counts) {
+      response->structValue->emplace(std::to_string(element.first),
+                                     std::make_shared<BaseLib::Variable>(element.second));
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return response;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
-{
-    try
-    {
-        uint64_t variableCount = 0;
-        uint64_t minCount = 0;
+BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo &clientInfo,
+                                       const std::unordered_map<uint64_t,
+                                                                std::unordered_map<int32_t,
+                                                                                   std::list<RoleVariableInfo>>> &variables) {
+  try {
+    uint64_t variableCount = 0;
+    uint64_t minCount = 0;
 
-        for(auto& peerIterator : variables)
-        {
-            for(auto& channelIterator : peerIterator.second)
-            {
-                for(auto& variable : channelIterator.second)
-                {
-                    BaseLib::PVariable value;
+    for (auto &peerIterator : variables) {
+      for (auto &channelIterator : peerIterator.second) {
+        for (auto &variable : channelIterator.second) {
+          BaseLib::PVariable value;
 
-                    {
-                        BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                        requestParameters->arrayValue->reserve(3);
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                        std::string methodName = "getValue";
-                        value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                        if(value->errorStruct) continue;
-                    }
+          {
+            BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+            requestParameters->arrayValue->reserve(3);
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+            std::string methodName = "getValue";
+            value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+            if (value->errorStruct) continue;
+          }
 
-                    BaseLib::PVariable description;
+          BaseLib::PVariable description;
 
-                    if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64 || value->type == BaseLib::VariableType::tFloat)
-                    {
-                        BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                        requestParameters->arrayValue->reserve(3);
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                        std::string methodName = "getVariableDescription";
-                        description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                        if(description->errorStruct) continue;
-                    }
+          if (value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64
+              || value->type == BaseLib::VariableType::tFloat) {
+            BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+            requestParameters->arrayValue->reserve(3);
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+            std::string methodName = "getVariableDescription";
+            description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+            if (description->errorStruct) continue;
+          }
 
-                    bool isMin = false;
-                    if(value->type == BaseLib::VariableType::tBoolean)
-                    {
-                        isMin = !value->booleanValue;
-                    }
-                    else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
-                    {
-                        isMin = (value->integerValue64 == description->structValue->at("MIN")->integerValue64);
-                    }
-                    else if(value->type == BaseLib::VariableType::tFloat)
-                    {
-                        isMin = (value->floatValue == description->structValue->at("MIN")->floatValue);
-                    }
-                    else continue;
+          bool isMin = false;
+          if (value->type == BaseLib::VariableType::tBoolean) {
+            isMin = !value->booleanValue;
+          } else if (value->type == BaseLib::VariableType::tInteger
+              || value->type == BaseLib::VariableType::tInteger64) {
+            isMin = (value->integerValue64 == description->structValue->at("MIN")->integerValue64);
+          } else if (value->type == BaseLib::VariableType::tFloat) {
+            isMin = (value->floatValue == description->structValue->at("MIN")->floatValue);
+          } else continue;
 
-                    variableCount++;
-                    if(isMin) minCount++;
-                }
-            }
+          variableCount++;
+          if (isMin) minCount++;
         }
+      }
+    }
 
-        auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
-        response->structValue->emplace("minimumCount", std::make_shared<BaseLib::Variable>(minCount));
-        response->structValue->emplace("aboveMinimumCount", std::make_shared<BaseLib::Variable>(variableCount - minCount));
-        return response;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
+    response->structValue->emplace("minimumCount", std::make_shared<BaseLib::Variable>(minCount));
+    response->structValue->emplace("aboveMinimumCount", std::make_shared<BaseLib::Variable>(variableCount - minCount));
+    return response;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables)
-{
-    try
-    {
-        uint64_t variableCount = 0;
-        uint64_t maxCount = 0;
+BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo &clientInfo,
+                                       const std::unordered_map<uint64_t,
+                                                                std::unordered_map<int32_t,
+                                                                                   std::list<RoleVariableInfo>>> &variables) {
+  try {
+    uint64_t variableCount = 0;
+    uint64_t maxCount = 0;
 
-        for(auto& peerIterator : variables)
-        {
-            for(auto& channelIterator : peerIterator.second)
-            {
-                for(auto& variable : channelIterator.second)
-                {
-                    BaseLib::PVariable value;
+    for (auto &peerIterator : variables) {
+      for (auto &channelIterator : peerIterator.second) {
+        for (auto &variable : channelIterator.second) {
+          BaseLib::PVariable value;
 
-                    {
-                        BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                        requestParameters->arrayValue->reserve(3);
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                        std::string methodName = "getValue";
-                        value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                        if(value->errorStruct) continue;
-                    }
+          {
+            BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+            requestParameters->arrayValue->reserve(3);
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+            std::string methodName = "getValue";
+            value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+            if (value->errorStruct) continue;
+          }
 
-                    BaseLib::PVariable description;
+          BaseLib::PVariable description;
 
-                    if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64 || value->type == BaseLib::VariableType::tFloat)
-                    {
-                        BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                        requestParameters->arrayValue->reserve(3);
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                        std::string methodName = "getVariableDescription";
-                        description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                        if(description->errorStruct) continue;
-                    }
+          if (value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64
+              || value->type == BaseLib::VariableType::tFloat) {
+            BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+            requestParameters->arrayValue->reserve(3);
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+            requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+            std::string methodName = "getVariableDescription";
+            description = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+            if (description->errorStruct) continue;
+          }
 
-                    bool isMax = false;
-                    if(value->type == BaseLib::VariableType::tBoolean)
-                    {
-                        isMax = value->booleanValue;
-                    }
-                    else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
-                    {
-                        isMax = (value->integerValue64 == description->structValue->at("MAX")->integerValue64);
-                    }
-                    else if(value->type == BaseLib::VariableType::tFloat)
-                    {
-                        isMax = (value->floatValue == description->structValue->at("MAX")->floatValue);
-                    }
-                    else continue;
+          bool isMax = false;
+          if (value->type == BaseLib::VariableType::tBoolean) {
+            isMax = value->booleanValue;
+          } else if (value->type == BaseLib::VariableType::tInteger
+              || value->type == BaseLib::VariableType::tInteger64) {
+            isMax = (value->integerValue64 == description->structValue->at("MAX")->integerValue64);
+          } else if (value->type == BaseLib::VariableType::tFloat) {
+            isMax = (value->floatValue == description->structValue->at("MAX")->floatValue);
+          } else continue;
 
-                    variableCount++;
-                    if(isMax) maxCount++;
-                }
-            }
+          variableCount++;
+          if (isMax) maxCount++;
         }
+      }
+    }
 
-        auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
-        response->structValue->emplace("maximumCount", std::make_shared<BaseLib::Variable>(maxCount));
-        response->structValue->emplace("belowMaximumCount", std::make_shared<BaseLib::Variable>(variableCount - maxCount));
-        return response;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
+    response->structValue->emplace("maximumCount", std::make_shared<BaseLib::Variable>(maxCount));
+    response->structValue->emplace("belowMaximumCount", std::make_shared<BaseLib::Variable>(variableCount - maxCount));
+    return response;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables, const BaseLib::PVariable& aggregationParameters)
-{
-    try
+BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo &clientInfo,
+                                              const std::unordered_map<uint64_t,
+                                                                       std::unordered_map<int32_t,
+                                                                                          std::list<RoleVariableInfo>>> &variables,
+                                              const BaseLib::PVariable &aggregationParameters) {
+  try {
+    BaseLib::PVariable threshold;
+
     {
-        BaseLib::PVariable threshold;
+      auto thresholdIterator = aggregationParameters->structValue->find("threshold");
+      if (thresholdIterator == aggregationParameters->structValue->end())
+        return BaseLib::Variable::createError(-1,
+                                              R"("threshold" not set in aggregationParameters.)");
+      threshold = thresholdIterator->second;
+    }
 
-        {
-            auto thresholdIterator = aggregationParameters->structValue->find("threshold");
-            if(thresholdIterator == aggregationParameters->structValue->end()) return BaseLib::Variable::createError(-1, R"("threshold" not set in aggregationParameters.)");
-            threshold = thresholdIterator->second;
-        }
+    uint64_t variableCount = 0;
+    uint64_t belowThresholdCount = 0;
 
-        uint64_t variableCount = 0;
-        uint64_t belowThresholdCount = 0;
+    for (auto &peerIterator : variables) {
+      for (auto &channelIterator : peerIterator.second) {
+        for (auto &variable : channelIterator.second) {
 
-        for(auto& peerIterator : variables)
-        {
-            for(auto& channelIterator : peerIterator.second)
-            {
-                for(auto& variable : channelIterator.second)
-                {
+          BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+          requestParameters->arrayValue->reserve(3);
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+          std::string methodName = "getValue";
+          auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+          if (value->errorStruct) continue;
 
-                    BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                    requestParameters->arrayValue->reserve(3);
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                    std::string methodName = "getValue";
-                    auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                    if(value->errorStruct) continue;
-
-                    bool isBelowThreshold = false;
-                    if(value->type == BaseLib::VariableType::tBoolean)
-                    {
-                        if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
-                        {
-                            isBelowThreshold = ((int64_t)value->booleanValue < threshold->integerValue64);
-                        }
-                        else if(threshold->type == BaseLib::VariableType::tFloat)
-                        {
-                            isBelowThreshold = ((double)value->booleanValue < threshold->floatValue);
-                        }
-                    }
-                    else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
-                    {
-                        if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
-                        {
-                            isBelowThreshold = (value->integerValue64 < threshold->integerValue64);
-                        }
-                        else if(threshold->type == BaseLib::VariableType::tFloat)
-                        {
-                            isBelowThreshold = ((double)value->integerValue64 < threshold->floatValue);
-                        }
-                    }
-                    else if(value->type == BaseLib::VariableType::tFloat)
-                    {
-                        if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
-                        {
-                            isBelowThreshold = ((int64_t)value->floatValue < threshold->integerValue64);
-                        }
-                        else if(threshold->type == BaseLib::VariableType::tFloat)
-                        {
-                            isBelowThreshold = (value->floatValue < threshold->floatValue);
-                        }
-                    }
-                    else continue;
-
-                    variableCount++;
-                    if(isBelowThreshold) belowThresholdCount++;
-                }
+          bool isBelowThreshold = false;
+          if (value->type == BaseLib::VariableType::tBoolean) {
+            if (threshold->type == BaseLib::VariableType::tInteger
+                || threshold->type == BaseLib::VariableType::tInteger64) {
+              isBelowThreshold = ((int64_t)value->booleanValue < threshold->integerValue64);
+            } else if (threshold->type == BaseLib::VariableType::tFloat) {
+              isBelowThreshold = ((double)value->booleanValue < threshold->floatValue);
             }
-        }
+          } else if (value->type == BaseLib::VariableType::tInteger
+              || value->type == BaseLib::VariableType::tInteger64) {
+            if (threshold->type == BaseLib::VariableType::tInteger
+                || threshold->type == BaseLib::VariableType::tInteger64) {
+              isBelowThreshold = (value->integerValue64 < threshold->integerValue64);
+            } else if (threshold->type == BaseLib::VariableType::tFloat) {
+              isBelowThreshold = ((double)value->integerValue64 < threshold->floatValue);
+            }
+          } else if (value->type == BaseLib::VariableType::tFloat) {
+            if (threshold->type == BaseLib::VariableType::tInteger
+                || threshold->type == BaseLib::VariableType::tInteger64) {
+              isBelowThreshold = ((int64_t)value->floatValue < threshold->integerValue64);
+            } else if (threshold->type == BaseLib::VariableType::tFloat) {
+              isBelowThreshold = (value->floatValue < threshold->floatValue);
+            }
+          } else continue;
 
-        auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
-        response->structValue->emplace("belowThresholdCount", std::make_shared<BaseLib::Variable>(belowThresholdCount));
-        response->structValue->emplace("aboveOrEqualThresholdCount", std::make_shared<BaseLib::Variable>(variableCount - belowThresholdCount));
-        return response;
+          variableCount++;
+          if (isBelowThreshold) belowThresholdCount++;
+        }
+      }
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+
+    auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
+    response->structValue->emplace("belowThresholdCount", std::make_shared<BaseLib::Variable>(belowThresholdCount));
+    response->structValue->emplace("aboveOrEqualThresholdCount",
+                                   std::make_shared<BaseLib::Variable>(variableCount - belowThresholdCount));
+    return response;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables, const BaseLib::PVariable& aggregationParameters)
-{
-    try
+BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo &clientInfo,
+                                              const std::unordered_map<uint64_t,
+                                                                       std::unordered_map<int32_t,
+                                                                                          std::list<RoleVariableInfo>>> &variables,
+                                              const BaseLib::PVariable &aggregationParameters) {
+  try {
+    BaseLib::PVariable threshold;
+
     {
-        BaseLib::PVariable threshold;
+      auto thresholdIterator = aggregationParameters->structValue->find("threshold");
+      if (thresholdIterator == aggregationParameters->structValue->end())
+        return BaseLib::Variable::createError(-1,
+                                              R"("threshold" not set in aggregationParameters.)");
+      threshold = thresholdIterator->second;
+    }
 
-        {
-            auto thresholdIterator = aggregationParameters->structValue->find("threshold");
-            if(thresholdIterator == aggregationParameters->structValue->end()) return BaseLib::Variable::createError(-1, R"("threshold" not set in aggregationParameters.)");
-            threshold = thresholdIterator->second;
-        }
+    uint64_t variableCount = 0;
+    uint64_t aboveThresholdCount = 0;
 
-        uint64_t variableCount = 0;
-        uint64_t aboveThresholdCount = 0;
+    for (auto &peerIterator : variables) {
+      for (auto &channelIterator : peerIterator.second) {
+        for (auto &variable : channelIterator.second) {
 
-        for(auto& peerIterator : variables)
-        {
-            for(auto& channelIterator : peerIterator.second)
-            {
-                for(auto& variable : channelIterator.second)
-                {
+          BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+          requestParameters->arrayValue->reserve(3);
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
+          requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
+          std::string methodName = "getValue";
+          auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+          if (value->errorStruct) continue;
 
-                    BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-                    requestParameters->arrayValue->reserve(3);
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(peerIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(channelIterator.first));
-                    requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable.name));
-                    std::string methodName = "getValue";
-                    auto value = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-                    if(value->errorStruct) continue;
-
-                    bool isAboveThreshold = false;
-                    if(value->type == BaseLib::VariableType::tBoolean)
-                    {
-                        if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
-                        {
-                            isAboveThreshold = ((int64_t)value->booleanValue > threshold->integerValue64);
-                        }
-                        else if(threshold->type == BaseLib::VariableType::tFloat)
-                        {
-                            isAboveThreshold = ((double)value->booleanValue > threshold->floatValue);
-                        }
-                    }
-                    else if(value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)
-                    {
-                        if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
-                        {
-                            isAboveThreshold = (value->integerValue64 > threshold->integerValue64);
-                        }
-                        else if(threshold->type == BaseLib::VariableType::tFloat)
-                        {
-                            isAboveThreshold = ((double)value->integerValue64 > threshold->floatValue);
-                        }
-                    }
-                    else if(value->type == BaseLib::VariableType::tFloat)
-                    {
-                        if(threshold->type == BaseLib::VariableType::tInteger || threshold->type == BaseLib::VariableType::tInteger64)
-                        {
-                            isAboveThreshold = ((int64_t)value->floatValue > threshold->integerValue64);
-                        }
-                        else if(threshold->type == BaseLib::VariableType::tFloat)
-                        {
-                            isAboveThreshold = (value->floatValue > threshold->floatValue);
-                        }
-                    }
-                    else continue;
-
-                    variableCount++;
-                    if(isAboveThreshold) aboveThresholdCount++;
-                }
+          bool isAboveThreshold = false;
+          if (value->type == BaseLib::VariableType::tBoolean) {
+            if (threshold->type == BaseLib::VariableType::tInteger
+                || threshold->type == BaseLib::VariableType::tInteger64) {
+              isAboveThreshold = ((int64_t)value->booleanValue > threshold->integerValue64);
+            } else if (threshold->type == BaseLib::VariableType::tFloat) {
+              isAboveThreshold = ((double)value->booleanValue > threshold->floatValue);
             }
-        }
+          } else if (value->type == BaseLib::VariableType::tInteger
+              || value->type == BaseLib::VariableType::tInteger64) {
+            if (threshold->type == BaseLib::VariableType::tInteger
+                || threshold->type == BaseLib::VariableType::tInteger64) {
+              isAboveThreshold = (value->integerValue64 > threshold->integerValue64);
+            } else if (threshold->type == BaseLib::VariableType::tFloat) {
+              isAboveThreshold = ((double)value->integerValue64 > threshold->floatValue);
+            }
+          } else if (value->type == BaseLib::VariableType::tFloat) {
+            if (threshold->type == BaseLib::VariableType::tInteger
+                || threshold->type == BaseLib::VariableType::tInteger64) {
+              isAboveThreshold = ((int64_t)value->floatValue > threshold->integerValue64);
+            } else if (threshold->type == BaseLib::VariableType::tFloat) {
+              isAboveThreshold = (value->floatValue > threshold->floatValue);
+            }
+          } else continue;
 
-        auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
-        response->structValue->emplace("aboveThresholdCount", std::make_shared<BaseLib::Variable>(aboveThresholdCount));
-        response->structValue->emplace("belowOrEqualThresholdCount", std::make_shared<BaseLib::Variable>(variableCount - aboveThresholdCount));
-        return response;
+          variableCount++;
+          if (isAboveThreshold) aboveThresholdCount++;
+        }
+      }
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+
+    auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
+    response->structValue->emplace("aboveThresholdCount", std::make_shared<BaseLib::Variable>(aboveThresholdCount));
+    response->structValue->emplace("belowOrEqualThresholdCount",
+                                   std::make_shared<BaseLib::Variable>(variableCount - aboveThresholdCount));
+    return response;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 }

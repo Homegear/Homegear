@@ -33,32 +33,33 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
-class RestServer
-{
-public:
-    RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
+class RestServer {
+ public:
+  RestServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> &serverInfo);
 
-    virtual ~RestServer();
+  virtual ~RestServer();
 
-    void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
-private:
-    BaseLib::Output _out;
-    BaseLib::Rpc::PServerInfo _serverInfo;
-    std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-    std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+ private:
+  BaseLib::Output _out;
+  BaseLib::Rpc::PServerInfo _serverInfo;
+  std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+  std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 
-    void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
+  void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char> &content);
 
-    void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
+  void getError(int32_t code,
+                std::string codeDescription,
+                std::string longDescription,
+                std::vector<char> &content,
+                std::vector<std::string> &additionalHeaders);
 
-    void send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data);
+  void send(std::shared_ptr<BaseLib::TcpSocket> &socket, std::vector<char> &data);
 };
 
 }

@@ -149,13 +149,13 @@ std::vector<NodeManager::PNodeInfo> NodeManager::getNodeInfo()
 			if(nodeInfoVector.size() + files.size() > nodeInfoVector.capacity()) nodeInfoVector.reserve(nodeInfoVector.capacity() + 100);
 			for(auto& file : files)
 			{
-				std::string path = GD::bl->settings.nodeBluePath() + "nodes/" + directory + "/" + file;
+				std::string path = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append("/").append(file);
 				try
 				{
 					if(file.size() < 6) continue; //?*.hni
 					std::string extension = file.substr(file.size() - 4, 4);
 					if(extension != ".hni") continue;
-					std::string content = GD::bl->io.getFileContent(path);
+					std::string content = BaseLib::Io::getFileContent(path);
 					BaseLib::HelperFunctions::trim(content);
 					if(content.empty() || content.compare(0, 31, "<script type=\"text/x-homegear\">") != 0)
 					{
