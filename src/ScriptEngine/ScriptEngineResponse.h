@@ -35,23 +35,19 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace ScriptEngine
-{
+namespace ScriptEngine {
 
-class ScriptEngineResponse
-{
-public:
-    std::atomic_bool finished;
-    int32_t packetId = 0;
-    BaseLib::PVariable response;
+class ScriptEngineResponse {
+ public:
+  std::atomic_bool finished;
+  int32_t packetId = 0;
+  BaseLib::PVariable response;
 
-    ScriptEngineResponse()
-    {
-        finished = false;
-    }
+  ScriptEngineResponse() {
+    finished = false;
+  }
 };
 
 typedef std::shared_ptr<ScriptEngineResponse> PScriptEngineResponse;

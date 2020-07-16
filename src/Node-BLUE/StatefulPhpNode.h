@@ -35,39 +35,37 @@
 
 #include <homegear-node/INode.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class StatefulPhpNode : public Flows::INode
-{
-private:
-	Flows::PVariable _nodeInfo;
-public:
-	StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected);
+class StatefulPhpNode : public Flows::INode {
+ private:
+  Flows::PVariable _nodeInfo;
+ public:
+  StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool *frontendConnected);
 
-	virtual ~StatefulPhpNode();
+  virtual ~StatefulPhpNode();
 
-	virtual bool init(Flows::PNodeInfo nodeInfo);
+  virtual bool init(Flows::PNodeInfo nodeInfo);
 
-	virtual bool start();
+  virtual bool start();
 
-	virtual void stop();
+  virtual void stop();
 
-	virtual void waitForStop();
+  virtual void waitForStop();
 
-	virtual void configNodesStarted();
+  virtual void configNodesStarted();
 
-	virtual void startUpComplete();
+  virtual void startUpComplete();
 
-	virtual void variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
+  virtual void variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
 
-	virtual void setNodeVariable(const std::string& variable, Flows::PVariable value);
+  virtual void setNodeVariable(const std::string &variable, Flows::PVariable value);
 
-	virtual Flows::PVariable getConfigParameterIncoming(std::string name);
+  virtual Flows::PVariable getConfigParameterIncoming(std::string name);
 
-	virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
+  virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
 
-	virtual Flows::PVariable invokeLocal(const std::string& methodName, Flows::PArray parameters);
+  virtual Flows::PVariable invokeLocal(const std::string &methodName, Flows::PArray parameters);
 };
 
 }

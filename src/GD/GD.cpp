@@ -32,8 +32,7 @@
 #include "../UPnP/UPnP.h"
 #include "../../config.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
 std::unique_ptr<BaseLib::SharedObjects> GD::bl;
 BaseLib::Output GD::out;

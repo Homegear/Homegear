@@ -32,141 +32,117 @@
 #include "PhpEvents.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
 std::mutex PhpEvents::eventsMapMutex;
 std::map<int32_t, std::shared_ptr<PhpEvents>> PhpEvents::eventsMap;
 
-PhpEvents::PhpEvents(std::string& token, std::function<void(std::string output, bool error)>& outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& rpcCallback)
-{
-    _stopProcessing = false;
-    _bufferCount = 0;
-    _token = token;
-    _outputCallback = outputCallback;
-    _rpcCallback = rpcCallback;
+PhpEvents::PhpEvents(std::string &token, std::function<void(std::string output, bool error)> &outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> &rpcCallback) {
+  _stopProcessing = false;
+  _bufferCount = 0;
+  _token = token;
+  _outputCallback = outputCallback;
+  _rpcCallback = rpcCallback;
 }
 
-PhpEvents::~PhpEvents()
-{
-    stop();
+PhpEvents::~PhpEvents() {
+  stop();
 }
 
-void PhpEvents::stop()
-{
-    if(_stopProcessing) return;
-    _stopProcessing = true;
-    _processingConditionVariable.notify_all();
+void PhpEvents::stop() {
+  if (_stopProcessing) return;
+  _stopProcessing = true;
+  _processingConditionVariable.notify_all();
 }
 
-bool PhpEvents::enqueue(std::shared_ptr<EventData>& entry)
-{
-    try
+bool PhpEvents::enqueue(std::shared_ptr<EventData> &entry) {
+  try {
+    if (!entry || _stopProcessing) return false;
+    std::unique_lock<std::mutex> lock(_queueMutex);
+    if (_stopProcessing) return true;
+
+    if (_bufferCount >= _bufferSize) return false;
+
     {
-        if(!entry || _stopProcessing) return false;
-        std::unique_lock<std::mutex> lock(_queueMutex);
-        if(_stopProcessing) return true;
-
-        if(_bufferCount >= _bufferSize) return false;
-
-        {
-            std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
-            _buffer[_bufferTail] = entry;
-            _bufferTail = (_bufferTail + 1) % _bufferSize;
-            ++_bufferCount;
-        }
-
-        _processingConditionVariable.notify_one();
-        return true;
+      std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
+      _buffer[_bufferTail] = entry;
+      _bufferTail = (_bufferTail + 1) % _bufferSize;
+      ++_bufferCount;
     }
-    catch(const std::exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return false;
+
+    _processingConditionVariable.notify_one();
+    return true;
+  }
+  catch (const std::exception &ex) {
+    GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
 }
 
-std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout)
-{
-    if(timeout < 1) timeout = 10000;
-    std::shared_ptr<EventData> eventData;
-    if(_stopProcessing) return eventData;
-    try
+std::shared_ptr<PhpEvents::EventData> PhpEvents::poll(int32_t timeout) {
+  if (timeout < 1) timeout = 10000;
+  std::shared_ptr<EventData> eventData;
+  if (_stopProcessing) return eventData;
+  try {
     {
-        {
-            std::unique_lock<std::mutex> lock(_queueMutex);
+      std::unique_lock<std::mutex> lock(_queueMutex);
 
-            if(!_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return _bufferCount > 0 || _stopProcessing; })) return eventData;
-            if(_stopProcessing) return eventData;
+      if (!_processingConditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return _bufferCount > 0 || _stopProcessing; })) return eventData;
+      if (_stopProcessing) return eventData;
 
-            std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
-            eventData = _buffer[_bufferHead];
-            _buffer[_bufferHead].reset();
-            _bufferHead = (_bufferHead + 1) % _bufferSize;
-            --_bufferCount;
-        }
+      std::lock_guard<std::mutex> bufferGuard(_bufferMutex);
+      eventData = _buffer[_bufferHead];
+      _buffer[_bufferHead].reset();
+      _bufferHead = (_bufferHead + 1) % _bufferSize;
+      --_bufferCount;
     }
-    catch(const std::exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return eventData;
+  }
+  catch (const std::exception &ex) {
+    GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return eventData;
 }
 
-void PhpEvents::addPeer(uint64_t peerId, int32_t channel, std::string& variable)
-{
-    try
-    {
-        std::lock_guard<std::mutex> peersGuard(_peersMutex);
-        if(channel > -1 && !variable.empty()) _peers[peerId][channel].insert(variable);
-        else _peers.emplace(std::make_pair(peerId, std::map<int32_t, std::set<std::string>>()));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void PhpEvents::addPeer(uint64_t peerId, int32_t channel, std::string &variable) {
+  try {
+    std::lock_guard<std::mutex> peersGuard(_peersMutex);
+    if (channel > -1 && !variable.empty()) _peers[peerId][channel].insert(variable);
+    else _peers.emplace(std::make_pair(peerId, std::map<int32_t, std::set<std::string>>()));
+  }
+  catch (const std::exception &ex) {
+    GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void PhpEvents::removePeer(uint64_t peerId, int32_t channel, std::string& variable)
-{
-    try
-    {
-        std::lock_guard<std::mutex> peersGuard(_peersMutex);
-        if(channel > -1 && !variable.empty())
-        {
-            _peers[peerId][channel].erase(variable);
-            if(_peers[peerId][channel].empty()) _peers[peerId].erase(channel);
-        }
-        else _peers.erase(peerId);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void PhpEvents::removePeer(uint64_t peerId, int32_t channel, std::string &variable) {
+  try {
+    std::lock_guard<std::mutex> peersGuard(_peersMutex);
+    if (channel > -1 && !variable.empty()) {
+      _peers[peerId][channel].erase(variable);
+      if (_peers[peerId][channel].empty()) _peers[peerId].erase(channel);
+    } else _peers.erase(peerId);
+  }
+  catch (const std::exception &ex) {
+    GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-bool PhpEvents::peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable)
-{
-    try
-    {
-        std::lock_guard<std::mutex> peersGuard(_peersMutex);
-        auto peerIterator = _peers.find(peerId);
-        if(peerIterator != _peers.end())
-        {
-            if(!peerIterator->second.empty() && channel > -1 && !variable.empty())
-            {
-                auto channelIterator = peerIterator->second.find(channel);
-                if(channelIterator == peerIterator->second.end()) return false;
-                return channelIterator->second.find(variable) != channelIterator->second.end();
-            }
-            else return true;
-        }
+bool PhpEvents::peerSubscribed(uint64_t peerId, int32_t channel, std::string &variable) {
+  try {
+    std::lock_guard<std::mutex> peersGuard(_peersMutex);
+    auto peerIterator = _peers.find(peerId);
+    if (peerIterator != _peers.end()) {
+      if (!peerIterator->second.empty() && channel > -1 && !variable.empty()) {
+        auto channelIterator = peerIterator->second.find(channel);
+        if (channelIterator == peerIterator->second.end()) return false;
+        return channelIterator->second.find(variable) != channelIterator->second.end();
+      } else return true;
     }
-    catch(const std::exception& ex)
-    {
-        GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return false;
+  }
+  catch (const std::exception &ex) {
+    GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
 }
 
 }

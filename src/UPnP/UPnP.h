@@ -33,72 +33,69 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class UPnP : public BaseLib::Rpc::IWebserverEventSink
-{
-public:
-	UPnP();
+class UPnP : public BaseLib::Rpc::IWebserverEventSink {
+ public:
+  UPnP();
 
-	virtual ~UPnP();
+  virtual ~UPnP();
 
-	void start();
+  void start();
 
-	void stop();
+  void stop();
 
-	void getDescription(int32_t port, std::vector<char>& output);
+  void getDescription(int32_t port, std::vector<char> &output);
 
-private:
-	struct Packets
-	{
-		std::vector<char> notifyRoot;
-		std::vector<char> notifyRootUUID;
-		std::vector<char> notify;
-		std::vector<char> okRoot;
-		std::vector<char> okRootUUID;
-		std::vector<char> ok;
-		std::vector<char> byebyeRoot;
-		std::vector<char> byebyeRootUUID;
-		std::vector<char> byebye;
-		std::vector<char> description;
-	};
+ private:
+  struct Packets {
+    std::vector<char> notifyRoot;
+    std::vector<char> notifyRootUUID;
+    std::vector<char> notify;
+    std::vector<char> okRoot;
+    std::vector<char> okRootUUID;
+    std::vector<char> ok;
+    std::vector<char> byebyeRoot;
+    std::vector<char> byebyeRootUUID;
+    std::vector<char> byebye;
+    std::vector<char> description;
+  };
 
-	BaseLib::Output _out;
-	std::atomic_bool _stopServer;
-	std::shared_ptr<BaseLib::FileDescriptor> _serverSocketDescriptor;
-	std::thread _listenThread;
-	std::string _address;
-	std::string _udn;
-	std::string _st;
-	std::map<int32_t, Packets> _packets;
-	int32_t _lastAdvertisement = 0;
+  BaseLib::Output _out;
+  std::atomic_bool _stopServer;
+  std::shared_ptr<BaseLib::FileDescriptor> _serverSocketDescriptor;
+  std::thread _listenThread;
+  std::string _address;
+  std::string _udn;
+  std::string _st;
+  std::map<int32_t, Packets> _packets;
+  int32_t _lastAdvertisement = 0;
 
-	// {{{ Webserver events
-	BaseLib::PEventHandler _webserverEventHandler;
+  // {{{ Webserver events
+  BaseLib::PEventHandler _webserverEventHandler;
 
-	bool onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path);
-	// }}}
+  bool onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpRequest, std::shared_ptr<BaseLib::TcpSocket> &socket, std::string &path);
+  // }}}
 
-	void getAddress();
+  void getAddress();
 
-	void setPackets();
+  void setPackets();
 
-	void getUDN();
+  void getUDN();
 
-    std::shared_ptr<BaseLib::FileDescriptor> getSocketDescriptor();
+  std::shared_ptr<BaseLib::FileDescriptor> getSocketDescriptor();
 
-	void listen();
+  void listen();
 
-	void processPacket(BaseLib::Http& http);
+  void processPacket(BaseLib::Http &http);
 
-	void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
+  void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
 
-	void sendNotify();
+  void sendNotify();
 
-	void sendByebye();
+  void sendByebye();
 
-	void registerServers();
+  void registerServers();
 };
 
 }

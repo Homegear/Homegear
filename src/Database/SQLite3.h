@@ -37,44 +37,42 @@
 
 #include <sqlite3.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class SQLite3
-{
-public:
-    SQLite3();
-    SQLite3(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal);
-    virtual ~SQLite3();
-    void dispose();
-    void init(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "", std::string backupFilename = "");
-    void hotBackup();
-    uint32_t executeWriteCommand(std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> command);
-    uint32_t executeWriteCommand(std::string command, BaseLib::Database::DataRow& dataToEscape);
-    std::shared_ptr<BaseLib::Database::DataTable> executeCommand(std::string command);
-    std::shared_ptr<BaseLib::Database::DataTable> executeCommand(std::string command, BaseLib::Database::DataRow& dataToEscape);
-    bool isOpen() { return _database != nullptr; }
-    /*void benchmark1();
-    void benchmark2();
-    void benchmark3();
-    void benchmark4();*/
-protected:
-private:
-    std::string _databasePath;
-    std::string _databaseFilename;
-    std::string _backupPath;
-    std::string _backupFilename;
-    bool _databaseSynchronous = true;
-    bool _databaseMemoryJournal = false;
-    bool _databaseWALJournal = true;
-    sqlite3* _database = nullptr;
-    std::mutex _databaseMutex;
+class SQLite3 {
+ public:
+  SQLite3();
+  SQLite3(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal);
+  virtual ~SQLite3();
+  void dispose();
+  void init(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "", std::string backupFilename = "");
+  void hotBackup();
+  uint32_t executeWriteCommand(std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> command);
+  uint32_t executeWriteCommand(std::string command, BaseLib::Database::DataRow &dataToEscape);
+  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(std::string command);
+  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(std::string command, BaseLib::Database::DataRow &dataToEscape);
+  bool isOpen() { return _database != nullptr; }
+  /*void benchmark1();
+  void benchmark2();
+  void benchmark3();
+  void benchmark4();*/
+ protected:
+ private:
+  std::string _databasePath;
+  std::string _databaseFilename;
+  std::string _backupPath;
+  std::string _backupFilename;
+  bool _databaseSynchronous = true;
+  bool _databaseMemoryJournal = false;
+  bool _databaseWALJournal = true;
+  sqlite3 *_database = nullptr;
+  std::mutex _databaseMutex;
 
-    bool checkIntegrity(std::string databasePath);
-    void openDatabase(bool lockMutex);
-    void closeDatabase(bool lockMutex);
-    void getDataRows(sqlite3_stmt* statement, std::shared_ptr<BaseLib::Database::DataTable>& dataRows);
-    void bindData(sqlite3_stmt* statement, BaseLib::Database::DataRow& dataToEscape);
+  bool checkIntegrity(std::string databasePath);
+  void openDatabase(bool lockMutex);
+  void closeDatabase(bool lockMutex);
+  void getDataRows(sqlite3_stmt *statement, std::shared_ptr<BaseLib::Database::DataTable> &dataRows);
+  void bindData(sqlite3_stmt *statement, BaseLib::Database::DataRow &dataToEscape);
 };
 
 }

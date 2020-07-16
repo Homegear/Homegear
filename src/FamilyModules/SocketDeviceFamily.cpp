@@ -30,52 +30,42 @@
 #include "SocketDeviceFamily.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-SocketDeviceFamily::SocketDeviceFamily(BaseLib::Systems::IFamilyEventSink* eventHandler, int32_t id, const std::string& name) : BaseLib::Systems::DeviceFamily(GD::bl.get(), eventHandler, id, name)
-{
+SocketDeviceFamily::SocketDeviceFamily(BaseLib::Systems::IFamilyEventSink *eventHandler, int32_t id, const std::string &name) : BaseLib::Systems::DeviceFamily(GD::bl.get(), eventHandler, id, name) {
 }
 
-bool SocketDeviceFamily::init()
-{
-    //Todo: Retrieve device list
-    return true;
+bool SocketDeviceFamily::init() {
+  //Todo: Retrieve device list
+  return true;
 }
 
-void SocketDeviceFamily::dispose()
-{
-    if(_disposed) return;
-    DeviceFamily::dispose();
+void SocketDeviceFamily::dispose() {
+  if (_disposed) return;
+  DeviceFamily::dispose();
 
-    _central.reset();
+  _central.reset();
 }
 
-void SocketDeviceFamily::reloadRpcDevices()
-{
+void SocketDeviceFamily::reloadRpcDevices() {
+  //Todo: Implement
+}
+
+void SocketDeviceFamily::createCentral() {
+  //Todo: Implement
+}
+
+std::shared_ptr<BaseLib::Systems::ICentral> SocketDeviceFamily::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber) {
+  return std::make_shared<SocketCentral>(getFamily(), deviceId, serialNumber, this);
+}
+
+BaseLib::PVariable SocketDeviceFamily::getPairingInfo() {
+  try {
     //Todo: Implement
-}
-
-void SocketDeviceFamily::createCentral()
-{
-    //Todo: Implement
-}
-
-std::shared_ptr<BaseLib::Systems::ICentral> SocketDeviceFamily::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
-{
-    return std::make_shared<SocketCentral>(getFamily(), deviceId, serialNumber, this);
-}
-
-BaseLib::PVariable SocketDeviceFamily::getPairingInfo()
-{
-    try
-    {
-        //Todo: Implement
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 }
