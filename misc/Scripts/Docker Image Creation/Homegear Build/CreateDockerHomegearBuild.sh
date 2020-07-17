@@ -604,7 +604,7 @@ if [[ -n $2 ]]; then
 	unzip ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
-	mv Homegear-ABI-${1}* homegear-abi-${1}
+	mv homegear-abi-${1}* homegear-abi-${1}
 
 	wget --https-only https://gitit.de/api/v4/projects/13/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
