@@ -55,41 +55,17 @@ struct RoleVariableInfo {
 
 class Roles {
  public:
-  static BaseLib::PVariable aggregate(const BaseLib::PRpcClientInfo &clientInfo,
-                                      RoleAggregationType aggregationType,
-                                      const BaseLib::PVariable &aggregationParameters,
-                                      const BaseLib::PArray &roles,
-                                      uint64_t roomId);
+  static BaseLib::PVariable aggregate(const BaseLib::PRpcClientInfo &clientInfo, RoleAggregationType aggregationType, const BaseLib::PVariable &aggregationParameters, const BaseLib::PArray &roles, uint64_t roomId, bool visualizedVariablesOnly);
 
  private:
   Roles() = default;
 
-  static BaseLib::PVariable countTrue(const BaseLib::PRpcClientInfo &clientInfo,
-                                      const std::unordered_map<uint64_t,
-                                                               std::unordered_map<int32_t,
-                                                                                  std::list<RoleVariableInfo>>> &variables);
-  static BaseLib::PVariable countDistinct(const BaseLib::PRpcClientInfo &clientInfo,
-                                          const std::unordered_map<uint64_t,
-                                                                   std::unordered_map<int32_t,
-                                                                                      std::list<RoleVariableInfo>>> &variables);
-  static BaseLib::PVariable countMinimum(const BaseLib::PRpcClientInfo &clientInfo,
-                                         const std::unordered_map<uint64_t,
-                                                                  std::unordered_map<int32_t,
-                                                                                     std::list<RoleVariableInfo>>> &variables);
-  static BaseLib::PVariable countMaximum(const BaseLib::PRpcClientInfo &clientInfo,
-                                         const std::unordered_map<uint64_t,
-                                                                  std::unordered_map<int32_t,
-                                                                                     std::list<RoleVariableInfo>>> &variables);
-  static BaseLib::PVariable countBelowThreshold(const BaseLib::PRpcClientInfo &clientInfo,
-                                                const std::unordered_map<uint64_t,
-                                                                         std::unordered_map<int32_t,
-                                                                                            std::list<RoleVariableInfo>>> &variables,
-                                                const BaseLib::PVariable &aggregationParameters);
-  static BaseLib::PVariable countAboveThreshold(const BaseLib::PRpcClientInfo &clientInfo,
-                                                const std::unordered_map<uint64_t,
-                                                                         std::unordered_map<int32_t,
-                                                                                            std::list<RoleVariableInfo>>> &variables,
-                                                const BaseLib::PVariable &aggregationParameters);
+  static BaseLib::PVariable countTrue(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countDistinct(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countMinimum(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countMaximum(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countBelowThreshold(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables, const BaseLib::PVariable &aggregationParameters);
+  static BaseLib::PVariable countAboveThreshold(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables, const BaseLib::PVariable &aggregationParameters);
 };
 
 }

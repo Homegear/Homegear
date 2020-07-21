@@ -1552,29 +1552,54 @@ BaseLib::PVariable RPCAggregateRoles::invoke(BaseLib::PRpcClientInfo clientInfo,
                                                                                                                      {BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tArray,
                                                                                                                       BaseLib::VariableType::tArray,
-                                                                                                                      BaseLib::VariableType::tInteger})
+                                                                                                                      BaseLib::VariableType::tInteger}),
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tStruct,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tArray,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tArray,
+                                                                                                                      BaseLib::VariableType::tStruct,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tArray,
+                                                                                                                      BaseLib::VariableType::tArray,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tBoolean})
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("aggregateRoles"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("aggregateRoles")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
     RoleAggregationType aggregationType = (RoleAggregationType)parameters->at(0)->integerValue64;
 
     BaseLib::PArray roles;
-    if (parameters->at(1)->type == BaseLib::VariableType::tInteger
-        || parameters->at(1)->type == BaseLib::VariableType::tInteger64) {
+    if (parameters->at(1)->type == BaseLib::VariableType::tInteger || parameters->at(1)->type == BaseLib::VariableType::tInteger64) {
       roles = std::make_shared<BaseLib::Array>();
       roles->emplace_back(std::make_shared<BaseLib::Variable>(parameters->at(1)->integerValue64));
     } else roles = parameters->at(1)->arrayValue;
 
-    auto aggregationParameters = parameters->size() >= 3 ? parameters->at(2) : std::make_shared<BaseLib::Variable>(
-        BaseLib::VariableType::tStruct);
+    auto aggregationParameters = parameters->size() >= 3 ? parameters->at(2) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
     uint64_t roomId = 0;
     if (parameters->size() >= 4) roomId = (uint64_t)parameters->at(3)->integerValue64;
 
-    return Roles::aggregate(clientInfo, aggregationType, aggregationParameters, roles, roomId);
+    auto visualizedElementsOnly = parameters->size() >= 5 ? parameters->at(4)->booleanValue : false;
+    return Roles::aggregate(clientInfo, aggregationType, aggregationParameters, roles, roomId, visualizedElementsOnly);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

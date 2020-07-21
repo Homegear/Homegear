@@ -35,11 +35,7 @@ namespace Homegear {
 
 namespace Rpc {
 
-BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
-                                    RoleAggregationType aggregationType,
-                                    const BaseLib::PVariable &aggregationParameters,
-                                    const BaseLib::PArray &roles,
-                                    uint64_t roomId) {
+BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo, RoleAggregationType aggregationType, const BaseLib::PVariable &aggregationParameters, const BaseLib::PArray &roles, uint64_t roomId, bool visualizedVariablesOnly) {
   try {
     std::unordered_map<uint64_t, std::unordered_map<int32_t, std::set<std::string>>> variablesInRoom;
     //{{{ Get variables in room
@@ -50,10 +46,7 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
       requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roomId));
       std::string methodName = "getVariablesInRoom";
       auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
-      if (result->errorStruct)
-        return BaseLib::Variable::createError(-1,
-                                              "Error getting variables in room: "
-                                                  + result->structValue->at("faultString")->stringValue);
+      if (result->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables in room: " + result->structValue->at("faultString")->stringValue);
 
       for (auto &peerStructElement : *result->structValue) {
         for (auto &channelStructElement : *peerStructElement.second->structValue) {
@@ -86,9 +79,7 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
         if (directionIterator != roleStruct->structValue->end())
           direction = (BaseLib::RoleDirection)directionIterator->second->integerValue64;
       }
-      if (!GD::bl->db->roleExists(roleId))
-        return BaseLib::Variable::createError(-1,
-                                              "At least one role ID is unknown.");
+      if (!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "At least one role ID is unknown.");
 
       auto requestParameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId));
@@ -101,12 +92,8 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
           for (auto &variableElement : *channelStructElement.second->structValue) {
             auto directionIterator = variableElement.second->structValue->find("direction");
             if (directionIterator != variableElement.second->structValue->end()) {
-              if ((direction == BaseLib::RoleDirection::input
-                  && (BaseLib::RoleDirection)directionIterator->second->integerValue64
-                      == BaseLib::RoleDirection::output) ||
-                  (direction == BaseLib::RoleDirection::output
-                      && (BaseLib::RoleDirection)directionIterator->second->integerValue64
-                          == BaseLib::RoleDirection::input)) {
+              if ((direction == BaseLib::RoleDirection::input && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::output) ||
+                  (direction == BaseLib::RoleDirection::output && (BaseLib::RoleDirection)directionIterator->second->integerValue64 == BaseLib::RoleDirection::input)) {
                 continue;
               }
             }
@@ -115,8 +102,8 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
             int32_t channel = BaseLib::Math::getNumber(channelStructElement.first);
             std::string variable = variableElement.first;
 
-            if (roomId != 0) //Check if role variable is in room
-            {
+            //Check if role variable is in room
+            if (roomId != 0) {
               auto peerIterator = variablesInRoom.find(peerId);
               if (peerIterator == variablesInRoom.end()) continue;
               auto channelIterator = peerIterator->second.find(channel);
@@ -124,6 +111,8 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
               auto variableIterator = channelIterator->second.find(variable);
               if (variableIterator == channelIterator->second.end()) continue;
             }
+
+            if (visualizedVariablesOnly && GD::uiController->getUiElementsWithVariable(peerId, channel, variable).empty()) continue;
 
             variables[peerId][channel].emplace_back(std::move(RoleVariableInfo(variable)));
           }
@@ -136,14 +125,8 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
     else if (aggregationType == RoleAggregationType::countDistinct) return countDistinct(clientInfo, variables);
     else if (aggregationType == RoleAggregationType::countMinimum) return countMinimum(clientInfo, variables);
     else if (aggregationType == RoleAggregationType::countMaximum) return countMaximum(clientInfo, variables);
-    else if (aggregationType == RoleAggregationType::countBelowThreshold)
-      return countBelowThreshold(clientInfo,
-                                 variables,
-                                 aggregationParameters);
-    else if (aggregationType == RoleAggregationType::countAboveThreshold)
-      return countAboveThreshold(clientInfo,
-                                 variables,
-                                 aggregationParameters);
+    else if (aggregationType == RoleAggregationType::countBelowThreshold) return countBelowThreshold(clientInfo, variables, aggregationParameters);
+    else if (aggregationType == RoleAggregationType::countAboveThreshold) return countAboveThreshold(clientInfo, variables, aggregationParameters);
     else return BaseLib::Variable::createError(-1, "Unknown aggregation type.");
   }
   catch (const std::exception &ex) {
@@ -152,10 +135,7 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo,
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo &clientInfo,
-                                    const std::unordered_map<uint64_t,
-                                                             std::unordered_map<int32_t,
-                                                                                std::list<RoleVariableInfo>>> &variables) {
+BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables) {
   try {
     uint64_t variableCount = 0;
     uint64_t trueCount = 0;
@@ -191,10 +171,7 @@ BaseLib::PVariable Roles::countTrue(const BaseLib::PRpcClientInfo &clientInfo,
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo &clientInfo,
-                                        const std::unordered_map<uint64_t,
-                                                                 std::unordered_map<int32_t,
-                                                                                    std::list<RoleVariableInfo>>> &variables) {
+BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables) {
   try {
     uint64_t variableCount = 0;
     std::unordered_map<uint64_t, uint64_t> counts;
@@ -231,10 +208,7 @@ BaseLib::PVariable Roles::countDistinct(const BaseLib::PRpcClientInfo &clientInf
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo &clientInfo,
-                                       const std::unordered_map<uint64_t,
-                                                                std::unordered_map<int32_t,
-                                                                                   std::list<RoleVariableInfo>>> &variables) {
+BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables) {
   try {
     uint64_t variableCount = 0;
     uint64_t minCount = 0;
@@ -297,10 +271,7 @@ BaseLib::PVariable Roles::countMinimum(const BaseLib::PRpcClientInfo &clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo &clientInfo,
-                                       const std::unordered_map<uint64_t,
-                                                                std::unordered_map<int32_t,
-                                                                                   std::list<RoleVariableInfo>>> &variables) {
+BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables) {
   try {
     uint64_t variableCount = 0;
     uint64_t maxCount = 0;
@@ -363,11 +334,7 @@ BaseLib::PVariable Roles::countMaximum(const BaseLib::PRpcClientInfo &clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo &clientInfo,
-                                              const std::unordered_map<uint64_t,
-                                                                       std::unordered_map<int32_t,
-                                                                                          std::list<RoleVariableInfo>>> &variables,
-                                              const BaseLib::PVariable &aggregationParameters) {
+BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables, const BaseLib::PVariable &aggregationParameters) {
   try {
     BaseLib::PVariable threshold;
 
@@ -439,11 +406,7 @@ BaseLib::PVariable Roles::countBelowThreshold(const BaseLib::PRpcClientInfo &cli
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo &clientInfo,
-                                              const std::unordered_map<uint64_t,
-                                                                       std::unordered_map<int32_t,
-                                                                                          std::list<RoleVariableInfo>>> &variables,
-                                              const BaseLib::PVariable &aggregationParameters) {
+BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables, const BaseLib::PVariable &aggregationParameters) {
   try {
     BaseLib::PVariable threshold;
 
@@ -505,8 +468,7 @@ BaseLib::PVariable Roles::countAboveThreshold(const BaseLib::PRpcClientInfo &cli
     auto response = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     response->structValue->emplace("variableCount", std::make_shared<BaseLib::Variable>(variableCount));
     response->structValue->emplace("aboveThresholdCount", std::make_shared<BaseLib::Variable>(aboveThresholdCount));
-    response->structValue->emplace("belowOrEqualThresholdCount",
-                                   std::make_shared<BaseLib::Variable>(variableCount - aboveThresholdCount));
+    response->structValue->emplace("belowOrEqualThresholdCount", std::make_shared<BaseLib::Variable>(variableCount - aboveThresholdCount));
     return response;
   }
   catch (const std::exception &ex) {

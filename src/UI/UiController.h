@@ -57,6 +57,8 @@ class UiController {
 
   void load();
 
+  std::unordered_set<uint64_t> getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string &variableName);
+
   BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, const std::string &elementId, const BaseLib::PVariable &data, const BaseLib::PVariable &metadata);
 
   BaseLib::PVariable addUiElementSimple(const BaseLib::PRpcClientInfo &clientInfo, const std::string &label, const BaseLib::PVariable &variable, bool dryRun);
@@ -92,8 +94,6 @@ class UiController {
   BaseLib::PVariable findRoleVariables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PVariable &uiInfo, const BaseLib::PVariable &variable, uint64_t roomId, BaseLib::PVariable &inputPeers, BaseLib::PVariable &outputPeers);
 
   static bool checkElementAccess(const BaseLib::PRpcClientInfo &clientInfo, const PUiElement &uiElement, const BaseLib::DeviceDescription::PHomegearUiElement &rpcElement);
-
-  std::unordered_set<uint64_t> getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string &variableName);
 };
 
 }
