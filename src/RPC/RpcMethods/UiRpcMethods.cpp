@@ -34,6 +34,43 @@
 namespace Homegear {
 namespace RpcMethods {
 
+BaseLib::PVariable RpcGetUiElementsWithVariable::invoke(BaseLib::PRpcClientInfo clientInfo,
+                                                           BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 //Peer ID; channel; variable name
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64,
+                                                                                                                      BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tString})
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getUiElementsWithVariable"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+
+    std::unordered_set<uint64_t> theSet = GD::uiController->getUiElementsWithVariable(parameters->at(0)->integerValue64, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+
+    BaseLib::PVariable variableArray;
+    variableArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    variableArray->arrayValue->reserve(theSet.size());
+
+    for (uint64_t val : theSet)
+    {
+        variableArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(val));
+    }
+
+    return variableArray;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+
 BaseLib::PVariable RpcAddUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -132,6 +169,29 @@ BaseLib::PVariable RpcGetAllUiElements::invoke(BaseLib::PRpcClientInfo clientInf
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
+
+
+BaseLib::PVariable RpcGetUiElement::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getUiElement"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64,
+                                                                                                                     BaseLib::VariableType::tString})
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    return GD::uiController->getUiElement(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 
 BaseLib::PVariable RpcGetAvailableUiElements::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {

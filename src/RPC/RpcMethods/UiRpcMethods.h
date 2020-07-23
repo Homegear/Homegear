@@ -37,6 +37,15 @@
 namespace Homegear {
 namespace RpcMethods {
 
+class RpcGetUiElementsWithVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcGetUiElementsWithVariable() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RpcAddUiElement : public BaseLib::Rpc::RpcMethod {
  public:
   RpcAddUiElement() {
@@ -73,6 +82,16 @@ class RpcGetAllUiElements : public BaseLib::Rpc::RpcMethod {
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
+
+class RpcGetUiElement : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcGetUiElement() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 
 class RpcGetAvailableUiElements : public BaseLib::Rpc::RpcMethod {
  public:
