@@ -305,9 +305,11 @@ RpcServer::RpcServer() {
   }
 
   //{{{ UI
+  _rpcMethods->emplace("getUiElementsWithVariable", std::make_shared<RpcMethods::RpcGetUiElementsWithVariable>());
   _rpcMethods->emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
   _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
   _rpcMethods->emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
+  _rpcMethods->emplace("getUiElement", std::make_shared<RpcMethods::RpcGetUiElement>());
   _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
   _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
   _rpcMethods->emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
