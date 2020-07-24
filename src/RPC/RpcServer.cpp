@@ -305,15 +305,15 @@ RpcServer::RpcServer() {
   }
 
   //{{{ UI
-  _rpcMethods->emplace("getUiElementsWithVariable", std::make_shared<RpcMethods::RpcGetUiElementsWithVariable>());
   _rpcMethods->emplace("addUiElement", std::make_shared<RpcMethods::RpcAddUiElement>());
   _rpcMethods->emplace("checkUiElementSimpleCreation", std::make_shared<RpcMethods::RpcCheckUiElementSimpleCreation>());
   _rpcMethods->emplace("getAllUiElements", std::make_shared<RpcMethods::RpcGetAllUiElements>());
-  _rpcMethods->emplace("getUiElement", std::make_shared<RpcMethods::RpcGetUiElement>());
   _rpcMethods->emplace("getAvailableUiElements", std::make_shared<RpcMethods::RpcGetAvailableUiElements>());
   _rpcMethods->emplace("getCategoryUiElements", std::make_shared<RpcMethods::RpcGetCategoryUiElements>());
   _rpcMethods->emplace("getRoomUiElements", std::make_shared<RpcMethods::RpcGetRoomUiElements>());
+  _rpcMethods->emplace("getUiElement", std::make_shared<RpcMethods::RpcGetUiElement>());
   _rpcMethods->emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
+  _rpcMethods->emplace("getUiElementsWithVariable", std::make_shared<RpcMethods::RpcGetUiElementsWithVariable>());
   _rpcMethods->emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
   _rpcMethods->emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
   _rpcMethods->emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
@@ -418,7 +418,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
       if (info->interface != "::1" && info->interface != "127.0.0.1") {
         if (!_info->ssl || _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none) {
           _out.printError(
-              "Error: For a family RPC server to listen on other addresses than \"::1\" or \"127.0.0.1\", SSL and authentication have to be enabled. Not starting server.");
+              R"(Error: For a family RPC server to listen on other addresses than "::1" or "127.0.0.1", SSL and authentication have to be enabled. Not starting server.)");
           return;
         }
       }
@@ -459,10 +459,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
         _out.printError("Error: Could not allocate TLS certificate structure: " + std::string(gnutls_strerror(result)));
         return;
       }
-      if ((result = gnutls_certificate_set_x509_key_file(_x509Cred,
-                                                         _info->certPath.c_str(),
-                                                         _info->keyPath.c_str(),
-                                                         GNUTLS_X509_FMT_PEM)) < 0) {
+      if ((result = gnutls_certificate_set_x509_key_file(_x509Cred, _info->certPath.c_str(), _info->keyPath.c_str(), GNUTLS_X509_FMT_PEM)) < 0) {
         _out.printError("Error: Could not load certificate or key file: " + std::string(gnutls_strerror(result)));
         gnutls_certificate_free_credentials(_x509Cred);
         _x509Cred = nullptr;

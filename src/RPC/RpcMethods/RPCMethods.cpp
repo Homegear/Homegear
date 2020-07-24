@@ -1585,7 +1585,7 @@ BaseLib::PVariable RPCAggregateRoles::invoke(BaseLib::PRpcClientInfo clientInfo,
 
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("aggregateRoles")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    RoleAggregationType aggregationType = (RoleAggregationType)parameters->at(0)->integerValue64;
+    auto aggregationType = (RoleAggregationType)parameters->at(0)->integerValue64;
 
     BaseLib::PArray roles;
     if (parameters->at(1)->type == BaseLib::VariableType::tInteger || parameters->at(1)->type == BaseLib::VariableType::tInteger64) {

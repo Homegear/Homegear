@@ -184,7 +184,7 @@ try {
     </div>
     <footer>
         <p class="pull-right"><a href="#">Back to top</a></p>
-        <p>&copy; 2014-<?= date('Y') ?> Homegear UG (haftungsbeschränkt)</p>
+        <p>&copy; 2014-<?= date('Y') ?> Homegear GmbH</p>
     </footer>
 </div>
 </body>

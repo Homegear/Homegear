@@ -65,9 +65,9 @@ class UiController {
 
   BaseLib::PVariable getAllUiElements(const BaseLib::PRpcClientInfo &clientInfo, const std::string &language);
 
-  BaseLib::PVariable getUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId, const std::string &language);
-
   BaseLib::PVariable getAvailableUiElements(const BaseLib::PRpcClientInfo &clientInfo, const std::string &language);
+
+  BaseLib::PVariable getUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId, const std::string &language);
 
   BaseLib::PVariable getUiElementMetadata(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId);
 

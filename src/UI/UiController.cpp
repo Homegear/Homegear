@@ -942,6 +942,15 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable UiController::getAvailableUiElements(const BaseLib::PRpcClientInfo &clientInfo, const std::string &language) {
+  try {
+    return _descriptions->getUiElements(language);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
 
 BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId, const std::string &language) {
   try {
@@ -955,30 +964,29 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
 
     auto languageIterator = uiElement->rpcElement.find(language);
     if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-        if (!rpcElement) return BaseLib::Variable::createError(-32500, "Unknown application error.");
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
-        if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
+      auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
+      if (!rpcElement) return BaseLib::Variable::createError(-32500, "Unknown application error.");
+      uiElement->rpcElement.emplace(language, rpcElement);
+      languageIterator = uiElement->rpcElement.find(language);
+      if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
     }
 
     if (checkAcls) {
-        if (!clientInfo->acls->checkRoomReadAccess(uiElement->roomId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        for (auto categoryId : uiElement->categoryIds) {
-          if (!clientInfo->acls->checkCategoryReadAccess(categoryId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        }
-        if (!checkElementAccess(clientInfo, uiElement, languageIterator->second)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+      if (!clientInfo->acls->checkRoomReadAccess(uiElement->roomId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+      for (auto categoryId : uiElement->categoryIds) {
+        if (!clientInfo->acls->checkCategoryReadAccess(categoryId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+      }
+      if (!checkElementAccess(clientInfo, uiElement, languageIterator->second)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     }
 
     auto elementInfo = languageIterator->second->getElementInfo();
     elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
-    //elementInfo->structValue->emplace("clickCount", std::make_shared<BaseLib::Variable>(uiElementIterator->first));
     elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
     elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
     auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     categories->arrayValue->reserve(uiElement->categoryIds.size());
     for (auto categoryId : uiElement->categoryIds) {
-        categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
+      categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
     }
     elementInfo->structValue->emplace("categories", categories);
 
@@ -988,13 +996,13 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
     if (variableInputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
     else //Complex
     {
-        auto controlsIterator = elementInfo->structValue->find("controls");
-        if (controlsIterator != elementInfo->structValue->end()) {
-          for (auto &control : *controlsIterator->second->arrayValue) {
-            variableInputsIterator = control->structValue->find("variableInputs");
-            if (variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
-          }
+      auto controlsIterator = elementInfo->structValue->find("controls");
+      if (controlsIterator != elementInfo->structValue->end()) {
+        for (auto &control : *controlsIterator->second->arrayValue) {
+          variableInputsIterator = control->structValue->find("variableInputs");
+          if (variableInputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableInputsIterator->second->arrayValue, true);
         }
+      }
     }
 
     //Simple
@@ -1002,44 +1010,29 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
     if (variableOutputsIterator != elementInfo->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
     else //Complex
     {
-        auto controlsIterator = elementInfo->structValue->find("controls");
-        if (controlsIterator != elementInfo->structValue->end()) {
-          for (auto &control : *controlsIterator->second->arrayValue) {
-            variableOutputsIterator = control->structValue->find("variableOutputs");
-            if (variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
-          }
+      auto controlsIterator = elementInfo->structValue->find("controls");
+      if (controlsIterator != elementInfo->structValue->end()) {
+        for (auto &control : *controlsIterator->second->arrayValue) {
+          variableOutputsIterator = control->structValue->find("variableOutputs");
+          if (variableOutputsIterator != control->structValue->end()) addVariableInfo(clientInfo, uiElement, variableOutputsIterator->second->arrayValue, false);
         }
+      }
     }
     //}}}
 
     auto dataIterator = uiElement->data->structValue->find("metadata");
     if (dataIterator != uiElement->data->structValue->end()) {
-        auto metadataIterator = elementInfo->structValue->find("metadata");
-        if (metadataIterator == elementInfo->structValue->end()) metadataIterator = elementInfo->structValue->emplace("metadata", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first;
+      auto metadataIterator = elementInfo->structValue->find("metadata");
+      if (metadataIterator == elementInfo->structValue->end()) metadataIterator = elementInfo->structValue->emplace("metadata", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct)).first;
 
-        for (auto &metadataElement : *dataIterator->second->structValue) {
-          metadataIterator->second->structValue->emplace(metadataElement);
-        }
+      for (auto &metadataElement : *dataIterator->second->structValue) {
+        metadataIterator->second->structValue->emplace(metadataElement);
+      }
     }
 
     elementInfo->structValue->emplace("dynamicMetadata", uiElement->metadata);
 
     return elementInfo;
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-
-
-
-
-
-BaseLib::PVariable UiController::getAvailableUiElements(const BaseLib::PRpcClientInfo &clientInfo, const std::string &language) {
-  try {
-    return _descriptions->getUiElements(language);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
