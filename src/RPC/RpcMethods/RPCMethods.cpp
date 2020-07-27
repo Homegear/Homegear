@@ -5091,9 +5091,8 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
 BaseLib::PVariable RPCGetVariablesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger})
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean})
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
@@ -5116,6 +5115,7 @@ BaseLib::PVariable RPCGetVariablesInRoom::invoke(BaseLib::PRpcClientInfo clientI
       if (central) {
         auto variables = central->getVariablesInRoom(clientInfo,
                                                      parameters->at(0)->integerValue64,
+                                                     parameters->size() > 1 ? parameters->at(1)->booleanValue : false,
                                                      checkDeviceAcls,
                                                      checkVariableAcls);
         result->structValue->insert(variables->structValue->begin(), variables->structValue->end());

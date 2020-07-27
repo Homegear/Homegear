@@ -43,7 +43,9 @@ BaseLib::PVariable Roles::aggregate(const BaseLib::PRpcClientInfo &clientInfo, R
       if (!GD::bl->db->roomExists(roomId)) return BaseLib::Variable::createError(-1, "Unknown room.");
 
       BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+      requestParameters->arrayValue->reserve(2);
       requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roomId));
+      requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(true));
       std::string methodName = "getVariablesInRoom";
       auto result = GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
       if (result->errorStruct) return BaseLib::Variable::createError(-1, "Error getting variables in room: " + result->structValue->at("faultString")->stringValue);
