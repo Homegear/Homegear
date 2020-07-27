@@ -606,6 +606,13 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv homegear-abi-${1}* homegear-abi-${1}
 
+	wget --https-only https://gitit.de/api/v4/projects/115/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-freeathome-${1}* homegear-freeathome-${1}
+
 	wget --https-only https://gitit.de/api/v4/projects/13/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
 	unzip ${1}.zip
@@ -696,28 +703,28 @@ createPackage binrpc-client $1 binrpc 0
 
 if [[ -n $2 ]]; then
 	sha256=`sha256sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
-	sed -i '/if(sha256(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i "/std::string homegearPath(buffer, size);/aif(sha256(homegearPath) != \"$sha256\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i '/if(sha256(homegearPath) != /d' homegear-licensing-${1}/src/Licensing.cpp
-	sed -i "/std::string homegearPath(buffer, size);/aif(sha256(homegearPath) != \"$sha256\") return false;" homegear-licensing-${1}/src/Licensing.cpp
+	sed -i '/if (sha256(homegearPath) != /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/std::string homegearPath(buffer.data(), size);/aif (sha256(homegearPath) != \"$sha256\") return false;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if (sha256(homegearPath) != /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/std::string homegearPath(buffer.data(), size);/aif (sha256(homegearPath) != \"$sha256\") return false;" homegear-licensing-${1}/src/Licensing.cpp
 
 	sha256=`sha256sum /usr/lib/libhomegear-base.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
-	sed -i '/if(sha256(baselibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i "/if(baselibPath.empty()) return false;/aif(sha256(baselibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i '/if(sha256(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
-	sed -i "/if(baselibPath.empty()) return false;/aif(sha256(baselibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+	sed -i '/if (sha256(baselibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if (baselibPath.empty()) return false;/aif (sha256(baselibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if (sha256(baselibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if (baselibPath.empty()) return false;/aif (sha256(baselibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
 	sha256=`sha256sum /usr/lib/libhomegear-node.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
-	sed -i '/if(sha256(nodelibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i "/if(nodelibPath.empty()) return false;/aif(sha256(nodelibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i '/if(sha256(nodelibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
-	sed -i "/if(nodelibPath.empty()) return false;/aif(sha256(nodelibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+	sed -i '/if (sha256(nodelibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if (nodelibPath.empty()) return false;/aif (sha256(nodelibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if (sha256(nodelibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if (nodelibPath.empty()) return false;/aif (sha256(nodelibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
 	sha256=`sha256sum /usr/lib/libhomegear-ipc.so.1 | awk '{print toupper($0)}' | cut -d ' ' -f 1`
-	sed -i '/if(sha256(ipclibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i "/if(ipclibPath.empty()) return false;/aif(sha256(ipclibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
-	sed -i '/if(sha256(ipclibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
-	sed -i "/if(ipclibPath.empty()) return false;/aif(sha256(ipclibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
+	sed -i '/if (sha256(ipclibPath) == /d' homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i "/if (ipclibPath.empty()) return false;/aif (sha256(ipclibPath) == \"$sha256\") return true;" homegear-easy-licensing-${1}/src/EasyLicensing.cpp
+	sed -i '/if (sha256(ipclibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
+	sed -i "/if (ipclibPath.empty()) return false;/aif (sha256(ipclibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
 	createPackageWithoutAutomake Homegear-AdminUI $1 homegear-adminui
 
@@ -739,6 +746,7 @@ if [[ -n $2 ]]; then
 	createPackage homegear-zwave $1 homegear-zwave 1
 	createPackage homegear-zigbee $1 homegear-zigbee 1
 	createPackage homegear-abi $1 homegear-abi 1
+	createPackage homegear-freeathome $1 homegear-freeathome 1
 	createPackage homegear-webssh $1 homegear-webssh 1
 	createPackage homegear-dc-connector $1 homegear-dc-connector 1
 	if [ "$distributionVersion" != "jessie" ]; then
@@ -825,6 +833,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-zwave
 	cleanUp2 homegear-zigbee
 	cleanUp2 homegear-abi
+	cleanUp2 homegear-freeathome
 	cleanUp2 homegear-webssh
 	cleanUp2 homegear-dc-connector
 	cleanUp2 homegear-cloudconnect
@@ -866,7 +875,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 	fi
 
 	if [[ -n \$1 ]]; then
-		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-zigbee.deb || test ! -f homegear-abi.deb || test ! -f homegear-webssh.deb || test ! -f homegear-dc-connector.deb || test ! -f homegear-cloudconnect.deb || test ! -f ibs-ssh.deb; then
+		if test ! -f homegear-adminui.deb || test ! -f homegear-easy-licensing.deb || test ! -f homegear-licensing.deb || test ! -f homegear-nodes-extra.deb || test ! -f homegear-knx.deb || test ! -f homegear-enocean.deb || test ! -f homegear-easycam.deb || test ! -f homegear-easyled.deb || test ! -f homegear-easyled2.deb || test ! -f homegear-rsl.deb || test ! -f homegear-rs2w.deb || test ! -f homegear-mbus.deb || test ! -f homegear-zwave.deb || test ! -f homegear-zigbee.deb || test ! -f homegear-abi.deb || test ! -f homegear-freeathome.deb || test ! -f homegear-webssh.deb || test ! -f homegear-dc-connector.deb || test ! -f homegear-cloudconnect.deb || test ! -f ibs-ssh.deb; then
 			echo \"Error: Some or all packages from gitit.de could not be created.\"
 			exit 1
 		fi
@@ -888,6 +897,7 @@ echo "if test -f libhomegear-base.deb && test -f libhomegear-node.deb && test -f
 		mv homegear-zwave.deb homegear-zwave_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-zigbee.deb homegear-zigbee_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-abi.deb homegear-abi_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-freeathome.deb homegear-freeathome_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-webssh.deb homegear-webssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-dc-connector.deb homegear-dc-connector_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-cloudconnect.deb homegear-cloudconnect_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -927,7 +937,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	fi
 
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
@@ -965,7 +975,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	fi
 
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi

@@ -177,7 +177,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
               auto directionIterator = variableIterator->second->structValue->find("direction");
               if (directionIterator != variableIterator->second->structValue->end()) {
                 if (directionIterator->second->integerValue64 == 1) {
-                  GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator->first + " does not have required direction (input). Simple UI element creation is not possible.");
+                  if (GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator->first + " does not have required direction (input). Simple UI element creation is not possible.");
                   wrongDirection = true;
                 }
               }
@@ -195,27 +195,41 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
             }
 
             if (roleCount == 0) {
+              BaseLib::PVariable autoRoleVariable;
+
               //Variable not found, look for alternative in channel
               for (auto &variableIterator2 : *channelIterator->second->structValue) {
                 bool wrongDirection = false;
                 auto directionIterator = variableIterator2.second->structValue->find("direction");
                 if (directionIterator != variableIterator2.second->structValue->end()) {
                   if (directionIterator->second->integerValue64 == 1) {
-                    GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator2.first + " does not have required direction (input). Simple UI element creation is not possible.");
+                    if (GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator2.first + " does not have required direction (input). Simple UI element creation is not possible.");
                     wrongDirection = true;
                   }
                 }
 
                 if (!wrongDirection) {
-                  roleCount++;
+                  if (variableIterator->first.find(".RV.") != std::string::npos) {
+                    autoRoleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    autoRoleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                    autoRoleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                    autoRoleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                  } else {
+                    roleCount++;
 
-                  //Role in channel
-                  auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                  roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                  roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
-                  roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
-                  outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                    //Role in channel
+                    auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                    roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
+                    roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator2.first));
+                    outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                  }
                 }
+              }
+
+              if (roleCount == 0 && autoRoleVariable) {
+                if (GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Using automatically generated variable to fill role " + std::to_string(roleId));
+                outerArray->arrayValue->emplace_back(std::move(autoRoleVariable));
               }
             }
 
@@ -230,8 +244,9 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 auto directionIterator = variableIterator.second->structValue->find("direction");
                 if (directionIterator != variableIterator.second->structValue->end()) {
                   if (directionIterator->second->integerValue64 == 1) {
-                    GD::out.printDebug(
-                        "Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
+                    if (GD::bl->debugLevel >= 5)
+                      GD::out.printDebug(
+                          "Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
                     wrongDirection = true;
                   }
                 }
@@ -265,8 +280,9 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto directionIterator = variableIterator.second->structValue->find("direction");
                     if (directionIterator != variableIterator.second->structValue->end()) {
                       if (directionIterator->second->integerValue64 == 1) {
-                        GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + " of device " + deviceIterator.first
-                                               + ". Simple UI element creation is not possible.");
+                        if (GD::bl->debugLevel >= 5)
+                          GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + " of device " + deviceIterator.first
+                                                 + ". Simple UI element creation is not possible.");
                         wrongDirection = true;
                       }
                     }
@@ -317,7 +333,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
               auto directionIterator = variableIterator->second->structValue->find("direction");
               if (directionIterator != variableIterator->second->structValue->end()) {
                 if (directionIterator->second->integerValue64 == 0) {
-                  GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator->first + " does not have required direction (output). Simple UI element creation is not possible.");
+                  if (GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator->first + " does not have required direction (output). Simple UI element creation is not possible.");
                   wrongDirection = true;
                 }
               }
@@ -341,7 +357,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 auto directionIterator = variableIterator2.second->structValue->find("direction");
                 if (directionIterator != variableIterator2.second->structValue->end()) {
                   if (directionIterator->second->integerValue64 == 0) {
-                    GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator2.first + " does not have required direction (output). Simple UI element creation is not possible.");
+                    if (GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator2.first + " does not have required direction (output). Simple UI element creation is not possible.");
                     wrongDirection = true;
                   }
                 }
@@ -371,8 +387,9 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 auto directionIterator = variableIterator.second->structValue->find("direction");
                 if (directionIterator != variableIterator.second->structValue->end()) {
                   if (directionIterator->second->integerValue64 == 0) {
-                    GD::out.printDebug(
-                        "Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
+                    if (GD::bl->debugLevel >= 5)
+                      GD::out.printDebug(
+                          "Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + ". Simple UI element creation is not possible.");
                     wrongDirection = true;
                   }
                 }
@@ -407,7 +424,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto directionIterator = variableIterator.second->structValue->find("direction");
                     if (directionIterator != variableIterator.second->structValue->end()) {
                       if (directionIterator->second->integerValue64 == 0) {
-                        GD::out.printDebug(
+                        if (GD::bl->debugLevel >= 5) GD::out.printDebug(
                             "Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first
                                 + ". Simple UI element creation is not possible.");
                         wrongDirection = true;

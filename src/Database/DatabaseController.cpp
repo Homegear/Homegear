@@ -2626,7 +2626,7 @@ BaseLib::PVariable DatabaseController::setNodeData(std::string &node, std::strin
       return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM nodeData");
-    if (rows->size() == 0 || rows->at(0).size() == 0) {
+    if (rows->empty() || rows->at(0).empty()) {
       return BaseLib::Variable::createError(-32500, "Error counting data in database.");
     }
     if (rows->at(0).at(0)->intValue > 1000000) {
@@ -2639,18 +2639,18 @@ BaseLib::PVariable DatabaseController::setNodeData(std::string &node, std::strin
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(node)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(node));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM nodeData WHERE node=? AND key=?", data);
     enqueue(0, entry);
 
     std::vector<char> encodedValue;
     _rpcEncoder->encodeResponse(value, encodedValue);
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(encodedValue));
     entry = std::make_shared<QueueEntry>("INSERT INTO nodeData VALUES(?, ?, ?)", data);
     enqueue(0, entry);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2673,16 +2673,16 @@ BaseLib::PVariable DatabaseController::deleteNodeData(std::string &node, std::st
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(node)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(node));
     std::string command("DELETE FROM nodeData WHERE node=?");
     if (!key.empty()) {
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
       command.append(" AND key=?");
     }
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
     enqueue(0, entry);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
