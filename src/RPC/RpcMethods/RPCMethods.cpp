@@ -3418,8 +3418,7 @@ BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
       return families.at(familyID)->getCentral()->getInstallMode(clientInfo);
     }
 
-    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
-         i != families.end(); ++i) {
+    for (auto i = families.begin(); i != families.end(); ++i) {
       std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
       if (central) {
         BaseLib::PVariable result = central->getInstallMode(clientInfo);
@@ -3427,7 +3426,28 @@ BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
       }
     }
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tInteger));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tInteger);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCGetInstanceId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getInstanceId")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+
+    std::string homegearInstanceId;
+    if (!GD::bl->db->getHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, homegearInstanceId)) {
+      return BaseLib::Variable::createError(-32500, "Could not get instance ID");
+    }
+
+    return std::make_shared<BaseLib::Variable>(homegearInstanceId);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3440,12 +3460,11 @@ BaseLib::PVariable RPCGetInstallMode::invoke(BaseLib::PRpcClientInfo clientInfo,
 
 BaseLib::PVariable RPCGetKeyMismatchDevice::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getKeyMismatchDevice"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getKeyMismatchDevice")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     ParameterError::Enum
         error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean}));
     if (error != ParameterError::Enum::noError) return getError(error);
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tString));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tString);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

@@ -168,6 +168,7 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("getEvent", std::make_shared<RPCGetEvent>());
   _rpcMethods->emplace("getLastEvents", std::make_shared<RPCGetLastEvents>());
   _rpcMethods->emplace("getInstallMode", std::make_shared<RPCGetInstallMode>());
+  _rpcMethods->emplace("getInstanceId", std::make_shared<RPCGetInstanceId>());
   _rpcMethods->emplace("getKeyMismatchDevice", std::make_shared<RPCGetKeyMismatchDevice>());
   _rpcMethods->emplace("getLinkInfo", std::make_shared<RPCGetLinkInfo>());
   _rpcMethods->emplace("getLinkPeers", std::make_shared<RPCGetLinkPeers>());

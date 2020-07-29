@@ -34,6 +34,8 @@
 
 #include <sys/stat.h>
 
+#include <memory>
+
 namespace Homegear {
 
 DatabaseController::DatabaseController() : IQueue(GD::bl.get(), 1, 100000) {
@@ -341,15 +343,15 @@ void DatabaseController::initializeDatabase() {
     createDefaultRoles();
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
     auto result = _db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
     if (result->empty()) {
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.12")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.12"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       std::string password;
@@ -379,6 +381,13 @@ void DatabaseController::initializeDatabase() {
       std::string userName("homegear");
       std::vector<uint64_t> groups{1};
       createUser(userName, passwordHash, salt, groups);
+    }
+
+    std::string homegearInstanceId;
+    if (!getHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, homegearInstanceId)) {
+      homegearInstanceId = BaseLib::HelperFunctions::getTimeUuid();
+      setHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, homegearInstanceId);
+      GD::out.printMessage("Homegear instance ID is " + homegearInstanceId);
     }
   }
   catch (const std::exception &ex) {
@@ -965,7 +974,7 @@ BaseLib::PVariable DatabaseController::setData(std::string &component, std::stri
       return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(value->type) + " is currently not supported.");
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM data");
-    if (rows->size() == 0 || rows->at(0).size() == 0) {
+    if (rows->empty() || rows->at(0).empty()) {
       return BaseLib::Variable::createError(-32500, "Error counting data in database.");
     }
     if (rows->at(0).at(0)->intValue > 1000000) {
@@ -978,18 +987,18 @@ BaseLib::PVariable DatabaseController::setData(std::string &component, std::stri
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(component));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM data WHERE component=? AND key=?", data);
     enqueue(0, entry);
 
     std::vector<char> encodedValue;
     _rpcEncoder->encodeResponse(value, encodedValue);
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(encodedValue));
     entry = std::make_shared<QueueEntry>("INSERT INTO data VALUES(?, ?, ?)", data);
     enqueue(0, entry);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1012,16 +1021,16 @@ BaseLib::PVariable DatabaseController::deleteData(std::string &component, std::s
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(component));
     std::string command("DELETE FROM data WHERE component=?");
     if (!key.empty()) {
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
       command.append(" AND key=?");
     }
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
     enqueue(0, entry);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

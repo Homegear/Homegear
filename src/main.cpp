@@ -505,7 +505,7 @@ void startUp() {
     }
 
     GD::out.printMessage("Starting Homegear...");
-    GD::out.printMessage(std::string("Homegear version ") + GD::baseLibVersion);
+    GD::out.printMessage(std::string("Homegear version: ") + GD::baseLibVersion);
 
     GD::out.printMessage("Determining maximum thread count...");
     try {
@@ -670,6 +670,11 @@ void startUp() {
         if (chown((GD::bl->settings.logfilePath() + "homegear.log").c_str(), GD::bl->userId, GD::bl->groupId) == -1) GD::out.printError("Could not set owner on file homegear.log");
         if (chown((GD::bl->settings.logfilePath() + "homegear.err").c_str(), GD::bl->userId, GD::bl->groupId) == -1) GD::out.printError("Could not set owner on file homegear.err");
       }
+    }
+
+    std::string homegearInstanceId;
+    if (GD::bl->db->getHomegearVariableString(DatabaseController::HomegearVariables::uniqueid, homegearInstanceId)) {
+      GD::out.printMessage("Homegear instance ID: " + homegearInstanceId);
     }
 
     for (int32_t i = 0; i < 60; i++) {
@@ -1086,7 +1091,7 @@ int main(int argc, char *argv[]) {
         exit(0);
       } else if (arg == "-e") {
         GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
-        GD::bl->debugLevel = 3; //Only output warnings.
+        GD::bl->debugLevel = 0; //Disable output messages
         std::stringstream command;
         if (i + 1 < argc) {
           command << std::string(argv[i + 1]);
@@ -1111,7 +1116,7 @@ int main(int argc, char *argv[]) {
         exit(0);
       } else if (arg == "-l") {
         GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
-        GD::bl->debugLevel = 3; //Only output warnings.
+        GD::bl->debugLevel = 0; //Only output warnings.
         std::string command = "lifetick";
         CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
         int32_t exitCode = cliClient.terminal(command);

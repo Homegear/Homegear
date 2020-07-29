@@ -760,6 +760,15 @@ class RPCGetInstallMode : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
+class RPCGetInstanceId : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetInstanceId() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+};
+
 class RPCGetKeyMismatchDevice : public BaseLib::Rpc::RpcMethod {
  public:
   RPCGetKeyMismatchDevice() {
