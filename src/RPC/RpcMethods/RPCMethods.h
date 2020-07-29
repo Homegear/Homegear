@@ -1239,15 +1239,6 @@ class RPCGetVersion : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetUPnPUuid : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCGetUPnPUuid() {
-    addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>());
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCInit : public BaseLib::Rpc::RpcMethod {
  public:
   RPCInit() {

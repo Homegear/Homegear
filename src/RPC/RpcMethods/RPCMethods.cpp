@@ -5462,26 +5462,6 @@ BaseLib::PVariable RPCGetVersion::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetUPnPUuid::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getUPnPUuid"))
-      return BaseLib::Variable::createError(-32603,
-                                            "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({}));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    if (GD::uPnP) return BaseLib::PVariable(new BaseLib::Variable(GD::uPnP->getUuid()));
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
 RPCInit::~RPCInit() {
   try {
     _disposing = true;
