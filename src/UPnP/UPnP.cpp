@@ -249,6 +249,10 @@ void UPnP::getDescription(int32_t port, std::vector<char> &output) {
   if (_packets.find(port) != _packets.end()) output = _packets.at(port).description;
 }
 
+std::string UPnP::getUuid() const {
+    return _st;
+}
+
 void UPnP::registerServers() {
   try {
     if (_udn.empty()) getUDN();
