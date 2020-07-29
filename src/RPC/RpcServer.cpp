@@ -203,6 +203,7 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("getVariablesInCategory", std::make_shared<RPCGetVariablesInCategory>());
   _rpcMethods->emplace("getVariablesInRoom", std::make_shared<RPCGetVariablesInRoom>());
   _rpcMethods->emplace("getVersion", std::make_shared<RPCGetVersion>());
+  _rpcMethods->emplace("getUPnPUuid", std::make_shared<RPCGetUPnPUuid>());
   _rpcMethods->emplace("init", std::make_shared<RPCInit>());
   _rpcMethods->emplace("invokeFamilyMethod", std::make_shared<RPCInvokeFamilyMethod>());
   _rpcMethods->emplace("lifetick", std::make_shared<RPCLifetick>());
