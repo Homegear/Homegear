@@ -1090,7 +1090,7 @@ int main(int argc, char *argv[]) {
         BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
         exit(0);
       } else if (arg == "-e") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath, true);
         GD::bl->debugLevel = 0; //Disable output messages
         std::stringstream command;
         if (i + 1 < argc) {
