@@ -78,6 +78,12 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
+
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
+
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
+
   std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
 
   std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
@@ -211,7 +217,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void closeClientConnections();
 
-  void closeClientConnection(PNodeBlueClientData client);
+  void closeClientConnection(const PNodeBlueClientData& client);
 
   PNodeBlueProcess getFreeProcess(uint32_t maxThreadCount);
 

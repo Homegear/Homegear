@@ -790,17 +790,12 @@ void Client::broadcastVariableProfileStateChanged(uint64_t profileId, bool state
 void Client::broadcastRequestUiRefresh(const std::string &id) {
   try {
     std::lock_guard<std::mutex> serversGuard(_serversMutex);
-    for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin();
-         server != _servers.end(); ++server) {
-      if (!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty()
-          && server->second->knownMethods.find("requestUiRefresh") == server->second->knownMethods.end()))
-        continue;
+    for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server) {
+      if (!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("requestUiRefresh") == server->second->knownMethods.end())) continue;
       if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("requestUiRefresh")) continue;
       auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
-      server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(
-          "requestUiRefresh",
-          parameters));
+      server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("requestUiRefresh", parameters));
     }
   }
   catch (const std::exception &ex) {
@@ -808,11 +803,57 @@ void Client::broadcastRequestUiRefresh(const std::string &id) {
   }
 }
 
-void Client::broadcastUpdateEvent(std::string id,
-                                  int32_t type,
-                                  uint64_t peerID,
-                                  int32_t channel,
-                                  std::string variable) {
+void Client::broadcastUiNotificationCreated(uint64_t uiNotificationId) {
+  try {
+    std::lock_guard<std::mutex> serversGuard(_serversMutex);
+    for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server) {
+      if (!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("uiNotificationCreated") == server->second->knownMethods.end())) continue;
+      if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("uiNotificationCreated")) continue;
+      auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+      server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("uiNotificationCreated", parameters));
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Client::broadcastUiNotificationRemoved(uint64_t uiNotificationId) {
+  try {
+    std::lock_guard<std::mutex> serversGuard(_serversMutex);
+    for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server) {
+      if (!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("uiNotificationRemoved") == server->second->knownMethods.end())) continue;
+      if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("uiNotificationRemoved")) continue;
+      auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+      server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("uiNotificationRemoved", parameters));
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Client::broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId) {
+  try {
+    std::lock_guard<std::mutex> serversGuard(_serversMutex);
+    for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin(); server != _servers.end(); ++server) {
+      if (!server->second->initialized || !server->second->newFormat || (!server->second->knownMethods.empty() && server->second->knownMethods.find("uiNotificationAction") == server->second->knownMethods.end())) continue;
+      if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("uiNotificationAction")) continue;
+      auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationType));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(buttonId));
+      server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("uiNotificationAction", parameters));
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Client::broadcastUpdateEvent(const std::string &id, int32_t type, uint64_t peerID, int32_t channel, const std::string &variable) {
   try {
     if (id.empty()) return;
     std::lock_guard<std::mutex> serversGuard(_serversMutex);

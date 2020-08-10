@@ -274,6 +274,12 @@ class ScriptEngineClient : public BaseLib::IQueue {
   BaseLib::PVariable broadcastUpdateDevice(BaseLib::PArray &parameters);
 
   BaseLib::PVariable broadcastVariableProfileStateChanged(BaseLib::PArray &parameters);
+
+  BaseLib::PVariable broadcastUiNotificationCreated(BaseLib::PArray &parameters);
+
+  BaseLib::PVariable broadcastUiNotificationRemoved(BaseLib::PArray &parameters);
+
+  BaseLib::PVariable broadcastUiNotificationAction(BaseLib::PArray &parameters);
   // }}}
 };
 

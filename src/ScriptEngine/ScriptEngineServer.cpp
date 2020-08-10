@@ -34,11 +34,14 @@
 #include "../GD/GD.h"
 #include "../RPC/RpcMethods/BuildingRpcMethods.h"
 #include "../RPC/RpcMethods/UiRpcMethods.h"
+#include "../RPC/RpcMethods/UiNotificationsRpcMethods.h"
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
 
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
+
+#include <memory>
 
 namespace Homegear {
 
@@ -280,6 +283,13 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
     _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
     _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
+  }
+
+  { // UI notifications
+    _rpcMethods.emplace("createUiNotification", std::make_shared<RpcMethods::RpcCreateUiNotification>());
+    _rpcMethods.emplace("getUiNotification", std::make_shared<RpcMethods::RpcGetUiNotification>());
+    _rpcMethods.emplace("getUiNotifications", std::make_shared<RpcMethods::RpcGetUiNotifications>());
+    _rpcMethods.emplace("removeUiNotification", std::make_shared<RpcMethods::RpcRemoveUiNotification>());
   }
 
   _localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -784,8 +794,8 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
     std::shared_ptr<BaseLib::Systems::Peer> peer;
     if (checkAcls) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (peer) break;
       }
@@ -817,13 +827,13 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
     std::vector<PScriptEngineClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(5);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
@@ -831,7 +841,7 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastEvent", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
     }
   }
@@ -843,15 +853,15 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
   }
 }
 
-void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions) {
+void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions) {
   try {
     if (_shuttingDown) return;
 
     if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
     if (_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
         {
           for (auto id : ids) {
@@ -865,15 +875,15 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib
     std::vector<PScriptEngineClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastNewDevices", parameters);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastNewDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastNewDevices\". Queue is full.");
     }
   }
@@ -885,21 +895,21 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib
   }
 }
 
-void ScriptEngineServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo) {
+void ScriptEngineServer::broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo) {
   try {
     if (_shuttingDown) return;
     std::vector<PScriptEngineClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastDeleteDevices", parameters);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastDeleteDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastDeleteDevices\". Queue is full.");
     }
   }
@@ -919,8 +929,8 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
     if (_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (!peer || !_scriptEngineClientInfo->acls->checkDeviceReadAccess(peer)) return;
       }
@@ -930,15 +940,15 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-      BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(hint))});
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastUpdateDevice", parameters);
+    for (auto &client : clients) {
+      BaseLib::PArray parameters(new BaseLib::Array{std::make_shared<BaseLib::Variable>(id), std::make_shared<BaseLib::Variable>(channel), std::make_shared<BaseLib::Variable>(hint)});
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUpdateDevice", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
     }
   }
@@ -958,19 +968,19 @@ void ScriptEngineServer::broadcastVariableProfileStateChanged(uint64_t profileId
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (std::map<int32_t, PScriptEngineClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
 
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastVariableProfileStateChanged", parameters);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastVariableProfileStateChanged", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastVariableProfileStateChanged\". Queue is full.");
     }
   }
@@ -979,7 +989,97 @@ void ScriptEngineServer::broadcastVariableProfileStateChanged(uint64_t profileId
   }
 }
 
-void ScriptEngineServer::closeClientConnection(PScriptEngineClientData client) {
+void ScriptEngineServer::broadcastUiNotificationCreated(uint64_t uiNotificationId) {
+  try {
+    if (_shuttingDown) return;
+
+    if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("uiNotificationCreated")) return;
+
+    std::vector<PScriptEngineClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUiNotificationCreated", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUiNotificationCreated\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void ScriptEngineServer::broadcastUiNotificationRemoved(uint64_t uiNotificationId) {
+  try {
+    if (_shuttingDown) return;
+
+    if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("uiNotificationRemoved")) return;
+
+    std::vector<PScriptEngineClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUiNotificationRemoved", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUiNotificationRemoved\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void ScriptEngineServer::broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId) {
+  try {
+    if (_shuttingDown) return;
+
+    if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("uiNotificationAction")) return;
+
+    std::vector<PScriptEngineClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(3);
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationType));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(buttonId));
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUiNotificationAction", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUiNotificationAction\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void ScriptEngineServer::closeClientConnection(const PScriptEngineClientData &client) {
   try {
     if (!client) return;
     GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);

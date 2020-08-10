@@ -31,6 +31,7 @@
 #include "RpcServer.h"
 #include "RpcMethods/BuildingRpcMethods.h"
 #include "RpcMethods/UiRpcMethods.h"
+#include "RpcMethods/UiNotificationsRpcMethods.h"
 #include "RpcMethods/VariableProfileRpcMethods.h"
 #include "RpcMethods/NodeBlueRpcMethods.h"
 #include "../GD/GD.h"

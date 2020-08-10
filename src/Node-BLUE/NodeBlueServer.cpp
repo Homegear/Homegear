@@ -32,6 +32,7 @@
 #include "../GD/GD.h"
 #include "../RPC/RpcMethods/BuildingRpcMethods.h"
 #include "../RPC/RpcMethods/UiRpcMethods.h"
+#include "../RPC/RpcMethods/UiNotificationsRpcMethods.h"
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
 #include "FlowParser.h"
@@ -2296,19 +2297,19 @@ void NodeBlueServer::broadcastVariableProfileStateChanged(uint64_t profileId, bo
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (std::map<int32_t, PNodeBlueClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(state));
 
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastVariableProfileStateChanged", parameters);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastVariableProfileStateChanged", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastVariableProfileStateChanged\". Queue is full.");
     }
   }
@@ -2317,7 +2318,97 @@ void NodeBlueServer::broadcastVariableProfileStateChanged(uint64_t profileId, bo
   }
 }
 
-void NodeBlueServer::closeClientConnection(PNodeBlueClientData client) {
+void NodeBlueServer::broadcastUiNotificationCreated(uint64_t uiNotificationId) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+
+    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("uiNotificationCreated")) return;
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUiNotificationCreated", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUiNotificationCreated\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void NodeBlueServer::broadcastUiNotificationRemoved(uint64_t uiNotificationId) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+
+    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("uiNotificationRemoved")) return;
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUiNotificationRemoved", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUiNotificationRemoved\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void NodeBlueServer::broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+
+    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("uiNotificationAction")) return;
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(3);
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationType));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(buttonId));
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUiNotificationAction", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUiNotificationAction\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void NodeBlueServer::closeClientConnection(const PNodeBlueClientData &client) {
   try {
     if (!client) return;
     GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
@@ -2344,7 +2435,7 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         return;
       }
 
-      std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+      auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
       if (localMethodIterator != _localRpcMethods.end()) {
         if (GD::bl->debugLevel >= 5) {
           _out.printInfo("Info: Client number " + std::to_string(queueEntry->clientData->id) + " is calling RPC method: " + queueEntry->methodName);
@@ -2362,7 +2453,7 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         return;
       }
 
-      std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(queueEntry->methodName);
+      auto methodIterator = _rpcMethods.find(queueEntry->methodName);
       if (methodIterator == _rpcMethods.end()) {
         BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
         if (queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);

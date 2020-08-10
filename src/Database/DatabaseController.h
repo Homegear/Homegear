@@ -44,9 +44,9 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
  public:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry(std::string command, BaseLib::Database::DataRow &data) { _entry = std::make_shared<std::pair<std::string, BaseLib::Database::DataRow>>(command, data); };
+    QueueEntry(const std::string &command, BaseLib::Database::DataRow &data) { _entry = std::make_shared<std::pair<std::string, BaseLib::Database::DataRow>>(command, data); };
 
-    virtual ~QueueEntry() {};
+    ~QueueEntry() override = default;;
 
     std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> &getEntry() { return _entry; }
 
@@ -58,7 +58,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   ~DatabaseController() override;
 
-  void dispose() override;
+  void dispose();
 
   void init() override;
 
@@ -98,14 +98,17 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   // {{{ UI
   uint64_t addUiElement(const std::string &elementStringId, const BaseLib::PVariable &data, const BaseLib::PVariable &metadata) override;
-
   std::shared_ptr<BaseLib::Database::DataTable> getUiElements() override;
-
   BaseLib::PVariable getUiElementMetadata(uint64_t databaseId) override;
-
   void removeUiElement(uint64_t databaseId) override;
-
   BaseLib::PVariable setUiElementMetadata(uint64_t databaseId, const BaseLib::PVariable &metadata) override;
+  // }}}
+
+  // {{{ UI notifications
+  uint64_t createUiNotification(const BaseLib::PVariable &notificationDescription) override;
+  BaseLib::PVariable getUiNotification(uint64_t databaseId, const std::string &languageCode) override;
+  BaseLib::PVariable getUiNotifications(const std::string &languageCode) override;
+  void removeUiNotification(uint64_t databaseId) override;
   // }}}
 
   // {{{ Buildings
@@ -161,7 +164,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   BaseLib::PVariable deleteRoom(uint64_t roomId) override;
 
-  std::string getRoomName(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId);
+  std::string getRoomName(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId) override;
 
   BaseLib::PVariable getRoomMetadata(uint64_t roomId) override;
 
@@ -191,7 +194,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   // }}}
 
   // {{{ Roles
-  void createDefaultRoles();
+  void createDefaultRoles() override;
 
   void createRoleInternal(uint64_t roleId, const BaseLib::PVariable &translations, const BaseLib::PVariable &metadata);
 
@@ -215,7 +218,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   // {{{ Node data
   BaseLib::PVariable setNodeData(std::string &node, std::string &key, BaseLib::PVariable &value) override;
 
-  BaseLib::PVariable getNodeData(std::string &node, std::string &key, bool requestFromTrustedServer = false) override;
+  BaseLib::PVariable getNodeData(std::string &node, std::string &key, bool requestFromTrustedServer) override;
 
   std::set<std::string> getAllNodeDataNodes() override;
 
@@ -233,57 +236,57 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   // }}}
 
   // {{{ System variables
-  virtual void deleteSystemVariable(std::string &variableId);
+  void deleteSystemVariable(std::string &variableId) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getAllSystemVariables();
+  std::shared_ptr<BaseLib::Database::DataTable> getAllSystemVariables() override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getSystemVariable(const std::string &variableId);
+  std::shared_ptr<BaseLib::Database::DataTable> getSystemVariable(const std::string &variableId) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getSystemVariablesInRoom(uint64_t roomId);
+  std::shared_ptr<BaseLib::Database::DataTable> getSystemVariablesInRoom(uint64_t roomId) override;
 
-  virtual void removeCategoryFromSystemVariables(uint64_t categoryId);
+  void removeCategoryFromSystemVariables(uint64_t categoryId) override;
 
-  virtual void removeRoleFromSystemVariables(uint64_t categoryId);
+  void removeRoleFromSystemVariables(uint64_t categoryId) override;
 
-  virtual void removeRoomFromSystemVariables(uint64_t roomId);
+  void removeRoomFromSystemVariables(uint64_t roomId) override;
 
-  virtual BaseLib::PVariable setSystemVariable(std::string &variableId, BaseLib::PVariable &value, uint64_t roomId, const std::string &categories, const std::string &roles, int32_t flags);
+  BaseLib::PVariable setSystemVariable(std::string &variableId, BaseLib::PVariable &value, uint64_t roomId, const std::string &categories, const std::string &roles, int32_t flags) override;
 
-  virtual BaseLib::PVariable setSystemVariableCategories(std::string &variableId, const std::string &categories);
+  BaseLib::PVariable setSystemVariableCategories(std::string &variableId, const std::string &categories) override;
 
-  virtual BaseLib::PVariable setSystemVariableRoles(std::string &variableId, const std::string &roles);
+  BaseLib::PVariable setSystemVariableRoles(std::string &variableId, const std::string &roles) override;
 
-  virtual BaseLib::PVariable setSystemVariableRoom(std::string &variableId, uint64_t room);
+  BaseLib::PVariable setSystemVariableRoom(std::string &variableId, uint64_t room) override;
   // }}}
 
   // {{{ Users
-  virtual bool createUser(const std::string &name, const std::vector<uint8_t> &passwordHash, const std::vector<uint8_t> &salt, const std::vector<uint64_t> &groups);
+  bool createUser(const std::string &name, const std::vector<uint8_t> &passwordHash, const std::vector<uint8_t> &salt, const std::vector<uint64_t> &groups) override;
 
-  virtual bool deleteUser(uint64_t userId);
+  bool deleteUser(uint64_t userId) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getPassword(const std::string &name);
+  std::shared_ptr<BaseLib::Database::DataTable> getPassword(const std::string &name) override;
 
-  virtual uint64_t getUserId(const std::string &name);
+  uint64_t getUserId(const std::string &name) override;
 
-  virtual int64_t getUserKeyIndex1(uint64_t userId);
+  int64_t getUserKeyIndex1(uint64_t userId) override;
 
-  virtual int64_t getUserKeyIndex2(uint64_t userId);
+  int64_t getUserKeyIndex2(uint64_t userId) override;
 
-  virtual BaseLib::PVariable getUserMetadata(uint64_t userId);
+  BaseLib::PVariable getUserMetadata(uint64_t userId) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
+  std::shared_ptr<BaseLib::Database::DataTable> getUsers() override;
 
-  virtual std::vector<uint64_t> getUsersGroups(uint64_t userId);
+  std::vector<uint64_t> getUsersGroups(uint64_t userId) override;
 
-  virtual bool updateUser(uint64_t userId, const std::vector<uint8_t> &passwordHash, const std::vector<uint8_t> &salt, const std::vector<uint64_t> &groups);
+  bool updateUser(uint64_t userId, const std::vector<uint8_t> &passwordHash, const std::vector<uint8_t> &salt, const std::vector<uint64_t> &groups) override;
 
-  virtual void setUserKeyIndex1(uint64_t userId, int64_t keyIndex);
+  void setUserKeyIndex1(uint64_t userId, int64_t keyIndex) override;
 
-  virtual void setUserKeyIndex2(uint64_t userId, int64_t keyIndex);
+  void setUserKeyIndex2(uint64_t userId, int64_t keyIndex) override;
 
-  virtual BaseLib::PVariable setUserMetadata(uint64_t userId, BaseLib::PVariable metadata);
+  BaseLib::PVariable setUserMetadata(uint64_t userId, BaseLib::PVariable metadata) override;
 
-  virtual bool userNameExists(const std::string &name);
+  bool userNameExists(const std::string &name) override;
   // }}}
 
   //{{{ User data
@@ -293,53 +296,53 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   //}}}
 
   // {{{ Groups
-  virtual BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl);
+  BaseLib::PVariable createGroup(BaseLib::PVariable translations, BaseLib::PVariable acl) override;
 
-  virtual BaseLib::PVariable deleteGroup(uint64_t groupId);
+  BaseLib::PVariable deleteGroup(uint64_t groupId) override;
 
-  virtual BaseLib::PVariable getAcl(uint64_t groupId);
+  BaseLib::PVariable getAcl(uint64_t groupId) override;
 
-  virtual BaseLib::PVariable getGroup(uint64_t groupId, std::string languageCode);
+  BaseLib::PVariable getGroup(uint64_t groupId, std::string languageCode) override;
 
-  virtual BaseLib::PVariable getGroups(std::string languageCode);
+  BaseLib::PVariable getGroups(std::string languageCode) override;
 
-  virtual bool groupExists(uint64_t groupId);
+  bool groupExists(uint64_t groupId) override;
 
-  virtual BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl);
+  BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl) override;
   // }}}
 
   // {{{ Events
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getEvents();
+  std::shared_ptr<BaseLib::Database::DataTable> getEvents() override;
 
-  virtual void saveEventAsynchronous(BaseLib::Database::DataRow &event);
+  void saveEventAsynchronous(BaseLib::Database::DataRow &event) override;
 
-  virtual void deleteEvent(std::string &name);
+  void deleteEvent(std::string &name) override;
   // }}}
 
   // {{{ Family
-  virtual void deleteFamily(int32_t familyId);
+  void deleteFamily(int32_t familyId) override;
 
-  virtual void saveFamilyVariableAsynchronous(int32_t familyId, BaseLib::Database::DataRow &data);
+  void saveFamilyVariableAsynchronous(int32_t familyId, BaseLib::Database::DataRow &data) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getFamilyVariables(int32_t familyId);
+  std::shared_ptr<BaseLib::Database::DataTable> getFamilyVariables(int32_t familyId) override;
 
-  virtual void deleteFamilyVariable(BaseLib::Database::DataRow &data);
+  void deleteFamilyVariable(BaseLib::Database::DataRow &data) override;
   // }}}
 
   // {{{ Device
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getDevices(uint32_t family);
+  std::shared_ptr<BaseLib::Database::DataTable> getDevices(uint32_t family) override;
 
-  virtual void deleteDevice(uint64_t id);
+  void deleteDevice(uint64_t id) override;
 
-  virtual uint64_t saveDevice(uint64_t id, int32_t address, std::string &serialNumber, uint32_t type, uint32_t family);
+  uint64_t saveDevice(uint64_t id, int32_t address, std::string &serialNumber, uint32_t type, uint32_t family) override;
 
-  virtual void saveDeviceVariableAsynchronous(BaseLib::Database::DataRow &data);
+  void saveDeviceVariableAsynchronous(BaseLib::Database::DataRow &data) override;
 
-  virtual void deletePeers(int32_t deviceID);
+  void deletePeers(int32_t deviceID) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getPeers(uint64_t deviceID);
+  std::shared_ptr<BaseLib::Database::DataTable> getPeers(uint64_t deviceID) override;
 
-  virtual std::shared_ptr<BaseLib::Database::DataTable> getDeviceVariables(uint64_t deviceID);
+  std::shared_ptr<BaseLib::Database::DataTable> getDeviceVariables(uint64_t deviceID) override;
   // }}}
 
   // {{{ Peer
@@ -405,7 +408,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   bool updateVariableProfile(uint64_t profileId, const BaseLib::PVariable &translations, const BaseLib::PVariable &profile) override;
   // }}}
  protected:
-  std::atomic_bool _disposing;
+  std::atomic_bool _disposing{false};
 
   Homegear::SQLite3 _db;
 
@@ -421,7 +424,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   std::mutex _metadataMutex;
   std::unordered_map<uint64_t, std::map<std::string, BaseLib::PVariable>> _metadata;
 
-  virtual void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 };
 
 }

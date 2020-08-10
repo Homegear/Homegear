@@ -424,9 +424,10 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                     auto directionIterator = variableIterator.second->structValue->find("direction");
                     if (directionIterator != variableIterator.second->structValue->end()) {
                       if (directionIterator->second->integerValue64 == 0) {
-                        if (GD::bl->debugLevel >= 5) GD::out.printDebug(
-                            "Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first
-                                + ". Simple UI element creation is not possible.");
+                        if (GD::bl->debugLevel >= 5)
+                          GD::out.printDebug(
+                              "Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first
+                                  + ". Simple UI element creation is not possible.");
                         wrongDirection = true;
                       }
                     }
@@ -510,6 +511,8 @@ BaseLib::PVariable UiController::addUiElementSimple(const BaseLib::PRpcClientInf
       }
       for (auto &role : *rolesIterator->second->arrayValue) {
         auto idIterator = role->structValue->find("id");
+        auto levelIterator = role->structValue->find("level");
+        if (levelIterator != role->structValue->end() && levelIterator->second->integerValue64 != 2) continue;
         if (idIterator != role->structValue->end() && idIterator->second->integerValue64 != 0) roleIds.emplace(idIterator->second->integerValue64);
       }
       auto roomIterator = variableDescription->structValue->find("ROOM");

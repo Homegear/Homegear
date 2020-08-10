@@ -36,14 +36,13 @@
 
 namespace Homegear {
 
-StatefulPhpNode::StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool *frontendConnected)
+StatefulPhpNode::StatefulPhpNode(const std::string &path, const std::string &nodeNamespace, const std::string &type, const std::atomic_bool *frontendConnected)
     : INode(path, nodeNamespace, type, frontendConnected) {
 }
 
-StatefulPhpNode::~StatefulPhpNode() {
-}
+StatefulPhpNode::~StatefulPhpNode() = default;
 
-bool StatefulPhpNode::init(Flows::PNodeInfo nodeInfo) {
+bool StatefulPhpNode::init(const Flows::PNodeInfo &nodeInfo) {
   _nodeInfo = nodeInfo->serialize();
 
   Flows::PArray parameters = std::make_shared<Flows::Array>();
@@ -150,7 +149,7 @@ void StatefulPhpNode::startUpComplete() {
   }
 }
 
-void StatefulPhpNode::variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value) {
+void StatefulPhpNode::variableEvent(const std::string &source, uint64_t peerId, int32_t channel, const std::string &variable, const Flows::PVariable &value, const Flows::PVariable &metadata) {
   try {
     Flows::PArray parameters = std::make_shared<Flows::Array>();
     parameters->reserve(3);
@@ -172,7 +171,7 @@ void StatefulPhpNode::variableEvent(std::string source, uint64_t peerId, int32_t
   }
 }
 
-void StatefulPhpNode::setNodeVariable(const std::string &variable, Flows::PVariable value) {
+void StatefulPhpNode::setNodeVariable(const std::string &variable, const Flows::PVariable &value) {
   try {
     Flows::PArray parameters = std::make_shared<Flows::Array>();
     parameters->reserve(3);
@@ -192,7 +191,7 @@ void StatefulPhpNode::setNodeVariable(const std::string &variable, Flows::PVaria
   }
 }
 
-Flows::PVariable StatefulPhpNode::getConfigParameterIncoming(std::string name) {
+Flows::PVariable StatefulPhpNode::getConfigParameterIncoming(const std::string &name) {
   try {
     Flows::PArray parameters = std::make_shared<Flows::Array>();
     parameters->reserve(3);
@@ -212,7 +211,7 @@ Flows::PVariable StatefulPhpNode::getConfigParameterIncoming(std::string name) {
   return std::make_shared<Flows::Variable>();
 }
 
-void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message) {
+void StatefulPhpNode::input(const Flows::PNodeInfo &nodeInfo, uint32_t index, const Flows::PVariable &message) {
   try {
     Flows::PArray parameters = std::make_shared<Flows::Array>();
     parameters->reserve(3);
@@ -233,7 +232,7 @@ void StatefulPhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PV
   }
 }
 
-Flows::PVariable StatefulPhpNode::invokeLocal(const std::string &methodName, Flows::PArray innerParameters) {
+Flows::PVariable StatefulPhpNode::invokeLocal(const std::string &methodName, const Flows::PArray &innerParameters) {
   try {
     Flows::PArray parameters = std::make_shared<Flows::Array>();
     parameters->reserve(3);

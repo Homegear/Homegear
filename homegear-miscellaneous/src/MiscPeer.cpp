@@ -737,7 +737,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
                 BaseLib::Systems::RpcConfigurationParameter& parameter = configCentral[channel][i->first];
                 if(!parameter.rpcParameter) continue;
                 if(parameter.rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
-                parameter.rpcParameter->convertToPacket(i->second, clientInfo->addon && clientInfo->peerId == _peerID ? Role() : parameter.mainRole(), value);
+                parameter.rpcParameter->convertToPacket(i->second, clientInfo->addon && clientInfo->peerId != 0 ? Role() : parameter.mainRole(), value);
                 std::vector<uint8_t> shiftedValue = value;
                 parameter.rpcParameter->adjustBitPosition(shiftedValue);
                 int32_t intIndex = (int32_t)parameter.rpcParameter->physical->index;

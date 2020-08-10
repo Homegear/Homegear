@@ -35,6 +35,8 @@
 
 #include <homegear-base/BaseLib.h>
 
+#include <utility>
+
 namespace Homegear {
 
 class PhpEvents {
@@ -46,7 +48,10 @@ class PhpEvents {
     newDevices,
     deleteDevices,
     updateDevice,
-    variableProfileStateChanged
+    variableProfileStateChanged,
+    uiNotificationCreated,
+    uiNotificationRemoved,
+    uiNotificationAction
   };
 
   class EventData {
@@ -81,13 +86,13 @@ class PhpEvents {
 
   void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 
-  int32_t getLogLevel() { return _logLevel; }
+  int32_t getLogLevel() const { return _logLevel; }
 
   void setPeerId(uint64_t peerId) { _peerId = peerId; }
 
-  uint64_t getPeerId() { return _peerId; }
+  uint64_t getPeerId() const { return _peerId; }
 
-  void setNodeId(std::string nodeId) { _nodeId = nodeId; }
+  void setNodeId(std::string nodeId) { _nodeId = std::move(nodeId); }
 
   std::string getNodeId() { return _nodeId; }
 

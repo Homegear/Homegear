@@ -36,14 +36,13 @@
 
 namespace Homegear {
 
-SimplePhpNode::SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool *frontendConnected)
+SimplePhpNode::SimplePhpNode(const std::string &path, const std::string &nodeNamespace, const std::string &type, const std::atomic_bool *frontendConnected)
     : INode(path, nodeNamespace, type, frontendConnected) {
 }
 
-SimplePhpNode::~SimplePhpNode() {
-}
+SimplePhpNode::~SimplePhpNode() = default;
 
-void SimplePhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message) {
+void SimplePhpNode::input(const Flows::PNodeInfo &nodeInfo, uint32_t index, const Flows::PVariable &message) {
   try {
     if (!_nodeInfo) _nodeInfo = nodeInfo->serialize();
 

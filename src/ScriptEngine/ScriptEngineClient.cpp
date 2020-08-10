@@ -68,23 +68,25 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
   _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
   _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
 
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("devTest", std::bind(&ScriptEngineClient::devTest, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("lifetick", std::bind(&ScriptEngineClient::lifetick, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("getRunningScripts", std::bind(&ScriptEngineClient::getRunningScripts, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("checkSessionId", std::bind(&ScriptEngineClient::checkSessionId, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("executeDeviceMethod", std::bind(&ScriptEngineClient::executeDeviceMethod, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>("broadcastVariableProfileStateChanged",
-                                                                                                                 std::bind(&ScriptEngineClient::broadcastVariableProfileStateChanged, this, std::placeholders::_1)));
+  _localRpcMethods.emplace("devTest", std::bind(&ScriptEngineClient::devTest, this, std::placeholders::_1));
+  _localRpcMethods.emplace("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1));
+  _localRpcMethods.emplace("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1));
+  _localRpcMethods.emplace("lifetick", std::bind(&ScriptEngineClient::lifetick, this, std::placeholders::_1));
+  _localRpcMethods.emplace("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1));
+  _localRpcMethods.emplace("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1));
+  _localRpcMethods.emplace("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getRunningScripts", std::bind(&ScriptEngineClient::getRunningScripts, this, std::placeholders::_1));
+  _localRpcMethods.emplace("checkSessionId", std::bind(&ScriptEngineClient::checkSessionId, this, std::placeholders::_1));
+  _localRpcMethods.emplace("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1));
+  _localRpcMethods.emplace("executeDeviceMethod", std::bind(&ScriptEngineClient::executeDeviceMethod, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastVariableProfileStateChanged", std::bind(&ScriptEngineClient::broadcastVariableProfileStateChanged, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastUiNotificationCreated", std::bind(&ScriptEngineClient::broadcastUiNotificationCreated, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastUiNotificationRemoved", std::bind(&ScriptEngineClient::broadcastUiNotificationRemoved, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastUiNotificationAction", std::bind(&ScriptEngineClient::broadcastUiNotificationAction, this, std::placeholders::_1));
 
   php_homegear_init();
 }
@@ -1819,13 +1821,81 @@ BaseLib::PVariable ScriptEngineClient::broadcastVariableProfileStateChanged(Base
     if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
-    for (std::map<int32_t, std::shared_ptr<PhpEvents>>::iterator i = PhpEvents::eventsMap.begin(); i != PhpEvents::eventsMap.end(); ++i) {
-      if (i->second) {
+    for (auto &i : PhpEvents::eventsMap) {
+      if (i.second) {
         std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
         eventData->type = PhpEvents::EventDataType::variableProfileStateChanged;
         eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
         eventData->value = parameters->at(1);
-        if (!i->second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+        if (!i.second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+      }
+    }
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationCreated(BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+    std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+    for (auto &i : PhpEvents::eventsMap) {
+      if (i.second) {
+        std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+        eventData->type = PhpEvents::EventDataType::uiNotificationCreated;
+        eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
+        if (!i.second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+      }
+    }
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationRemoved(BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+    std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+    for (auto &i : PhpEvents::eventsMap) {
+      if (i.second) {
+        std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+        eventData->type = PhpEvents::EventDataType::uiNotificationRemoved;
+        eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
+        if (!i.second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+      }
+    }
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationAction(BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+    std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+    for (auto &i : PhpEvents::eventsMap) {
+      if (i.second) {
+        std::shared_ptr<PhpEvents::EventData> eventData(new PhpEvents::EventData());
+        eventData->type = PhpEvents::EventDataType::uiNotificationAction;
+        eventData->id = static_cast<uint64_t>(parameters->at(0)->integerValue64);
+        eventData->source = parameters->at(1)->stringValue;
+        eventData->value = parameters->at(2);
+        if (!i.second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
       }
     }
 

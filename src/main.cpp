@@ -80,7 +80,6 @@ void exitHomegear(int exitCode) {
   if (GD::bl->hgdc) GD::bl->hgdc->stop();
   if (GD::bl->db) {
     //Finish database operations before closing modules, otherwise SEGFAULT
-    GD::bl->db->dispose();
     GD::bl->db.reset();
   }
   if (GD::familyController) GD::familyController->dispose();
@@ -187,7 +186,6 @@ void terminateHomegear(int signalNumber) {
     GD::out.printMessage("(Shutdown) => Disposing database");
     if (GD::bl->db) {
       //Finish database operations before closing modules, otherwise SEGFAULT
-      GD::bl->db->dispose();
       GD::bl->db.reset();
     }
     GD::out.printMessage("(Shutdown) => Disposing family modules");

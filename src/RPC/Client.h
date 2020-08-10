@@ -103,11 +103,17 @@ class Client {
 
   void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 
-  void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
+  void broadcastUpdateEvent(const std::string& id, int32_t type, uint64_t peerID, int32_t channel, const std::string& variable);
 
   void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
   void broadcastRequestUiRefresh(const std::string &id);
+
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
+
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
+
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
 
   void broadcastPtyOutput(std::string &output);
 

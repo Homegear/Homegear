@@ -63,7 +63,13 @@ class IpcServer : public BaseLib::IQueue {
 
   void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
-  bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &methodName);
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
+
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
+
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
+
+  bool methodExists(const BaseLib::PRpcClientInfo& clientInfo, std::string &methodName);
 
   BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo &clientInfo, const std::string &methodName, const BaseLib::PArray &parameters);
 
@@ -149,7 +155,7 @@ class IpcServer : public BaseLib::IQueue {
 
   void sendResponse(PIpcClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
-  void closeClientConnection(PIpcClientData client);
+  void closeClientConnection(const PIpcClientData& client);
 
   void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 

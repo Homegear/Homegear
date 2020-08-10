@@ -47,10 +47,10 @@ class SQLite3 {
   void dispose();
   void init(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath = "", std::string backupFilename = "");
   void hotBackup();
-  uint32_t executeWriteCommand(std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> command);
-  uint32_t executeWriteCommand(std::string command, BaseLib::Database::DataRow &dataToEscape);
-  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(std::string command);
-  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(std::string command, BaseLib::Database::DataRow &dataToEscape);
+  uint32_t executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>& command);
+  uint32_t executeWriteCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape);
+  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(const std::string& command);
+  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape);
   bool isOpen() { return _database != nullptr; }
   /*void benchmark1();
   void benchmark2();

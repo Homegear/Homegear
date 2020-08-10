@@ -324,6 +324,12 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable broadcastUpdateDevice(Flows::PArray &parameters);
 
   Flows::PVariable broadcastVariableProfileStateChanged(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUiNotificationCreated(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUiNotificationRemoved(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUiNotificationAction(Flows::PArray &parameters);
   // }}}
 };
 

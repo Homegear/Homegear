@@ -1222,6 +1222,25 @@ ZEND_FUNCTION(hg_poll_event) {
         Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
         add_assoc_zval_ex(return_value, "STATE", sizeof("STATE") - 1, &element);
       }
+    } else if (eventData->type == Homegear::PhpEvents::EventDataType::uiNotificationCreated || eventData->type == Homegear::PhpEvents::EventDataType::uiNotificationRemoved) {
+      if (eventData->type == Homegear::PhpEvents::EventDataType::uiNotificationCreated) ZVAL_STRINGL(&element, "uiNotificationCreated", sizeof("uiNotificationCreated") - 1);
+      else if (eventData->type == Homegear::PhpEvents::EventDataType::uiNotificationRemoved) ZVAL_STRINGL(&element, "uiNotificationRemoved", sizeof("uiNotificationRemoved") - 1);
+      add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
+
+      ZVAL_LONG(&element, eventData->id);
+      add_assoc_zval_ex(return_value, "NOTIFICATIONID", sizeof("NOTIFICATIONID") - 1, &element);
+    } else if (eventData->type == Homegear::PhpEvents::EventDataType::uiNotificationAction) {
+      ZVAL_STRINGL(&element, "uiNotificationAction", sizeof("uiNotificationAction") - 1);
+      add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);
+
+      ZVAL_LONG(&element, eventData->id);
+      add_assoc_zval_ex(return_value, "NOTIFICATIONID", sizeof("NOTIFICATIONID") - 1, &element);
+
+      ZVAL_STRINGL(&element, eventData->source.c_str(), eventData->source.size());
+      add_assoc_zval_ex(return_value, "NOTIFICATIONTYPE", sizeof("NOTIFICATIONTYPE") - 1, &element);
+
+      ZVAL_LONG(&element, eventData->value->integerValue64);
+      add_assoc_zval_ex(return_value, "BUTTONID", sizeof("BUTTONID") - 1, &element);
     }
   } else RETURN_FALSE
 }

@@ -353,7 +353,7 @@ void SQLite3::bindData(sqlite3_stmt *statement, BaseLib::Database::DataRow &data
   });
 }
 
-uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> command) {
+uint32_t SQLite3::executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>& command) {
   try {
     if (!command) return 0;
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -391,7 +391,7 @@ uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, Bas
   return 0;
 }
 
-uint32_t SQLite3::executeWriteCommand(std::string command, BaseLib::Database::DataRow &dataToEscape) {
+uint32_t SQLite3::executeWriteCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape) {
   try {
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
     if (!_database) {
@@ -428,7 +428,7 @@ uint32_t SQLite3::executeWriteCommand(std::string command, BaseLib::Database::Da
   return 0;
 }
 
-std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::string command, BaseLib::Database::DataRow &dataToEscape) {
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape) {
   std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
   try {
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -466,7 +466,7 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::strin
   return dataRows;
 }
 
-std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::string command) {
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string& command) {
   std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
   try {
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -475,7 +475,7 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::strin
       return dataRows;
     }
     sqlite3_stmt *statement = nullptr;
-    int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
+    int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, nullptr);
     if (result) {
       GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
       return dataRows;

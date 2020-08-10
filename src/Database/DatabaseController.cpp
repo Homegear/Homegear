@@ -39,7 +39,6 @@
 namespace Homegear {
 
 DatabaseController::DatabaseController() : IQueue(GD::bl.get(), 1, 100000) {
-  _disposing = false;
 }
 
 DatabaseController::~DatabaseController() {
@@ -126,6 +125,8 @@ void DatabaseController::initializeDatabase() {
     _db.executeCommand("CREATE INDEX IF NOT EXISTS rolesIndex ON roles (id)");
     _db.executeCommand("CREATE TABLE IF NOT EXISTS uiElements (id INTEGER PRIMARY KEY UNIQUE, element TEXT, data BLOB, metadata BLOB)");
     _db.executeCommand("CREATE INDEX IF NOT EXISTS uiElementsIndex ON uiElements (id, element)");
+    _db.executeCommand("CREATE TABLE IF NOT EXISTS uiNotifications (id INTEGER PRIMARY KEY UNIQUE, data BLOB)");
+    _db.executeCommand("CREATE INDEX IF NOT EXISTS uiNotificationsIndex ON uiElements (id)");
     _db.executeCommand("CREATE TABLE IF NOT EXISTS variableProfiles (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, profile BLOB)");
     _db.executeCommand("CREATE INDEX IF NOT EXISTS variableProfilesIndex ON variableProfiles (id)");
 
@@ -366,8 +367,8 @@ void DatabaseController::initializeDatabase() {
       std::string content = "Default password for user \"homegear\": " + password + "\nPlease write down the password and delete this file.\n";
       std::string path = GD::bl->settings.writeableDataPath() + "defaultPassword.txt";
       BaseLib::Io::writeFile(path, content);
-      uid_t userId = GD::bl->hf.userId(GD::bl->settings.dataPathUser());
-      gid_t groupId = GD::bl->hf.groupId(GD::bl->settings.dataPathGroup());
+      uid_t userId = BaseLib::HelperFunctions::userId(GD::bl->settings.dataPathUser());
+      gid_t groupId = BaseLib::HelperFunctions::groupId(GD::bl->settings.dataPathGroup());
       if (((int32_t)userId) == -1 || ((int32_t)groupId) == -1) {
         userId = GD::bl->userId;
         groupId = GD::bl->groupId;
@@ -412,13 +413,13 @@ bool DatabaseController::convertDatabase() {
     std::string backupPath = GD::bl->settings.databaseBackupPath();
     if (backupPath.empty()) backupPath = databasePath;
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("table"))));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::string("homegearVariables"))));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string("table")));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string("homegearVariables")));
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
     //Cannot proceed, because table homegearVariables does not exist
     if (rows->empty()) return false;
     data.clear();
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
     std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
     if (result->empty()) return false; //Handled in initializeDatabase
     int64_t versionId = result->at(0).at(0)->intValue;
@@ -481,12 +482,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.4.3")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.4.3"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.4.3";
@@ -497,12 +498,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.0")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.5.0"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.5.0";
@@ -519,12 +520,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.5.1"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.5.1";
@@ -538,12 +539,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("CREATE INDEX peersIndex ON peers (peerID, parent, address, serialNumber, type)");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.0")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.6.0"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.6.0";
@@ -554,12 +555,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.6.1")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.6.1"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.6.1";
@@ -580,12 +581,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.0")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.0"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.0";
@@ -609,11 +610,11 @@ bool DatabaseController::convertDatabase() {
 
       _db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables2 (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)");
       std::shared_ptr<BaseLib::Database::DataTable> systemVariablesRows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
-      for (BaseLib::Database::DataTable::iterator i = systemVariablesRows->begin(); i != systemVariablesRows->end(); ++i) {
-        if (i->second.size() < 2) continue;
+      for (auto &i : *systemVariablesRows) {
+        if (i.second.size() < 2) continue;
         data.clear();
-        data.push_back(i->second.at(0));
-        data.push_back(i->second.at(1));
+        data.push_back(i.second.at(0));
+        data.push_back(i.second.at(1));
         _db.executeCommand("INSERT OR REPLACE INTO systemVariables2(variableID, serializedObject) VALUES(?, ?)", data);
       }
       _db.executeCommand("DROP INDEX systemVariablesIndex");
@@ -622,12 +623,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.1")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.1"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.1";
@@ -642,12 +643,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.3")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.3"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.3";
@@ -678,12 +679,12 @@ bool DatabaseController::convertDatabase() {
       }
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.4")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.4"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.4";
@@ -695,12 +696,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeWriteCommand("DELETE FROM serviceMessages", data);
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.5")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.5"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.5";
@@ -713,12 +714,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex2 INTEGER");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.6")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.6"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.6";
@@ -734,12 +735,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp)");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.7")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.7"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.7";
@@ -751,12 +752,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN flags INTEGER");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.8")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.8"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.8";
@@ -768,12 +769,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE parameters ADD COLUMN roles TEXT");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.9")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.9"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.9";
@@ -786,12 +787,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE parameters ADD COLUMN metadata BLOB");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.10")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.10"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.10";
@@ -803,12 +804,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN roles TEXT");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.11")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.11"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.11";
@@ -820,12 +821,12 @@ bool DatabaseController::convertDatabase() {
       _db.executeCommand("ALTER TABLE uiElements ADD COLUMN metadata BLOB");
 
       data.clear();
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(versionId)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       //Don't forget to set new version in initializeDatabase!!!
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.7.12")));
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.12"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
       version = "0.7.12";
@@ -877,7 +878,7 @@ void DatabaseController::releaseSavepointAsynchronous(std::string &name) {
 //Homegear variables
 bool DatabaseController::getHomegearVariableString(HomegearVariables::Enum id, std::string &value) {
   BaseLib::Database::DataRow data;
-  data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
+  data.push_back(std::make_shared<BaseLib::Database::DataColumn>((uint64_t)id));
   std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT stringValue FROM homegearVariables WHERE variableIndex=?", data);
   if (result->empty() || result->at(0).empty()) return false;
   value = result->at(0).at(0)->textValue;
@@ -886,25 +887,25 @@ bool DatabaseController::getHomegearVariableString(HomegearVariables::Enum id, s
 
 void DatabaseController::setHomegearVariableString(HomegearVariables::Enum id, std::string &value) {
   BaseLib::Database::DataRow data;
-  data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
+  data.push_back(std::make_shared<BaseLib::Database::DataColumn>((uint64_t)id));
   std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT variableID FROM homegearVariables WHERE variableIndex=?", data);
   data.clear();
   if (result->empty() || result->at(0).empty()) {
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>((uint64_t)id));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
     //Don't forget to set new version in initializeDatabase!!!
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(value));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
     enqueue(0, entry);
   } else {
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((uint64_t)id)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(result->at(0).at(0)->intValue));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>((uint64_t)id));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
     //Don't forget to set new version in initializeDatabase!!!
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(value));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
     enqueue(0, entry);
   }
@@ -929,11 +930,11 @@ BaseLib::PVariable DatabaseController::getData(std::string &component, std::stri
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(component));
     std::string command;
     if (!key.empty()) {
       command = "SELECT value FROM data WHERE component=? AND key=?";
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
     } else command = "SELECT key, value FROM data WHERE component=?";
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand(command, data);
@@ -1097,9 +1098,6 @@ BaseLib::PVariable DatabaseController::getUiElementMetadata(uint64_t databaseId)
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1112,9 +1110,6 @@ void DatabaseController::removeUiElement(uint64_t databaseId) {
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
 }
 
@@ -1135,10 +1130,198 @@ BaseLib::PVariable DatabaseController::setUiElementMetadata(uint64_t databaseId,
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//}}}
+
+//{{{ UI notifications
+uint64_t DatabaseController::createUiNotification(const BaseLib::PVariable &notificationDescription) {
+  try {
+    BaseLib::Database::DataRow rowData;
+    rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+
+    //{
+    //  "type": "bla", //An arbitrary string to identify the notification
+    //  "flags": {
+    //    "closeable": true, //Shows a button when shown as an overlay to close the notification
+    //    "hasModal": true, //Does the notification have a modal with additional information?
+    //    "overlayNotification": true, //Makes the notification appear as an overlay
+    //    "overlayModal": true //The user needs to interact with the modal to continue
+    //  }
+    //  "title": {
+    //    "en-US": "Please do something",
+    //    .
+    //    .
+    //    .
+    //  }
+    //  "modalTitle": {
+    //    "en-US": "My Modal",
+    //    .
+    //    .
+    //    .
+    //  }
+    //  "modalContent": {
+    //    "en-US": "<p>My HTML</p>"
+    //  "}
+    //  "buttons": [ //Modal and notification overlay buttons. The buttons are only displayed in the notification overlay, when there is no modal defined.
+    //    {
+    //      "id": 0, //A number to identify the button
+    //      "type": "success", //"success", "warning", "error" - used for setting CSS classes
+    //      "reloadUi": true, //Reload UI on button press?
+    //      "closeModal": true, //Closes the modal
+    //      "label": {
+    //        "en-US": "OK"
+    //      },
+    //      "icon": "my-icon"
+    //    },
+    //    .
+    //    .
+    //    .
+    //  ]
+    //}
+
+    std::vector<char> dataBlob;
+    _rpcEncoder->encodeResponse(notificationDescription, dataBlob);
+    rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(dataBlob));
+
+    uint64_t result = _db.executeWriteCommand("REPLACE INTO uiNotifications VALUES(?, ?)", rowData);
+
+    return result;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return 0;
+}
+
+BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, const std::string &languageCode) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(databaseId));
+    auto rows = _db.executeCommand("SELECT data FROM uiNotifications WHERE id=?", data);
+
+    if (rows->empty()) return BaseLib::Variable::createError(-1, "Unknown UI notification.");
+
+    auto notification = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+
+    auto titleIterator = notification->structValue->find("title");
+    if (titleIterator != notification->structValue->end()) {
+      auto languageIterator = titleIterator->second->structValue->find(languageCode);
+      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
+      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
+      if (languageIterator != titleIterator->second->structValue->end()) {
+        titleIterator->second->stringValue = languageIterator->second->stringValue;
+      }
+      titleIterator->second->type = BaseLib::VariableType::tString;
+    }
+
+    titleIterator = notification->structValue->find("modalTitle");
+    if (titleIterator != notification->structValue->end()) {
+      auto languageIterator = titleIterator->second->structValue->find(languageCode);
+      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
+      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
+      if (languageIterator != titleIterator->second->structValue->end()) {
+        titleIterator->second->stringValue = languageIterator->second->stringValue;
+      }
+      titleIterator->second->type = BaseLib::VariableType::tString;
+    }
+
+    auto buttonsIterator = notification->structValue->find("buttons");
+    if (buttonsIterator != notification->structValue->end()) {
+      for (auto &button : *buttonsIterator->second->arrayValue) {
+        auto labelIterator = button->structValue->find("label");
+        if (labelIterator != button->structValue->end()) {
+          auto languageIterator = labelIterator->second->structValue->find(languageCode);
+          if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find("en-US");
+          if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->begin();
+          if (languageIterator != labelIterator->second->structValue->end()) {
+            labelIterator->second->stringValue = languageIterator->second->stringValue;
+          }
+          labelIterator->second->type = BaseLib::VariableType::tString;
+        }
+      }
+    }
+
+    return notification;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &languageCode) {
+  try {
+    auto rows = _db.executeCommand("SELECT id, data FROM uiNotifications");
+
+    auto notifications = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    notifications->arrayValue->reserve(rows->size());
+
+    for (auto &row : *rows) {
+      auto id = (uint64_t)row.second.at(0)->intValue;
+      auto notification = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+
+      notification->structValue->emplace("id", std::make_shared<BaseLib::Variable>(id));
+
+      auto titleIterator = notification->structValue->find("title");
+      if (titleIterator != notification->structValue->end()) {
+        auto languageIterator = titleIterator->second->structValue->find(languageCode);
+        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
+        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
+        if (languageIterator != titleIterator->second->structValue->end()) {
+          titleIterator->second->stringValue = languageIterator->second->stringValue;
+        }
+        titleIterator->second->type = BaseLib::VariableType::tString;
+      }
+
+      titleIterator = notification->structValue->find("modalTitle");
+      if (titleIterator != notification->structValue->end()) {
+        auto languageIterator = titleIterator->second->structValue->find(languageCode);
+        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
+        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
+        if (languageIterator != titleIterator->second->structValue->end()) {
+          titleIterator->second->stringValue = languageIterator->second->stringValue;
+        }
+        titleIterator->second->type = BaseLib::VariableType::tString;
+      }
+
+      auto buttonsIterator = notification->structValue->find("buttons");
+      if (buttonsIterator != notification->structValue->end()) {
+        for (auto &button : *buttonsIterator->second->arrayValue) {
+          auto labelIterator = button->structValue->find("label");
+          if (labelIterator != button->structValue->end()) {
+            auto languageIterator = labelIterator->second->structValue->find(languageCode);
+            if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find("en-US");
+            if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->begin();
+            if (languageIterator != labelIterator->second->structValue->end()) {
+              labelIterator->second->stringValue = languageIterator->second->stringValue;
+            }
+            labelIterator->second->type = BaseLib::VariableType::tString;
+          }
+        }
+      }
+
+      notifications->arrayValue->emplace_back(std::move(notification));
+    }
+
+    return notifications;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void DatabaseController::removeUiNotification(uint64_t databaseId) {
+  try {
+    BaseLib::Database::DataRow rowData;
+    rowData.push_back(std::make_shared<BaseLib::Database::DataColumn>(databaseId));
+
+    _db.executeWriteCommand("DELETE FROM uiNotifications WHERE id=?", rowData);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 //}}}
 
@@ -1156,7 +1339,7 @@ BaseLib::PVariable DatabaseController::addStoryToBuilding(uint64_t buildingId, u
 
     std::ostringstream storyStream;
     for (auto &storyString : storyStrings) {
-      uint64_t story = (uint64_t)BaseLib::Math::getNumber64(storyString);
+      auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
       if (story == storyId) containsStory = true;
       storyStream << std::to_string(story) << ",";
     }
@@ -1235,7 +1418,7 @@ BaseLib::PVariable DatabaseController::getStoriesInBuilding(BaseLib::PRpcClientI
     int32_t pos = 0;
     std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
     for (auto &storyString : storyStrings) {
-      uint64_t story = (uint64_t)BaseLib::Math::getNumber64(storyString);
+      auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
       if (story != 0) {
         auto metadata = getStoryMetadata(story);
         auto positionIterator = metadata->structValue->find("position");
@@ -1306,7 +1489,7 @@ BaseLib::PVariable DatabaseController::getBuildings(std::string languageCode) {
       std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
       for (auto &storyString : storyStrings) {
         if (storyString.empty()) continue;
-        uint64_t story = (uint64_t)BaseLib::Math::getNumber64(storyString);
+        auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
         if (story != 0) {
           auto metadata = getStoryMetadata(story);
           auto positionIterator = metadata->structValue->find("position");
@@ -1355,13 +1538,13 @@ BaseLib::PVariable DatabaseController::removeStoryFromBuildings(uint64_t storyId
     if (storyId == 0) return std::make_shared<BaseLib::Variable>(false);
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, stories FROM buildings");
 
-    for (BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i) {
-      std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
+    for (auto &i : *rows) {
+      std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsStory = false;
 
       std::ostringstream storyStream;
       for (auto &storyString : storyStrings) {
-        uint64_t story = (uint64_t)BaseLib::Math::getNumber64(storyString);
+        auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
         if (story == storyId) containsStory = true;
         else storyStream << std::to_string(story) << ",";
       }
@@ -1370,7 +1553,7 @@ BaseLib::PVariable DatabaseController::removeStoryFromBuildings(uint64_t storyId
         std::string storyString = storyStream.str();
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(storyString));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i->second.at(0)->intValue));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i.second.at(0)->intValue));
         _db.executeCommand("UPDATE buildings SET stories=? WHERE id=?", data);
       }
     }
@@ -1399,7 +1582,7 @@ BaseLib::PVariable DatabaseController::removeStoryFromBuilding(uint64_t building
 
     std::ostringstream storyStream;
     for (auto &storyString : storyStrings) {
-      uint64_t story = (uint64_t)BaseLib::Math::getNumber64(storyString);
+      auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
       if (story == storyId) containsStory = true;
       else storyStream << std::to_string(story) << ",";
     }
@@ -1502,7 +1685,7 @@ BaseLib::PVariable DatabaseController::addRoomToStory(uint64_t storyId, uint64_t
 
     std::ostringstream roomStream;
     for (auto &roomString : roomStrings) {
-      uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+      auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
       if (room == roomId) containsRoom = true;
       roomStream << std::to_string(room) << ",";
     }
@@ -1581,7 +1764,7 @@ BaseLib::PVariable DatabaseController::getRoomsInStory(BaseLib::PRpcClientInfo c
     int32_t pos = 0;
     std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
     for (auto &roomString : roomStrings) {
-      uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+      auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
       if (checkAcls && !clientInfo->acls->checkRoomReadAccess(room)) continue;
       if (room != 0) {
         auto metadata = getRoomMetadata(room);
@@ -1653,7 +1836,7 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode) {
       std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
       for (auto &roomString : roomStrings) {
         if (roomString.empty()) continue;
-        uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+        auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
         if (room != 0) {
           auto metadata = getRoomMetadata(room);
           auto positionIterator = metadata->structValue->find("position");
@@ -1702,13 +1885,13 @@ BaseLib::PVariable DatabaseController::removeRoomFromStories(uint64_t roomId) {
     if (roomId == 0) return std::make_shared<BaseLib::Variable>(false);
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, rooms FROM stories");
 
-    for (BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i) {
-      std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
+    for (auto &i : *rows) {
+      std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsRoom = false;
 
       std::ostringstream roomStream;
       for (auto &roomString : roomStrings) {
-        uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+        auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
         if (room == roomId) containsRoom = true;
         else roomStream << std::to_string(room) << ",";
       }
@@ -1717,7 +1900,7 @@ BaseLib::PVariable DatabaseController::removeRoomFromStories(uint64_t roomId) {
         std::string roomString = roomStream.str();
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roomString));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i->second.at(0)->intValue));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i.second.at(0)->intValue));
         _db.executeCommand("UPDATE stories SET rooms=? WHERE id=?", data);
       }
     }
@@ -1746,7 +1929,7 @@ BaseLib::PVariable DatabaseController::removeRoomFromStory(uint64_t storyId, uin
 
     std::ostringstream roomStream;
     for (auto &roomString : roomStrings) {
-      uint64_t room = (uint64_t)BaseLib::Math::getNumber64(roomString);
+      auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
       if (room == roomId) containsRoom = true;
       else roomStream << std::to_string(room) << ",";
     }
@@ -2237,8 +2420,8 @@ void DatabaseController::createDefaultRoles() {
     auto result = _db.executeCommand("SELECT count(*) FROM roles");
     if ((!result->empty() && result->begin()->second.begin()->second->intValue == 0) || GD::bl->settings.reloadRolesOnStartup()) {
       std::string defaultRolesFile = GD::bl->settings.dataPath() + "defaultRoles.json";
-      if (GD::bl->io.fileExists(defaultRolesFile)) {
-        auto rawRoles = GD::bl->io.getFileContent(defaultRolesFile);
+      if (BaseLib::Io::fileExists(defaultRolesFile)) {
+        auto rawRoles = BaseLib::Io::getFileContent(defaultRolesFile);
         if (!BaseLib::HelperFunctions::trim(rawRoles).empty()) {
           BaseLib::Rpc::JsonDecoder jsonDecoder(GD::bl.get());
           BaseLib::PVariable roles;
@@ -2268,7 +2451,7 @@ void DatabaseController::createDefaultRoles() {
                 auto typesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 typesArray->arrayValue->reserve(typesIterator->second->arrayValue->size());
                 for (auto &type : *typesIterator->second->arrayValue) {
-                  int32_t typeValue = (int32_t)BaseLib::VariableType::tVoid;
+                  auto typeValue = (int32_t)BaseLib::VariableType::tVoid;
                   if (type->stringValue == "bool") typeValue = (int32_t)BaseLib::VariableType::tBoolean;
                   else if (type->stringValue == "int") typeValue = (int32_t)BaseLib::VariableType::tInteger;
                   else if (type->stringValue == "int64") typeValue = (int32_t)BaseLib::VariableType::tInteger64;
@@ -2580,11 +2763,11 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string &node, std::strin
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(node)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(node));
     std::string command;
     if (!key.empty()) {
       command = "SELECT value FROM nodeData WHERE node=? AND key=?";
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
     } else command = "SELECT key, value FROM nodeData WHERE node=?";
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand(command, data);
@@ -2707,16 +2890,16 @@ BaseLib::PVariable DatabaseController::deleteNodeData(std::string &node, std::st
 BaseLib::PVariable DatabaseController::getAllMetadata(BaseLib::PRpcClientInfo clientInfo, std::shared_ptr<BaseLib::Systems::Peer> peer, bool checkAcls) {
   try {
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peer->getID()))));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(peer->getID())));
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
 
     BaseLib::PVariable metadataStruct(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-    for (BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i) {
-      if (i->second.size() < 2) continue;
-      if (checkAcls && !clientInfo->acls->checkVariableReadAccess(peer, -2, i->second.at(0)->textValue)) continue;
-      BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*i->second.at(1)->binaryValue);
-      metadataStruct->structValue->insert(BaseLib::StructElement(i->second.at(0)->textValue, metadata));
+    for (auto &i : *rows) {
+      if (i.second.size() < 2) continue;
+      if (checkAcls && !clientInfo->acls->checkVariableReadAccess(peer, -2, i.second.at(0)->textValue)) continue;
+      BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*i.second.at(1)->binaryValue);
+      metadataStruct->structValue->insert(BaseLib::StructElement(i.second.at(0)->textValue, metadata));
     }
 
     return metadataStruct;
@@ -2740,7 +2923,7 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string 
       std::lock_guard<std::mutex> metadataGuard(_metadataMutex);
       auto peerIterator = _metadata.find(peerID);
       if (peerIterator != _metadata.end()) {
-        std::map<std::string, BaseLib::PVariable>::iterator dataIterator = peerIterator->second.find(dataID);
+        auto dataIterator = peerIterator->second.find(dataID);
         if (dataIterator != peerIterator->second.end()) {
           metadata = dataIterator->second;
           return metadata;
@@ -2749,8 +2932,8 @@ BaseLib::PVariable DatabaseController::getMetadata(uint64_t peerID, std::string 
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(peerID)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(dataID));
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
     if (rows->empty() || rows->at(0).empty()) return std::make_shared<BaseLib::Variable>();
@@ -2780,7 +2963,7 @@ BaseLib::PVariable DatabaseController::setMetadata(BaseLib::PRpcClientInfo clien
       return BaseLib::Variable::createError(-32602, "Type " + BaseLib::Variable::getTypeString(metadata->type) + " is currently not supported.");
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM metadata");
-    if (rows->size() == 0 || rows->at(0).size() == 0) {
+    if (rows->empty() || rows->at(0).empty()) {
       return BaseLib::Variable::createError(-32500, "Error counting metadata in database.");
     }
     if (rows->at(0).at(0)->intValue > 1000000) {
@@ -2793,14 +2976,14 @@ BaseLib::PVariable DatabaseController::setMetadata(BaseLib::PRpcClientInfo clien
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(peerID)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(dataID));
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
     enqueue(0, entry);
 
     std::vector<char> value;
     _rpcEncoder->encodeResponse(metadata, value);
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(value));
 
     entry = std::make_shared<QueueEntry>("INSERT INTO metadata VALUES(?, ?, ?)", data);
     enqueue(0, entry);
@@ -2818,7 +3001,7 @@ BaseLib::PVariable DatabaseController::setMetadata(BaseLib::PRpcClientInfo clien
     if (GD::ipcServer) GD::ipcServer->broadcastEvent(source, peerID, -1, valueKeys, values);
     GD::rpcClient->broadcastEvent(source, peerID, -1, serialNumber, valueKeys, values);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2843,10 +3026,10 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
     }
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(std::to_string(peerID))));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(peerID)));
     std::string command("DELETE FROM metadata WHERE objectID=?");
     if (!dataID.empty()) {
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(dataID));
       command.append(" AND dataID=?");
     }
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
@@ -2855,8 +3038,8 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
     std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
     std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>());
     BaseLib::PVariable value(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-    value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(1))));
-    value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
+    value->structValue->insert(BaseLib::StructElement("TYPE", std::make_shared<BaseLib::Variable>(1)));
+    value->structValue->insert(BaseLib::StructElement("CODE", std::make_shared<BaseLib::Variable>(1)));
     values->push_back(value);
 #ifdef EVENTHANDLER
     GD::eventHandler->trigger(peerID, -1, dataID, value);
@@ -2869,7 +3052,7 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
     if (GD::ipcServer) GD::ipcServer->broadcastEvent(source, peerID, -1, valueKeys, values);
     GD::rpcClient->broadcastEvent(source, peerID, -1, serialNumber, valueKeys, values);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2887,7 +3070,7 @@ void DatabaseController::deleteSystemVariable(std::string &variableId) {
     if (variableId.size() > 250) return;
 
     BaseLib::Database::DataRow data;
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableId)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(variableId));
     std::string command("DELETE FROM systemVariables WHERE variableID=?");
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
     enqueue(0, entry);
@@ -2926,8 +3109,8 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId) 
     if (categoryId == 0) return;
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, categories FROM systemVariables");
 
-    for (auto i = rows->begin(); i != rows->end(); ++i) {
-      std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
+    for (auto &i : *rows) {
+      std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsCategory = false;
 
       std::ostringstream categoryStream;
@@ -2941,7 +3124,7 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId) 
         std::string categoryString = categoryStream.str();
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(categoryString));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i->second.at(0)->intValue));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i.second.at(0)->intValue));
         _db.executeCommand("UPDATE systemVariables SET categories=? WHERE variableID=?", data);
       }
     }
@@ -2956,8 +3139,8 @@ void DatabaseController::removeRoleFromSystemVariables(uint64_t roleId) {
     if (roleId == 0) return;
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, roles FROM systemVariables");
 
-    for (auto i = rows->begin(); i != rows->end(); ++i) {
-      std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i->second.at(1)->textValue, ',');
+    for (auto &i : *rows) {
+      std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsRole = false;
 
       std::ostringstream roleStream;
@@ -2971,7 +3154,7 @@ void DatabaseController::removeRoleFromSystemVariables(uint64_t roleId) {
         std::string roleString = roleStream.str();
         BaseLib::Database::DataRow data;
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(roleString));
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i->second.at(0)->intValue));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i.second.at(0)->intValue));
         _db.executeCommand("UPDATE systemVariables SET roles=? WHERE variableID=?", data);
       }
     }
@@ -3417,16 +3600,16 @@ BaseLib::PVariable DatabaseController::deleteUserData(uint64_t userId, const std
       }
     }
 
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(component));
     std::string command("DELETE FROM userData WHERE userID=? AND component=?");
     if (!key.empty()) {
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
       command.append(" AND key=?");
     }
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(command, data);
     enqueue(0, entry);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3457,11 +3640,11 @@ BaseLib::PVariable DatabaseController::getUserData(uint64_t userId, const std::s
       }
     }
 
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(component));
     std::string command;
     if (!key.empty()) {
       command = "SELECT value FROM userData WHERE userID=? AND component=? AND key=?";
-      data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
     } else command = "SELECT key, value FROM userData WHERE userID=? AND component=?";
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand(command, data);
@@ -3506,7 +3689,7 @@ BaseLib::PVariable DatabaseController::setUserData(uint64_t userId, const std::s
     if (_db.executeCommand("SELECT userID FROM users WHERE userID=?", data)->empty()) return BaseLib::Variable::createError(-1, "Unknown user.");
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT COUNT(*) FROM userData");
-    if (rows->size() == 0 || rows->at(0).size() == 0) {
+    if (rows->empty() || rows->at(0).empty()) {
       return BaseLib::Variable::createError(-32500, "Error counting data in database.");
     }
     if (rows->at(0).at(0)->intValue > 1000000) {
@@ -3518,18 +3701,18 @@ BaseLib::PVariable DatabaseController::setUserData(uint64_t userId, const std::s
       _data[component][key] = value;
     }
 
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(component)));
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(key)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(component));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(key));
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM userData WHERE userID=? AND component=? AND key=?", data);
     enqueue(0, entry);
 
     std::vector<char> encodedValue;
     _rpcEncoder->encodeResponse(value, encodedValue);
-    data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(encodedValue));
     entry = std::make_shared<QueueEntry>("INSERT INTO userData VALUES(?, ?, ?, ?)", data);
     enqueue(0, entry);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3788,7 +3971,7 @@ void DatabaseController::saveEventAsynchronous(BaseLib::Database::DataRow &event
 
 void DatabaseController::deleteEvent(std::string &name) {
   try {
-    BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name))});
+    BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(name)});
     std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM events WHERE name=?", data);
     enqueue(0, entry);
   }
@@ -4091,10 +4274,11 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 uint64_t DatabaseController::savePeerParameterSynchronous(BaseLib::Database::DataRow &data) {
   if (data.size() == 7) {
     data.push_front(data.at(5));
-    uint64_t result = _db.executeWriteCommand("REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue)
-                                                  + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND remotePeer=" + std::to_string(data.at(4)->intValue) + " AND remoteChannel="
-                                                  + std::to_string(data.at(5)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)",
-                                              data);
+    uint64_t result = _db.executeWriteCommand(
+        "REPLACE INTO parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, value) VALUES((SELECT parameterID FROM parameters WHERE peerID=" + std::to_string(data.at(1)->intValue)
+            + " AND parameterSetType=" + std::to_string(data.at(2)->intValue) + " AND peerChannel=" + std::to_string(data.at(3)->intValue) + " AND remotePeer=" + std::to_string(data.at(4)->intValue) + " AND remoteChannel="
+            + std::to_string(data.at(5)->intValue) + " AND parameterName=?), ?, ?, ?, ?, ?, ?, ?)",
+        data);
     if (result == 0) throw BaseLib::Exception("Error saving peer parameter to database. See previous errors in log for more information.");
     return result;
   } else GD::out.printError("Error: The number of columns is invalid.");

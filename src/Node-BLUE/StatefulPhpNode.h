@@ -41,31 +41,31 @@ class StatefulPhpNode : public Flows::INode {
  private:
   Flows::PVariable _nodeInfo;
  public:
-  StatefulPhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool *frontendConnected);
+  StatefulPhpNode(const std::string &path, const std::string &nodeNamespace, const std::string &type, const std::atomic_bool *frontendConnected);
 
-  virtual ~StatefulPhpNode();
+  ~StatefulPhpNode() override;
 
-  virtual bool init(Flows::PNodeInfo nodeInfo);
+  bool init(const Flows::PNodeInfo &nodeInfo) override;
 
-  virtual bool start();
+  bool start() override;
 
-  virtual void stop();
+  void stop() override;
 
-  virtual void waitForStop();
+  void waitForStop() override;
 
-  virtual void configNodesStarted();
+  void configNodesStarted() override;
 
-  virtual void startUpComplete();
+  void startUpComplete() override;
 
-  virtual void variableEvent(std::string source, uint64_t peerId, int32_t channel, std::string variable, Flows::PVariable value);
+  void variableEvent(const std::string &source, uint64_t peerId, int32_t channel, const std::string &variable, const Flows::PVariable &value, const Flows::PVariable &metadata) override;
 
-  virtual void setNodeVariable(const std::string &variable, Flows::PVariable value);
+  void setNodeVariable(const std::string &variable, const Flows::PVariable &value) override;
 
-  virtual Flows::PVariable getConfigParameterIncoming(std::string name);
+  Flows::PVariable getConfigParameterIncoming(const std::string &name) override;
 
-  virtual void input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message);
+  void input(const Flows::PNodeInfo &nodeInfo, uint32_t index, const Flows::PVariable &message) override;
 
-  virtual Flows::PVariable invokeLocal(const std::string &methodName, Flows::PArray parameters);
+  Flows::PVariable invokeLocal(const std::string &methodName, const Flows::PArray &parameters) override;
 };
 
 }
