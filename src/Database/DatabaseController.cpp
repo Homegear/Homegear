@@ -1204,26 +1204,37 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
 
     auto notification = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 
-    auto titleIterator = notification->structValue->find("title");
-    if (titleIterator != notification->structValue->end()) {
-      auto languageIterator = titleIterator->second->structValue->find(languageCode);
-      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
-      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
-      if (languageIterator != titleIterator->second->structValue->end()) {
-        titleIterator->second->stringValue = languageIterator->second->stringValue;
+    auto contentIterator = notification->structValue->find("title");
+    if (contentIterator != notification->structValue->end()) {
+      auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+      if (languageIterator != contentIterator->second->structValue->end()) {
+        contentIterator->second->stringValue = languageIterator->second->stringValue;
       }
-      titleIterator->second->type = BaseLib::VariableType::tString;
+      contentIterator->second->type = BaseLib::VariableType::tString;
     }
 
-    titleIterator = notification->structValue->find("modalTitle");
-    if (titleIterator != notification->structValue->end()) {
-      auto languageIterator = titleIterator->second->structValue->find(languageCode);
-      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
-      if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
-      if (languageIterator != titleIterator->second->structValue->end()) {
-        titleIterator->second->stringValue = languageIterator->second->stringValue;
+    contentIterator = notification->structValue->find("modalTitle");
+    if (contentIterator != notification->structValue->end()) {
+      auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+      if (languageIterator != contentIterator->second->structValue->end()) {
+        contentIterator->second->stringValue = languageIterator->second->stringValue;
       }
-      titleIterator->second->type = BaseLib::VariableType::tString;
+      contentIterator->second->type = BaseLib::VariableType::tString;
+    }
+
+    contentIterator = notification->structValue->find("modalContent");
+    if (contentIterator != notification->structValue->end()) {
+      auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+      if (languageIterator != contentIterator->second->structValue->end()) {
+        contentIterator->second->stringValue = languageIterator->second->stringValue;
+      }
+      contentIterator->second->type = BaseLib::VariableType::tString;
     }
 
     auto buttonsIterator = notification->structValue->find("buttons");
@@ -1263,26 +1274,37 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
 
       notification->structValue->emplace("id", std::make_shared<BaseLib::Variable>(id));
 
-      auto titleIterator = notification->structValue->find("title");
-      if (titleIterator != notification->structValue->end()) {
-        auto languageIterator = titleIterator->second->structValue->find(languageCode);
-        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
-        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
-        if (languageIterator != titleIterator->second->structValue->end()) {
-          titleIterator->second->stringValue = languageIterator->second->stringValue;
+      auto contentIterator = notification->structValue->find("title");
+      if (contentIterator != notification->structValue->end()) {
+        auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+        if (languageIterator != contentIterator->second->structValue->end()) {
+          contentIterator->second->stringValue = languageIterator->second->stringValue;
         }
-        titleIterator->second->type = BaseLib::VariableType::tString;
+        contentIterator->second->type = BaseLib::VariableType::tString;
       }
 
-      titleIterator = notification->structValue->find("modalTitle");
-      if (titleIterator != notification->structValue->end()) {
-        auto languageIterator = titleIterator->second->structValue->find(languageCode);
-        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->find("en-US");
-        if (languageIterator == titleIterator->second->structValue->end()) languageIterator = titleIterator->second->structValue->begin();
-        if (languageIterator != titleIterator->second->structValue->end()) {
-          titleIterator->second->stringValue = languageIterator->second->stringValue;
+      contentIterator = notification->structValue->find("modalTitle");
+      if (contentIterator != notification->structValue->end()) {
+        auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+        if (languageIterator != contentIterator->second->structValue->end()) {
+          contentIterator->second->stringValue = languageIterator->second->stringValue;
         }
-        titleIterator->second->type = BaseLib::VariableType::tString;
+        contentIterator->second->type = BaseLib::VariableType::tString;
+      }
+
+      contentIterator = notification->structValue->find("modalContent");
+      if (contentIterator != notification->structValue->end()) {
+        auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+        if (languageIterator != contentIterator->second->structValue->end()) {
+          contentIterator->second->stringValue = languageIterator->second->stringValue;
+        }
+        contentIterator->second->type = BaseLib::VariableType::tString;
       }
 
       auto buttonsIterator = notification->structValue->find("buttons");

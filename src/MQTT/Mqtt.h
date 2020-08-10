@@ -112,22 +112,22 @@ class Mqtt : public BaseLib::IQueue {
  private:
   class QueueEntrySend : public BaseLib::IQueueEntry {
    public:
-    QueueEntrySend() {}
+    QueueEntrySend() = default;
 
-    QueueEntrySend(std::shared_ptr<MqttMessage> &message) { this->message = message; }
+    explicit QueueEntrySend(std::shared_ptr<MqttMessage> &message) { this->message = message; }
 
-    virtual ~QueueEntrySend() {}
+    ~QueueEntrySend() override = default;
 
     std::shared_ptr<MqttMessage> message;
   };
 
   class QueueEntryReceived : public BaseLib::IQueueEntry {
    public:
-    QueueEntryReceived() {}
+    QueueEntryReceived() = default;
 
-    QueueEntryReceived(std::vector<char> &data) { this->data = data; }
+    explicit QueueEntryReceived(std::vector<char> &data) { this->data = data; }
 
-    virtual ~QueueEntryReceived() {}
+    ~QueueEntryReceived() override = default;
 
     std::vector<char> data;
   };
@@ -139,25 +139,20 @@ class Mqtt : public BaseLib::IQueue {
     bool mutexReady = false;
     std::vector<char> response;
 
-    uint8_t getResponseControlByte() { return _responseControlByte; }
+    uint8_t getResponseControlByte() const { return _responseControlByte; }
 
-    Request(uint8_t responseControlByte) { _responseControlByte = responseControlByte; };
+    explicit Request(uint8_t responseControlByte) { _responseControlByte = responseControlByte; };
 
-    virtual ~Request() {};
+    ~Request() = default;;
    private:
     uint8_t _responseControlByte;
   };
 
-  class RequestByType {
-   public:
+  struct RequestByType {
     std::mutex mutex;
     std::condition_variable conditionVariable;
     bool mutexReady = false;
     std::vector<char> response;
-
-    RequestByType() {};
-
-    virtual ~RequestByType() {};
   };
 
   BaseLib::Output _out;
@@ -195,9 +190,7 @@ class Mqtt : public BaseLib::IQueue {
 
   void disconnect();
 
-  void processMessages();
-
-  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
   std::vector<char> getLengthBytes(uint32_t length);
 

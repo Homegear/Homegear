@@ -39,6 +39,7 @@
 #include "php_device.h"
 #include <wordexp.h>
 
+#include <memory>
 #include <utility>
 #include <zend_stream.h>
 
@@ -58,7 +59,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
   _stopped = false;
   _nodesStopped = false;
 
-  _fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+  _fileDescriptor = std::make_shared<BaseLib::FileDescriptor>();
   _out.init(GD::bl.get());
   _out.setPrefix("Script Engine (" + std::to_string(getpid()) + "): ");
 
@@ -353,7 +354,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
           _out.printError("Error: Wrong parameter count while calling method " + queueEntry->methodName);
           return;
         }
-        std::map<std::string, std::function<BaseLib::PVariable(BaseLib::PArray &parameters)>>::iterator localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
+        auto localMethodIterator = _localRpcMethods.find(queueEntry->methodName);
         if (localMethodIterator == _localRpcMethods.end()) {
           _out.printError("Warning: RPC method not found: " + queueEntry->methodName);
           BaseLib::PVariable error = BaseLib::Variable::createError(-32601, "Requested method not found in script engine client.");
@@ -363,7 +364,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
         if (GD::bl->debugLevel >= 5) {
           _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
-          for (auto parameter : *queueEntry->parameters) {
+          for (const auto& parameter : *queueEntry->parameters) {
             parameter->print(true, false);
           }
         }
@@ -1841,7 +1842,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastVariableProfileStateChanged(Base
 
 BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationCreated(BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
     for (auto &i : PhpEvents::eventsMap) {
@@ -1863,7 +1864,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationCreated(BaseLib::P
 
 BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationRemoved(BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
     for (auto &i : PhpEvents::eventsMap) {
@@ -1885,7 +1886,7 @@ BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationRemoved(BaseLib::P
 
 BaseLib::PVariable ScriptEngineClient::broadcastUiNotificationAction(BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
     for (auto &i : PhpEvents::eventsMap) {

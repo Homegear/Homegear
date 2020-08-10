@@ -609,8 +609,9 @@ Flows::PVariable NodeBlueClient::send(std::vector<char> &data) {
       auto sentBytes = static_cast<int32_t>(::send(_fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL));
       if (sentBytes <= 0) {
         if (errno == EAGAIN) continue;
-        if (_fileDescriptor->descriptor != -1) _out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size())
-                                                                   + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
+        if (_fileDescriptor->descriptor != -1)
+          _out.printError("Could not send data to client " + std::to_string(_fileDescriptor->descriptor) + ". Sent bytes: " + std::to_string(totallySentBytes) + " of " + std::to_string(data.size())
+                              + (sentBytes == -1 ? ". Error message: " + std::string(strerror(errno)) : ""));
         return Flows::Variable::createError(-32500, "Unknown application error.");
       }
       totallySentBytes += sentBytes;
@@ -1530,7 +1531,8 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray &parameters) {
         if (_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
         startTime = BaseLib::HelperFunctions::getTime();
         if (node) node->stop();
-        if (BaseLib::HelperFunctions::getTime() - startTime > 100) _out.printWarning(
+        if (BaseLib::HelperFunctions::getTime() - startTime > 100)
+          _out.printWarning(
               "Warning: Stop of node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue
                   + " took longer than 100ms.");
         if (_bl->debugLevel >= 5) _out.printDebug("Debug: Node " + nodeIterator.second->id + " stopped.");
@@ -1545,7 +1547,8 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray &parameters) {
         if (_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
         startTime = BaseLib::HelperFunctions::getTime();
         if (node) node->waitForStop();
-        if (BaseLib::HelperFunctions::getTime() - startTime > 1000) _out.printWarning(
+        if (BaseLib::HelperFunctions::getTime() - startTime > 1000)
+          _out.printWarning(
               "Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue
                   + " took longer than 1 second.");
       }
@@ -2040,7 +2043,7 @@ Flows::PVariable NodeBlueClient::broadcastFlowVariableEvent(Flows::PArray &param
 
     {
       std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-      for (const auto& nodeId : _eventSubscriptions) {
+      for (const auto &nodeId : _eventSubscriptions) {
         Flows::PINode node = _nodeManager->getNode(nodeId);
         if (node) node->homegearEvent("flowVariableEvent", parameters);
       }
@@ -2053,7 +2056,7 @@ Flows::PVariable NodeBlueClient::broadcastFlowVariableEvent(Flows::PArray &param
       auto flowIterator = _flowSubscriptions.find(flowId);
       if (flowIterator == _flowSubscriptions.end()) return std::make_shared<Flows::Variable>();
 
-      for (const auto& nodeId : flowIterator->second) {
+      for (const auto &nodeId : flowIterator->second) {
         Flows::PINode node = _nodeManager->getNode(nodeId);
         if (node) node->flowVariableEvent(flowId, parameters->at(1)->stringValue, parameters->at(2));
       }
@@ -2073,7 +2076,7 @@ Flows::PVariable NodeBlueClient::broadcastGlobalVariableEvent(Flows::PArray &par
 
     {
       std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-      for (const auto& nodeId : _eventSubscriptions) {
+      for (const auto &nodeId : _eventSubscriptions) {
         Flows::PINode node = _nodeManager->getNode(nodeId);
         if (node) node->homegearEvent("globalVariableEvent", parameters);
       }
@@ -2081,7 +2084,7 @@ Flows::PVariable NodeBlueClient::broadcastGlobalVariableEvent(Flows::PArray &par
 
     {
       std::lock_guard<std::mutex> eventsGuard(_globalSubscriptionsMutex);
-      for (const auto& nodeId : _globalSubscriptions) {
+      for (const auto &nodeId : _globalSubscriptions) {
         Flows::PINode node = _nodeManager->getNode(nodeId);
         if (node) node->globalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
       }
@@ -2100,7 +2103,7 @@ Flows::PVariable NodeBlueClient::broadcastNewDevices(Flows::PArray &parameters) 
     if (parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("newDevices", parameters);
     }
@@ -2118,7 +2121,7 @@ Flows::PVariable NodeBlueClient::broadcastDeleteDevices(Flows::PArray &parameter
     if (parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("deleteDevices", parameters);
     }
@@ -2136,7 +2139,7 @@ Flows::PVariable NodeBlueClient::broadcastUpdateDevice(Flows::PArray &parameters
     if (parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("updateDevice", parameters);
     }
@@ -2154,7 +2157,7 @@ Flows::PVariable NodeBlueClient::broadcastVariableProfileStateChanged(Flows::PAr
     if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("variableProfileStateChanged", parameters);
     }
@@ -2169,10 +2172,10 @@ Flows::PVariable NodeBlueClient::broadcastVariableProfileStateChanged(Flows::PAr
 
 Flows::PVariable NodeBlueClient::broadcastUiNotificationCreated(Flows::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("uiNotificationCreated", parameters);
     }
@@ -2187,10 +2190,10 @@ Flows::PVariable NodeBlueClient::broadcastUiNotificationCreated(Flows::PArray &p
 
 Flows::PVariable NodeBlueClient::broadcastUiNotificationRemoved(Flows::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("uiNotificationRemoved", parameters);
     }
@@ -2205,10 +2208,10 @@ Flows::PVariable NodeBlueClient::broadcastUiNotificationRemoved(Flows::PArray &p
 
 Flows::PVariable NodeBlueClient::broadcastUiNotificationAction(Flows::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     std::lock_guard<std::mutex> eventsGuard(_eventSubscriptionsMutex);
-    for (const auto& nodeId : _eventSubscriptions) {
+    for (const auto &nodeId : _eventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("uiNotificationAction", parameters);
     }

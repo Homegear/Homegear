@@ -475,19 +475,11 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> &address) {
 
     BaseLib::PVariable devices(new BaseLib::Variable(BaseLib::VariableType::tArray));
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
-         i != families.end(); ++i) {
-      std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+    for (auto &family : families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
       if (!central) continue;
-      BaseLib::PVariable result = central->listDevices(server->getServerClientInfo(),
-                                                       true,
-                                                       std::map<std::string, bool>(),
-                                                       server->knownDevices,
-                                                       checkAcls);
-      if (!result->arrayValue->empty())
-        devices->arrayValue->insert(devices->arrayValue->end(),
-                                    result->arrayValue->begin(),
-                                    result->arrayValue->end());
+      BaseLib::PVariable result = central->listDevices(server->getServerClientInfo(), true, std::map<std::string, bool>(), server->knownDevices, checkAcls);
+      if (!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
     }
     if (devices->arrayValue->empty()) return;
     auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
@@ -498,12 +490,8 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> &address) {
     std::string methodName = "newDevices";
     BaseLib::PVariable result = server->invoke(methodName, parameters);
     if (result->errorStruct) {
-      if (server->removed
-          || (server->getServerClientInfo()->sendEventsToRpcServer && server->getServerClientInfo()->closed))
-        return;
-      GD::out.printError(
-          "Error calling XML RPC method \"newDevices\" on server " + address.first + " with port " + address.second
-              + ". Error struct: ");
+      if (server->removed || (server->getServerClientInfo()->sendEventsToRpcServer && server->getServerClientInfo()->closed)) return;
+      GD::out.printError("Error calling XML RPC method \"newDevices\" on server " + address.first + " with port " + address.second + ". Error struct: ");
       result->print(true, false);
       return;
     }
