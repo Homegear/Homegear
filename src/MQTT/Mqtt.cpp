@@ -1114,7 +1114,7 @@ void Mqtt::publish(const std::string &topic, const std::vector<char> &data, bool
     packet.insert(packet.end(), payload.begin(), payload.end());
     int32_t j = 0;
     std::vector<char> response(7);
-    if (GD::bl->debugLevel >= 4) _out.printInfo("MQTT Client Info: Publishing topic   " + fullTopic);
+    if (GD::bl->debugLevel >= 4) _out.printInfo("MQTT Client Info: Publishing topic: " + fullTopic);
     for (int32_t i = 0; i < 25; i++) {
       if (_reconnecting) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));

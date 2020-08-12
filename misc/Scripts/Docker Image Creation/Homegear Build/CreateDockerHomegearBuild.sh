@@ -925,7 +925,7 @@ echo "isodate=\`date +%Y%m%d\`
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
 	fi
-fi" >> $rootfs/build/CreateDebianPackageNightly.sh
+" >> $rootfs/build/CreateDebianPackageNightly.sh
 chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
 
