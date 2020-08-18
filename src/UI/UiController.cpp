@@ -209,7 +209,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                 }
 
                 if (!wrongDirection) {
-                  if (variableIterator->first.find(".RV.") != std::string::npos) {
+                  if (variableIterator2.first.find(".RV.") != std::string::npos) {
                     autoRoleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                     autoRoleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
                     autoRoleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator->first)));
