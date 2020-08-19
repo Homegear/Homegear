@@ -1069,7 +1069,7 @@ cd /build
 if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
-	tar -zcpf \${path} homegear* lib* python3-homegear* distribution
+	tar -zcpf \${path} homegear* lib* ibs-ssh* mellon* python3-homegear* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
