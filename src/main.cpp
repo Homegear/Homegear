@@ -505,17 +505,21 @@ void startUp() {
     GD::out.printMessage("Starting Homegear...");
     GD::out.printMessage(std::string("Homegear version: ") + GD::baseLibVersion);
 
-    GD::out.printMessage("Determining maximum thread count...");
-    try {
-      // {{{ Get maximum thread count
-      std::string output;
-      BaseLib::ProcessManager::exec(GD::executablePath + GD::executableFile + " -tc", GD::bl->fileDescriptorManager.getMax(), output);
-      BaseLib::HelperFunctions::trim(output);
-      if (BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
-      // }}}
-    }
-    catch (const std::exception &ex) {
-      GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    if (GD::bl->settings.maxTotalThreadCount() < 100) {
+      GD::out.printMessage("Determining maximum thread count...");
+      try {
+        // {{{ Get maximum thread count
+        std::string output;
+        BaseLib::ProcessManager::exec(GD::executablePath + GD::executableFile + " -tc", GD::bl->fileDescriptorManager.getMax(), output);
+        BaseLib::HelperFunctions::trim(output);
+        if (BaseLib::Math::isNumber(output, false)) GD::bl->threadManager.setMaxThreadCount(BaseLib::Math::getNumber(output, false));
+        // }}}
+      }
+      catch (const std::exception &ex) {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+      }
+    } else {
+      GD::bl->threadManager.setMaxThreadCount(GD::bl->settings.maxTotalThreadCount());
     }
     GD::out.printMessage("Maximum thread count is: " + std::to_string(GD::bl->threadManager.getMaxThreadCount()));
 
