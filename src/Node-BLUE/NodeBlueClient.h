@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -45,293 +45,292 @@
 #include <mutex>
 #include <string>
 
-namespace Homegear
-{
-
-namespace NodeBlue
-{
-
-class NodeBlueClient : public BaseLib::IQueue
-{
-public:
-	NodeBlueClient();
-
-	virtual ~NodeBlueClient();
-
-	void dispose();
-
-	void start();
-
-private:
-	struct RequestInfo
-	{
-		std::mutex waitMutex;
-		std::condition_variable conditionVariable;
-	};
-	typedef std::shared_ptr<RequestInfo> PRequestInfo;
-
-	struct InputValue
-	{
-		int64_t time = 0;
-		Flows::PVariable value;
-	};
-
-	class QueueEntry : public BaseLib::IQueueEntry
-	{
-	public:
-		QueueEntry() {}
-
-		QueueEntry(std::string& methodName, Flows::PArray parameters)
-		{
-			this->methodName = methodName;
-			this->parameters = parameters;
-		}
-
-		QueueEntry(std::vector<char>& packet) { this->packet = packet; }
-
-		QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message)
-		{
-			this->nodeInfo = nodeInfo;
-			this->targetPort = targetPort;
-			this->message = message;
-		}
-
-		virtual ~QueueEntry() {}
-
-		//{{{ Request
-		std::string methodName;
-		Flows::PArray parameters;
-		//}}}
-
-		//{{{ Response
-		std::vector<char> packet;
-		//}}}
+namespace Homegear {
+
+namespace NodeBlue {
+
+class NodeBlueClient : public BaseLib::IQueue {
+ public:
+  NodeBlueClient();
+
+  virtual ~NodeBlueClient();
+
+  void dispose();
+
+  void start();
+
+ private:
+  struct RequestInfo {
+    std::mutex waitMutex;
+    std::condition_variable conditionVariable;
+  };
+  typedef std::shared_ptr<RequestInfo> PRequestInfo;
+
+  struct InputValue {
+    int64_t time = 0;
+    Flows::PVariable value;
+  };
+
+  class QueueEntry : public BaseLib::IQueueEntry {
+   public:
+    QueueEntry() {}
+
+    QueueEntry(std::string &methodName, Flows::PArray parameters) {
+      this->methodName = methodName;
+      this->parameters = parameters;
+    }
+
+    QueueEntry(std::vector<char> &packet) { this->packet = packet; }
+
+    QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) {
+      this->nodeInfo = nodeInfo;
+      this->targetPort = targetPort;
+      this->message = message;
+    }
+
+    virtual ~QueueEntry() {}
 
-		//{{{ Node output
-		Flows::PNodeInfo nodeInfo;
-		uint32_t targetPort = 0;
-		Flows::PVariable message;
-		//}}}
-	};
+    //{{{ Request
+    std::string methodName;
+    Flows::PArray parameters;
+    //}}}
 
-	BaseLib::Output _out;
-	std::atomic_int _threadCount;
-	std::atomic_int _processingThreadCount1;
-	std::atomic_int _processingThreadCount2;
-	std::atomic_int _processingThreadCount3;
-	std::atomic<int64_t> _processingThreadCountMaxReached1;
-	std::atomic<int64_t> _processingThreadCountMaxReached2;
-	std::atomic<int64_t> _processingThreadCountMaxReached3;
-	std::atomic_bool _startUpComplete;
-	std::atomic_bool _shuttingDownOrRestarting;
-	std::atomic_bool _shutdownComplete;
-	std::atomic_bool _disposed;
-	std::string _socketPath;
-	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-	std::atomic_bool _stopped;
-	std::mutex _sendMutex;
-	std::mutex _rpcResponsesMutex;
-	std::map<int64_t, std::map<int32_t, PNodeBlueResponseClient>> _rpcResponses;
-	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::map<std::string, std::function<Flows::PVariable(Flows::PArray& parameters)>> _localRpcMethods;
-	std::thread _maintenanceThread;
-	std::thread _watchdogThread;
-	std::mutex _requestInfoMutex;
-	std::map<int64_t, PRequestInfo> _requestInfo;
-	std::mutex _packetIdMutex;
-	int32_t _currentPacketId = 0;
-	std::atomic_bool _nodesStopped;
-	std::unique_ptr<NodeManager> _nodeManager;
-	std::atomic_bool _frontendConnected;
-	std::atomic<int64_t> _lastQueueSize;
-	std::mutex _eventFlowIdMutex;
-	std::string _eventFlowId;
+    //{{{ Response
+    std::vector<char> packet;
+    //}}}
 
-	std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
-	std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
-	std::unique_ptr<Flows::RpcEncoder> _rpcEncoder;
+    //{{{ Node output
+    Flows::PNodeInfo nodeInfo;
+    uint32_t targetPort = 0;
+    Flows::PVariable message;
+    //}}}
+  };
 
-	std::mutex _startFlowMutex;
+  BaseLib::Output _out;
+  std::atomic_int _threadCount;
+  std::atomic_int _processingThreadCount1;
+  std::atomic_int _processingThreadCount2;
+  std::atomic_int _processingThreadCount3;
+  std::atomic<int64_t> _processingThreadCountMaxReached1;
+  std::atomic<int64_t> _processingThreadCountMaxReached2;
+  std::atomic<int64_t> _processingThreadCountMaxReached3;
+  std::atomic_bool _startUpComplete;
+  std::atomic_bool _shuttingDownOrRestarting;
+  std::atomic_bool _shutdownComplete;
+  std::atomic_bool _disposed;
+  std::string _socketPath;
+  std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
+  std::atomic_bool _stopped;
+  std::mutex _sendMutex;
+  std::mutex _rpcResponsesMutex;
+  std::map<int64_t, std::map<int32_t, PNodeBlueResponseClient>> _rpcResponses;
+  std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+  std::map<std::string, std::function<Flows::PVariable(Flows::PArray &parameters)>> _localRpcMethods;
+  std::thread _maintenanceThread;
+  std::thread _watchdogThread;
+  std::mutex _requestInfoMutex;
+  std::map<int64_t, PRequestInfo> _requestInfo;
+  std::mutex _packetIdMutex;
+  int32_t _currentPacketId = 0;
+  std::atomic_bool _nodesStopped;
+  std::unique_ptr<NodeManager> _nodeManager;
+  std::atomic_bool _frontendConnected;
+  std::atomic<int64_t> _lastQueueSize;
+  std::mutex _eventFlowIdMutex;
+  std::string _eventFlowId;
 
-	std::mutex _flowsMutex;
-	std::unordered_map<int32_t, PFlowInfoClient> _flows;
+  std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
+  std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
+  std::unique_ptr<Flows::RpcEncoder> _rpcEncoder;
 
-	std::mutex _nodesMutex;
-	std::unordered_map<std::string, Flows::PNodeInfo> _nodes;
+  std::mutex _startFlowMutex;
 
-	std::mutex _peerSubscriptionsMutex;
-	std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
-    std::mutex _eventSubscriptionsMutex;
-	std::set<std::string> _eventSubscriptions;
+  std::mutex _flowsMutex;
+  std::unordered_map<int32_t, PFlowInfoClient> _flows;
 
-	std::mutex _flowSubscriptionsMutex;
-	std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
+  std::mutex _nodesMutex;
+  std::unordered_map<std::string, Flows::PNodeInfo> _nodes;
 
-	std::mutex _globalSubscriptionsMutex;
-	std::set<std::string> _globalSubscriptions;
+  std::mutex _peerSubscriptionsMutex;
+  std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
+  std::mutex _eventSubscriptionsMutex;
+  std::set<std::string> _eventSubscriptions;
 
+  std::mutex _flowSubscriptionsMutex;
+  std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
 
-	std::mutex _internalMessagesMutex;
-	std::unordered_map<std::string, Flows::PVariable> _internalMessages;
+  std::mutex _globalSubscriptionsMutex;
+  std::set<std::string> _globalSubscriptions;
 
-	std::mutex _inputValuesMutex;
-	std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
+  std::mutex _internalMessagesMutex;
+  std::unordered_map<std::string, Flows::PVariable> _internalMessages;
 
-	std::mutex _fixedInputValuesMutex;
-	std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _fixedInputValues;
+  std::mutex _inputValuesMutex;
+  std::unordered_map<std::string, std::unordered_map<int32_t, std::list<InputValue>>> _inputValues;
 
-	void watchdog();
+  std::mutex _fixedInputValuesMutex;
+  std::unordered_map<std::string, std::unordered_map<int32_t, Flows::PVariable>> _fixedInputValues;
 
-	void resetClient(Flows::PVariable packetId);
+  void watchdog();
 
-	void registerClient();
+  void resetClient(Flows::PVariable packetId);
 
-	Flows::PVariable invoke(const std::string& methodName, Flows::PArray parameters, bool wait);
+  void registerClient();
 
-	Flows::PVariable invokeNodeMethod(const std::string& nodeId, const std::string& methodName, Flows::PArray parameters, bool wait);
+  Flows::PVariable invoke(const std::string &methodName, Flows::PArray parameters, bool wait);
 
-	void sendResponse(Flows::PVariable& packetId, Flows::PVariable& variable);
+  Flows::PVariable invokeNodeMethod(const std::string &nodeId, const std::string &methodName, Flows::PArray parameters, bool wait);
 
-	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+  void sendResponse(Flows::PVariable &packetId, Flows::PVariable &variable);
 
-	Flows::PVariable send(std::vector<char>& data);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
 
-	void log(const std::string& nodeId, int32_t logLevel, const std::string& message);
+  Flows::PVariable send(std::vector<char> &data);
 
-	void frontendEventLog(const std::string& nodeId, const std::string& message);
+  void log(const std::string &nodeId, int32_t logLevel, const std::string &message);
 
-	void subscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable);
+  void frontendEventLog(const std::string &nodeId, const std::string &message);
 
-	void unsubscribePeer(const std::string& nodeId, uint64_t peerId, int32_t channel, const std::string& variable);
+  void subscribePeer(const std::string &nodeId, uint64_t peerId, int32_t channel, const std::string &variable);
 
-	void subscribeFlow(const std::string& nodeId, const std::string& flowId);
+  void unsubscribePeer(const std::string &nodeId, uint64_t peerId, int32_t channel, const std::string &variable);
 
-	void unsubscribeFlow(const std::string& nodeId, const std::string& flowId);
+  void subscribeFlow(const std::string &nodeId, const std::string &flowId);
 
-	void subscribeGlobal(const std::string& nodeId);
+  void unsubscribeFlow(const std::string &nodeId, const std::string &flowId);
 
-	void unsubscribeGlobal(const std::string& nodeId);
+  void subscribeGlobal(const std::string &nodeId);
 
-    void subscribeHomegearEvents(const std::string& nodeId);
+  void unsubscribeGlobal(const std::string &nodeId);
 
-    void unsubscribeHomegearEvents(const std::string& nodeId);
+  void subscribeHomegearEvents(const std::string &nodeId);
 
-	void queueOutput(const std::string& nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
+  void unsubscribeHomegearEvents(const std::string &nodeId);
 
-	void nodeEvent(const std::string& nodeId, const std::string& topic, Flows::PVariable value);
+  void queueOutput(const std::string &nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
-	Flows::PVariable getNodeData(const std::string& nodeId, const std::string& key);
+  void nodeEvent(const std::string &nodeId, const std::string &topic, Flows::PVariable value);
 
-	void setNodeData(const std::string& nodeId, const std::string& key, Flows::PVariable value);
+  Flows::PVariable getNodeData(const std::string &nodeId, const std::string &key);
 
-    Flows::PVariable getFlowData(const std::string& flowId, const std::string& key);
+  void setNodeData(const std::string &nodeId, const std::string &key, Flows::PVariable value);
 
-    void setFlowData(const std::string& flowId, const std::string& key, Flows::PVariable value);
+  Flows::PVariable getFlowData(const std::string &flowId, const std::string &key);
 
-    Flows::PVariable getGlobalData(const std::string& key);
+  void setFlowData(const std::string &flowId, const std::string &key, Flows::PVariable value);
 
-    void setGlobalData(const std::string& key, Flows::PVariable value);
+  Flows::PVariable getGlobalData(const std::string &key);
 
-	void setInternalMessage(const std::string& nodeId, Flows::PVariable message);
+  void setGlobalData(const std::string &key, Flows::PVariable value);
 
-	void setInputValue(const std::string& nodeId, int32_t inputIndex, Flows::PVariable message);
+  void setInternalMessage(const std::string &nodeId, Flows::PVariable message);
 
-	Flows::PVariable getConfigParameter(const std::string& nodeId, const std::string& name);
+  void setInputValue(const std::string &nodeId, int32_t inputIndex, Flows::PVariable message);
 
-	// {{{ RPC methods
-	/**
-     * Causes the log files to be reopened.
-     * @param parameters Irrelevant for this method.
-     */
-	Flows::PVariable reload(Flows::PArray& parameters);
+  Flows::PVariable getConfigParameter(const std::string &nodeId, const std::string &name);
 
-	/**
-     * Causes the script engine client to exit.
-     * @param parameters Irrelevant for this method.
-     */
-	Flows::PVariable shutdown(Flows::PArray& parameters);
+  // {{{ RPC methods
+  /**
+   * Causes the log files to be reopened.
+   * @param parameters Irrelevant for this method.
+   */
+  Flows::PVariable reload(Flows::PArray &parameters);
 
-	/**
-	 * Checks if everything is working.
-	 * @param parameters Irrelevant for this method.
-	 */
-	Flows::PVariable lifetick(Flows::PArray& parameters);
+  /**
+   * Causes the script engine client to exit.
+   * @param parameters Irrelevant for this method.
+   */
+  Flows::PVariable shutdown(Flows::PArray &parameters);
 
-	/**
-     * Starts a new flow.
-     * @param parameters
-     */
-	Flows::PVariable startFlow(Flows::PArray& parameters);
+  /**
+   * Checks if everything is working.
+   * @param parameters Irrelevant for this method.
+   */
+  Flows::PVariable lifetick(Flows::PArray &parameters);
 
-	/**
-     * Executes the method "start" on all nodes. It is run after all nodes are initialized.
-     * @param parameters
-     */
-	Flows::PVariable startNodes(Flows::PArray& parameters);
+  /**
+   * Starts a new flow.
+   * @param parameters
+   */
+  Flows::PVariable startFlow(Flows::PArray &parameters);
 
-	/**
-     * Executed when all config nodes are available.
-     * @param parameters
-     */
-	Flows::PVariable configNodesStarted(Flows::PArray& parameters);
+  /**
+   * Executes the method "start" on all nodes. It is run after all nodes are initialized.
+   * @param parameters
+   */
+  Flows::PVariable startNodes(Flows::PArray &parameters);
 
-	/**
-     * Executed when start up is complete. Nodes can output data from within this method.
-     * @param parameters
-     */
-	Flows::PVariable startUpComplete(Flows::PArray& parameters);
+  /**
+   * Executed when all config nodes are available.
+   * @param parameters
+   */
+  Flows::PVariable configNodesStarted(Flows::PArray &parameters);
 
-	/**
-     * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
-     * @param parameters
-     */
-	Flows::PVariable stopNodes(Flows::PArray& parameters);
+  /**
+   * Executed when start up is complete. Nodes can output data from within this method.
+   * @param parameters
+   */
+  Flows::PVariable startUpComplete(Flows::PArray &parameters);
 
-	/**
-     * Stops a flow.
-     * @param parameters
-     */
-	Flows::PVariable stopFlow(Flows::PArray& parameters);
+  /**
+   * Executes the method "stop" on all nodes. RPC methods can still be called within "stop", but not afterwards.
+   * @param parameters
+   */
+  Flows::PVariable stopNodes(Flows::PArray &parameters);
 
-	/**
-     * Returns the number of flows currently running.
-     * @param parameters Irrelevant for this method.
-     * @return Returns the number of running flows.
-     */
-	Flows::PVariable flowCount(Flows::PArray& parameters);
+  /**
+   * Stops a flow.
+   * @param parameters
+   */
+  Flows::PVariable stopFlow(Flows::PArray &parameters);
 
-	Flows::PVariable nodeOutput(Flows::PArray& parameters);
+  /**
+   * Returns the number of flows currently running.
+   * @param parameters Irrelevant for this method.
+   * @return Returns the number of running flows.
+   */
+  Flows::PVariable flowCount(Flows::PArray &parameters);
 
-	Flows::PVariable invokeExternalNodeMethod(Flows::PArray& parameters);
+  Flows::PVariable nodeOutput(Flows::PArray &parameters);
 
-	Flows::PVariable executePhpNodeBaseMethod(Flows::PArray& parameters);
+  Flows::PVariable invokeExternalNodeMethod(Flows::PArray &parameters);
 
-	Flows::PVariable getNodesWithFixedInputs(Flows::PArray& parameters);
+  Flows::PVariable executePhpNodeBaseMethod(Flows::PArray &parameters);
 
-	Flows::PVariable getNodeVariable(Flows::PArray& parameters);
+  Flows::PVariable getNodesWithFixedInputs(Flows::PArray &parameters);
 
-	Flows::PVariable getFlowVariable(Flows::PArray& parameters);
+  Flows::PVariable getNodeVariable(Flows::PArray &parameters);
 
-	Flows::PVariable setNodeVariable(Flows::PArray& parameters);
+  Flows::PVariable getFlowVariable(Flows::PArray &parameters);
 
-	Flows::PVariable setFlowVariable(Flows::PArray& parameters);
+  Flows::PVariable setNodeVariable(Flows::PArray &parameters);
 
-	Flows::PVariable enableNodeEvents(Flows::PArray& parameters);
+  Flows::PVariable setFlowVariable(Flows::PArray &parameters);
 
-	Flows::PVariable disableNodeEvents(Flows::PArray& parameters);
+  Flows::PVariable enableNodeEvents(Flows::PArray &parameters);
 
-	Flows::PVariable broadcastEvent(Flows::PArray& parameters);
+  Flows::PVariable disableNodeEvents(Flows::PArray &parameters);
 
-	Flows::PVariable broadcastFlowVariableEvent(Flows::PArray& parameters);
+  Flows::PVariable broadcastEvent(Flows::PArray &parameters);
 
-	Flows::PVariable broadcastGlobalVariableEvent(Flows::PArray& parameters);
+  Flows::PVariable broadcastFlowVariableEvent(Flows::PArray &parameters);
 
-	Flows::PVariable broadcastNewDevices(Flows::PArray& parameters);
+  Flows::PVariable broadcastGlobalVariableEvent(Flows::PArray &parameters);
 
-	Flows::PVariable broadcastDeleteDevices(Flows::PArray& parameters);
+  Flows::PVariable broadcastNewDevices(Flows::PArray &parameters);
 
-	Flows::PVariable broadcastUpdateDevice(Flows::PArray& parameters);
-	// }}}
+  Flows::PVariable broadcastDeleteDevices(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUpdateDevice(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastVariableProfileStateChanged(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUiNotificationCreated(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUiNotificationRemoved(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastUiNotificationAction(Flows::PArray &parameters);
+  // }}}
 };
 
 }

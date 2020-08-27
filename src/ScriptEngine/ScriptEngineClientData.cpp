@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,31 +33,25 @@
 #include "ScriptEngineClientData.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace ScriptEngine
-{
+namespace ScriptEngine {
 
-ScriptEngineClientData::ScriptEngineClientData()
-{
-    closed = false;
-    fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
-    binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-    buffer.resize(1024);
+ScriptEngineClientData::ScriptEngineClientData() {
+  closed = false;
+  fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
-ScriptEngineClientData::ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
-{
-    closed = false;
-    fileDescriptor = clientFileDescriptor;
-    binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-    buffer.resize(1024);
+ScriptEngineClientData::ScriptEngineClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) {
+  closed = false;
+  fileDescriptor = clientFileDescriptor;
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
-
-ScriptEngineClientData::~ScriptEngineClientData()
-{
+ScriptEngineClientData::~ScriptEngineClientData() {
 }
 
 }

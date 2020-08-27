@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,154 +31,122 @@
 #include "NodeBlueProcess.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-NodeBlueProcess::NodeBlueProcess()
-{
-	_nodeThreadCount = 0;
-	lastExecution = 0;
+NodeBlueProcess::NodeBlueProcess() {
+  _nodeThreadCount = 0;
+  lastExecution = 0;
 }
 
-NodeBlueProcess::~NodeBlueProcess()
-{
+NodeBlueProcess::~NodeBlueProcess() {
 
 }
 
-uint32_t NodeBlueProcess::flowCount()
-{
-	try
-	{
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		return _flows.size();
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	return (uint32_t) -1;
+uint32_t NodeBlueProcess::flowCount() {
+  try {
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    return _flows.size();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return (uint32_t)-1;
 }
 
-
-void NodeBlueProcess::reset()
-{
-	std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-	_nodeThreadCount = 0;
-	_flows.clear();
-	_flowFinishedInfo.clear();
+void NodeBlueProcess::reset() {
+  std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+  _nodeThreadCount = 0;
+  _flows.clear();
+  _flowFinishedInfo.clear();
 }
 
-uint32_t NodeBlueProcess::nodeThreadCount()
-{
-	return _nodeThreadCount;
+uint32_t NodeBlueProcess::nodeThreadCount() {
+  return _nodeThreadCount;
 }
 
-void NodeBlueProcess::invokeFlowFinished(int32_t exitCode)
-{
-	try
-	{
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		for(std::map<int32_t, PFlowInfoServer>::iterator i = _flows.begin(); i != _flows.end(); ++i)
-		{
-			GD::out.printInfo("Info: Flow with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
-			i->second->finished = true;
-			i->second->exitCode = exitCode;
-		}
-		for(std::map<int32_t, PFlowFinishedInfo>::iterator i = _flowFinishedInfo.begin(); i != _flowFinishedInfo.end(); ++i)
-		{
-			i->second->finished = true;
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void NodeBlueProcess::invokeFlowFinished(int32_t exitCode) {
+  try {
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    for (std::map<int32_t, PFlowInfoServer>::iterator i = _flows.begin(); i != _flows.end(); ++i) {
+      GD::out.printInfo("Info: Flow with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
+      i->second->finished = true;
+      i->second->exitCode = exitCode;
+    }
+    for (std::map<int32_t, PFlowFinishedInfo>::iterator i = _flowFinishedInfo.begin(); i != _flowFinishedInfo.end(); ++i) {
+      i->second->finished = true;
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void NodeBlueProcess::invokeFlowFinished(int32_t id, int32_t exitCode)
-{
-	try
-	{
-		GD::out.printInfo("Info: Flow with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		std::map<int32_t, PFlowInfoServer>::iterator flowIterator = _flows.find(id);
-		if(flowIterator != _flows.end())
-		{
-			flowIterator->second->finished = true;
-			flowIterator->second->exitCode = exitCode;
-		}
-		std::map<int32_t, PFlowFinishedInfo>::iterator flowFinishedIterator = _flowFinishedInfo.find(id);
-		if(flowFinishedIterator != _flowFinishedInfo.end())
-		{
-			flowFinishedIterator->second->finished = true;
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void NodeBlueProcess::invokeFlowFinished(int32_t id, int32_t exitCode) {
+  try {
+    GD::out.printInfo("Info: Flow with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    std::map<int32_t, PFlowInfoServer>::iterator flowIterator = _flows.find(id);
+    if (flowIterator != _flows.end()) {
+      flowIterator->second->finished = true;
+      flowIterator->second->exitCode = exitCode;
+    }
+    std::map<int32_t, PFlowFinishedInfo>::iterator flowFinishedIterator = _flowFinishedInfo.find(id);
+    if (flowFinishedIterator != _flowFinishedInfo.end()) {
+      flowFinishedIterator->second->finished = true;
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-PFlowInfoServer NodeBlueProcess::getFlow(int32_t id)
-{
-	try
-	{
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		std::map<int32_t, PFlowInfoServer>::iterator flowIterator = _flows.find(id);
-		if(flowIterator != _flows.end()) return flowIterator->second;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	return PFlowInfoServer();
+PFlowInfoServer NodeBlueProcess::getFlow(int32_t id) {
+  try {
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    std::map<int32_t, PFlowInfoServer>::iterator flowIterator = _flows.find(id);
+    if (flowIterator != _flows.end()) return flowIterator->second;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return PFlowInfoServer();
 }
 
-PFlowFinishedInfo NodeBlueProcess::getFlowFinishedInfo(int32_t id)
-{
-	try
-	{
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		std::map<int32_t, PFlowFinishedInfo>::iterator flowIterator = _flowFinishedInfo.find(id);
-		if(flowIterator != _flowFinishedInfo.end()) return flowIterator->second;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	return PFlowFinishedInfo();
+PFlowFinishedInfo NodeBlueProcess::getFlowFinishedInfo(int32_t id) {
+  try {
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    std::map<int32_t, PFlowFinishedInfo>::iterator flowIterator = _flowFinishedInfo.find(id);
+    if (flowIterator != _flowFinishedInfo.end()) return flowIterator->second;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return PFlowFinishedInfo();
 }
 
-void NodeBlueProcess::registerFlow(int32_t id, PFlowInfoServer& flowInfo)
-{
-	try
-	{
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		_flows[id] = flowInfo;
-		_flowFinishedInfo[id] = PFlowFinishedInfo(new FlowFinishedInfo());
-		_nodeThreadCount += flowInfo->maxThreadCount;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void NodeBlueProcess::registerFlow(int32_t id, PFlowInfoServer &flowInfo) {
+  try {
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    _flows[id] = flowInfo;
+    _flowFinishedInfo[id] = PFlowFinishedInfo(new FlowFinishedInfo());
+    _nodeThreadCount += flowInfo->maxThreadCount;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void NodeBlueProcess::unregisterFlow(int32_t id)
-{
-	try
-	{
-		std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
-		_flows.erase(id);
-		_flowFinishedInfo.erase(id);
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void NodeBlueProcess::unregisterFlow(int32_t id) {
+  try {
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    _flows.erase(id);
+    _flowFinishedInfo.erase(id);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

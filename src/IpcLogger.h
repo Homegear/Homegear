@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,49 +33,45 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-enum class IpcModule
-{
-    scriptEngine = 1,
-    nodeBlue = 2,
-    ipc = 3
+enum class IpcModule {
+  scriptEngine = 1,
+  nodeBlue = 2,
+  ipc = 3
 };
 
-enum class IpcLoggerPacketDirection
-{
-    toServer,
-    toClient
+enum class IpcLoggerPacketDirection {
+  toServer,
+  toClient
 };
 
-class IpcLogger
-{
-private:
-    bool _enabled = false;
-    std::mutex _outputMutex;
-    std::ofstream _outputStream;
-public:
-    IpcLogger();
-    ~IpcLogger();
+class IpcLogger {
+ private:
+  bool _enabled = false;
+  std::mutex _outputMutex;
+  std::ofstream _outputStream;
+ public:
+  IpcLogger();
+  ~IpcLogger();
 
-    /**
-     * Returns `true` when the logger is enabled. Don't check the settings as a change in them don't change the enabled state without Homegear restart.
-     *
-     * @return
-     */
-    bool enabled();
+  /**
+   * Returns `true` when the logger is enabled. Don't check the settings as a change in them don't change the enabled state without Homegear restart.
+   *
+   * @return
+   */
+  bool enabled();
 
-    /**
-     * Writes an entry to the IPC log file.
-     *
-     * @param module The module the log entry is for.
-     * @param packetId The packet ID as encoded in the IPC packet.
-     * @param pid The process ID of the IPC client process.
-     * @param direction Direction of the packet.
-     * @param data The full binary RPC packet.
-     */
-    void log(IpcModule module, int32_t packetId, pid_t pid, IpcLoggerPacketDirection direction, const std::vector<char>& data);
+  /**
+   * Writes an entry to the IPC log file.
+   *
+   * @param module The module the log entry is for.
+   * @param packetId The packet ID as encoded in the IPC packet.
+   * @param pid The process ID of the IPC client process.
+   * @param direction Direction of the packet.
+   * @param data The full binary RPC packet.
+   */
+  void log(IpcModule module, int32_t packetId, pid_t pid, IpcLoggerPacketDirection direction, const std::vector<char> &data);
 };
 
 }

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -41,53 +41,50 @@
 
 #include <dlfcn.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class LicensingModuleLoader
-{
-public:
-	LicensingModuleLoader(std::string name, std::string path);
+class LicensingModuleLoader {
+ public:
+  LicensingModuleLoader(std::string name, std::string path);
 
-	virtual ~LicensingModuleLoader();
+  virtual ~LicensingModuleLoader();
 
-	std::unique_ptr<BaseLib::Licensing::Licensing> createModule();
+  std::unique_ptr<BaseLib::Licensing::Licensing> createModule();
 
-private:
-	std::string _name;
-	void* _handle = nullptr;
-	std::unique_ptr<BaseLib::Licensing::LicensingFactory> _factory;
+ private:
+  std::string _name;
+  void *_handle = nullptr;
+  std::unique_ptr<BaseLib::Licensing::LicensingFactory> _factory;
 
-	LicensingModuleLoader(const LicensingModuleLoader&);
+  LicensingModuleLoader(const LicensingModuleLoader &);
 
-	LicensingModuleLoader& operator=(const LicensingModuleLoader&);
+  LicensingModuleLoader &operator=(const LicensingModuleLoader &);
 };
 
-class LicensingController
-{
-public:
-	LicensingController();
+class LicensingController {
+ public:
+  LicensingController();
 
-	virtual ~LicensingController();
+  virtual ~LicensingController();
 
-	void init();
+  void init();
 
-	void dispose();
+  void dispose();
 
-	void load();
+  void load();
 
-	void loadModules();
+  void loadModules();
 
-	bool moduleAvailable(int32_t moduleId);
+  bool moduleAvailable(int32_t moduleId);
 
-private:
-	bool _disposed = false;
+ private:
+  bool _disposed = false;
 
-	std::map<std::string, std::unique_ptr<LicensingModuleLoader>> moduleLoaders;
+  std::map<std::string, std::unique_ptr<LicensingModuleLoader>> moduleLoaders;
 
-	LicensingController(const LicensingController&);
+  LicensingController(const LicensingController &);
 
-	LicensingController& operator=(const LicensingController&);
+  LicensingController &operator=(const LicensingController &);
 };
 
 }

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -36,47 +36,47 @@
 
 #include <termios.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class CliClient : public Ipc::IIpcClient
-{
-public:
-	CliClient(std::string socketPath);
+class CliClient : public Ipc::IIpcClient {
+ public:
+  explicit CliClient(const std::string &socketPath);
 
-	virtual ~CliClient();
+  ~CliClient() override;
 
-	int32_t terminal(std::string& command);
+  void stop() override;
 
-private:
-	std::atomic_bool _printEvents;
-	int32_t _currentFamily = -1;
-	uint64_t _currentPeer = 0;
+  int32_t terminal(const std::string &command);
+ private:
+  std::atomic_bool _printEvents{false};
+  int32_t _currentFamily = -1;
+  uint64_t _currentPeer = 0;
 
-	std::mutex _outputMutex;
+  std::mutex _outputMutex;
 
-	std::mutex _onConnectWaitMutex;
-	std::condition_variable _onConnectConditionVariable;
+  std::mutex _onConnectWaitMutex;
+  std::condition_variable _onConnectConditionVariable;
 
-	std::string getBreadcrumb();
+  std::string getBreadcrumb() const;
 
-	virtual void onConnect();
+  void onConnect() override;
 
-	virtual void onDisconnect();
+  void onDisconnect() override;
 
-	// {{{ RPC methods
-	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters);
+  static void loadHistory();
+  static void safeHistory();
 
-	Ipc::PVariable output(Ipc::PArray& parameters);
-	// }}}
+  void invokeGeneralCommand(const std::string &command);
 
-	void standardOutputReference(std::string& text);
+  // {{{ RPC methods
+  Ipc::PVariable broadcastEvent(Ipc::PArray &parameters) override;
 
-	void standardOutput(std::string text);
+  Ipc::PVariable output(Ipc::PArray &parameters);
+  // }}}
 
-	void errorOutputReference(std::string& text);
+  void standardOutput(const std::string &text);
 
-	void errorOutput(std::string text);
+  void errorOutput(const std::string &text);
 };
 
 }

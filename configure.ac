@@ -72,6 +72,9 @@ AC_CHECK_HEADERS([curl/curl.h], [AM_CONDITIONAL(HAVE_CURL_HEADERS, true)], [AM_C
 AC_CHECK_LIB([curl], [curl_easy_send], [AM_CONDITIONAL(HAVE_CURL, true)], [AM_CONDITIONAL(HAVE_CURL, false)])
 AC_CHECK_HEADERS([php7-homegear/main/php_config.h], [AM_CONDITIONAL(HAVE_PHP_HEADERS, true)], [AM_CONDITIONAL(HAVE_PHP_HEADERS, false)])
 
+AC_DEFINE_UNQUOTED([LIBHOMEGEARNODE_VERSION], [`./getVersionNodeLib.sh`], [Define libhomegear-node version])
+AC_DEFINE_UNQUOTED([LIBHOMEGEARIPC_VERSION], [`./getVersionIpcLib.sh`], [Define libhomegear-ipc version])
+
 AC_DEFINE_UNQUOTED([GITCOMMITSHABASE], [`./getGitCommitBase.sh`], [Define git commit SHA of libhomegear-base])
 AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`./getGitCommitHomegear.sh`], [Define git commit SHA of Homegear])
 AC_DEFINE_UNQUOTED([GITBRANCHBASE], [`./getGitBranchBase.sh`], [Define git branch of libhomegear-base])
@@ -106,8 +109,10 @@ AS_IF([test "x$with_ccu2" = "xyes"], [
 #	])
 
 AC_ARG_WITH([i2c], [AS_HELP_STRING([--without-i2c], [Compile without I2C support (disables all I2C interfaces)])], [with_i2c=no], [])
-AS_IF([test "x$with_i2c" != "xno"], [
-	AC_DEFINE(I2CSUPPORT, [], [Enables compilation of all I2C interfaces and I2C support in PHP])
+AS_IF([test "x$with_i2c" = "xno"], [
+	AM_CONDITIONAL(WITH_I2C, false)
+	], [
+	AM_CONDITIONAL(WITH_I2C, true)
 	])
 
 AC_OUTPUT(Makefile src/Makefile homegear-miscellaneous/src/Makefile)

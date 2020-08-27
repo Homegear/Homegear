@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,29 +31,23 @@
 #include "NodeBlueClientData.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-NodeBlueClientData::NodeBlueClientData()
-{
-	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
+NodeBlueClientData::NodeBlueClientData() {
+  fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
-NodeBlueClientData::NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
-{
-	fileDescriptor = clientFileDescriptor;
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
+NodeBlueClientData::NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) {
+  fileDescriptor = clientFileDescriptor;
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
-
-NodeBlueClientData::~NodeBlueClientData()
-{
+NodeBlueClientData::~NodeBlueClientData() {
 }
 
 }

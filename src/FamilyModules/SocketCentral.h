@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,38 +34,39 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class SocketCentral : public BaseLib::Systems::ICentral
-{
-public:
-    SocketCentral(int32_t familyId, ICentralEventSink* eventHandler);
-    SocketCentral(int32_t familyId, uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
-    ~SocketCentral() final;
-    void dispose(bool wait = true) final;
+class SocketCentral : public BaseLib::Systems::ICentral {
+ public:
+  SocketCentral(int32_t familyId, ICentralEventSink *eventHandler);
+  SocketCentral(int32_t familyId, uint32_t deviceType, std::string serialNumber, ICentralEventSink *eventHandler);
+  ~SocketCentral() final;
+  void dispose(bool wait = true) final;
 
-    void homegearShuttingDown() final;
+  void homegearShuttingDown() final;
 
-    std::string handleCliCommand(std::string command);
-    bool onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet) final;
+  std::string handleCliCommand(std::string command);
+  bool onPacketReceived(std::string &senderId, std::shared_ptr<BaseLib::Systems::Packet> packet) final;
 
-    uint64_t getPeerIdFromSerial(std::string& serialNumber) { PSocketPeer peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
-    PSocketPeer getPeer(uint64_t id);
-    PSocketPeer getPeer(std::string serialNumber);
+  uint64_t getPeerIdFromSerial(std::string &serialNumber) {
+    PSocketPeer peer = getPeer(serialNumber);
+    if (peer) return peer->getID(); else return 0;
+  }
+  PSocketPeer getPeer(uint64_t id);
+  PSocketPeer getPeer(std::string serialNumber);
 
-    BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) final;
-    BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) final;
-protected:
-    std::atomic_bool _shuttingDown;
+  BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) final;
+  BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) final;
+ protected:
+  std::atomic_bool _shuttingDown;
 
-    void init();
-    void loadPeers() final;
-    void savePeers(bool full) final;
-    void loadVariables() final {}
-    void saveVariables() final {}
-    PSocketPeer createPeer(uint32_t deviceType, int32_t firmwareVersion, std::string serialNumber, bool save = true);
-    void deletePeer(uint64_t id);
+  void init();
+  void loadPeers() final;
+  void savePeers(bool full) final;
+  void loadVariables() final {}
+  void saveVariables() final {}
+  PSocketPeer createPeer(uint32_t deviceType, int32_t firmwareVersion, std::string serialNumber, bool save = true);
+  void deletePeer(uint64_t id);
 };
 
 }

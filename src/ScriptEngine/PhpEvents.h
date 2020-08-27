@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,84 +35,95 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+#include <utility>
 
-class PhpEvents
-{
+namespace Homegear {
 
-public:
-    class EventData
-    {
-    public:
-        std::string source;
-        std::string type;
-        uint64_t id = 0;
-        int32_t channel = -1;
-        int32_t hint = -1;
-        std::string variable;
-        BaseLib::PVariable value;
-    };
+class PhpEvents {
 
-    static std::mutex eventsMapMutex;
-    static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
+ public:
+  enum class EventDataType {
+    undefined,
+    event,
+    newDevices,
+    deleteDevices,
+    updateDevice,
+    variableProfileStateChanged,
+    uiNotificationCreated,
+    uiNotificationRemoved,
+    uiNotificationAction
+  };
 
-    PhpEvents(std::string& token, std::function<void(std::string output, bool error)>& outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& rpcCallback);
+  class EventData {
+   public:
+    std::string source;
+    EventDataType type = EventDataType::undefined;
+    uint64_t id = 0;
+    int32_t channel = -1;
+    int32_t hint = -1;
+    std::string variable;
+    BaseLib::PVariable value;
+  };
 
-    virtual ~PhpEvents();
+  static std::mutex eventsMapMutex;
+  static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
 
-    void stop();
+  PhpEvents(std::string &token, std::function<void(std::string output, bool error)> &outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> &rpcCallback);
 
-    bool enqueue(std::shared_ptr<EventData>& entry);
+  virtual ~PhpEvents();
 
-    std::shared_ptr<EventData> poll(int32_t timeout = -1);
+  void stop();
 
-    void addPeer(uint64_t peerId, int32_t channel, std::string& variable);
+  bool enqueue(std::shared_ptr<EventData> &entry);
 
-    void removePeer(uint64_t peerId, int32_t channel, std::string& variable);
+  std::shared_ptr<EventData> poll(int32_t timeout = -1);
 
-    bool peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable);
+  void addPeer(uint64_t peerId, int32_t channel, std::string &variable);
 
-    void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
+  void removePeer(uint64_t peerId, int32_t channel, std::string &variable);
 
-    int32_t getLogLevel() { return _logLevel; }
+  bool peerSubscribed(uint64_t peerId, int32_t channel, std::string &variable);
 
-    void setPeerId(uint64_t peerId) { _peerId = peerId; }
+  void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 
-    uint64_t getPeerId() { return _peerId; }
+  int32_t getLogLevel() const { return _logLevel; }
 
-    void setNodeId(std::string nodeId) { _nodeId = nodeId; }
+  void setPeerId(uint64_t peerId) { _peerId = peerId; }
 
-    std::string getNodeId() { return _nodeId; }
+  uint64_t getPeerId() const { return _peerId; }
 
-    std::function<void(std::string output, bool error)>& getOutputCallback() { return _outputCallback; };
+  void setNodeId(std::string nodeId) { _nodeId = std::move(nodeId); }
 
-    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& getRpcCallback() { return _rpcCallback; };
+  std::string getNodeId() { return _nodeId; }
 
-    std::string& getToken() { return _token; }
+  std::function<void(std::string output, bool error)> &getOutputCallback() { return _outputCallback; };
 
-private:
-    std::function<void(std::string output, bool error)> _outputCallback;
-    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
-    std::string _token;
+  std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> &getRpcCallback() { return _rpcCallback; };
 
-    // {{{ Data exchange - we are abusing the events object here for data exchange between main thread and sub threads.
-    uint64_t _peerId = 0;
-    std::string _nodeId;
-    int32_t _logLevel = -1;
-    // }}}
+  std::string &getToken() { return _token; }
 
-    std::atomic_bool _stopProcessing;
-    static const int32_t _bufferSize = 1000;
-    std::mutex _queueMutex;
-    int32_t _bufferHead = 0;
-    int32_t _bufferTail = 0;
-    std::atomic_int _bufferCount;
-    std::mutex _bufferMutex;
-    std::shared_ptr<EventData> _buffer[_bufferSize];
-    std::condition_variable _processingConditionVariable;
-    std::mutex _peersMutex;
-    std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
+ private:
+  std::function<void(std::string output, bool error)> _outputCallback;
+  std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
+  std::string _token;
+
+  // {{{ Data exchange - we are abusing the events object here for data exchange between main thread and sub threads.
+  uint64_t _peerId = 0;
+  std::string _nodeId;
+  int32_t _logLevel = -1;
+  // }}}
+
+  std::atomic_bool _stopProcessing;
+  static const int32_t _bufferSize = 1000;
+  std::mutex _queueMutex;
+  int32_t _bufferHead = 0;
+  int32_t _bufferTail = 0;
+  std::atomic_int _bufferCount;
+  std::mutex _bufferMutex;
+  std::shared_ptr<EventData> _buffer[_bufferSize];
+  std::condition_variable _processingConditionVariable;
+  std::mutex _peersMutex;
+  std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
 };
 
 }

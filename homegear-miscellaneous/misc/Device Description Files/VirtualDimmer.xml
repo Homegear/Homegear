@@ -10,68 +10,77 @@
 		<startType>permanent</startType>
 		<script2>
 <![CDATA[<?php
-/**
- * Class to share data between the main script and the event thread.
- */
-class SharedData extends Threaded
+use parallel\{Channel,Runtime,Events,Events\Event};
+
+$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
 {
-    public $scriptId = 0;
-    public $peerId = 0;
-    public $stop = false;
-    public $eventThread = NULL;
+	$hg = new \Homegear\Homegear();
 
-    public function run() {}
-}
-
-class EventThread extends Thread
-{
-    private $sharedData;
-
-	public function __construct($sharedData)
+	if($hg->registerThread($scriptId) === false)
 	{
-		$this->sharedData = $sharedData;
+		$hg->log(2, 'Could not register thread.');
+		return false;
 	}
 
-	public function run()
+	$hg->subscribePeer($peerId);
+
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->setBlocking(false);
+
+	while(true)
 	{
-		$hg = new \Homegear\Homegear();
-		if($hg->registerThread($this->sharedData->scriptId) === false)
+		$result = $hg->pollEvent();
+		if($result)
 		{
-			$hg->log(2, "Could not register thread.");
-			return;
-		}
-		$hg->subscribePeer($this->sharedData->peerId);
-		while(!$this->sharedData->stop)
-		{
-			$result = $hg->pollEvent();
-			if($result["TYPE"] == "event" && $result["PEERID"] == $this->sharedData->peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$this->sharedData->peerId)
+			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
 			{
 				if($result["VARIABLE"] == 'LEVEL')
 				{
-					$hg->setValue($this->sharedData->peerId, 1, 'STATE', $result["VALUE"] != 0);
-					$hg->setValue($this->sharedData->peerId, 1, 'LEVEL_FAST', $result["VALUE"]);
+					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
+					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"]);
 				}
 				else if($result["VARIABLE"] == 'LEVEL_FAST')
 				{
-					$hg->setValue($this->sharedData->peerId, 1, 'STATE', $result["VALUE"] != 0);
-					$hg->setValue($this->sharedData->peerId, 1, 'LEVEL', $result["VALUE"]);
+					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
+					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"]);
 				}
 				else if($result["VARIABLE"] == 'STATE')
 				{
-					$hg->setValue($this->sharedData->peerId, 1, 'LEVEL', $result["VALUE"] ? $hg->getValue($this->sharedData->peerId, 1, 'STATE_LEVEL') : 0);					
-					$hg->setValue($this->sharedData->peerId, 1, 'LEVEL_FAST', $result["VALUE"] ? $hg->getValue($this->sharedData->peerId, 1, 'STATE_LEVEL') : 0);					
+					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
+					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
 				}
 			}
 		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event && $event->source == 'eventHomegearChannelPeer'.$peerId)
+			{
+				$events->addChannel($homegearChannel);
+				if($event->type == Event\Type::Read)
+				{
+					if(is_array($event->value) && count($event->value) > 0)
+					{
+						if($event->value['name'] == 'stop') return true; //Stop
+					}
+				}
+				else if($event->type == Event\Type::Close) return true; //Stop
+			}
+		}
+		while($event);
 	}
-}
+};
 
 class HomegearDevice extends HomegearDeviceBase
 {
 	private $hg = NULL;
 	private $peerId = NULL;
-	private $sharedData = NULL;
-	private $eventThread = NULL;
+	private $eventRuntime = NULL;
+	private $eventFuture = NULL;
+	private $eventHomegearChannel = NULL; //Channel to pass events to event thread
 
 	function __construct()
 	{
@@ -92,24 +101,40 @@ class HomegearDevice extends HomegearDeviceBase
 
 	public function start() : bool
 	{
-		$this->sharedData = new SharedData();
-		$this->sharedData->peerId = $this->peerId;
-		$this->sharedData->scriptId = $this->hg->getScriptId();
-		$this->eventThread = new EventThread($this->sharedData);
-		$this->eventThread->start();
-		$this->sharedData->eventThread = $this->eventThread;
+		$this->eventRuntime = new Runtime();
+
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+
+		global $eventThread;
+		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel]);
+
 		return true;
 	}
 
 	public function stop()
 	{
-		if($this->eventThread) $this->sharedData->stop = true;
+		if($this->eventHomegearChannel) $this->eventHomegearChannel->send(['name' => 'stop', 'value' => true]);
 	}
 
 	public function waitForStop()
 	{
-		if($this->eventThread) $this->eventThread->join();
-		$this->eventThread = NULL;
+		if($this->eventFuture)
+		{
+			$this->eventFuture->value();
+			$this->eventFuture = NULL;
+		}
+
+		if($this->eventHomegearChannel)
+		{
+			$this->eventHomegearChannel->close();
+			$this->eventHomegearChannel = NULL;
+		}
+
+		if($this->eventRuntime)
+		{
+			$this->eventRuntime->close();
+			$this->eventRuntime = NULL;
+		}
 	}
 }
 ]]>
@@ -140,6 +165,29 @@ class HomegearDevice extends HomegearDeviceBase
 					<operationType>store</operationType>
 				</physicalNone>
 			</parameter>
+		    <parameter id="UNREACH">
+		       <properties>
+		         <readable>true</readable>
+		         <writeable>true</writeable>
+		         <service>true</service>
+		     </properties>
+		       <logicalBoolean />
+		       <physicalBoolean>
+		         <operationType>internal</operationType>
+		       </physicalBoolean>
+		  </parameter>
+	      <parameter id="STICKY_UNREACH">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <service>true</service>
+	          <sticky>true</sticky>
+	        </properties>
+	        <logicalBoolean />
+	        <physicalBoolean>
+	          <operationType>internal</operationType>
+	        </physicalBoolean>
+	      </parameter>
 		</variables>
 		<variables id="custom_ch1_values">
 			<parameter id="LEVEL">

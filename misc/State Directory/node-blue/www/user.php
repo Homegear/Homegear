@@ -15,7 +15,16 @@ class User
             $_SESSION['user'] = $_SERVER['SSL_CLIENT_S_DN_CN'];
             $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
         }
-        
+     
+        if (array_key_exists('CLIENT_AUTHENTICATED', $_SERVER) && $_SERVER['CLIENT_AUTHENTICATED'] == "true" && 
+            array_key_exists('CLIENT_VERIFIED_USERNAME', $_SERVER) && $_SERVER['CLIENT_VERIFIED_USERNAME'])
+        {
+            $settings = hg_get_user_metadata($_SERVER['CLIENT_VERIFIED_USERNAME']);
+            $_SESSION['authorized'] = true;
+            $_SESSION['user'] = $_SERVER['CLIENT_VERIFIED_USERNAME'];
+            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+        }
+
         $authorized = (isset($_SESSION["authorized"]) && $_SESSION["authorized"] === true && isset($_SESSION["user"]));
         if(!$authorized && $redirectToLogin)
         {

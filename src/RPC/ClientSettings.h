@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -39,51 +39,50 @@
 #include <map>
 #include <cstring>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
-class ClientSettings
-{
-public:
-	struct Settings
-	{
-		enum AuthType
-		{
-			none,
-			basic,
-			cert
-		};
+class ClientSettings {
+ public:
+  struct Settings {
+    enum AuthType {
+      none,
+      basic,
+      cert
+    };
 
-		std::string name;
-		std::string hostname;
-		bool forceSSL = false;
-		AuthType authType = AuthType::none;
-		std::string caFile;
-		std::string certFile;
-		std::string keyFile;
-		bool verifyCertificate = true;
-		std::string userName;
-		std::string password;
-		uint32_t retries = 3;
-		uint32_t timeout = 15000000;
-		bool keepAlive = false;
-	};
+    std::string name;
+    std::string hostname;
+    bool forceSSL = false;
+    AuthType authType = AuthType::none;
+    std::string caFile;
+    std::string certFile;
+    std::string keyFile;
+    bool verifyCertificate = true;
+    std::string userName;
+    std::string password;
+    uint32_t retries = 3;
+    uint32_t timeout = 15000000;
+    bool keepAlive = false;
+  };
 
-	ClientSettings();
+  ClientSettings();
 
-	virtual ~ClientSettings() {}
+  virtual ~ClientSettings() {}
 
-	void load(std::string filename);
+  void load(std::string filename);
 
-	std::shared_ptr<Settings> get(std::string& hostname) { if(_clients.find(hostname) != _clients.end()) return _clients[hostname]; else return std::shared_ptr<Settings>(); }
+  std::shared_ptr<Settings> get(std::string &hostname) {
+    if (_clients.find(hostname) != _clients.end())
+      return _clients[hostname];
+    else return std::shared_ptr<Settings>();
+  }
 
-private:
-	std::map<std::string, std::shared_ptr<Settings>> _clients;
+ private:
+  std::map<std::string, std::shared_ptr<Settings>> _clients;
 
-	void reset();
+  void reset();
 };
 
 }

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -34,61 +34,68 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/DeviceDescription/UI/UiElements.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class UiController
-{
-public:
-    struct UiElement
-    {
-        uint64_t databaseId = 0;
-        std::string elementId;
-        std::string label;
-        BaseLib::PVariable data;
-        uint64_t roomId = 0;
-        std::unordered_set<uint64_t> categoryIds;
-        BaseLib::DeviceDescription::UiElements::PUiPeerInfo peerInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiPeerInfo>();
-        std::unordered_map<std::string, BaseLib::DeviceDescription::PHomegearUiElement> rpcElement;
-    };
-    typedef std::shared_ptr<UiElement> PUiElement;
+class UiController {
+ public:
+  struct UiElement {
+    uint64_t databaseId = 0;
+    std::string elementId;
+    std::string label;
+    BaseLib::PVariable data;
+    BaseLib::PVariable metadata;
+    uint64_t roomId = 0;
+    std::unordered_set<uint64_t> categoryIds;
+    BaseLib::DeviceDescription::UiElements::PUiPeerInfo peerInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiPeerInfo>();
+    std::unordered_map<std::string, BaseLib::DeviceDescription::PHomegearUiElement> rpcElement;
+  };
+  typedef std::shared_ptr<UiElement> PUiElement;
 
-    UiController();
+  UiController();
 
-    virtual ~UiController();
+  virtual ~UiController();
 
-    void load();
+  void load();
 
-    BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, std::string& elementId, BaseLib::PVariable data);
+  std::unordered_set<uint64_t> getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string &variableName);
 
-    BaseLib::PVariable addUiElementSimple(const BaseLib::PRpcClientInfo& clientInfo, const std::string& label, const BaseLib::PVariable& variable, bool dryRun);
+  BaseLib::PVariable addUiElement(BaseLib::PRpcClientInfo clientInfo, const std::string &elementId, const BaseLib::PVariable &data, const BaseLib::PVariable &metadata);
 
-    BaseLib::PVariable getAllUiElements(const BaseLib::PRpcClientInfo& clientInfo, const std::string& language);
+  BaseLib::PVariable addUiElementSimple(const BaseLib::PRpcClientInfo &clientInfo, const std::string &label, const BaseLib::PVariable &variable, bool dryRun);
 
-    BaseLib::PVariable getAvailableUiElements(const BaseLib::PRpcClientInfo& clientInfo, const std::string& language);
+  BaseLib::PVariable getAllUiElements(const BaseLib::PRpcClientInfo &clientInfo, const std::string &language);
 
-    BaseLib::PVariable getUiElementsInRoom(const BaseLib::PRpcClientInfo& clientInfo, uint64_t roomId, const std::string& language);
+  BaseLib::PVariable getAvailableUiElements(const BaseLib::PRpcClientInfo &clientInfo, const std::string &language);
 
-    BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo& clientInfo, uint64_t categoryId, const std::string& language);
+  BaseLib::PVariable getUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId, const std::string &language);
 
-    BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo& clientInfo, uint64_t databaseId);
+  BaseLib::PVariable getUiElementMetadata(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId);
 
-protected:
-    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-    std::unique_ptr<BaseLib::DeviceDescription::UiElements> _descriptions;
+  BaseLib::PVariable getUiElementsInRoom(const BaseLib::PRpcClientInfo &clientInfo, uint64_t roomId, const std::string &language);
 
-    std::mutex _uiElementsMutex;
-    std::unordered_map<uint64_t, PUiElement> _uiElements;
-    std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByRoom;
-    std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
+  BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo &clientInfo, uint64_t categoryId, const std::string &language);
 
-    void addDataInfo(PUiElement& uiElement, BaseLib::PVariable& data);
+  static BaseLib::PVariable requestUiRefresh(const BaseLib::PRpcClientInfo &clientInfo, const std::string &id);
 
-    void addVariableInfo(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, BaseLib::PArray& variables, bool addValue);
+  BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId);
 
-    BaseLib::PVariable findRoleVariables(const BaseLib::PRpcClientInfo& clientInfo, const BaseLib::PVariable& uiInfo, const BaseLib::PVariable& variable, uint64_t roomId, BaseLib::PVariable& inputPeers, BaseLib::PVariable& outputPeers);
+  BaseLib::PVariable setUiElementMetadata(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId, const BaseLib::PVariable &metadata);
+ protected:
+  std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+  std::unique_ptr<BaseLib::DeviceDescription::UiElements> _descriptions;
 
-    bool checkElementAccess(const BaseLib::PRpcClientInfo& clientInfo, const PUiElement& uiElement, const BaseLib::DeviceDescription::PHomegearUiElement& rpcElement);
+  std::mutex _uiElementsMutex;
+  std::unordered_map<uint64_t, PUiElement> _uiElements;
+  std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByRoom;
+  std::unordered_map<uint64_t, std::unordered_set<PUiElement>> _uiElementsByCategory;
+
+  static void addDataInfo(PUiElement &uiElement, const BaseLib::PVariable &data);
+
+  static void addVariableInfo(const BaseLib::PRpcClientInfo &clientInfo, const PUiElement &uiElement, BaseLib::PArray &variables, bool addValue);
+
+  BaseLib::PVariable findRoleVariables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PVariable &uiInfo, const BaseLib::PVariable &variable, uint64_t roomId, BaseLib::PVariable &inputPeers, BaseLib::PVariable &outputPeers);
+
+  static bool checkElementAccess(const BaseLib::PRpcClientInfo &clientInfo, const PUiElement &uiElement, const BaseLib::DeviceDescription::PHomegearUiElement &rpcElement);
 };
 
 }

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,168 +31,133 @@
 #include "ClientSettings.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
-ClientSettings::ClientSettings()
-{
+ClientSettings::ClientSettings() {
 
 }
 
-void ClientSettings::reset()
-{
-	_clients.clear();
+void ClientSettings::reset() {
+  _clients.clear();
 }
 
-void ClientSettings::load(std::string filename)
-{
-	try
-	{
-		reset();
-		char input[1024];
-		FILE* fin;
-		int32_t len, ptr;
-		bool found = false;
+void ClientSettings::load(std::string filename) {
+  try {
+    reset();
+    char input[1024];
+    FILE *fin;
+    int32_t len, ptr;
+    bool found = false;
 
-		if(!(fin = fopen(filename.c_str(), "r")))
-		{
-			GD::out.printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
-			return;
-		}
+    if (!(fin = fopen(filename.c_str(), "r"))) {
+      GD::out.printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
+      return;
+    }
 
-		std::shared_ptr<Settings> settings(new Settings());
-		while(fgets(input, 1024, fin))
-		{
-			if(input[0] == '#') continue;
-			len = strlen(input);
-			if(len < 2) continue;
-			if(input[len - 1] == '\n') input[len - 1] = '\0';
-			ptr = 0;
-			if(input[0] == '[')
-			{
-				while(ptr < len)
-				{
-					if(input[ptr] == ']')
-					{
-						input[ptr] = '\0';
-						if(!settings->hostname.empty()) _clients[settings->hostname] = settings;
-						settings.reset(new Settings());
-						settings->name = std::string(&input[1]);
-						break;
-					}
-					ptr++;
-				}
-				continue;
-			}
-			found = false;
-			while(ptr < len)
-			{
-				if(input[ptr] == '=')
-				{
-					found = true;
-					input[ptr++] = '\0';
-					break;
-				}
-				ptr++;
-			}
-			if(found)
-			{
-				std::string name(input);
-				BaseLib::HelperFunctions::toLower(name);
-				BaseLib::HelperFunctions::trim(name);
-				std::string value(&input[ptr]);
-				BaseLib::HelperFunctions::trim(value);
-				if(name == "hostname")
-				{
-					settings->hostname = BaseLib::HelperFunctions::toLower(value);
-					GD::out.printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
-				}
-				else if(name == "cafile")
-				{
-					settings->caFile = value;
-					GD::out.printDebug("Debug: caFile of RPC client " + settings->name + " set to " + settings->caFile);
-				}
-				else if(name == "certfile")
-				{
-					settings->certFile = value;
-					GD::out.printDebug("Debug: certFile of RPC client " + settings->name + " set to " + settings->certFile);
-				}
-				else if(name == "keyfile")
-				{
-					settings->keyFile = value;
-					GD::out.printDebug("Debug: keyFile of RPC client " + settings->name + " set to " + settings->keyFile);
-				}
-				else if(name == "forcessl")
-				{
-					BaseLib::HelperFunctions::toLower(value);
-					if(value == "false") settings->forceSSL = false;
-					GD::out.printDebug("Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
-				}
-				else if(name == "authtype")
-				{
-					BaseLib::HelperFunctions::toLower(value);
-					if(value == "basic") settings->authType = Settings::AuthType::basic;
-					else if(value == "cert") settings->authType = Settings::AuthType::cert;
-					GD::out.printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
-				}
-				else if(name == "verifycertificate")
-				{
-					BaseLib::HelperFunctions::toLower(value);
-					if(value == "false") settings->verifyCertificate = false;
-					GD::out.printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
-				}
-				else if(name == "username")
-				{
-					settings->userName = BaseLib::HelperFunctions::toLower(value);
-					GD::out.printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
-				}
-				else if(name == "password")
-				{
-					settings->password = BaseLib::HelperFunctions::toLower(value);
-					if(settings->password.front() == '"' && settings->password.back() == '"')
-					{
-						settings->password = settings->password.substr(1, settings->password.size() - 2);
-						BaseLib::HelperFunctions::stringReplace(settings->password, "\\\"", "\"");
-						BaseLib::HelperFunctions::stringReplace(settings->password, "\\\\", "\\");
-					}
-					GD::out.printDebug("Debug: password of RPC client " + settings->name + " was set.");
-				}
-				else if(name == "retries")
-				{
-					settings->retries = BaseLib::Math::getNumber(value);
-					if(settings->retries < 1) settings->retries = 1;
-					else if(settings->retries > 20) settings->retries = 20;
-					GD::out.printDebug("Debug: retries of RPC client " + settings->name + " set to " + std::to_string(settings->retries));
-				}
-				else if(name == "timeout")
-				{
-					settings->timeout = BaseLib::Math::getNumber(value) * 1000;
-					if(settings->timeout < 1000000) settings->timeout = 1000000;
-					GD::out.printDebug("Debug: timeout of RPC client " + settings->name + " set to " + std::to_string(settings->timeout));
-				}
-				else if(name == "keepalive")
-				{
-					BaseLib::HelperFunctions::toLower(value);
-					settings->keepAlive = (value == "true");
-					GD::out.printDebug("Debug: keepAlive of RPC client " + settings->name + " set to " + std::to_string(settings->keepAlive));
-				}
-				else
-				{
-					GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));
-				}
-			}
-		}
-		if(!settings->hostname.empty()) _clients[settings->hostname] = settings;
+    std::shared_ptr<Settings> settings(new Settings());
+    while (fgets(input, 1024, fin)) {
+      if (input[0] == '#') continue;
+      len = strlen(input);
+      if (len < 2) continue;
+      if (input[len - 1] == '\n') input[len - 1] = '\0';
+      ptr = 0;
+      if (input[0] == '[') {
+        while (ptr < len) {
+          if (input[ptr] == ']') {
+            input[ptr] = '\0';
+            if (!settings->hostname.empty()) _clients[settings->hostname] = settings;
+            settings.reset(new Settings());
+            settings->name = std::string(&input[1]);
+            break;
+          }
+          ptr++;
+        }
+        continue;
+      }
+      found = false;
+      while (ptr < len) {
+        if (input[ptr] == '=') {
+          found = true;
+          input[ptr++] = '\0';
+          break;
+        }
+        ptr++;
+      }
+      if (found) {
+        std::string name(input);
+        BaseLib::HelperFunctions::toLower(name);
+        BaseLib::HelperFunctions::trim(name);
+        std::string value(&input[ptr]);
+        BaseLib::HelperFunctions::trim(value);
+        if (name == "hostname") {
+          settings->hostname = BaseLib::HelperFunctions::toLower(value);
+          GD::out.printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
+        } else if (name == "cafile") {
+          settings->caFile = value;
+          GD::out.printDebug("Debug: caFile of RPC client " + settings->name + " set to " + settings->caFile);
+        } else if (name == "certfile") {
+          settings->certFile = value;
+          GD::out.printDebug("Debug: certFile of RPC client " + settings->name + " set to " + settings->certFile);
+        } else if (name == "keyfile") {
+          settings->keyFile = value;
+          GD::out.printDebug("Debug: keyFile of RPC client " + settings->name + " set to " + settings->keyFile);
+        } else if (name == "forcessl") {
+          BaseLib::HelperFunctions::toLower(value);
+          if (value == "false") settings->forceSSL = false;
+          GD::out.printDebug(
+              "Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
+        } else if (name == "authtype") {
+          BaseLib::HelperFunctions::toLower(value);
+          if (value == "basic") settings->authType = Settings::AuthType::basic;
+          else if (value == "cert") settings->authType = Settings::AuthType::cert;
+          GD::out.printDebug(
+              "Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
+        } else if (name == "verifycertificate") {
+          BaseLib::HelperFunctions::toLower(value);
+          if (value == "false") settings->verifyCertificate = false;
+          GD::out.printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to "
+                                 + std::to_string(settings->verifyCertificate));
+        } else if (name == "username") {
+          settings->userName = BaseLib::HelperFunctions::toLower(value);
+          GD::out.printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
+        } else if (name == "password") {
+          settings->password = BaseLib::HelperFunctions::toLower(value);
+          if (settings->password.front() == '"' && settings->password.back() == '"') {
+            settings->password = settings->password.substr(1, settings->password.size() - 2);
+            BaseLib::HelperFunctions::stringReplace(settings->password, "\\\"", "\"");
+            BaseLib::HelperFunctions::stringReplace(settings->password, "\\\\", "\\");
+          }
+          GD::out.printDebug("Debug: password of RPC client " + settings->name + " was set.");
+        } else if (name == "retries") {
+          settings->retries = BaseLib::Math::getNumber(value);
+          if (settings->retries < 1) settings->retries = 1;
+          else if (settings->retries > 20) settings->retries = 20;
+          GD::out.printDebug(
+              "Debug: retries of RPC client " + settings->name + " set to " + std::to_string(settings->retries));
+        } else if (name == "timeout") {
+          settings->timeout = BaseLib::Math::getNumber(value) * 1000;
+          if (settings->timeout < 1000000) settings->timeout = 1000000;
+          GD::out.printDebug(
+              "Debug: timeout of RPC client " + settings->name + " set to " + std::to_string(settings->timeout));
+        } else if (name == "keepalive") {
+          BaseLib::HelperFunctions::toLower(value);
+          settings->keepAlive = (value == "true");
+          GD::out.printDebug(
+              "Debug: keepAlive of RPC client " + settings->name + " set to " + std::to_string(settings->keepAlive));
+        } else {
+          GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));
+        }
+      }
+    }
+    if (!settings->hostname.empty()) _clients[settings->hostname] = settings;
 
-		fclose(fin);
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+    fclose(fin);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

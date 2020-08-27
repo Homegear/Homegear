@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,13 +33,12 @@
 
 #include <string>
 
-struct FamilyModuleInfo
-{
-    std::string filename;
-    std::string baselibVersion;
-    int32_t familyId;
-    std::string familyName;
-    bool loaded;
+struct FamilyModuleInfo {
+  std::string filename;
+  std::string baselibVersion;
+  int32_t familyId;
+  std::string familyName;
+  bool loaded;
 };
 
 #endif

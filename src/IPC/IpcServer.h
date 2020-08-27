@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,143 +35,147 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+#include <utility>
 
-class IpcServer : public BaseLib::IQueue
-{
-public:
-	IpcServer();
+namespace Homegear {
 
-	virtual ~IpcServer();
+class IpcServer : public BaseLib::IQueue {
+ public:
+  IpcServer();
 
-    bool lifetick();
+  virtual ~IpcServer();
 
-	bool start();
+  bool lifetick();
 
-	void stop();
+  bool start();
 
-	void homegearShuttingDown();
+  void stop();
 
-	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
+  void homegearShuttingDown();
 
-	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+  void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
-	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
+  void broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions);
 
-	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+  void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
 
-	bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
+  void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
-    BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
+  void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
-	BaseLib::PVariable callRpcMethod(const BaseLib::PRpcClientInfo& clientInfo, const std::string& methodName, const BaseLib::PArray& parameters);
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
 
-	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
 
-private:
-	class QueueEntry : public BaseLib::IQueueEntry
-	{
-	public:
-		enum class QueueEntryType
-		{
-			defaultType,
-			broadcast
-		};
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
 
-		QueueEntry() {}
+  bool methodExists(const BaseLib::PRpcClientInfo& clientInfo, std::string &methodName);
 
-		QueueEntry(PIpcClientData clientData, std::vector<char>& packet)
-		{
-			this->clientData = clientData;
-			this->packet = packet;
-		}
+  BaseLib::PVariable callProcessRpcMethod(pid_t processId, const BaseLib::PRpcClientInfo &clientInfo, const std::string &methodName, const BaseLib::PArray &parameters);
 
-		QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters)
-		{
-			type = QueueEntryType::broadcast;
-			this->clientData = clientData;
-			this->methodName = methodName;
-			this->parameters = parameters;
-		}
+  BaseLib::PVariable callRpcMethod(const BaseLib::PRpcClientInfo &clientInfo, const std::string &methodName, const BaseLib::PArray &parameters);
 
-		virtual ~QueueEntry() {}
+  std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> getRpcMethods();
 
-		QueueEntryType type = QueueEntryType::defaultType;
-		PIpcClientData clientData;
+ private:
+  class QueueEntry : public BaseLib::IQueueEntry {
+   public:
+    enum class QueueEntryType {
+      defaultType,
+      broadcast
+    };
 
-		// {{{ defaultType
-		std::vector<char> packet;
-		// }}}
+    QueueEntry() = default;
 
-		// {{{ broadcast
-		std::string methodName;
-		BaseLib::PArray parameters;
-		// }}}
-	};
+    QueueEntry(PIpcClientData clientData, std::vector<char> &packet) {
+      this->clientData = std::move(clientData);
+      this->packet = packet;
+    }
 
-	BaseLib::Output _out;
-	std::string _socketPath;
-	std::atomic_bool _shuttingDown;
-	std::atomic_bool _stopServer;
-	std::thread _mainThread;
-	int32_t _backlog = 100;
-	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-	std::mutex _stateMutex;
-	std::map<int32_t, PIpcClientData> _clients;
-	std::mutex _clientsByRpcMethodsMutex;
-	std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, std::unordered_map<int32_t, PIpcClientData>>> _clientsByRpcMethods;
-	int32_t _currentClientId = 0;
-	int64_t _lastGargabeCollection = 0;
-	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
-	std::unordered_map<std::string, std::function<BaseLib::PVariable(PIpcClientData& clientData, int64_t threadId, BaseLib::PArray& parameters)>> _localRpcMethods;
-	std::mutex _packetIdMutex;
-	int32_t _currentPacketId = 0;
+    QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters) {
+      type = QueueEntryType::broadcast;
+      this->clientData = std::move(clientData);
+      this->methodName = std::move(methodName);
+      this->parameters = std::move(parameters);
+    }
 
-	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+    ~QueueEntry() override = default;
 
-    std::mutex _lifetick1Mutex;
-    std::pair<int64_t, bool> _lifetick1;
-    std::mutex _lifetick2Mutex;
-    std::pair<int64_t, bool> _lifetick2;
+    QueueEntryType type = QueueEntryType::defaultType;
+    PIpcClientData clientData;
 
-	void collectGarbage();
+    // {{{ defaultType
+    std::vector<char> packet;
+    // }}}
 
-	bool getFileDescriptor(bool deleteOldSocket = false);
+    // {{{ broadcast
+    std::string methodName;
+    BaseLib::PArray parameters;
+    // }}}
+  };
 
-	void mainThread();
+  BaseLib::Output _out;
+  std::string _socketPath;
+  std::atomic_bool _shuttingDown;
+  std::atomic_bool _stopServer;
+  std::thread _mainThread;
+  int32_t _backlog = 100;
+  std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+  std::mutex _stateMutex;
+  std::map<int32_t, PIpcClientData> _clients;
+  std::mutex _clientsByRpcMethodsMutex;
+  std::unordered_map<std::string, std::pair<BaseLib::Rpc::PRpcMethod, std::unordered_map<int32_t, PIpcClientData>>> _clientsByRpcMethods;
+  int32_t _currentClientId = 0;
+  int64_t _lastGargabeCollection = 0;
+  std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+  std::unordered_map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
+  std::unordered_map<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int64_t threadId, BaseLib::PArray &parameters)>> _localRpcMethods;
+  std::mutex _packetIdMutex;
+  int32_t _currentPacketId = 0;
 
-	void readClient(PIpcClientData& clientData);
+  std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+  std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-	BaseLib::PVariable send(const PIpcClientData& clientData, const std::vector<char>& data);
+  std::mutex _lifetick1Mutex;
+  std::pair<int64_t, bool> _lifetick1;
+  std::mutex _lifetick2Mutex;
+  std::pair<int64_t, bool> _lifetick2;
 
-	BaseLib::PVariable sendRequest(const PIpcClientData& clientData, const std::string& methodName, const BaseLib::PArray& parameters);
+  void collectGarbage();
 
-	void sendResponse(PIpcClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+  bool getFileDescriptor(bool deleteOldSocket = false);
 
-	void closeClientConnection(PIpcClientData client);
+  void mainThread();
 
-	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+  void readClient(PIpcClientData &clientData);
 
-	// {{{ RPC methods
-    BaseLib::PVariable getHomegearPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  BaseLib::PVariable send(const PIpcClientData &clientData, const std::vector<char> &data);
 
-    BaseLib::PVariable setPid(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  BaseLib::PVariable sendRequest(const PIpcClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters);
 
-	BaseLib::PVariable getClientId(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  void sendResponse(PIpcClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
-	BaseLib::PVariable registerRpcMethod(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  void closeClientConnection(const PIpcClientData& client);
 
-	BaseLib::PVariable cliGeneralCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
-	BaseLib::PVariable cliFamilyCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  // {{{ RPC methods
+  BaseLib::PVariable getHomegearPid(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
-	BaseLib::PVariable cliPeerCommand(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
+  BaseLib::PVariable setPid(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
-	BaseLib::PVariable ptyOutput(PIpcClientData& clientData, int32_t threadId, BaseLib::PArray& parameters);
-	// }}}
+  BaseLib::PVariable getClientId(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable registerRpcMethod(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable cliGeneralCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable cliFamilyCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable cliPeerCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable ptyOutput(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+  // }}}
 };
 
 }

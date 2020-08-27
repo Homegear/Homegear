@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,23 +34,21 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class SocketDeviceFamily : public BaseLib::Systems::DeviceFamily
-{
-public:
-    SocketDeviceFamily(BaseLib::Systems::IFamilyEventSink* eventHandler, int32_t id, const std::string& name);
-    ~SocketDeviceFamily() final = default;
-    bool init() final;
-    void dispose() final;
+class SocketDeviceFamily : public BaseLib::Systems::DeviceFamily {
+ public:
+  SocketDeviceFamily(BaseLib::Systems::IFamilyEventSink *eventHandler, int32_t id, const std::string &name);
+  ~SocketDeviceFamily() final = default;
+  bool init() final;
+  void dispose() final;
 
-    bool hasPhysicalInterface() final { return false; }
-    BaseLib::PVariable getPairingInfo() final;
-    void reloadRpcDevices();
-protected:
-    std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber) final;
-    void createCentral() final;
+  bool hasPhysicalInterface() final { return false; }
+  BaseLib::PVariable getPairingInfo() final;
+  void reloadRpcDevices();
+ protected:
+  std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber) final;
+  void createCentral() final;
 };
 
 }

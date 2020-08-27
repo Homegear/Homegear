@@ -1,19 +1,19 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * Homegear is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with Homegear.  If not, see
  * <http://www.gnu.org/licenses/>.
- * 
+ *
  * In addition, as a special exception, the copyright holders give
  * permission to link the code of portions of this program with the
  * OpenSSL library under certain conditions as described in each
@@ -33,72 +33,71 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class UPnP : public BaseLib::Rpc::IWebserverEventSink
-{
-public:
-	UPnP();
+class UPnP : public BaseLib::Rpc::IWebserverEventSink {
+ public:
+  UPnP();
 
-	virtual ~UPnP();
+  virtual ~UPnP();
 
-	void start();
+  void start();
 
-	void stop();
+  void stop();
 
-	void getDescription(int32_t port, std::vector<char>& output);
+  void getDescription(int32_t port, std::vector<char> &output);
 
-private:
-	struct Packets
-	{
-		std::vector<char> notifyRoot;
-		std::vector<char> notifyRootUUID;
-		std::vector<char> notify;
-		std::vector<char> okRoot;
-		std::vector<char> okRootUUID;
-		std::vector<char> ok;
-		std::vector<char> byebyeRoot;
-		std::vector<char> byebyeRootUUID;
-		std::vector<char> byebye;
-		std::vector<char> description;
-	};
+  std::string getUuid() const;
 
-	BaseLib::Output _out;
-	std::atomic_bool _stopServer;
-	std::shared_ptr<BaseLib::FileDescriptor> _serverSocketDescriptor;
-	std::thread _listenThread;
-	std::string _address;
-	std::string _udn;
-	std::string _st;
-	std::map<int32_t, Packets> _packets;
-	int32_t _lastAdvertisement = 0;
+ private:
+  struct Packets {
+    std::vector<char> notifyRoot;
+    std::vector<char> notifyRootUUID;
+    std::vector<char> notify;
+    std::vector<char> okRoot;
+    std::vector<char> okRootUUID;
+    std::vector<char> ok;
+    std::vector<char> byebyeRoot;
+    std::vector<char> byebyeRootUUID;
+    std::vector<char> byebye;
+    std::vector<char> description;
+  };
 
-	// {{{ Webserver events
-	BaseLib::PEventHandler _webserverEventHandler;
+  BaseLib::Output _out;
+  std::atomic_bool _stopServer;
+  std::shared_ptr<BaseLib::FileDescriptor> _serverSocketDescriptor;
+  std::thread _listenThread;
+  std::string _address;
+  std::string _udn;
+  std::string _st;
+  std::map<int32_t, Packets> _packets;
+  int32_t _lastAdvertisement = 0;
 
-	bool onGet(BaseLib::Rpc::PServerInfo& serverInfo, BaseLib::Http& httpRequest, std::shared_ptr<BaseLib::TcpSocket>& socket, std::string& path);
-	// }}}
+  // {{{ Webserver events
+  BaseLib::PEventHandler _webserverEventHandler;
 
-	void getAddress();
+  bool onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpRequest, std::shared_ptr<BaseLib::TcpSocket> &socket, std::string &path);
+  // }}}
 
-	void setPackets();
+  void getAddress();
 
-	void getUDN();
+  void setPackets();
 
-    std::shared_ptr<BaseLib::FileDescriptor> getSocketDescriptor();
+  void getUDN();
 
-	void listen();
+  std::shared_ptr<BaseLib::FileDescriptor> getSocketDescriptor();
 
-	void processPacket(BaseLib::Http& http);
+  void listen();
 
-	void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
+  void processPacket(BaseLib::Http &http);
 
-	void sendNotify();
+  void sendOK(std::string destinationIpAddress, int32_t destinationPort, bool rootDeviceOnly);
 
-	void sendByebye();
+  void sendNotify();
 
-	void registerServers();
+  void sendByebye();
+
+  void registerServers();
 };
 
 }

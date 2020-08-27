@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,122 +30,97 @@
 #include "SocketCentral.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-SocketCentral::SocketCentral(int32_t familyId, ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(familyId, GD::bl.get(), eventHandler)
-{
-    init();
+SocketCentral::SocketCentral(int32_t familyId, ICentralEventSink *eventHandler) : BaseLib::Systems::ICentral(familyId, GD::bl.get(), eventHandler) {
+  init();
 }
 
-SocketCentral::SocketCentral(int32_t familyId, uint32_t deviceId, std::string serialNumber, ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(familyId, GD::bl.get(), deviceId, serialNumber, -1, eventHandler)
-{
-    init();
+SocketCentral::SocketCentral(int32_t familyId, uint32_t deviceId, std::string serialNumber, ICentralEventSink *eventHandler) : BaseLib::Systems::ICentral(familyId, GD::bl.get(), deviceId, serialNumber, -1, eventHandler) {
+  init();
 }
 
-SocketCentral::~SocketCentral()
-{
-    dispose();
+SocketCentral::~SocketCentral() {
+  dispose();
 }
 
-void SocketCentral::dispose(bool wait)
-{
-    try
-    {
-        if(_disposing) return;
-        _disposing = true;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void SocketCentral::dispose(bool wait) {
+  try {
+    if (_disposing) return;
+    _disposing = true;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void SocketCentral::init()
-{
-    try
-    {
-        _shuttingDown = false;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void SocketCentral::init() {
+  try {
+    _shuttingDown = false;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void SocketCentral::homegearShuttingDown()
-{
-    _shuttingDown = true;
+void SocketCentral::homegearShuttingDown() {
+  _shuttingDown = true;
 }
 
-void SocketCentral::loadPeers()
-{
+void SocketCentral::loadPeers() {
+  //Todo: Implement
+}
+
+PSocketPeer SocketCentral::getPeer(uint64_t id) {
+  //Todo: Implement
+  return PSocketPeer();
+}
+
+PSocketPeer SocketCentral::getPeer(std::string serialNumber) {
+  //Todo: Implement
+  return PSocketPeer();
+}
+
+bool SocketCentral::onPacketReceived(std::string &senderId, std::shared_ptr<BaseLib::Systems::Packet> packet) {
+  return false;
+}
+
+void SocketCentral::savePeers(bool full) {
+  //Todo: Implement
+}
+
+void SocketCentral::deletePeer(uint64_t id) {
+  //Todo: Implement
+}
+
+std::string SocketCentral::handleCliCommand(std::string command) {
+  //Todo: Implement
+  return "";
+}
+
+PSocketPeer SocketCentral::createPeer(uint32_t deviceType, int32_t firmwareVersion, std::string serialNumber, bool save) {
+  //Todo: Implement
+  return PSocketPeer();
+}
+
+BaseLib::PVariable SocketCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) {
+  try {
     //Todo: Implement
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-PSocketPeer SocketCentral::getPeer(uint64_t id)
-{
+BaseLib::PVariable SocketCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags) {
+  try {
     //Todo: Implement
-    return PSocketPeer();
-}
-
-PSocketPeer SocketCentral::getPeer(std::string serialNumber)
-{
-    //Todo: Implement
-    return PSocketPeer();
-}
-
-bool SocketCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet)
-{
-    return false;
-}
-
-void SocketCentral::savePeers(bool full)
-{
-    //Todo: Implement
-}
-
-void SocketCentral::deletePeer(uint64_t id)
-{
-    //Todo: Implement
-}
-
-std::string SocketCentral::handleCliCommand(std::string command)
-{
-    //Todo: Implement
-    return "";
-}
-
-PSocketPeer SocketCentral::createPeer(uint32_t deviceType, int32_t firmwareVersion, std::string serialNumber, bool save)
-{
-    //Todo: Implement
-    return PSocketPeer();
-}
-
-BaseLib::PVariable SocketCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags)
-{
-    try
-    {
-        //Todo: Implement
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable SocketCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags)
-{
-    try
-    {
-        //Todo: Implement
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 }

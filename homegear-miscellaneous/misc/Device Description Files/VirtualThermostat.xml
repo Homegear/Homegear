@@ -31,6 +31,29 @@
 					<operationType>store</operationType>
 				</physicalNone>
 			</parameter>
+		    <parameter id="UNREACH">
+		       <properties>
+		         <readable>true</readable>
+		         <writeable>true</writeable>
+		         <service>true</service>
+		     </properties>
+		       <logicalBoolean />
+		       <physicalBoolean>
+		         <operationType>internal</operationType>
+		       </physicalBoolean>
+		  </parameter>
+	      <parameter id="STICKY_UNREACH">
+	        <properties>
+	          <readable>true</readable>
+	          <writeable>true</writeable>
+	          <service>true</service>
+	          <sticky>true</sticky>
+	        </properties>
+	        <logicalBoolean />
+	        <physicalBoolean>
+	          <operationType>internal</operationType>
+	        </physicalBoolean>
+	      </parameter>
 		</variables>
 		<variables id="custom_ch1_values">
 			<parameter id="ACTUAL_TEMPERATURE">
@@ -38,11 +61,11 @@
 					<readable>true</readable>
 					<writeable>true</writeable>
 				</properties>
-				<logicalFloat>
-					<minimumValue>4</minimumValue>
-					<maximumValue>30</maximumValue>
-					<defaultValue>19</defaultValue>
-				</logicalFloat>
+				<logicalDecimal>
+					<minimumValue>5.000000</minimumValue>
+					<maximumValue>30.000000</maximumValue>
+					<defaultValue>17.000000</defaultValue>
+				</logicalDecimal>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -66,11 +89,11 @@
 					<readable>true</readable>
 					<writeable>true</writeable>
 				</properties>
-				<logicalFloat>
-					<minimumValue>4</minimumValue>
-					<maximumValue>30</maximumValue>
-					<defaultValue>19</defaultValue>
-				</logicalFloat>
+				<logicalDecimal>
+					<minimumValue>5.000000</minimumValue>
+					<maximumValue>30.000000</maximumValue>
+					<defaultValue>17.000000</defaultValue>
+				</logicalDecimal>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>

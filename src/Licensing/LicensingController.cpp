@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -32,189 +32,153 @@
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-LicensingModuleLoader::LicensingModuleLoader(std::string name, std::string path)
-{
-	try
-	{
-		_name = name;
-		GD::out.printInfo("Info: Loading licensing module " + _name);
+LicensingModuleLoader::LicensingModuleLoader(std::string name, std::string path) {
+  try {
+    _name = name;
+    GD::out.printInfo("Info: Loading licensing module " + _name);
 
-		void* moduleHandle = dlopen(path.c_str(), RTLD_NOW);
-		if(!moduleHandle)
-		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\": " + std::string(dlerror()));
-			return;
-		}
+    void *moduleHandle = dlopen(path.c_str(), RTLD_NOW);
+    if (!moduleHandle) {
+      GD::out.printCritical("Critical: Could not open module \"" + path + "\": " + std::string(dlerror()));
+      return;
+    }
 
-		std::string (* getVersion)();
-		getVersion = (std::string (*)()) dlsym(moduleHandle, "getVersion");
-		if(!getVersion)
-		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getVersion\" not found.");
-			dlclose(moduleHandle);
-			return;
-		}
-		std::string version = getVersion();
-		if(GD::bl->version() != version)
-		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Module is compiled for Homegear version " + version);
-			dlclose(moduleHandle);
-			return;
-		}
+    std::string (*getVersion)();
+    getVersion = (std::string (*)())dlsym(moduleHandle, "getVersion");
+    if (!getVersion) {
+      GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getVersion\" not found.");
+      dlclose(moduleHandle);
+      return;
+    }
+    std::string version = getVersion();
+    if (GD::bl->version() != version) {
+      GD::out.printCritical("Critical: Could not open module \"" + path + "\". Module is compiled for Homegear version " + version);
+      dlclose(moduleHandle);
+      return;
+    }
 
+    BaseLib::Licensing::LicensingFactory *(*getFactory)();
+    getFactory = (BaseLib::Licensing::LicensingFactory *(*)())dlsym(moduleHandle, "getFactory");
+    if (!getFactory) {
+      GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFactory\" not found.");
+      dlclose(moduleHandle);
+      return;
+    }
 
-		BaseLib::Licensing::LicensingFactory* (* getFactory)();
-		getFactory = (BaseLib::Licensing::LicensingFactory* (*)()) dlsym(moduleHandle, "getFactory");
-		if(!getFactory)
-		{
-			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFactory\" not found.");
-			dlclose(moduleHandle);
-			return;
-		}
-
-		_handle = moduleHandle;
-		_factory = std::unique_ptr<BaseLib::Licensing::LicensingFactory>(getFactory());
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+    _handle = moduleHandle;
+    _factory = std::unique_ptr<BaseLib::Licensing::LicensingFactory>(getFactory());
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-LicensingModuleLoader::~LicensingModuleLoader()
-{
-	try
-	{
-		GD::out.printInfo("Info: Disposing licensing module " + _name);
-		GD::out.printDebug("Debug: Deleting factory pointer of module " + _name);
-		if(_factory) delete _factory.release();
-		GD::out.printDebug("Debug: Closing dynamic library module " + _name);
-		if(_handle) dlclose(_handle);
-		_handle = nullptr;
-		GD::out.printDebug("Debug: Dynamic library " + _name + " disposed");
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+LicensingModuleLoader::~LicensingModuleLoader() {
+  try {
+    GD::out.printInfo("Info: Disposing licensing module " + _name);
+    GD::out.printDebug("Debug: Deleting factory pointer of module " + _name);
+    if (_factory) delete _factory.release();
+    GD::out.printDebug("Debug: Closing dynamic library module " + _name);
+    if (_handle) dlclose(_handle);
+    _handle = nullptr;
+    GD::out.printDebug("Debug: Dynamic library " + _name + " disposed");
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-std::unique_ptr<BaseLib::Licensing::Licensing> LicensingModuleLoader::createModule()
-{
-	if(!_factory) return std::unique_ptr<BaseLib::Licensing::Licensing>();
-	return std::unique_ptr<BaseLib::Licensing::Licensing>(_factory->createLicensing(GD::bl.get()));
+std::unique_ptr<BaseLib::Licensing::Licensing> LicensingModuleLoader::createModule() {
+  if (!_factory) return std::unique_ptr<BaseLib::Licensing::Licensing>();
+  return std::unique_ptr<BaseLib::Licensing::Licensing>(_factory->createLicensing(GD::bl.get()));
 }
 
-LicensingController::LicensingController()
-{
+LicensingController::LicensingController() {
 }
 
-LicensingController::~LicensingController()
-{
-	dispose();
+LicensingController::~LicensingController() {
+  dispose();
 }
 
-bool LicensingController::moduleAvailable(int32_t moduleId)
-{
-	return GD::licensingModules.find(moduleId) != GD::licensingModules.end();
+bool LicensingController::moduleAvailable(int32_t moduleId) {
+  return GD::licensingModules.find(moduleId) != GD::licensingModules.end();
 }
 
-void LicensingController::loadModules()
-{
-	try
-	{
-		GD::out.printDebug("Debug: Loading licensing modules");
+void LicensingController::loadModules() {
+  try {
+    GD::out.printDebug("Debug: Loading licensing modules");
 
-		std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.modulePath());
-		if(files.empty())
-		{
-			GD::out.printDebug("Debug: No licensing modules found in \"" + GD::bl->settings.modulePath() + "\".");
-			return;
-		}
-		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
-		{
-			if(i->size() < 9) continue; //mod_?*.so
-			std::string prefix = i->substr(0, 4);
-			std::string extension = i->substr(i->size() - 3, 3);
-			std::string licensingPostfix;
-			if(i->size() > 15) licensingPostfix = i->substr(i->size() - 12, 9);
-			if(extension != ".so" || prefix != "mod_" || licensingPostfix != "licensing") continue;
-			std::string path(GD::bl->settings.modulePath() + *i);
+    std::vector<std::string> files = GD::bl->io.getFiles(GD::bl->settings.modulePath());
+    if (files.empty()) {
+      GD::out.printDebug("Debug: No licensing modules found in \"" + GD::bl->settings.modulePath() + "\".");
+      return;
+    }
+    for (std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i) {
+      if (i->size() < 9) continue; //mod_?*.so
+      std::string prefix = i->substr(0, 4);
+      std::string extension = i->substr(i->size() - 3, 3);
+      std::string licensingPostfix;
+      if (i->size() > 15) licensingPostfix = i->substr(i->size() - 12, 9);
+      if (extension != ".so" || prefix != "mod_" || licensingPostfix != "licensing") continue;
+      std::string path(GD::bl->settings.modulePath() + *i);
 
-			moduleLoaders.insert(std::pair<std::string, std::unique_ptr<LicensingModuleLoader>>(*i, std::unique_ptr<LicensingModuleLoader>(new LicensingModuleLoader(*i, path))));
+      moduleLoaders.insert(std::pair<std::string, std::unique_ptr<LicensingModuleLoader>>(*i, std::unique_ptr<LicensingModuleLoader>(new LicensingModuleLoader(*i, path))));
 
-			std::unique_ptr<BaseLib::Licensing::Licensing> licensingModule = moduleLoaders.at(*i)->createModule();
+      std::unique_ptr<BaseLib::Licensing::Licensing> licensingModule = moduleLoaders.at(*i)->createModule();
 
-			if(licensingModule) GD::licensingModules[licensingModule->getModuleId()].swap(licensingModule);
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+      if (licensingModule) GD::licensingModules[licensingModule->getModuleId()].swap(licensingModule);
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void LicensingController::init()
-{
-	try
-	{
-		std::vector<int32_t> modulesToRemove;
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i)
-		{
-			if(!i->second->init()) modulesToRemove.push_back(i->first);
-		}
-		for(std::vector<int32_t>::iterator i = modulesToRemove.begin(); i != modulesToRemove.end(); ++i)
-		{
-			GD::licensingModules.at(*i)->dispose(); //Calls dispose
-			GD::licensingModules.erase(*i);
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void LicensingController::init() {
+  try {
+    std::vector<int32_t> modulesToRemove;
+    for (std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i) {
+      if (!i->second->init()) modulesToRemove.push_back(i->first);
+    }
+    for (std::vector<int32_t>::iterator i = modulesToRemove.begin(); i != modulesToRemove.end(); ++i) {
+      GD::licensingModules.at(*i)->dispose(); //Calls dispose
+      GD::licensingModules.erase(*i);
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void LicensingController::load()
-{
-	try
-	{
-		for(std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i)
-		{
-			i->second->load();
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void LicensingController::load() {
+  try {
+    for (std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i) {
+      i->second->load();
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-
-void LicensingController::dispose()
-{
-	try
-	{
-		if(_disposed) return;
-		_disposed = true;
-		if(!GD::licensingModules.empty())
-		{
-			for(std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i)
-			{
-				if(!i->second) continue;
-				i->second->dispose();
-			}
-		}
-		GD::licensingModules.clear();
-		moduleLoaders.clear();
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+void LicensingController::dispose() {
+  try {
+    if (_disposed) return;
+    _disposed = true;
+    if (!GD::licensingModules.empty()) {
+      for (std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.begin(); i != GD::licensingModules.end(); ++i) {
+        if (!i->second) continue;
+        i->second->dispose();
+      }
+    }
+    GD::licensingModules.clear();
+    moduleLoaders.clear();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,205 +35,161 @@
 
 #include <homegear-base/Encoding/GZip.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace ScriptEngine
-{
+namespace ScriptEngine {
 
-ScriptEngineProcess::ScriptEngineProcess(bool nodeProcess)
-{
-    _nodeProcess = nodeProcess;
-    _nodeThreadCount = 0;
-    lastExecution = 0;
+ScriptEngineProcess::ScriptEngineProcess(bool nodeProcess) {
+  _nodeProcess = nodeProcess;
+  _nodeThreadCount = 0;
+  lastExecution = 0;
 }
 
-ScriptEngineProcess::~ScriptEngineProcess()
-{
+ScriptEngineProcess::~ScriptEngineProcess() {
 
 }
 
-uint32_t ScriptEngineProcess::scriptCount()
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        return _scripts.size();
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return (uint32_t) -1;
+uint32_t ScriptEngineProcess::scriptCount() {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    return _scripts.size();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return (uint32_t)-1;
 }
 
-uint32_t ScriptEngineProcess::nodeThreadCount()
-{
-    return _nodeThreadCount;
+uint32_t ScriptEngineProcess::nodeThreadCount() {
+  return _nodeThreadCount;
 }
 
-void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string& output, bool error)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
-        if(scriptsIterator != _scripts.end())
-        {
-            if(scriptsIterator->second->scriptOutputCallback) scriptsIterator->second->scriptOutputCallback(scriptsIterator->second, output, error);
-            if(scriptsIterator->second->returnOutput)
-            {
-                if(scriptsIterator->second->output.size() + output.size() > scriptsIterator->second->output.capacity()) scriptsIterator->second->output.reserve(scriptsIterator->second->output.capacity() + (((output.size() / 1024) + 1) * 1024));
-                scriptsIterator->second->output.append(output);
-            }
-        }
+void ScriptEngineProcess::invokeScriptOutput(int32_t id, std::string &output, bool error) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
+    if (scriptsIterator != _scripts.end()) {
+      if (scriptsIterator->second->scriptOutputCallback) scriptsIterator->second->scriptOutputCallback(scriptsIterator->second, output, error);
+      if (scriptsIterator->second->returnOutput) {
+        if (scriptsIterator->second->output.size() + output.size() > scriptsIterator->second->output.capacity()) scriptsIterator->second->output.reserve(scriptsIterator->second->output.capacity() + (((output.size() / 1024) + 1) * 1024));
+        scriptsIterator->second->output.append(output);
+      }
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void ScriptEngineProcess::invokeScriptHeaders(int32_t id, BaseLib::PVariable& headers)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
-        if(scriptsIterator != _scripts.end() && scriptsIterator->second->scriptHeadersCallback) scriptsIterator->second->scriptHeadersCallback(scriptsIterator->second, headers);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void ScriptEngineProcess::invokeScriptHeaders(int32_t id, BaseLib::PVariable &headers) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
+    if (scriptsIterator != _scripts.end() && scriptsIterator->second->scriptHeadersCallback) scriptsIterator->second->scriptHeadersCallback(scriptsIterator->second, headers);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
-        {
-            if(GD::bl->debugLevel >= 5 || (i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
-            {
-                GD::out.printInfo("Info: Script with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
-            }
-            _nodeThreadCount -= i->second->maxThreadCount + 1;
-            i->second->finished = true;
-            i->second->exitCode = exitCode;
-        }
-        for(std::map<int32_t, PScriptFinishedInfo>::iterator i = _scriptFinishedInfo.begin(); i != _scriptFinishedInfo.end(); ++i)
-        {
-            i->second->finished = true;
-            i->second->conditionVariable.notify_all();
-        }
-        for(std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i)
-        {
-            if(i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode);
-        }
+void ScriptEngineProcess::invokeScriptFinished(int32_t exitCode) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    for (std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i) {
+      if (GD::bl->debugLevel >= 5 || (i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && i->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode)) {
+        GD::out.printInfo("Info: Script with id " + std::to_string(i->first) + " finished with exit code " + std::to_string(exitCode));
+      }
+      _nodeThreadCount -= i->second->maxThreadCount + 1;
+      i->second->finished = true;
+      i->second->exitCode = exitCode;
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    for (std::map<int32_t, PScriptFinishedInfo>::iterator i = _scriptFinishedInfo.begin(); i != _scriptFinishedInfo.end(); ++i) {
+      i->second->finished = true;
+      i->second->conditionVariable.notify_all();
     }
+    for (std::map<int32_t, PScriptInfo>::iterator i = _scripts.begin(); i != _scripts.end(); ++i) {
+      if (i->second->scriptFinishedCallback) i->second->scriptFinishedCallback(i->second, exitCode);
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
-        if(scriptsIterator != _scripts.end())
-        {
-            if(GD::bl->debugLevel >= 5 || (scriptsIterator->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptsIterator->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode))
-            {
-                GD::out.printInfo("Info: Script with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
-            }
-            if(scriptsIterator->second->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptsIterator->second->nodeInfo)
-            {
-                _nodeThreadCount -= scriptsIterator->second->maxThreadCount + 1;
-                if(_unregisterNode) _unregisterNode(scriptsIterator->second->nodeInfo->structValue->at("id")->stringValue);
-            }
-            else if(scriptsIterator->second->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::device2)
-            {
-                if(_unregisterDevice) _unregisterDevice(scriptsIterator->second->peerId);
-            }
-            scriptsIterator->second->exitCode = exitCode;
-            scriptsIterator->second->finished = true;
-        }
-        std::map<int32_t, PScriptFinishedInfo>::iterator scriptFinishedIterator = _scriptFinishedInfo.find(id);
-        if(scriptFinishedIterator != _scriptFinishedInfo.end())
-        {
-            scriptFinishedIterator->second->finished = true;
-            scriptFinishedIterator->second->conditionVariable.notify_all();
-        }
-        if(scriptsIterator != _scripts.end() && scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
+void ScriptEngineProcess::invokeScriptFinished(int32_t id, int32_t exitCode) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
+    if (scriptsIterator != _scripts.end()) {
+      if (GD::bl->debugLevel >= 5 || (scriptsIterator->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptsIterator->second->getType() != BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode)) {
+        GD::out.printInfo("Info: Script with id " + std::to_string(id) + " finished with exit code " + std::to_string(exitCode));
+      }
+      if (scriptsIterator->second->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode && scriptsIterator->second->nodeInfo) {
+        _nodeThreadCount -= scriptsIterator->second->maxThreadCount + 1;
+        if (_unregisterNode) _unregisterNode(scriptsIterator->second->nodeInfo->structValue->at("id")->stringValue);
+      } else if (scriptsIterator->second->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::device2) {
+        if (_unregisterDevice) _unregisterDevice(scriptsIterator->second->peerId);
+      }
+      scriptsIterator->second->exitCode = exitCode;
+      scriptsIterator->second->finished = true;
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    std::map<int32_t, PScriptFinishedInfo>::iterator scriptFinishedIterator = _scriptFinishedInfo.find(id);
+    if (scriptFinishedIterator != _scriptFinishedInfo.end()) {
+      scriptFinishedIterator->second->finished = true;
+      scriptFinishedIterator->second->conditionVariable.notify_all();
     }
+    if (scriptsIterator != _scripts.end() && scriptsIterator->second->scriptFinishedCallback) scriptsIterator->second->scriptFinishedCallback(scriptsIterator->second, exitCode);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-PScriptInfo ScriptEngineProcess::getScript(int32_t id)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
-        if(scriptsIterator != _scripts.end()) return scriptsIterator->second;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return PScriptInfo();
+PScriptInfo ScriptEngineProcess::getScript(int32_t id) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    std::map<int32_t, PScriptInfo>::iterator scriptsIterator = _scripts.find(id);
+    if (scriptsIterator != _scripts.end()) return scriptsIterator->second;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return PScriptInfo();
 }
 
-PScriptFinishedInfo ScriptEngineProcess::getScriptFinishedInfo(int32_t id)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        std::map<int32_t, PScriptFinishedInfo>::iterator scriptsIterator = _scriptFinishedInfo.find(id);
-        if(scriptsIterator != _scriptFinishedInfo.end()) return scriptsIterator->second;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return PScriptFinishedInfo();
+PScriptFinishedInfo ScriptEngineProcess::getScriptFinishedInfo(int32_t id) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    std::map<int32_t, PScriptFinishedInfo>::iterator scriptsIterator = _scriptFinishedInfo.find(id);
+    if (scriptsIterator != _scriptFinishedInfo.end()) return scriptsIterator->second;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return PScriptFinishedInfo();
 }
 
-void ScriptEngineProcess::registerScript(int32_t id, PScriptInfo& scriptInfo)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        _scripts[id] = scriptInfo;
-        _scriptFinishedInfo[id] = PScriptFinishedInfo(new ScriptFinishedInfo());
-        _nodeThreadCount += scriptInfo->maxThreadCount + 1;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void ScriptEngineProcess::registerScript(int32_t id, PScriptInfo &scriptInfo) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    _scripts[id] = scriptInfo;
+    _scriptFinishedInfo[id] = PScriptFinishedInfo(new ScriptFinishedInfo());
+    _nodeThreadCount += scriptInfo->maxThreadCount + 1;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void ScriptEngineProcess::unregisterScript(int32_t id)
-{
-    try
-    {
-        std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
-        _scripts.erase(id);
-        _scriptFinishedInfo.erase(id);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void ScriptEngineProcess::unregisterScript(int32_t id) {
+  try {
+    std::lock_guard<std::mutex> scriptsGuard(_scriptsMutex);
+    _scripts.erase(id);
+    _scriptFinishedInfo.erase(id);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

@@ -1,6 +1,6 @@
 #include <utility>
 
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,600 +33,476 @@
 #include "SQLite3.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-SQLite3::SQLite3()
-{
+SQLite3::SQLite3() {
 }
 
-SQLite3::SQLite3(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3()
-{
-    if(databasePath.empty()) return;
-    _databaseSynchronous = databaseSynchronous;
-    _databaseMemoryJournal = databaseMemoryJournal;
-    _databaseWALJournal = databaseWALJournal;
-    _databasePath = databasePath;
-    _databaseFilename = std::move(databaseFilename);
-    _backupPath = "";
-    _backupFilename = "";
-    openDatabase(true);
+SQLite3::SQLite3(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3() {
+  if (databasePath.empty()) return;
+  _databaseSynchronous = databaseSynchronous;
+  _databaseMemoryJournal = databaseMemoryJournal;
+  _databaseWALJournal = databaseWALJournal;
+  _databasePath = databasePath;
+  _databaseFilename = std::move(databaseFilename);
+  _backupPath = "";
+  _backupFilename = "";
+  openDatabase(true);
 }
 
-void SQLite3::init(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath, std::string backupFilename)
-{
-    if(databasePath.empty()) return;
-    _databaseSynchronous = databaseSynchronous;
-    _databaseMemoryJournal = databaseMemoryJournal;
-    _databaseWALJournal = databaseWALJournal;
-    _databasePath = databasePath;
-    _databaseFilename = std::move(databaseFilename);
-    _backupPath = std::move(backupPath);
-    _backupFilename = std::move(backupFilename);
-    hotBackup();
+void SQLite3::init(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath, std::string backupFilename) {
+  if (databasePath.empty()) return;
+  _databaseSynchronous = databaseSynchronous;
+  _databaseMemoryJournal = databaseMemoryJournal;
+  _databaseWALJournal = databaseWALJournal;
+  _databasePath = databasePath;
+  _databaseFilename = std::move(databaseFilename);
+  _backupPath = std::move(backupPath);
+  _backupFilename = std::move(backupFilename);
+  hotBackup();
 }
 
-SQLite3::~SQLite3()
-{
-    closeDatabase(true);
+SQLite3::~SQLite3() {
+  closeDatabase(true);
 }
 
-void SQLite3::dispose()
-{
-    closeDatabase(true);
+void SQLite3::dispose() {
+  closeDatabase(true);
 }
 
-void SQLite3::hotBackup()
-{
-    try
-    {
-        if(_databasePath.empty() || _databaseFilename.empty())
-        {
-            GD::out.printError("Error: Can't backup database: _databasePath or _databaseFilename is empty.");
+void SQLite3::hotBackup() {
+  try {
+    if (_databasePath.empty() || _databaseFilename.empty()) {
+      GD::out.printError("Error: Can't backup database: _databasePath or _databaseFilename is empty.");
+      return;
+    }
+    std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
+    closeDatabase(false);
+    if (GD::bl->io.fileExists(_databasePath + _databaseFilename)) {
+      if (!checkIntegrity(_databasePath + _databaseFilename)) {
+        GD::out.printCritical("Critical: Integrity check on database failed.");
+        if (!_backupPath.empty() && !_backupFilename.empty()) {
+          GD::out.printCritical("Critical: Backing up corrupted database file to: " + _backupPath + _databaseFilename + ".broken");
+          GD::bl->io.copyFile(_databasePath + _databaseFilename, _backupPath + _databaseFilename + ".broken");
+          bool restored = false;
+          for (int32_t i = 0; i <= 10000; i++) {
+            if (GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_backupPath + _backupFilename + std::to_string(i))) {
+              GD::out.printCritical("Critical: Restoring database file: " + _backupPath + _backupFilename + std::to_string(i));
+              if (GD::bl->io.copyFile(_backupPath + _backupFilename + std::to_string(i), _databasePath + _databaseFilename)) {
+                restored = true;
+                break;
+              }
+            }
+          }
+          if (!restored) {
+            GD::out.printCritical("Critical: Could not restore database.");
             return;
-        }
-        std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
-        closeDatabase(false);
-        if(GD::bl->io.fileExists(_databasePath + _databaseFilename))
-        {
-            if(!checkIntegrity(_databasePath + _databaseFilename))
-            {
-                GD::out.printCritical("Critical: Integrity check on database failed.");
-                if(!_backupPath.empty() && !_backupFilename.empty())
-                {
-                    GD::out.printCritical("Critical: Backing up corrupted database file to: " + _backupPath + _databaseFilename + ".broken");
-                    GD::bl->io.copyFile(_databasePath + _databaseFilename, _backupPath + _databaseFilename + ".broken");
-                    bool restored = false;
-                    for(int32_t i = 0; i <= 10000; i++)
-                    {
-                        if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_backupPath + _backupFilename + std::to_string(i)))
-                        {
-                            GD::out.printCritical("Critical: Restoring database file: " + _backupPath + _backupFilename + std::to_string(i));
-                            if(GD::bl->io.copyFile(_backupPath + _backupFilename + std::to_string(i), _databasePath + _databaseFilename))
-                            {
-                                restored = true;
-                                break;
-                            }
-                        }
-                    }
-                    if(!restored)
-                    {
-                        GD::out.printCritical("Critical: Could not restore database.");
-                        return;
-                    }
+          }
+        } else return;
+      } else {
+        if (!_backupPath.empty() && !_backupFilename.empty()) {
+          GD::out.printInfo("Info: Backing up database...");
+          if (GD::bl->settings.databaseMaxBackups() > 1) {
+            if (GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1))) {
+              if (!GD::bl->io.deleteFile(_backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1))) {
+                GD::out.printError("Error: Cannot delete file: " + _backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1));
+              }
+            }
+            for (int32_t i = GD::bl->settings.databaseMaxBackups() - 2; i >= 0; i--) {
+              if (GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i))) {
+                if (!GD::bl->io.moveFile(_backupPath + _backupFilename + std::to_string(i), _backupPath + _backupFilename + std::to_string(i + 1))) {
+                  GD::out.printError("Error: Cannot move file: " + _backupPath + _backupFilename + std::to_string(i));
                 }
-                else return;
+              }
             }
-            else
-            {
-                if(!_backupPath.empty() && !_backupFilename.empty())
-                {
-                    GD::out.printInfo("Info: Backing up database...");
-                    if(GD::bl->settings.databaseMaxBackups() > 1)
-                    {
-                        if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
-                        {
-                            if(!GD::bl->io.deleteFile(_backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1)))
-                            {
-                                GD::out.printError("Error: Cannot delete file: " + _backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1));
-                            }
-                        }
-                        for(int32_t i = GD::bl->settings.databaseMaxBackups() - 2; i >= 0; i--)
-                        {
-                            if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)))
-                            {
-                                if(!GD::bl->io.moveFile(_backupPath + _backupFilename + std::to_string(i), _backupPath + _backupFilename + std::to_string(i + 1)))
-                                {
-                                    GD::out.printError("Error: Cannot move file: " + _backupPath + _backupFilename + std::to_string(i));
-                                }
-                            }
-                        }
-                    }
-                    if(GD::bl->settings.databaseMaxBackups() > 0)
-                    {
-                        if(!GD::bl->io.copyFile(_databasePath + _databaseFilename, _backupPath + _backupFilename + '0'))
-                        {
-                            GD::out.printError("Error: Cannot copy file: " + _backupPath + _backupFilename + '0');
-                        }
-                    }
-                }
-                else GD::out.printError("Error: Can't backup database: _backupPath or _backupFilename is empty.");
+          }
+          if (GD::bl->settings.databaseMaxBackups() > 0) {
+            if (!GD::bl->io.copyFile(_databasePath + _databaseFilename, _backupPath + _backupFilename + '0')) {
+              GD::out.printError("Error: Cannot copy file: " + _backupPath + _backupFilename + '0');
             }
+          }
+        } else GD::out.printError("Error: Can't backup database: _backupPath or _backupFilename is empty.");
+      }
+    } else {
+      GD::out.printWarning("Warning: No database found. Trying to restore backup.");
+      if (!_backupPath.empty() && !_backupFilename.empty()) {
+        bool restored = false;
+        for (int32_t i = 0; i <= 10000; i++) {
+          if (GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_backupPath + _backupFilename + std::to_string(i))) {
+            GD::out.printWarning("Warning: Restoring database file: " + _backupPath + _backupFilename + std::to_string(i));
+            if (GD::bl->io.copyFile(_backupPath + _backupFilename + std::to_string(i), _databasePath + _databaseFilename)) {
+              restored = true;
+              break;
+            }
+          }
         }
-        else
-        {
-            GD::out.printWarning("Warning: No database found. Trying to restore backup.");
-            if(!_backupPath.empty() && !_backupFilename.empty())
-            {
-                bool restored = false;
-                for(int32_t i = 0; i <= 10000; i++)
-                {
-                    if(GD::bl->io.fileExists(_backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_backupPath + _backupFilename + std::to_string(i)))
-                    {
-                        GD::out.printWarning("Warning: Restoring database file: " + _backupPath + _backupFilename + std::to_string(i));
-                        if(GD::bl->io.copyFile(_backupPath + _backupFilename + std::to_string(i), _databasePath + _databaseFilename))
-                        {
-                            restored = true;
-                            break;
-                        }
-                    }
-                }
-                if(restored) GD::out.printWarning("Warning: Database successfully restored.");
-                else GD::out.printWarning("Warning: Database could not be restored. Creating new database.");
-            }
-        }
-        openDatabase(false);
+        if (restored) GD::out.printWarning("Warning: Database successfully restored.");
+        else GD::out.printWarning("Warning: Database could not be restored. Creating new database.");
+      }
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+    openDatabase(false);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
 }
 
-bool SQLite3::checkIntegrity(std::string databasePath)
-{
-    sqlite3* database = nullptr;
-    try
-    {
-        int32_t result = sqlite3_open(databasePath.c_str(), &database);
-        if(result || !database)
-        {
-            if(database) sqlite3_close(database);
-            return true;
-        }
+bool SQLite3::checkIntegrity(std::string databasePath) {
+  sqlite3 *database = nullptr;
+  try {
+    int32_t result = sqlite3_open(databasePath.c_str(), &database);
+    if (result || !database) {
+      if (database) sqlite3_close(database);
+      return true;
+    }
 
-        std::shared_ptr<BaseLib::Database::DataTable> integrityResult(new BaseLib::Database::DataTable());
+    std::shared_ptr<BaseLib::Database::DataTable> integrityResult(new BaseLib::Database::DataTable());
 
-        sqlite3_stmt* statement = nullptr;
-        result = sqlite3_prepare_v2(database, "PRAGMA integrity_check", -1, &statement, NULL);
-        if(result)
-        {
-            sqlite3_close(database);
-            return false;
-        }
-        try
-        {
-            getDataRows(statement, integrityResult);
-        }
-        catch(const std::exception& ex)
-        {
-            sqlite3_close(database);
-            return false;
-        }
+    sqlite3_stmt *statement = nullptr;
+    result = sqlite3_prepare_v2(database, "PRAGMA integrity_check", -1, &statement, NULL);
+    if (result) {
+      sqlite3_close(database);
+      return false;
+    }
+    try {
+      getDataRows(statement, integrityResult);
+    }
+    catch (const std::exception &ex) {
+      sqlite3_close(database);
+      return false;
+    }
+    sqlite3_clear_bindings(statement);
+    result = sqlite3_finalize(statement);
+    if (result) {
+      sqlite3_close(database);
+      return false;
+    }
+
+    if (integrityResult->size() != 1 || integrityResult->at(0).size() < 1 || integrityResult->at(0).at(0)->textValue != "ok") {
+      sqlite3_close(database);
+      return false;
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  if (database) sqlite3_close(database);
+  return true;
+}
+
+void SQLite3::openDatabase(bool lockMutex) {
+  try {
+    std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
+    if (lockMutex) databaseGuard.lock();
+    char *errorMessage = nullptr;
+    std::string fullDatabasePath = _databasePath + _databaseFilename;
+    int result = sqlite3_open(fullDatabasePath.c_str(), &_database);
+    if (result || !_database) {
+      GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
+      if (_database) sqlite3_close(_database);
+      _database = nullptr;
+      return;
+    }
+    sqlite3_extended_result_codes(_database, 1);
+
+    if (!_databaseSynchronous) {
+      sqlite3_exec(_database, "PRAGMA synchronous=OFF", 0, 0, &errorMessage);
+      if (errorMessage) {
+        GD::out.printError("Can't execute \"PRAGMA synchronous=OFF\": " + std::string(errorMessage));
+        sqlite3_free(errorMessage);
+      }
+    }
+
+    //Reset to default journal mode, because WAL stays active.
+    //Also I'm not sure if VACUUM works with journal_mode=WAL.
+    sqlite3_exec(_database, "PRAGMA journal_mode=DELETE", 0, 0, &errorMessage);
+    if (errorMessage) {
+      GD::out.printError("Can't execute \"PRAGMA journal_mode=DELETE\": " + std::string(errorMessage));
+      sqlite3_free(errorMessage);
+    }
+
+    sqlite3_exec(_database, "VACUUM", 0, 0, &errorMessage);
+    if (errorMessage) {
+      GD::out.printWarning("Warning: Can't execute \"VACUUM\": " + std::string(errorMessage));
+      sqlite3_free(errorMessage);
+    }
+
+    if (_databaseMemoryJournal) {
+      sqlite3_exec(_database, "PRAGMA journal_mode=MEMORY", 0, 0, &errorMessage);
+      if (errorMessage) {
+        GD::out.printError("Can't execute \"PRAGMA journal_mode=MEMORY\": " + std::string(errorMessage));
+        sqlite3_free(errorMessage);
+      }
+    }
+
+    if (_databaseWALJournal) {
+      sqlite3_exec(_database, "PRAGMA journal_mode=WAL", 0, 0, &errorMessage);
+      if (errorMessage) {
+        GD::out.printError("Can't execute \"PRAGMA journal_mode=WAL\": " + std::string(errorMessage));
+        sqlite3_free(errorMessage);
+      }
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
+void SQLite3::closeDatabase(bool lockMutex) {
+  try {
+    if (!_database) return;
+    std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
+    if (lockMutex) databaseGuard.lock();
+    GD::out.printInfo("Closing database...");
+    char *errorMessage = nullptr;
+    sqlite3_exec(_database, "COMMIT", 0, 0, &errorMessage); //Release all savepoints
+    if (errorMessage) {
+      //Normally error is: No transaction is active, so no real error
+      GD::out.printDebug("Debug: Can't execute \"COMMIT\": " + std::string(errorMessage));
+      sqlite3_free(errorMessage);
+    }
+    sqlite3_exec(_database, "PRAGMA synchronous = FULL", 0, 0, &errorMessage);
+    if (errorMessage) {
+      GD::out.printError("Error: Can't execute \"PRAGMA synchronous = FULL\": " + std::string(errorMessage));
+      sqlite3_free(errorMessage);
+    }
+    sqlite3_exec(_database, "PRAGMA journal_mode = DELETE", 0, 0, &errorMessage);
+    if (errorMessage) {
+      GD::out.printError("Error: Can't execute \"PRAGMA journal_mode = DELETE\": " + std::string(errorMessage));
+      sqlite3_free(errorMessage);
+    }
+    sqlite3_close(_database);
+    _database = nullptr;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
+void SQLite3::getDataRows(sqlite3_stmt *statement, std::shared_ptr<BaseLib::Database::DataTable> &dataRows) {
+  int32_t result;
+  int32_t row = 0;
+  while ((result = sqlite3_step(statement)) == SQLITE_ROW) {
+    for (int32_t i = 0; i < sqlite3_column_count(statement); i++) {
+      std::shared_ptr<BaseLib::Database::DataColumn> col(new BaseLib::Database::DataColumn());
+      col->index = i;
+      int32_t columnType = sqlite3_column_type(statement, i);
+      if (columnType == SQLITE_INTEGER) {
+        col->dataType = BaseLib::Database::DataColumn::DataType::Enum::INTEGER;
+        col->intValue = sqlite3_column_int64(statement, i);
+      } else if (columnType == SQLITE_FLOAT) {
+        col->dataType = BaseLib::Database::DataColumn::DataType::Enum::FLOAT;
+        col->floatValue = sqlite3_column_double(statement, i);
+      } else if (columnType == SQLITE_BLOB) {
+        col->dataType = BaseLib::Database::DataColumn::DataType::Enum::BLOB;
+        char *binaryData = (char *)sqlite3_column_blob(statement, i);
+        int32_t size = sqlite3_column_bytes(statement, i);
+        if (size > 0) col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
+      } else if (columnType == SQLITE_NULL) {
+        col->dataType = BaseLib::Database::DataColumn::DataType::Enum::NODATA;
+      } else if (columnType == SQLITE_TEXT) //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
+      {
+        col->dataType = BaseLib::Database::DataColumn::DataType::Enum::TEXT;
+        col->textValue = std::string((const char *)sqlite3_column_text(statement, i));
+      }
+      if (i == 0) dataRows->insert(std::pair<uint32_t, std::map<uint32_t, std::shared_ptr<BaseLib::Database::DataColumn>>>(row, std::map<uint32_t, std::shared_ptr<BaseLib::Database::DataColumn>>()));
+      dataRows->at(row)[i] = col;
+    }
+    row++;
+  }
+  if (result != SQLITE_DONE) {
+    throw BaseLib::Exception("Can't execute command (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
+  }
+}
+
+void SQLite3::bindData(sqlite3_stmt *statement, BaseLib::Database::DataRow &dataToEscape) {
+  //There is no try/catch block on purpose!
+  int32_t result = 0;
+  int32_t index = 1;
+  std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<BaseLib::Database::DataColumn> col) {
+    switch (col->dataType) {
+      case BaseLib::Database::DataColumn::DataType::Enum::NODATA:result = sqlite3_bind_null(statement, index);
+        break;
+      case BaseLib::Database::DataColumn::DataType::Enum::INTEGER:result = sqlite3_bind_int64(statement, index, col->intValue);
+        break;
+      case BaseLib::Database::DataColumn::DataType::Enum::FLOAT:result = sqlite3_bind_double(statement, index, col->floatValue);
+        break;
+      case BaseLib::Database::DataColumn::DataType::Enum::BLOB:
+        if (col->binaryValue->empty()) result = sqlite3_bind_null(statement, index);
+        else result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
+        break;
+      case BaseLib::Database::DataColumn::DataType::Enum::TEXT:result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);
+        break;
+    }
+    if (result) {
+      throw (BaseLib::Exception(std::string(sqlite3_errmsg(_database))));
+    }
+    index++;
+  });
+}
+
+uint32_t SQLite3::executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>& command) {
+  try {
+    if (!command) return 0;
+    std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
+    if (!_database) {
+      GD::out.printError("Error: Could not write to database. No database handle.");
+      return 0;
+    }
+    sqlite3_stmt *statement = nullptr;
+    int32_t result = sqlite3_prepare_v2(_database, command->first.c_str(), -1, &statement, NULL);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database)));
+      return 0;
+    }
+    if (!command->second.empty()) bindData(statement, command->second);
+    result = sqlite3_step(statement);
+    if (result != SQLITE_DONE) {
+      GD::out.printError("Can't execute command: " + std::string(sqlite3_errmsg(_database)));
+      return 0;
+    }
+    sqlite3_clear_bindings(statement);
+    result = sqlite3_finalize(statement);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database)));
+      return 0;
+    }
+    uint32_t rowID = sqlite3_last_insert_rowid(_database);
+    return rowID;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return 0;
+}
+
+uint32_t SQLite3::executeWriteCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape) {
+  try {
+    std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
+    if (!_database) {
+      GD::out.printError("Error: Could not write to database. No database handle.");
+      return 0;
+    }
+    sqlite3_stmt *statement = nullptr;
+    int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+      return 0;
+    }
+    if (!dataToEscape.empty()) bindData(statement, dataToEscape);
+    result = sqlite3_step(statement);
+    if (result != SQLITE_DONE) {
+      GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+      return 0;
+    }
+    sqlite3_clear_bindings(statement);
+    result = sqlite3_finalize(statement);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+      return 0;
+    }
+    uint32_t rowID = sqlite3_last_insert_rowid(_database);
+    return rowID;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return 0;
+}
+
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape) {
+  std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
+  try {
+    std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
+    if (!_database) {
+      GD::out.printError("Error: Could not write to database. No database handle.");
+      return dataRows;
+    }
+    sqlite3_stmt *statement = nullptr;
+    int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+      return dataRows;
+    }
+    bindData(statement, dataToEscape);
+    try {
+      getDataRows(statement, dataRows);
+    }
+    catch (const std::exception &ex) {
+      if (command.compare(0, 7, "RELEASE") == 0) {
+        GD::out.printInfo(std::string("Info: ") + ex.what());
         sqlite3_clear_bindings(statement);
-        result = sqlite3_finalize(statement);
-        if(result)
-        {
-            sqlite3_close(database);
-            return false;
-        }
-
-        if(integrityResult->size() != 1 || integrityResult->at(0).size() < 1 || integrityResult->at(0).at(0)->textValue != "ok")
-        {
-            sqlite3_close(database);
-            return false;
-        }
+        return dataRows;
+      } else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    if(database) sqlite3_close(database);
-    return true;
+    sqlite3_clear_bindings(statement);
+    result = sqlite3_finalize(statement);
+    if (result) GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return dataRows;
 }
 
-void SQLite3::openDatabase(bool lockMutex)
-{
-    try
-    {
-        std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
-        if(lockMutex) databaseGuard.lock();
-        char* errorMessage = nullptr;
-        std::string fullDatabasePath = _databasePath + _databaseFilename;
-        int result = sqlite3_open(fullDatabasePath.c_str(), &_database);
-        if(result || !_database)
-        {
-            GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
-            if(_database) sqlite3_close(_database);
-            _database = nullptr;
-            return;
-        }
-        sqlite3_extended_result_codes(_database, 1);
-
-        if(!_databaseSynchronous)
-        {
-            sqlite3_exec(_database, "PRAGMA synchronous=OFF", 0, 0, &errorMessage);
-            if(errorMessage)
-            {
-                GD::out.printError("Can't execute \"PRAGMA synchronous=OFF\": " + std::string(errorMessage));
-                sqlite3_free(errorMessage);
-            }
-        }
-
-        //Reset to default journal mode, because WAL stays active.
-        //Also I'm not sure if VACUUM works with journal_mode=WAL.
-        sqlite3_exec(_database, "PRAGMA journal_mode=DELETE", 0, 0, &errorMessage);
-        if(errorMessage)
-        {
-            GD::out.printError("Can't execute \"PRAGMA journal_mode=DELETE\": " + std::string(errorMessage));
-            sqlite3_free(errorMessage);
-        }
-
-        sqlite3_exec(_database, "VACUUM", 0, 0, &errorMessage);
-        if(errorMessage)
-        {
-            GD::out.printWarning("Warning: Can't execute \"VACUUM\": " + std::string(errorMessage));
-            sqlite3_free(errorMessage);
-        }
-
-        if(_databaseMemoryJournal)
-        {
-            sqlite3_exec(_database, "PRAGMA journal_mode=MEMORY", 0, 0, &errorMessage);
-            if(errorMessage)
-            {
-                GD::out.printError("Can't execute \"PRAGMA journal_mode=MEMORY\": " + std::string(errorMessage));
-                sqlite3_free(errorMessage);
-            }
-        }
-
-        if(_databaseWALJournal)
-        {
-            sqlite3_exec(_database, "PRAGMA journal_mode=WAL", 0, 0, &errorMessage);
-            if(errorMessage)
-            {
-                GD::out.printError("Can't execute \"PRAGMA journal_mode=WAL\": " + std::string(errorMessage));
-                sqlite3_free(errorMessage);
-            }
-        }
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string& command) {
+  std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
+  try {
+    std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
+    if (!_database) {
+      GD::out.printError("Error: Could not write to database. No database handle.");
+      return dataRows;
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    sqlite3_stmt *statement = nullptr;
+    int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, nullptr);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+      return dataRows;
     }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    try {
+      getDataRows(statement, dataRows);
     }
-}
-
-void SQLite3::closeDatabase(bool lockMutex)
-{
-    try
-    {
-        if(!_database) return;
-        std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
-        if(lockMutex) databaseGuard.lock();
-        GD::out.printInfo("Closing database...");
-        char* errorMessage = nullptr;
-        sqlite3_exec(_database, "COMMIT", 0, 0, &errorMessage); //Release all savepoints
-        if(errorMessage)
-        {
-            //Normally error is: No transaction is active, so no real error
-            GD::out.printDebug("Debug: Can't execute \"COMMIT\": " + std::string(errorMessage));
-            sqlite3_free(errorMessage);
-        }
-        sqlite3_exec(_database, "PRAGMA synchronous = FULL", 0, 0, &errorMessage);
-        if(errorMessage)
-        {
-            GD::out.printError("Error: Can't execute \"PRAGMA synchronous = FULL\": " + std::string(errorMessage));
-            sqlite3_free(errorMessage);
-        }
-        sqlite3_exec(_database, "PRAGMA journal_mode = DELETE", 0, 0, &errorMessage);
-        if(errorMessage)
-        {
-            GD::out.printError("Error: Can't execute \"PRAGMA journal_mode = DELETE\": " + std::string(errorMessage));
-            sqlite3_free(errorMessage);
-        }
-        sqlite3_close(_database);
-        _database = nullptr;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<BaseLib::Database::DataTable>& dataRows)
-{
-    int32_t result;
-    int32_t row = 0;
-    while((result = sqlite3_step(statement)) == SQLITE_ROW)
-    {
-        for(int32_t i = 0; i < sqlite3_column_count(statement); i++)
-        {
-            std::shared_ptr<BaseLib::Database::DataColumn> col(new BaseLib::Database::DataColumn());
-            col->index = i;
-            int32_t columnType = sqlite3_column_type(statement, i);
-            if(columnType == SQLITE_INTEGER)
-            {
-                col->dataType = BaseLib::Database::DataColumn::DataType::Enum::INTEGER;
-                col->intValue = sqlite3_column_int64(statement, i);
-            }
-            else if(columnType == SQLITE_FLOAT)
-            {
-                col->dataType = BaseLib::Database::DataColumn::DataType::Enum::FLOAT;
-                col->floatValue = sqlite3_column_double(statement, i);
-            }
-            else if(columnType == SQLITE_BLOB)
-            {
-                col->dataType = BaseLib::Database::DataColumn::DataType::Enum::BLOB;
-                char* binaryData = (char*)sqlite3_column_blob(statement, i);
-                int32_t size = sqlite3_column_bytes(statement, i);
-                if(size > 0) col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
-            }
-            else if(columnType == SQLITE_NULL)
-            {
-                col->dataType = BaseLib::Database::DataColumn::DataType::Enum::NODATA;
-            }
-            else if(columnType == SQLITE_TEXT) //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
-            {
-                col->dataType = BaseLib::Database::DataColumn::DataType::Enum::TEXT;
-                col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
-            }
-            if(i == 0) dataRows->insert(std::pair<uint32_t, std::map<uint32_t, std::shared_ptr<BaseLib::Database::DataColumn>>>(row, std::map<uint32_t, std::shared_ptr<BaseLib::Database::DataColumn>>()));
-            dataRows->at(row)[i] = col;
-        }
-        row++;
-    }
-    if(result != SQLITE_DONE)
-    {
-        throw BaseLib::Exception("Can't execute command (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
-    }
-}
-
-void SQLite3::bindData(sqlite3_stmt* statement, BaseLib::Database::DataRow& dataToEscape)
-{
-    //There is no try/catch block on purpose!
-    int32_t result = 0;
-    int32_t index = 1;
-    std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<BaseLib::Database::DataColumn> col)
-    {
-        switch(col->dataType)
-        {
-            case BaseLib::Database::DataColumn::DataType::Enum::NODATA:
-                result = sqlite3_bind_null(statement, index);
-                break;
-            case BaseLib::Database::DataColumn::DataType::Enum::INTEGER:
-                result = sqlite3_bind_int64(statement, index, col->intValue);
-                break;
-            case BaseLib::Database::DataColumn::DataType::Enum::FLOAT:
-                result = sqlite3_bind_double(statement, index, col->floatValue);
-                break;
-            case BaseLib::Database::DataColumn::DataType::Enum::BLOB:
-                if(col->binaryValue->empty()) result = sqlite3_bind_null(statement, index);
-                else result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
-                break;
-            case BaseLib::Database::DataColumn::DataType::Enum::TEXT:
-                result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);
-                break;
-        }
-        if(result)
-        {
-            throw(BaseLib::Exception(std::string(sqlite3_errmsg(_database))));
-        }
-        index++;
-    });
-}
-
-uint32_t SQLite3::executeWriteCommand(std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> command)
-{
-    try
-    {
-        if(!command) return 0;
-        std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
-        if(!_database)
-        {
-            GD::out.printError("Error: Could not write to database. No database handle.");
-            return 0;
-        }
-        sqlite3_stmt* statement = nullptr;
-        int32_t result = sqlite3_prepare_v2(_database, command->first.c_str(), -1, &statement, NULL);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database)));
-            return 0;
-        }
-        if(!command->second.empty()) bindData(statement, command->second);
-        result = sqlite3_step(statement);
-        if(result != SQLITE_DONE)
-        {
-            GD::out.printError("Can't execute command: " + std::string(sqlite3_errmsg(_database)));
-            return 0;
-        }
+    catch (const std::exception &ex) {
+      if (command.compare(0, 7, "RELEASE") == 0) {
+        GD::out.printInfo(std::string("Info: ") + ex.what());
         sqlite3_clear_bindings(statement);
-        result = sqlite3_finalize(statement);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command->first + "\": " + std::string(sqlite3_errmsg(_database)));
-            return 0;
-        }
-        uint32_t rowID = sqlite3_last_insert_rowid(_database);
-        return rowID;
+        return dataRows;
+      } else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    sqlite3_clear_bindings(statement);
+    result = sqlite3_finalize(statement);
+    if (result) {
+      GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
     }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
-}
-
-uint32_t SQLite3::executeWriteCommand(std::string command, BaseLib::Database::DataRow& dataToEscape)
-{
-    try
-    {
-        std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
-        if(!_database)
-        {
-            GD::out.printError("Error: Could not write to database. No database handle.");
-            return 0;
-        }
-        sqlite3_stmt* statement = nullptr;
-        int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-            return 0;
-        }
-        if(!dataToEscape.empty()) bindData(statement, dataToEscape);
-        result = sqlite3_step(statement);
-        if(result != SQLITE_DONE)
-        {
-            GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-            return 0;
-        }
-        sqlite3_clear_bindings(statement);
-        result = sqlite3_finalize(statement);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-            return 0;
-        }
-        uint32_t rowID = sqlite3_last_insert_rowid(_database);
-        return rowID;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::string command, BaseLib::Database::DataRow& dataToEscape)
-{
-    std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
-    try
-    {
-        std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
-        if(!_database)
-        {
-            GD::out.printError("Error: Could not write to database. No database handle.");
-            return dataRows;
-        }
-        sqlite3_stmt* statement = nullptr;
-        int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-            return dataRows;
-        }
-        bindData(statement, dataToEscape);
-        try
-        {
-            getDataRows(statement, dataRows);
-        }
-        catch(const std::exception& ex)
-        {
-            if(command.compare(0, 7, "RELEASE") == 0)
-            {
-                GD::out.printInfo(std::string("Info: ") + ex.what());
-                sqlite3_clear_bindings(statement);
-                return dataRows;
-            }
-            else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        sqlite3_clear_bindings(statement);
-        result = sqlite3_finalize(statement);
-        if(result) GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return dataRows;
-}
-
-std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(std::string command)
-{
-    std::shared_ptr<BaseLib::Database::DataTable> dataRows(new BaseLib::Database::DataTable());
-    try
-    {
-        std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
-        if(!_database)
-        {
-            GD::out.printError("Error: Could not write to database. No database handle.");
-            return dataRows;
-        }
-        sqlite3_stmt* statement = nullptr;
-        int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
-            return dataRows;
-        }
-        try
-        {
-            getDataRows(statement, dataRows);
-        }
-        catch(const std::exception& ex)
-        {
-            if(command.compare(0, 7, "RELEASE") == 0)
-            {
-                GD::out.printInfo(std::string("Info: ") + ex.what());
-                sqlite3_clear_bindings(statement);
-                return dataRows;
-            }
-            else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        sqlite3_clear_bindings(statement);
-        result = sqlite3_finalize(statement);
-        if(result)
-        {
-            GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
-        }
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return dataRows;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return dataRows;
 }
 
 /*

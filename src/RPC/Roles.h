@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,45 +33,39 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
-enum class RoleAggregationType
-{
-    countTrue = 1,
-    countDistinct = 2,
-    countMinimum = 3,
-    countMaximum = 4,
-    countBelowThreshold = 5,
-    countAboveThreshold = 6
+enum class RoleAggregationType {
+  countTrue = 1,
+  countDistinct = 2,
+  countMinimum = 3,
+  countMaximum = 4,
+  countBelowThreshold = 5,
+  countAboveThreshold = 6
 };
 
-struct RoleVariableInfo
-{
-    RoleVariableInfo() = default;
-    RoleVariableInfo(const std::string& name, bool invert) : name(name), invert(invert) {}
+struct RoleVariableInfo {
+  RoleVariableInfo() = default;
+  RoleVariableInfo(const std::string &name) : name(name) {}
 
-    std::string name;
-    bool invert = false;
+  std::string name;
 };
 
-class Roles
-{
-public:
-    static BaseLib::PVariable aggregate(const BaseLib::PRpcClientInfo& clientInfo, RoleAggregationType aggregationType, const BaseLib::PVariable& aggregationParameters, const BaseLib::PArray& roles, uint64_t roomId);
+class Roles {
+ public:
+  static BaseLib::PVariable aggregate(const BaseLib::PRpcClientInfo &clientInfo, RoleAggregationType aggregationType, const BaseLib::PVariable &aggregationParameters, const BaseLib::PArray &roles, uint64_t roomId, bool visualizedVariablesOnly);
 
-private:
-    Roles() = default;
+ private:
+  Roles() = default;
 
-    static BaseLib::PVariable countTrue(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables);
-    static BaseLib::PVariable countDistinct(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables);
-    static BaseLib::PVariable countMinimum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables);
-    static BaseLib::PVariable countMaximum(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables);
-    static BaseLib::PVariable countBelowThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables, const BaseLib::PVariable& aggregationParameters);
-    static BaseLib::PVariable countAboveThreshold(const BaseLib::PRpcClientInfo& clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>>& variables, const BaseLib::PVariable& aggregationParameters);
+  static BaseLib::PVariable countTrue(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countDistinct(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countMinimum(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countMaximum(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables);
+  static BaseLib::PVariable countBelowThreshold(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables, const BaseLib::PVariable &aggregationParameters);
+  static BaseLib::PVariable countAboveThreshold(const BaseLib::PRpcClientInfo &clientInfo, const std::unordered_map<uint64_t, std::unordered_map<int32_t, std::list<RoleVariableInfo>>> &variables, const BaseLib::PVariable &aggregationParameters);
 };
 
 }

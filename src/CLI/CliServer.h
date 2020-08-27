@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -48,38 +48,36 @@
 #include <iostream>
 #include <string>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class CliServer
-{
-public:
-	CliServer(int32_t clientId);
+class CliServer {
+ public:
+  CliServer(int32_t clientId);
 
-	virtual ~CliServer();
+  virtual ~CliServer();
 
-	BaseLib::PVariable generalCommand(std::string& command);
+  BaseLib::PVariable generalCommand(std::string &command);
 
-	std::string familyCommand(int32_t familyId, std::string& command);
+  std::string familyCommand(int32_t familyId, std::string &command);
 
-	std::string peerCommand(uint64_t peerId, std::string& command);
+  std::string peerCommand(uint64_t peerId, std::string &command);
 
-private:
-	int32_t _clientId = 0;
-	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	bool _scriptFinished = false;
-	std::mutex _waitMutex;
-	std::condition_variable _waitConditionVariable;
+ private:
+  int32_t _clientId = 0;
+  std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+  bool _scriptFinished = false;
+  std::mutex _waitMutex;
+  std::condition_variable _waitConditionVariable;
 
 #ifndef NO_SCRIPTENGINE
-	void scriptFinished(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, int32_t exitCode);
+  void scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode);
 
-	void scriptOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& output, bool error);
+  void scriptOutput(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, std::string &output, bool error);
 #endif
 
-	std::string userCommand(std::string& command);
+  std::string userCommand(std::string &command);
 
-	std::string moduleCommand(std::string& command);
+  std::string moduleCommand(std::string &command);
 };
 
 }

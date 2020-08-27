@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,23 +33,19 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-class NodeBlueResponseServer
-{
-public:
-	std::atomic_bool finished;
-	int32_t packetId = 0;
-	BaseLib::PVariable response;
+class NodeBlueResponseServer {
+ public:
+  std::atomic_bool finished;
+  int32_t packetId = 0;
+  BaseLib::PVariable response;
 
-	NodeBlueResponseServer()
-	{
-		finished = false;
-	}
+  NodeBlueResponseServer() {
+    finished = false;
+  }
 };
 
 typedef std::shared_ptr<NodeBlueResponseServer> PNodeBlueResponseServer;

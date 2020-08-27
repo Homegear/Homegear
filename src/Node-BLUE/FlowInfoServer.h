@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * libhomegear-base is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License as
@@ -33,34 +33,31 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-class FlowInfoServer
-{
-public:
-	int32_t id = 0;
-	std::string nodeBlueId;
-	uint32_t maxThreadCount = 0;
+class FlowInfoServer {
+ public:
+  int32_t id = 0;
+  std::string nodeBlueId;
+  uint32_t maxThreadCount = 0;
 
-	// {{{ Input parameters
-	BaseLib::PVariable flow;
-	// }}}
+  // {{{ Input parameters
+  BaseLib::PVariable flow;
+  // }}}
 
-	// {{{ Output parameters
-	bool started = false;
-	bool finished = false;
-	int32_t exitCode = -1;
-	// }}}
+  // {{{ Output parameters
+  bool started = false;
+  bool finished = false;
+  int32_t exitCode = -1;
+  // }}}
 
-	FlowInfoServer() {}
+  FlowInfoServer() {}
 
-	virtual ~FlowInfoServer() {}
+  virtual ~FlowInfoServer() {}
 
-protected:
+ protected:
 };
 
 typedef std::shared_ptr<FlowInfoServer> PFlowInfoServer;

@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -39,109 +39,110 @@
 #include <map>
 #include <cstring>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class MqttSettings
-{
-public:
-    MqttSettings();
+class MqttSettings {
+ public:
+  MqttSettings();
 
-    virtual ~MqttSettings() {}
+  virtual ~MqttSettings() {}
 
-    void load(std::string filename);
+  void load(std::string filename);
 
-    bool enabled() { return _enabled; }
+  bool enabled() { return _enabled; }
 
-    int32_t processingThreadCount() { return _processingThreadCount; }
+  int32_t processingThreadCount() { return _processingThreadCount; }
 
-    std::string brokerHostname() { return _brokerHostname; }
+  std::string brokerHostname() { return _brokerHostname; }
 
-    std::string brokerPort() { return _brokerPort; }
+  std::string brokerPort() { return _brokerPort; }
 
-    std::string clientName() { return _clientName; }
+  std::string clientName() { return _clientName; }
 
-    std::string prefix() { return _prefix; }
+  std::string prefix() { return _prefix; }
 
-    std::string homegearId() { return _homegearId; }
+  std::string homegearId() { return _homegearId; }
 
-    std::string username() { return _username; }
+  std::string username() { return _username; }
 
-    std::string password() { return _password; }
+  std::string password() { return _password; }
 
-    bool retain() { return _retain; }
+  uint32_t qos() { return _qos; }
 
-    bool plainTopic() { return _plainTopic; }
+  bool retain() { return _retain; }
 
-    bool jsonTopic() { return _jsonTopic; }
+  bool plainTopic() { return _plainTopic; }
 
-    bool jsonobjTopic() { return _jsonobjTopic; }
+  bool jsonTopic() { return _jsonTopic; }
 
-    bool enableSSL() { return _enableSSL; }
+  bool jsonobjTopic() { return _jsonobjTopic; }
 
-    std::string caFile() { return _caFile; }
+  bool enableSSL() { return _enableSSL; }
 
-    bool verifyCertificate() { return _verifyCertificate; }
+  std::string caFile() { return _caFile; }
 
-    std::string certPath() { return _certPath; }
+  bool verifyCertificate() { return _verifyCertificate; }
 
-    std::string keyPath() { return _keyPath; }
+  std::string certPath() { return _certPath; }
 
-    //{{{ BMX
-    bool bmxTopic() { return _bmxTopic; }
+  std::string keyPath() { return _keyPath; }
 
-    std::string bmxPrefix() { return _bmxPrefix; }
+  //{{{ BMX
+  bool bmxTopic() { return _bmxTopic; }
 
-    std::string bmxHostname() { return _bmxHostname; }
+  std::string bmxPrefix() { return _bmxPrefix; }
 
-    std::string bmxPort() { return _bmxPort; }
+  std::string bmxHostname() { return _bmxHostname; }
 
-    std::string bmxOrgId() { return _bmxOrgId; }
+  std::string bmxPort() { return _bmxPort; }
 
-    std::string bmxDevTypeId() { return _bmxDevTypeId; }
+  std::string bmxOrgId() { return _bmxOrgId; }
 
-    std::string bmxGwTypeId() { return _bmxGwTypeId; }
+  std::string bmxDevTypeId() { return _bmxDevTypeId; }
 
-    std::string bmxDeviceId() { return _bmxDeviceId; }
+  std::string bmxGwTypeId() { return _bmxGwTypeId; }
 
-    std::string bmxUsername() { return _bmxUsername; }
+  std::string bmxDeviceId() { return _bmxDeviceId; }
 
-    std::string bmxToken() { return _bmxToken; }
-    //}}}
-private:
-    bool _enabled = false;
-    int32_t _processingThreadCount = 5;
-    std::string _brokerHostname;
-    std::string _brokerPort;
-    std::string _clientName;
-    std::string _prefix;
-    std::string _homegearId;
-    std::string _username;
-    std::string _password;
-    bool _retain = true;
-    bool _plainTopic = true;
-    bool _jsonTopic = true;
-    bool _jsonobjTopic = true;
-    bool _enableSSL = false;
-    std::string _caFile;
-    bool _verifyCertificate = true;
-    std::string _certPath;
-    std::string _keyPath;
+  std::string bmxUsername() { return _bmxUsername; }
 
-    //{{{ BMX
-    bool _bmxTopic = false;
-    std::string _bmxPrefix;
-    std::string _bmxHostname;
-    std::string _bmxPort;
-    std::string _bmxOrgId;
-    std::string _bmxDevTypeId;
-    std::string _bmxGwTypeId;
-    std::string _bmxDeviceId;
-    std::string _bmxUsername;
-    std::string _bmxToken;
-    //}}}
+  std::string bmxToken() { return _bmxToken; }
+  //}}}
+ private:
+  bool _enabled = false;
+  int32_t _processingThreadCount = 5;
+  std::string _brokerHostname;
+  std::string _brokerPort;
+  std::string _clientName;
+  std::string _prefix;
+  std::string _homegearId;
+  std::string _username;
+  std::string _password;
+  uint32_t _qos;
+  bool _retain = true;
+  bool _plainTopic = true;
+  bool _jsonTopic = true;
+  bool _jsonobjTopic = true;
+  bool _enableSSL = false;
+  std::string _caFile;
+  bool _verifyCertificate = true;
+  std::string _certPath;
+  std::string _keyPath;
 
-    void reset();
+  //{{{ BMX
+  bool _bmxTopic = false;
+  std::string _bmxPrefix;
+  std::string _bmxHostname;
+  std::string _bmxPort;
+  std::string _bmxOrgId;
+  std::string _bmxDevTypeId;
+  std::string _bmxGwTypeId;
+  std::string _bmxDeviceId;
+  std::string _bmxUsername;
+  std::string _bmxToken;
+  //}}}
+
+  void reset();
 };
 
 }

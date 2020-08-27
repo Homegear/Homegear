@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -48,9 +48,9 @@
 
 void php_device_startup();
 
-bool php_init_device(PScriptInfo scriptInfo, zend_class_entry* homegearDeviceClassEntry, zval* homegearDeviceObject);
+bool php_init_device(PScriptInfo scriptInfo, zend_class_entry *homegearDeviceClassEntry, zval *homegearDeviceObject);
 
-BaseLib::PVariable php_device_object_invoke_local(PScriptInfo& scriptInfo, zval* homegearDeviceObject, std::string& methodName, BaseLib::PArray& parameters);
+BaseLib::PVariable php_device_object_invoke_local(PScriptInfo &scriptInfo, zval *homegearDeviceObject, std::string &methodName, BaseLib::PArray &parameters);
 
 #endif
 #endif

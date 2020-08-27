@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -37,32 +37,28 @@
 
 static pthread_key_t pthread_key;
 
-pthread_key_t* php_homegear_get_pthread_key()
-{
-    return &pthread_key;
+pthread_key_t *php_homegear_get_pthread_key() {
+  return &pthread_key;
 }
 
-zend_homegear_globals* php_homegear_get_globals()
-{
-    zend_homegear_globals* data = (zend_homegear_globals*)pthread_getspecific(pthread_key);
-    if(!data)
-    {
-        data = new zend_homegear_globals();
-        if(!data || pthread_setspecific(pthread_key, data) != 0)
-        {
-            Homegear::GD::out.printCritical("Critical: Could not set PHP globals data - out of memory?.");
-            if(data) delete data;
-            data = nullptr;
-            return data;
-        }
-        data->id = 0;
-        data->webRequest = false;
-        data->commandLine = false;
-        data->cookiesParsed = false;
-        data->peerId = 0;
-        data->logLevel = -1;
+zend_homegear_globals *php_homegear_get_globals() {
+  zend_homegear_globals *data = (zend_homegear_globals *)pthread_getspecific(pthread_key);
+  if (!data) {
+    data = new zend_homegear_globals();
+    if (!data || pthread_setspecific(pthread_key, data) != 0) {
+      Homegear::GD::out.printCritical("Critical: Could not set PHP globals data - out of memory?.");
+      if (data) delete data;
+      data = nullptr;
+      return data;
     }
-    return data;
+    data->id = 0;
+    data->webRequest = false;
+    data->commandLine = false;
+    data->cookiesParsed = false;
+    data->peerId = 0;
+    data->logLevel = -1;
+  }
+  return data;
 }
 
 #endif

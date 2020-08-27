@@ -1,4 +1,4 @@
-/* Copyright 2013-2019 Homegear GmbH
+/* Copyright 2013-2020 Homegear GmbH
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -33,68 +33,68 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class SystemVariableController
-{
-private:
-    std::mutex _systemVariableMutex;
-    std::unordered_map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
-    std::set<std::string> _specialSystemVariables;
+class SystemVariableController {
+ private:
+  std::mutex _systemVariableMutex;
+  std::unordered_map<std::string, BaseLib::Database::PSystemVariable> _systemVariables;
+  std::set<std::string> _specialSystemVariables;
 
-    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-    std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-public:
-    SystemVariableController();
+  std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+  std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-    BaseLib::PVariable erase(std::string& variableId);
+  BaseLib::Role parseRoleString(const std::string &roleString);
+ public:
+  SystemVariableController();
 
-    BaseLib::PVariable getCategories(std::string& variableId);
+  BaseLib::PVariable erase(std::string &variableId);
 
-    std::set<uint64_t> getCategoriesInternal(std::string& variableId);
+  BaseLib::PVariable getCategories(std::string &variableId);
 
-    BaseLib::PVariable getRoles(std::string& variableId);
+  std::set<uint64_t> getCategoriesInternal(std::string &variableId);
 
-    BaseLib::PVariable getRolesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
+  BaseLib::PVariable getRoles(std::string &variableId);
 
-    std::unordered_map<uint64_t, BaseLib::Role> getRolesInternal(std::string& variableId);
+  BaseLib::PVariable getRolesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
 
-    BaseLib::PVariable getRoom(std::string& variableId);
+  std::unordered_map<uint64_t, BaseLib::Role> getRolesInternal(std::string &variableId);
 
-    BaseLib::PVariable getValue(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, bool checkAcls);
+  BaseLib::PVariable getRoom(std::string &variableId);
 
-    BaseLib::Database::PSystemVariable getInternal(const std::string& variableId);
+  BaseLib::PVariable getValue(BaseLib::PRpcClientInfo clientInfo, std::string &variableId, bool checkAcls);
 
-    BaseLib::PVariable getVariableDescription(BaseLib::PRpcClientInfo clientInfo, std::string name, const std::unordered_set<std::string>& fields, bool checkAcls);
+  BaseLib::Database::PSystemVariable getInternal(const std::string &variableId);
 
-    BaseLib::PVariable getVariablesInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, bool checkAcls);
+  BaseLib::PVariable getVariableDescription(BaseLib::PRpcClientInfo clientInfo, std::string name, const std::unordered_set<std::string> &fields, bool checkAcls);
 
-    BaseLib::PVariable getVariablesInRole(BaseLib::PRpcClientInfo clientInfo, uint64_t roleId, bool checkAcls);
+  BaseLib::PVariable getVariablesInCategory(BaseLib::PRpcClientInfo clientInfo, uint64_t categoryId, bool checkAcls);
 
-    BaseLib::PVariable getVariablesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
+  BaseLib::PVariable getVariablesInRole(BaseLib::PRpcClientInfo clientInfo, uint64_t roleId, bool checkAcls);
 
-    uint64_t getRoomInternal(std::string& variableId);
+  BaseLib::PVariable getVariablesInRoom(BaseLib::PRpcClientInfo clientInfo, uint64_t roomId, bool checkAcls);
 
-    BaseLib::PVariable getAll(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesRolesFlags, bool checkAcls);
+  uint64_t getRoomInternal(std::string &variableId);
 
-    bool hasCategory(std::string& variableId, uint64_t categoryId);
+  BaseLib::PVariable getAll(BaseLib::PRpcClientInfo clientInfo, bool returnRoomsCategoriesRolesFlags, bool checkAcls);
 
-    bool hasRole(std::string& variableId, uint64_t roleId);
+  bool hasCategory(std::string &variableId, uint64_t categoryId);
 
-    void removeCategory(uint64_t categoryId);
+  bool hasRole(std::string &variableId, uint64_t roleId);
 
-    void removeRole(uint64_t categoryId);
+  void removeCategory(uint64_t categoryId);
 
-    void removeRoom(uint64_t roomId);
+  void removeRole(uint64_t categoryId);
 
-    BaseLib::PVariable setCategories(std::string& variableId, std::set<uint64_t>& categories);
+  void removeRoom(uint64_t roomId);
 
-    BaseLib::PVariable setRoles(std::string& variableId, std::unordered_map<uint64_t, BaseLib::Role>& roles);
+  BaseLib::PVariable setCategories(std::string &variableId, std::set<uint64_t> &categories);
 
-    BaseLib::PVariable setRoom(std::string& variableId, uint64_t room);
+  BaseLib::PVariable setRoles(std::string &variableId, std::unordered_map<uint64_t, BaseLib::Role> &roles);
 
-    BaseLib::PVariable setValue(BaseLib::PRpcClientInfo clientInfo, std::string& variableId, BaseLib::PVariable& value, int32_t flags, bool checkAcls);
+  BaseLib::PVariable setRoom(std::string &variableId, uint64_t room);
+
+  BaseLib::PVariable setValue(BaseLib::PRpcClientInfo clientInfo, std::string &variableId, BaseLib::PVariable &value, int32_t flags, bool checkAcls);
 };
 
 }
