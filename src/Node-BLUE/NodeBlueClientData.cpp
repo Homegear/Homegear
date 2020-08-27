@@ -31,29 +31,23 @@
 #include "NodeBlueClientData.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-NodeBlueClientData::NodeBlueClientData()
-{
-	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
+NodeBlueClientData::NodeBlueClientData() {
+  fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
-NodeBlueClientData::NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
-{
-	fileDescriptor = clientFileDescriptor;
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
+NodeBlueClientData::NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) {
+  fileDescriptor = clientFileDescriptor;
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
-
-NodeBlueClientData::~NodeBlueClientData()
-{
+NodeBlueClientData::~NodeBlueClientData() {
 }
 
 }

@@ -35,23 +35,19 @@
 
 #include <atomic>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-class NodeBlueResponseClient
-{
-public:
-	std::atomic_bool finished;
-	int32_t packetId = 0;
-	Flows::PVariable response;
+class NodeBlueResponseClient {
+ public:
+  std::atomic_bool finished;
+  int32_t packetId = 0;
+  Flows::PVariable response;
 
-	NodeBlueResponseClient()
-	{
-		finished = false;
-	}
+  NodeBlueResponseClient() {
+    finished = false;
+  }
 };
 
 typedef std::shared_ptr<NodeBlueResponseClient> PNodeBlueResponseClient;

@@ -33,27 +33,25 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class FamilyServer
-{
-public:
-    FamilyServer();
+class FamilyServer {
+ public:
+  FamilyServer();
 
-    virtual ~FamilyServer() = default;
+  virtual ~FamilyServer() = default;
 
-    bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName);
+  bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &methodName);
 
-    BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PArray& parameters);
-private:
-    BaseLib::Output _out;
+  BaseLib::PVariable callRpcMethod(BaseLib::PRpcClientInfo clientInfo, const std::string &methodName, BaseLib::PArray &parameters);
+ private:
+  BaseLib::Output _out;
 
-    std::unordered_map<std::string, std::function<BaseLib::PVariable(BaseLib::PRpcClientInfo& clientInfo, BaseLib::PArray& parameters)>> _rpcMethods;
+  std::unordered_map<std::string, std::function<BaseLib::PVariable(BaseLib::PRpcClientInfo &clientInfo, BaseLib::PArray &parameters)>> _rpcMethods;
 
-    // {{{ RPC methods
-    BaseLib::PVariable rpcTest(BaseLib::PRpcClientInfo& clientInfo, BaseLib::PArray& parameters);
-    // }}}
+  // {{{ RPC methods
+  BaseLib::PVariable rpcTest(BaseLib::PRpcClientInfo &clientInfo, BaseLib::PArray &parameters);
+  // }}}
 };
 
 }

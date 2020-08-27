@@ -31,137 +31,142 @@
 #include "VariableProfileRpcMethods.h"
 #include "../../GD/GD.h"
 
-namespace Homegear
-{
-namespace RpcMethods
-{
+namespace Homegear {
+namespace RpcMethods {
 
-BaseLib::PVariable RpcActivateVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                         std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64}),
-                                                                                                                 }));
-        if(error != ParameterError::Enum::noError) return getError(error);
+BaseLib::PVariable RpcActivateVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64}),
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("executeVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("executeVariableProfile"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->activateVariableProfile(clientInfo, (uint64_t)parameters->at(0)->integerValue64);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return GD::variableProfileManager->activateVariableProfile(clientInfo, (uint64_t)parameters->at(0)->integerValue64);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RpcAddVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                 //Name translations; profile
-                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct}),
-         }));
-        if(error != ParameterError::Enum::noError) return getError(error);
+BaseLib::PVariable RpcAddVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 //Name translations; profile
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tStruct,
+                                                                                                                      BaseLib::VariableType::tStruct}),
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("addVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("addVariableProfile"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->addVariableProfile(clientInfo, parameters->at(0), parameters->at(1));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return GD::variableProfileManager->addVariableProfile(clientInfo, parameters->at(0), parameters->at(1));
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RpcDeleteVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                //Name translations; profile
-                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64}),
-        }));
-        if(error != ParameterError::Enum::noError) return getError(error);
+BaseLib::PVariable RpcDeleteVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 //Name translations; profile
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64}),
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("deleteVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("deleteVariableProfile"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->deleteVariableProfile((uint64_t)parameters->at(0)->integerValue64);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return GD::variableProfileManager->deleteVariableProfile((uint64_t)parameters->at(0)->integerValue64);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RpcGetAllVariableProfiles::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        if(!parameters->empty())
-        {
-            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                    std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString})
-            }));
-            if(error != ParameterError::Enum::noError) return getError(error);
-        }
-
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getAllVariableProfiles")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
-        return GD::variableProfileManager->getAllVariableProfiles(languageCode);
+BaseLib::PVariable RpcGetAllVariableProfiles::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!parameters->empty()) {
+      ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                   std::vector<
+                                                                                                                       BaseLib::VariableType>(
+                                                                                                                       {BaseLib::VariableType::tString})
+                                                                                                               }));
+      if (error != ParameterError::Enum::noError) return getError(error);
     }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getAllVariableProfiles"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
+    return GD::variableProfileManager->getAllVariableProfiles(languageCode);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RpcGetVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64}),
-                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString}),
-        }));
-        if(error != ParameterError::Enum::noError) return getError(error);
+BaseLib::PVariable RpcGetVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64}),
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64,
+                                                                                                                      BaseLib::VariableType::tString}),
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getVariableProfile"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        std::string languageCode = parameters->size() < 2 ? "" : parameters->at(1)->stringValue;
-        return GD::variableProfileManager->getVariableProfile((uint64_t)parameters->at(0)->integerValue64, languageCode);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    std::string languageCode = parameters->size() < 2 ? "" : parameters->at(1)->stringValue;
+    return GD::variableProfileManager->getVariableProfile((uint64_t)parameters->at(0)->integerValue64, languageCode);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RpcUpdateVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters)
-{
-    try
-    {
-        ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct}),
-        }));
-        if(error != ParameterError::Enum::noError) return getError(error);
+BaseLib::PVariable RpcUpdateVariableProfile::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<
+                                                                                                                     BaseLib::VariableType>(
+                                                                                                                     {BaseLib::VariableType::tInteger64,
+                                                                                                                      BaseLib::VariableType::tStruct,
+                                                                                                                      BaseLib::VariableType::tStruct}),
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
 
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("updateVariableProfile")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("updateVariableProfile"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        return GD::variableProfileManager->updateVariableProfile((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return GD::variableProfileManager->updateVariableProfile((uint64_t)parameters->at(0)->integerValue64,
+                                                             parameters->at(1),
+                                                             parameters->at(2));
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 }

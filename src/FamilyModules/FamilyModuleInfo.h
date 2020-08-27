@@ -33,13 +33,12 @@
 
 #include <string>
 
-struct FamilyModuleInfo
-{
-    std::string filename;
-    std::string baselibVersion;
-    int32_t familyId;
-    std::string familyName;
-    bool loaded;
+struct FamilyModuleInfo {
+  std::string filename;
+  std::string baselibVersion;
+  int32_t familyId;
+  std::string familyName;
+  bool loaded;
 };
 
 #endif

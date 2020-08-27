@@ -43,103 +43,98 @@
 
 #include <dlfcn.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class NodeLoader
-{
-public:
-	NodeLoader(const std::string& soPath);
+class NodeLoader {
+ public:
+  NodeLoader(const std::string &soPath);
 
-	virtual ~NodeLoader();
+  virtual ~NodeLoader();
 
-	Flows::PINode createNode(const std::atomic_bool* nodeEventsEnabled, const std::string& nodeNamespace, const std::string& type, const std::string& nodePath);
+  Flows::PINode createNode(const std::atomic_bool *nodeEventsEnabled, const std::string &nodeNamespace, const std::string &type, const std::string &nodePath);
 
-private:
-	std::string _soPath;
-	void* _handle = nullptr;
-	std::unique_ptr<Flows::NodeFactory> _factory;
+ private:
+  std::string _soPath;
+  void *_handle = nullptr;
+  std::unique_ptr<Flows::NodeFactory> _factory;
 
-	NodeLoader(const NodeLoader&) = delete;
+  NodeLoader(const NodeLoader &) = delete;
 
-	NodeLoader& operator=(const NodeLoader&) = delete;
+  NodeLoader &operator=(const NodeLoader &) = delete;
 };
 
-class NodeManager
-{
-public:
-	struct NodeInfo
-	{
-		std::string filename;
-		std::string fullPath;
-		std::string nodeId;
-		std::string nodeName;
-		std::string readableName;
-		std::string version;
-		bool coreNode = false;
-		int32_t maxThreadCount = 1;
-		std::string frontendListEntry;
-		std::string frontendCode;
-	};
-	typedef std::shared_ptr<NodeInfo> PNodeInfo;
+class NodeManager {
+ public:
+  struct NodeInfo {
+    std::string filename;
+    std::string fullPath;
+    std::string nodeId;
+    std::string nodeName;
+    std::string readableName;
+    std::string version;
+    bool coreNode = false;
+    int32_t maxThreadCount = 1;
+    std::string frontendListEntry;
+    std::string frontendCode;
+  };
+  typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
-	struct NodeUsageInfo
-	{
-		std::atomic_bool locked;
-		std::atomic_int referenceCounter;
-	};
-	typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
+  struct NodeUsageInfo {
+    std::atomic_bool locked;
+    std::atomic_int referenceCounter;
+  };
+  typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
 
-	explicit NodeManager(const std::atomic_bool* nodeEventsEnabled);
+  explicit NodeManager(const std::atomic_bool *nodeEventsEnabled);
 
-	virtual ~NodeManager();
+  virtual ~NodeManager();
 
-	/**
-	 * Returns a vector of type NodeInfo with information about all nodes.
-	 * @return Returns a vector of type NodeInfo.
-	 */
-	static std::vector<PNodeInfo> getNodeInfo();
+  /**
+   * Returns a vector of type NodeInfo with information about all nodes.
+   * @return Returns a vector of type NodeInfo.
+   */
+  static std::vector<PNodeInfo> getNodeInfo();
 
-	static std::string getNodeLocales(std::string& language);
+  static std::string getNodeLocales(std::string &language);
 
-	/**
-	 * Loads a node. The node needs to be in Homegear's node path.
-	 * @param name The name of the node (e. g. variable).
-	 * @param id The id of the node (e. g. 142947a.387ef34ad)
-	 * @param[out] node If loading was successful, this variable contains the loaded node.
-	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
-	 */
-	int32_t loadNode(const std::string& nodeNamespace, const std::string& type, const std::string& id, Flows::PINode& node);
+  /**
+   * Loads a node. The node needs to be in Homegear's node path.
+   * @param name The name of the node (e. g. variable).
+   * @param id The id of the node (e. g. 142947a.387ef34ad)
+   * @param[out] node If loading was successful, this variable contains the loaded node.
+   * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
+   */
+  int32_t loadNode(const std::string &nodeNamespace, const std::string &type, const std::string &id, Flows::PINode &node);
 
-	/**
-	 * Unloads a previously loaded node.
-	 * @param id The id of the node (e. g. 142947a.387ef34ad).
-	 * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node not loaded, -1: System error, -2: Node does not exists
-	 */
-	int32_t unloadNode(const std::string& id);
+  /**
+   * Unloads a previously loaded node.
+   * @param id The id of the node (e. g. 142947a.387ef34ad).
+   * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node not loaded, -1: System error, -2: Node does not exists
+   */
+  int32_t unloadNode(const std::string &id);
 
-	/*
-	 * Returns the node specified by id.
-	 */
-	Flows::PINode getNode(const std::string& id);
+  /*
+   * Returns the node specified by id.
+   */
+  Flows::PINode getNode(const std::string &id);
 
-private:
-	std::mutex _nodeLoadersMutex;
-    std::unique_ptr<NodeLoader> _pythonNodeLoader;
-	std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
+ private:
+  std::mutex _nodeLoadersMutex;
+  std::unique_ptr<NodeLoader> _pythonNodeLoader;
+  std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
 
-	typedef std::string NodeId; //Node ID from Homegear
-	typedef std::string NodeName; //Node name from Homegear
+  typedef std::string NodeId; //Node ID from Homegear
+  typedef std::string NodeName; //Node name from Homegear
 
-	std::mutex _nodesMutex;
-	std::unordered_map<NodeId, Flows::PINode> _nodes;
-	std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
+  std::mutex _nodesMutex;
+  std::unordered_map<NodeId, Flows::PINode> _nodes;
+  std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
 
-	const std::atomic_bool* _nodeEventsEnabled;
+  const std::atomic_bool *_nodeEventsEnabled;
 
-	NodeManager(const NodeManager&) = delete;
+  NodeManager(const NodeManager &) = delete;
 
-	NodeManager& operator=(const NodeManager&) = delete;
+  NodeManager &operator=(const NodeManager &) = delete;
 };
 
 }

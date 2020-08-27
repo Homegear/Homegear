@@ -33,7 +33,18 @@ jQuery.propHooks.disabled = {
         }
     }
 };
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Replaced message "status" with "statusTop", "statusBottom" and "hightlightLink"
+ * - Get events and fixed inputs on startup
+ * - Added function homegearReady()
+ * - Changed some menu entries
+ * - Load main content after Node-BLUE is connected to Homegear
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -521,8 +532,6 @@ var RED = (function() {
                 RED.notify(RED._("palette.event.nodeUpgraded", {module:msg.module,version:msg.version}),"success");
                 RED.nodes.registry.setModulePendingUpdated(msg.module,msg.version);
             }
-            // Refresh flow library to ensure any examples are updated
-            RED.library.loadFlowLibrary();
         });
         RED.comms.subscribe("event-log/#", function(topic,payload) {
             var id = topic.substring(9);
@@ -538,7 +547,7 @@ var RED = (function() {
             '<img width="50px" src="red/images/node-red-icon.svg" />'+
             '</div>';
 
-            RED.sidebar.info.set(aboutHeader+marked(data));
+            RED.sidebar.info.set(aboutHeader+RED.utils.renderMarkdown(data));
             RED.sidebar.info.show();
         });
     }
@@ -585,7 +594,7 @@ var RED = (function() {
             {id:"menu-item-workspace-delete",label:RED._("menu.label.delete"),onselect:"core:remove-flow"}
         ]});
         menuOptions.push({id:"menu-item-subflow",label:RED._("menu.label.subflows"), options: [
-            {id:"menu-item-subflow-create",label:RED._("menu.label.createSubflow"),onselect:"core:create-subflow"}/*,
+            {id:"menu-item-subflow-create",label:RED._("menu.label.createSubflow"),onselect:"core:create-subflow"}/*
             {id:"menu-item-subflow-convert",label:RED._("menu.label.selectionToSubflow"),disabled:true,onselect:"core:convert-to-subflow"},*/
         ]});
         menuOptions.push(null);
@@ -781,7 +790,12 @@ var RED = (function() {
          emit: emit
      }
  })();
-;/* This file was modified by Homegear GmbH */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Get language from index.php, not from localStorage.
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -805,9 +819,9 @@ RED.i18n = (function() {
 
     return {
         init: function(options, done) {
-            apiRootUrl = options.apiRootUrl||"";  
+            apiRootUrl = options.apiRootUrl||"";
             var opts = {
-                lng: locale ? locale[0] : null,
+                lng: locale ? locale[0] : null, //Get locale from locale array defined in index.php
                 resGetPath: apiRootUrl+'locales/__ns__?lng=__lng__',
                 dynamicLoad: false,
                 load:'current',
@@ -833,12 +847,10 @@ RED.i18n = (function() {
             }
 
         },
-
         lang: function() {
             var locale = locale ? locale : ['en-US'];
             return locale[0];
         },
-
         loadNodeCatalog: function(namespace,done) {
             i18n.loadNamespace(namespace,done);
         },
@@ -869,7 +881,14 @@ RED.i18n = (function() {
         }
     }
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Renamed Node-RED to Node-BLUE
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -929,8 +948,9 @@ RED.settings = (function () {
         if (key === "auth-tokens") {
             return JSON.parse(localStorage.getItem(key));
         } else {
+            var v;
             try {
-                var v = RED.utils.getMessageProperty(userSettings,key);
+                v = RED.utils.getMessageProperty(userSettings,key);
                 if (v === undefined) {
                     v = defaultIfUndefined;
                 }
@@ -991,7 +1011,7 @@ RED.settings = (function () {
                     if (auth_tokens) {
                         jqXHR.setRequestHeader("Authorization","Bearer "+auth_tokens.access_token);
                     }
-                    jqXHR.setRequestHeader("Node-RED-API-Version","v2");
+                    jqXHR.setRequestHeader("Node-BLUE-API-Version","v2");
                 }
             }
         });
@@ -1403,7 +1423,12 @@ RED.user = (function() {
     }
 
 })();
-;/* This file was modified by Homegear GmbH */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - The file is pretty much a complete reimplementation. Only the subscription part is kept from the original code.
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -1422,6 +1447,7 @@ RED.user = (function() {
  **/
 
 RED.comms = (function() {
+
     var homegear = null;
     var errornotification = null;
     var subscriptions = {};
@@ -3063,7 +3089,19 @@ RED.state = {
     PANNING: 10,
     SELECTING_NODE: 11
 }
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added support for multiple inputs.
+ * - Added node namespace
+ * - Added Homegear tag
+ * - Replaced "link " (with space) with "link-"
+ *
+ * Todo after update:
+ * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
+ * - Search for "link " and replace with "link-"
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -3649,8 +3687,6 @@ RED.nodes = (function() {
         var node = {};
         node.id = n.id;
         node.type = n.type;
-        node.namespace = n.namespace ? n.namespace : n.type;
-        if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Needed for autogenerated nodes
         node.name = n.name;
         node.info = n.info;
         node.category = n.category;
@@ -3924,7 +3960,7 @@ RED.nodes = (function() {
             var m = /^subflow:(.+)$/.exec(newNodes[i].type);
             if (m) {
                 var subflowId = m[1];
-                var parent = getSubflow(newNodes[i].z || activeWorkspace);
+                var parent = getSubflow(activeWorkspace);
                 if (parent) {
                     var err;
                     if (subflowId === parent.id) {
@@ -4193,7 +4229,7 @@ RED.nodes = (function() {
                                     defaults: {},
                                     label: "unknown: "+n.type,
                                     labelStyle: "red-ui-flow-node-label-italic",
-                                    outputs: n.outputs||n.wires.length,
+                                    outputs: n.outputs|| (n.wires && n.wires.length) || 0,
                                     set: registry.getNodeSet("node-red/unknown")
                                 }
                             } else {
@@ -4522,6 +4558,9 @@ RED.nodes = (function() {
                             delete configNodes[n.id];
                         } else {
                             nodes.splice(nodes.indexOf(n),1);
+                            if (nodeTabMap[n.z]) {
+                                delete nodeTabMap[n.z][n.id];
+                            }
                         }
                         reimportList.push(convertNode(n));
                     });
@@ -5492,7 +5531,16 @@ RED.nodes.fontAwesome = (function() {
         },
     }
 })();
-;/* This file was modified by Homegear GmbH */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Add inputPorts where necessary.
+ * - Rename output ports from "ports" to "outputPorts"
+ *
+ * Todo after update:
+ * - Search for new occurrences of "inputs" and "ports" and apply changes where necessary.
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -5535,7 +5583,7 @@ RED.history = (function() {
                 inverseEv = {
                     t: 'replace',
                     config: RED.nodes.createCompleteNodeSet(),
-                    changed: [],
+                    changed: {},
                     rev: RED.nodes.version()
                 };
                 RED.nodes.clear();
@@ -6014,7 +6062,14 @@ RED.history = (function() {
     }
 
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Removed Node-RED standard validations.
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -6035,12 +6090,19 @@ RED.validators = {
     number: function(blankAllowed){return function(v) { return (blankAllowed&&(v===''||v===undefined)) || (v!=='' && !isNaN(v));}},
     regex: function(re){return function(v) { return re.test(v);}},
     typedInput: function(ptypeName,isConfig) { return function(v) {
-       var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName);
+        var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName);
         if(!ptype) return true;
         return ptype.typedInput('validate');
     }}
 };
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - 
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -6059,6 +6121,28 @@ RED.validators = {
  **/
 
 RED.utils = (function() {
+
+    window._marked = window.marked;
+    window.marked = function(txt) {
+        console.warn("Use of 'marked()' is deprecated. Use RED.utils.renderMarkdown() instead");
+        return renderMarkdown(txt);
+    }
+
+    _marked.setOptions({
+        renderer: new _marked.Renderer(),
+        gfm: true,
+        tables: true,
+        breaks: false,
+        pedantic: false,
+        smartLists: true,
+        smartypants: false
+    });
+
+    function renderMarkdown(txt) {
+        var rendered = _marked(txt);
+        var cleaned = DOMPurify.sanitize(rendered, {SAFE_FOR_JQUERY: true})
+        return cleaned;
+    }
 
     function formatString(str) {
         return str.replace(/\r?\n/g,"&crarr;").replace(/\t/g,"&rarr;");
@@ -6322,8 +6406,7 @@ RED.utils = (function() {
         if (path !== undefined && rootPath !== undefined) {
              strippedKey = path.substring(rootPath.length+(path[rootPath.length]==="."?1:0));
         }
-        else
-        {
+        else {
             path = "";
             rootPath = "";
         }
@@ -6926,6 +7009,8 @@ RED.utils = (function() {
             iconPath.file = originalFile;
         }
 
+        // This could be a non-core node trying to use a core icon.
+        iconPath.module = 'node-red';
         if (isIconExists(iconPath)) {
             return RED.settings.apiRootUrl+"icons/"+iconPath.module+"/"+iconPath.file;
         }
@@ -7100,10 +7185,18 @@ RED.utils = (function() {
         decodeObject: decodeObject,
         parseContextKey: parseContextKey,
         createIconElement: createIconElement,
-        sanitize: sanitize
+        sanitize: sanitize,
+        renderMarkdown: renderMarkdown
     }
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Hide x overflow
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -7901,7 +7994,7 @@ RED.utils = (function() {
                     return;
                 }
                 if (container.hasClass("expanded")) {
-                    done && done();
+                    if (done) { done() }
                     return;
                 }
                 if (!container.hasClass("built") && (item.deferBuild || typeof item.children === 'function')) {
@@ -7926,7 +8019,7 @@ RED.utils = (function() {
                                 spinner.remove();
                             }
                         }
-                        done && done();
+                        if (done) { done() }
                         that._trigger("childrenloaded",null,item)
                     }
                     if (typeof item.children === 'function') {
@@ -7948,7 +8041,7 @@ RED.utils = (function() {
                     } else {
                         item.treeList.childList.slideDown('fast');
                     }
-                    done && done();
+                    if (done) { done() }
                 }
                 container.addClass("expanded");
             }
@@ -8209,7 +8302,15 @@ RED.utils = (function() {
     })
 
 })(jQuery);
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added local links
+ * - Fixes for changed menu colors
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -8629,7 +8730,14 @@ RED.panels = (function() {
         create: createPanel
     }
 })();
-;/** This file was modified by Homegear GmbH */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Improvements
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -9051,7 +9159,10 @@ RED.popover = (function() {
             this.element.addClass("red-ui-searchBox-input");
             this.uiContainer = this.element.wrap("<div>").parent();
             this.uiContainer.addClass("red-ui-searchBox-container");
-
+            if (this.element.parents("form").length === 0) {
+                var form = this.element.wrap("<form>").parent();
+                form.addClass("red-ui-searchBox-form");
+            }
             $('<i class="fa fa-search"></i>').prependTo(this.uiContainer);
             this.clearButton = $('<a href="#"><i class="fa fa-times"></i></a>').appendTo(this.uiContainer);
             this.clearButton.on("click",function(e) {
@@ -9345,7 +9456,7 @@ RED.tabs = (function() {
             var thisTab = $(this).parent();
             var fireSelectionChanged = false;
             if (options.onselect) {
-                if (evt.metaKey) {
+                if (evt.metaKey || evt.ctrlKey) {
                     if (thisTab.hasClass("selected")) {
                         thisTab.removeClass("selected");
                         if (thisTab[0] !== currentTab[0]) {
@@ -10001,6 +10112,16 @@ RED.stack = (function() {
     }
 })();
 ;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added more types
+ * - Changed label from boolean to bool
+ *
+ * Todo after update:
+ **/
+
+/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -10239,9 +10360,8 @@ RED.stack = (function() {
             value: "bin",
             label: "buffer",
             icon: "red/images/typedInput/bin.svg"
-        }
+         }
         //}}}
-
     };
     var nlsd = false;
 
@@ -10565,56 +10685,6 @@ RED.stack = (function() {
                 done(labelWidth);
             }
         },
-        _resize: function() {
-            var that = this;
-            if (this.uiWidth !== null) {
-                this.uiSelect.width(this.uiWidth);
-            }
-            var type = this.typeMap[this.propertyType];
-            if (type && type.hasValue === false) {
-                this.selectTrigger.addClass("red-ui-typedInput-full-width");
-            } else {
-                this.selectTrigger.removeClass("red-ui-typedInput-full-width");
-                this._getLabelWidth(this.selectTrigger, function(labelWidth) {
-                    that.elementDiv.css('left',labelWidth+"px");
-                    that.valueLabelContainer.css('left',labelWidth+"px");
-                    if (that.optionExpandButton.shown) {
-                        that.elementDiv.css('right',"22px");
-                        that.valueLabelContainer.css('right',"22px");
-                    } else {
-                        that.elementDiv.css('right','0');
-                        that.valueLabelContainer.css('right','0');
-                        that.input.css({
-                            'border-top-right-radius': '4px',
-                            'border-bottom-right-radius': '4px'
-                        });
-                    }
-                    if (that.optionSelectTrigger) {
-                        if (type && type.options && type.hasValue === true) {
-                            that.optionSelectLabel.css({'left':'auto'})
-                            that._getLabelWidth(that.optionSelectLabel, function(lw) {
-                                that.optionSelectTrigger.css({'width':(23+lw)+"px"});
-                                that.elementDiv.css('right',(23+lw)+"px");
-                                that.input.css({
-                                    'border-top-right-radius': 0,
-                                    'border-bottom-right-radius': 0
-                                });
-                            });
-                        } else {
-                            that.optionSelectLabel.css({'left':'0'})
-                            that.optionSelectTrigger.css({'width':'calc( 100% - '+labelWidth+'px )'});
-                            if (!that.optionExpandButton.shown) {
-                                that.elementDiv.css({'right':0});
-                                that.input.css({
-                                    'border-top-right-radius': '4px',
-                                    'border-bottom-right-radius': '4px'
-                                });
-                            }
-                        }
-                    }
-                });
-            }
-        },
         _updateOptionSelectLabel: function(o) {
             var opt = this.typeMap[this.propertyType];
             this.optionSelectLabel.empty();
@@ -10642,7 +10712,6 @@ RED.stack = (function() {
                 }
                 if (opt.hasValue) {
                     this.optionValue = o.value;
-                    this._resize();
                     this.input.trigger('change',this.propertyType,this.value());
                 }
             } else {
@@ -10682,11 +10751,12 @@ RED.stack = (function() {
                 this.propertyType = null;
                 this.type(currentType);
             }
-            setTimeout(function() {that._resize();},0);
         },
         width: function(desiredWidth) {
             this.uiWidth = desiredWidth;
-            this._resize();
+            if (this.uiWidth !== null) {
+                this.uiSelect.width(this.uiWidth);
+            }
         },
         value: function(value) {
             var that = this;
@@ -10757,8 +10827,6 @@ RED.stack = (function() {
                         }
                         else if (opt.icon.indexOf("/") !== -1) {
                             image = new Image();
-                            image.onload = function() { that._resize(); }
-                            image.onerror = function() { that._resize(); }
                             image.name = opt.icon;
                             image.src = mapDeprecatedIcon(opt.icon);
                             $('<img>',{src:mapDeprecatedIcon(opt.icon),style:"margin-right: 4px;height: 18px;"}).prependTo(this.selectLabel);
@@ -10770,6 +10838,12 @@ RED.stack = (function() {
                     if (opt.hasValue === false || (opt.showLabel !== false && !opt.icon)) {
                         this.selectLabel.text(opt.label);
                     }
+                    if (opt.hasValue === false) {
+                        this.selectTrigger.addClass("red-ui-typedInput-full-width");
+                    } else {
+                        this.selectTrigger.removeClass("red-ui-typedInput-full-width");
+                    }
+
                     if (this.optionMenu) {
                         this.optionMenu.remove();
                         this.optionMenu = null;
@@ -10780,11 +10854,13 @@ RED.stack = (function() {
                             this.optionExpandButton.shown = false;
                         }
                         if (this.optionSelectTrigger) {
-                            this.optionSelectTrigger.show();
+                            this.optionSelectTrigger.css({"display":"inline-flex"});
                             if (!opt.hasValue) {
+                                this.optionSelectTrigger.css({"flex-grow":1})
                                 this.elementDiv.hide();
                                 this.valueLabelContainer.hide();
                             } else {
+                                this.optionSelectTrigger.css({"flex-grow":0})
                                 this.elementDiv.show();
                                 this.valueLabelContainer.hide();
                             }
@@ -10958,9 +11034,6 @@ RED.stack = (function() {
                         this._trigger("typechange",null,this.propertyType);
                         this.input.trigger('change',this.propertyType,this.value());
                     }
-                    if (!image) {
-                        this._resize();
-                    }
                 }
             }
         },
@@ -10987,7 +11060,6 @@ RED.stack = (function() {
         },
         show: function() {
             this.uiSelect.show();
-            this._resize();
         },
         hide: function() {
             this.uiSelect.hide();
@@ -11129,7 +11201,14 @@ RED.stack = (function() {
         list: listActions
     }
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Removed deploy options
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -11194,9 +11273,9 @@ RED.deploy = (function() {
                  '<img src="red/images/spin.svg"/>'+
                 '</span>'+
               '</a>').prependTo(".red-ui-header-toolbar");
-              //'<a id="red-ui-header-button-deploy-options" class="red-ui-deploy-button" href="#"><i class="fa fa-caret-down"></i></a>'+
-              //'</span></li>').prependTo(".red-ui-header-toolbar");
-              /*RED.menu.init({id:"red-ui-header-button-deploy-options",
+              /*'<a id="red-ui-header-button-deploy-options" class="red-ui-deploy-button" href="#"><i class="fa fa-caret-down"></i></a>'+
+              '</span></li>').prependTo(".red-ui-header-toolbar");
+              RED.menu.init({id:"red-ui-header-button-deploy-options",
                   options: [
                       {id:"deploymenu-item-full",toggle:"deploy-type",icon:"red/images/deploy-full.svg",label:RED._("deploy.full"),sublabel:RED._("deploy.fullDesc"),selected: true, onselect:function(s) { if(s){changeDeploymentType("full")}}},
                       {id:"deploymenu-item-flow",toggle:"deploy-type",icon:"red/images/deploy-flows.svg",label:RED._("deploy.modifiedFlows"),sublabel:RED._("deploy.modifiedFlowsDesc"), onselect:function(s) {if(s){changeDeploymentType("flows")}}},
@@ -11467,8 +11546,7 @@ RED.deploy = (function() {
                 var invalidNodes = [];
 
                 RED.nodes.eachNode(function(node) {
-                    hasInvalid = hasInvalid || !node.valid;
-                    if (!node.valid) {
+                    if (!node.valid && !node.d) {
                         invalidNodes.push(getNodeInfo(node));
                     }
                     if (node.type === "unknown") {
@@ -11478,6 +11556,7 @@ RED.deploy = (function() {
                     }
                 });
                 hasUnknown = unknownNodes.length > 0;
+                hasInvalid = invalidNodes.length > 0;
 
                 var unusedConfigNodes = [];
                 RED.nodes.eachConfig(function(node) {
@@ -12678,9 +12757,9 @@ RED.deploy = (function() {
         }
 
         var localSelectDiv = $('<label>',{class:"red-ui-diff-selectbox",for:safeNodeId+"-local"}).on("click", function(e) { e.stopPropagation();}).appendTo(localDiv);
-        var localRadio = $('<input>',{class:"red-ui-diff-selectbox-input",id:safeNodeId+"-local",type:'radio',value:"local",name:safeNodeId,class:className+"-local"}).data('node-id',node.id).on("change", changeHandler).appendTo(localSelectDiv);
+        var localRadio = $('<input>',{class:"red-ui-diff-selectbox-input "+className+"-local",id:safeNodeId+"-local",type:'radio',value:"local",name:safeNodeId}).data('node-id',node.id).on("change", changeHandler).appendTo(localSelectDiv);
         var remoteSelectDiv = $('<label>',{class:"red-ui-diff-selectbox",for:safeNodeId+"-remote"}).on("click", function(e) { e.stopPropagation();}).appendTo(remoteDiv);
-        var remoteRadio = $('<input>',{class:"red-ui-diff-selectbox-input",id:safeNodeId+"-remote",type:'radio',value:"remote",name:safeNodeId,class:className+"-remote"}).data('node-id',node.id).on("change", changeHandler).appendTo(remoteSelectDiv);
+        var remoteRadio = $('<input>',{class:"red-ui-diff-selectbox-input "+className+"-remote",id:safeNodeId+"-remote",type:'radio',value:"remote",name:safeNodeId}).data('node-id',node.id).on("change", changeHandler).appendTo(remoteSelectDiv);
         if (state === 'local') {
             localRadio.prop('checked',true);
         } else if (state === 'remote') {
@@ -14397,12 +14476,12 @@ RED.keyboard = (function() {
         var pane = $('<div id="red-ui-settings-tab-keyboard"></div>');
 
         $('<div class="keyboard-shortcut-entry keyboard-shortcut-list-header">'+
-        '<div class="keyboard-shortcut-entry-key keyboard-shortcut-entry-text"><input id="red-ui-settings-tab-keyboard-filter" type="text" data-i18n="[placeholder]keyboard.filterActions"></div>'+
+        '<div class="keyboard-shortcut-entry-key keyboard-shortcut-entry-text"><input autocomplete="off" name="keyboard-filter" id="red-ui-settings-tab-keyboard-filter" type="text" data-i18n="[placeholder]keyboard.filterActions"></div>'+
         '<div class="keyboard-shortcut-entry-key" data-i18n="keyboard.shortcut"></div>'+
         '<div class="keyboard-shortcut-entry-scope" data-i18n="keyboard.scope"></div>'+
         '</div>').appendTo(pane);
 
-        pane.find("input").searchBox({
+        pane.find("#red-ui-settings-tab-keyboard-filter").searchBox({
             delay: 100,
             change: function() {
                 var filterValue = $(this).val().trim();
@@ -14456,7 +14535,14 @@ RED.keyboard = (function() {
     }
 
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Send "enableEvents" to Homegear on tab change to only enable events for that tab.
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -14624,7 +14710,7 @@ RED.workspaces = (function() {
                 var dialogForm = $('<form id="dialog-form" class="form-horizontal"></form>').appendTo(trayBody);
                 $('<div class="form-row">'+
                     '<label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label>'+
-                    '<input type="text" id="node-input-name">'+
+                    '<input type="text" id="node-input-name" data-i18n="[placeholder]common.label.name">'+
                 '</div>').appendTo(dialogForm);
 
 
@@ -14977,7 +15063,22 @@ RED.statusBar = (function() {
     }
 
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added support for multiple inputs.
+ * - Changed grid size to 10
+ * - Replaced "link " (with space) with "link-"
+ * - Added namespace
+ * - Removed "getPortLabel()"
+ * - Added statusTop and statusBottom
+ *
+ * Todo after update:
+ * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
+ * - Search for "link " and replace with "link-"
+ * - Search for "13" in height information and replace with "18"
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -15737,7 +15838,7 @@ RED.view = (function() {
         //     .attr("d","M 0 "+(node_height/2)+" H "+(gridSize * -2))
         //     .attr("opacity",0);
 
-        var filter = undefined;
+        var filter;
         if (drag_lines.length > 0) {
             if (drag_lines[0].virtualLink) {
                 filter = {type:drag_lines[0].node.type === 'link-in'?'link-out':'link-in'}
@@ -15770,7 +15871,7 @@ RED.view = (function() {
             }
             var numOutputs = (quickAddLink.portType === PORT_TYPE_OUTPUT)?(quickAddLink.node.outputs || 1):1;
             var sourcePort = quickAddLink.port;
-            var portY = -((numOutputs-1)/2)*13 +13*sourcePort;
+            var portY = -((numOutputs-1)/2)*18 +18*sourcePort;
             var sc = (quickAddLink.portType === PORT_TYPE_OUTPUT)?1:-1;
             quickAddLink.el.attr("d",generateLinkPath(quickAddLink.node.x+sc*quickAddLink.node.w/2,quickAddLink.node.y+portY,point[0]-sc*node_width/2,point[1],sc));
         }
@@ -16487,6 +16588,7 @@ RED.view = (function() {
     var lastSelection = null;
     function updateSelection() {
         var selection = {};
+        var activeWorkspace = RED.workspaces.active();
 
         var workspaceSelection = RED.workspaces.selection();
         if (workspaceSelection.length === 0) {
@@ -16496,7 +16598,6 @@ RED.view = (function() {
             if (selected_link != null) {
                 selection.link = selected_link;
             }
-            var activeWorkspace = RED.workspaces.active();
             activeLinks = RED.nodes.filterLinks({
                 source:{z:activeWorkspace},
                 target:{z:activeWorkspace}
@@ -16614,7 +16715,7 @@ RED.view = (function() {
         var workspaceSelection = RED.workspaces.selection();
         if (workspaceSelection.length > 0) {
             var workspaceCount = 0;
-            workspaceSelection.forEach(function(ws) { if (ws.type === 'tab') workspaceCount++ });
+            workspaceSelection.forEach(function(ws) { if (ws.type === 'tab') { workspaceCount++ } });
             if (workspaceCount === RED.workspaces.count()) {
                 // Cannot delete all workspaces
                 return;
@@ -16655,7 +16756,7 @@ RED.view = (function() {
             var removedLinks = [];
             var removedSubflowOutputs = [];
             var removedSubflowInputs = [];
-            var removedSubflowStatus = undefined;
+            var removedSubflowStatus;
             var subflowInstances = [];
 
             var startDirty = RED.nodes.dirty();
@@ -17611,6 +17712,7 @@ RED.view = (function() {
                     .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);} )
                     .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_OUTPUT,i);})
                     .on("mouseout",function(d) {portMouseOut(d3.select(this),d,PORT_TYPE_OUTPUT,i);});
+
                 inGroup.append("svg:text").attr("class","red-ui-flow-port-label").attr("x",20).attr("y",8).style("font-size","10px").text("input");
                 inGroup.append("svg:text").attr("class","red-ui-flow-port-label red-ui-flow-port-index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
 
@@ -18005,7 +18107,6 @@ RED.view = (function() {
                             //thisNode.selectAll(".red-ui-flow-node-icon-right").attr("x",function(d){return d.w-d3.select(this).attr("width")-1-(d.outputs>0?5:0);});
                             //thisNode.selectAll(".red-ui-flow-node-icon-shade-right").attr("x",function(d){return d.w-30;});
                             //thisNode.selectAll(".red-ui-flow-node-icon-shade-border-right").attr("d",function(d){return "M "+(d.w-30)+" 1 l 0 "+(d.h-2)});
-
                             var numInputs = d.inputs;
                             var y = (d.h/2)-((numInputs-1)/2)*18;
                             d.inputPorts = d.inputPorts || d3.range(numInputs);
@@ -18061,7 +18162,7 @@ RED.view = (function() {
                                         content = infoBody;
                                     }
                                 }
-                                
+
                                 var nodeId = d.id;
                                 var valueVariableName = "inputValue" + i;
                                 var historyVariableName = "inputHistory" + i;
@@ -18263,7 +18364,6 @@ RED.view = (function() {
                             }
 
                             var numOutputs = d.outputs;
-
                             if (isLink && d.type === "link-out") {
                                 if (showAllLinkPorts===PORT_TYPE_OUTPUT || activeLinkNodes[d.id]) {
                                     d.outputPorts = [0];
@@ -18273,7 +18373,6 @@ RED.view = (function() {
                                     numOutputs = 0;
                                 }
                             }
-
                             y = (d.h/2)-((numOutputs-1)/2)*18;
                             d.outputPorts = d.outputPorts || d3.range(numOutputs);
                             d._outputPorts = thisNode.selectAll(".red-ui-flow-port-output").data(d.outputPorts);
@@ -18345,7 +18444,6 @@ RED.view = (function() {
                                 var x = d.w - 5;
                                 d._outputPorts.each(function(d,i) {
                                         var port = d3.select(this);
-                                        //port.attr("y",(y+13*i)-5).attr("x",x);
                                         port.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
                                 });
                             }
@@ -18452,7 +18550,7 @@ RED.view = (function() {
                             thisNode.selectAll(".red-ui-flow-node-icon-shade-border").attr("d", function (d) {
                                 return "M " + (((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) ? 0 : 30) + " 1 l 0 " + (d.h - 2);
                             });
-                            thisNode.selectAll(".fa-lg").attr("y",function(d){return (d.h+13)/2;});
+                            thisNode.selectAll(".fa-lg").attr("y",function(d){return (d.h+18)/2;});
 
                             thisNode.selectAll(".red-ui-flow-node-button").attr("opacity",function(d) {
                                 return (!isButtonEnabled(d))?0.4:1
@@ -18882,8 +18980,10 @@ RED.view = (function() {
                         if (new_ms.length === 1) {
                             node = new_ms[0];
                             spliceActive = node.n.hasOwnProperty("_def") &&
-                                           node.n._def.inputs > 0 &&
-                                           node.n._def.outputs > 0;
+                                           ((node.n.hasOwnProperty("inputs") && node.n.inputs > 0) || (!node.n.hasOwnProperty("inputs") && node.n._def.inputs > 0)) &&
+                                           ((node.n.hasOwnProperty("outputs") && node.n.outputs > 0) || (!node.n.hasOwnProperty("outputs") && node.n._def.outputs > 0))
+
+
                         }
                     }
                     RED.keyboard.add("*","escape",function(){
@@ -19763,7 +19863,15 @@ RED.sidebar = (function() {
     }
 
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added namespace to setLabel
+ *
+ * Todo after update:
+ * - Search for new occurences of setLabel() and add namespace
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -19859,7 +19967,10 @@ RED.palette = (function() {
         var lineHeight = 20;
         var portHeight = 10;
 
+        el.attr("data-palette-label",label);
+
         label = RED.utils.sanitize(label);
+
 
         var words = label.split(/[ -]/);
 
@@ -19973,16 +20084,14 @@ RED.palette = (function() {
             }
 
             $('<div/>', {
-                class: "red-ui-palette-label"
-                     + (((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " red-ui-palette-label-right" : "")
+                class: "red-ui-palette-label"+(((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " red-ui-palette-label-right" : "")
             }).appendTo(d);
 
 
             if (def.icon) {
                 var icon_url = RED.utils.getNodeIcon(def);
                 var iconContainer = $('<div/>', {
-                    class: "red-ui-palette-icon-container"
-                         + (((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " red-ui-palette-icon-container-right" : "")
+                    class: "red-ui-palette-icon-container"+(((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " red-ui-palette-icon-container-right" : "")
                 }).appendTo(d);
                 RED.utils.createIconElement(icon_url, iconContainer, true);
             }
@@ -20029,7 +20138,7 @@ RED.palette = (function() {
                 RED.view.focus();
                 var helpText;
                 if (nt.indexOf("subflow:") === 0) {
-                    helpText = marked(RED.nodes.subflow(nt.substring(8)).info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
+                    helpText = RED.utils.renderMarkdown(RED.nodes.subflow(nt.substring(8)).info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
                 } else {
                     helpText = i18n.t((def.namespace ? def.namespace : nt) + "/" + nt + ".hni:" + nt + ".help")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
                 }
@@ -20130,7 +20239,7 @@ RED.palette = (function() {
                     RED.workspaces.show(nt.substring(8));
                     e.preventDefault();
                 });
-                nodeInfo = marked(def.info||"");
+                nodeInfo = RED.utils.renderMarkdown(def.info||"");
             }
             setLabel(nt,$(d),label,nodeInfo, def.namespace ? def.namespace : nt);
 
@@ -20180,14 +20289,10 @@ RED.palette = (function() {
             var portOutput = paletteNode.find(".red-ui-palette-port-output");
 
             var paletteLabel = paletteNode.find(".red-ui-palette-label");
-            paletteLabel.attr("class","red-ui-palette-label"
-                 + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-label-right" : "")
-             );
+            paletteLabel.attr("class","red-ui-palette-label" + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-label-right" : ""));
 
             var paletteIconContainer = paletteNode.find(".red-ui-palette-icon-container");
-            paletteIconContainer.attr("class","red-ui-palette-icon-container"
-                  + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-icon-container-right" : "")
-              );
+            paletteIconContainer.attr("class","red-ui-palette-icon-container" + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-icon-container-right" : ""));
 
             if (portInput.length === 0 && sf.in.length > 0) {
                 var portIn = document.createElement("div");
@@ -20204,7 +20309,7 @@ RED.palette = (function() {
             } else if (portOutput.length !== 0 && sf.out.length === 0) {
                 portOutput.remove();
             }
-            setLabel(sf.type+":"+sf.id,paletteNode,sf.name,marked(sf.info||""),sf.type+":"+sf.id);
+            setLabel(sf.type+":"+sf.id,paletteNode,sf.name,RED.utils.renderMarkdown(sf.info||""),sf.type+":"+sf.id);
             setIcon(paletteNode,sf);
 
             var currentCategory = paletteNode.data('category');
@@ -20236,7 +20341,7 @@ RED.palette = (function() {
     function filterChange(val) {
         var re = new RegExp(val.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'),'i');
         $("#red-ui-palette-container .red-ui-palette-node").each(function(i,el) {
-            var currentLabel = $(el).find(".red-ui-palette-label").text();
+            var currentLabel = $(el).attr("data-palette-label");
             var type = $(el).attr("data-palette-type");
             if (val === "" || re.test(type) || re.test(currentLabel)) {
                 $(this).show();
@@ -20413,7 +20518,14 @@ RED.palette = (function() {
         getCategories: getCategories
     };
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added translated help text.
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -20431,17 +20543,6 @@ RED.palette = (function() {
  * limitations under the License.
  **/
 RED.sidebar.info = (function() {
-
-    marked.setOptions({
-        renderer: new marked.Renderer(),
-        gfm: true,
-        tables: true,
-        breaks: false,
-        pedantic: false,
-        sanitize: true,
-        smartLists: true,
-        smartypants: false
-    });
 
     var content;
     var sections;
@@ -20731,7 +20832,7 @@ RED.sidebar.info = (function() {
                 if (subflowNode && node.type !== "subflow") {
                     // Selected a subflow instance node.
                     // - The subflow template info goes into help
-                    helpText = (marked(subflowNode.info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>'));
+                    helpText = (RED.utils.renderMarkdown(subflowNode.info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>'));
                 } else {
                     helpText = i18n.t((node._def.namespace ? node._def.namespace : node.type) + "/" + node.type + ".hni:" + node.type + ".help")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
                 }
@@ -20743,10 +20844,10 @@ RED.sidebar.info = (function() {
             if (node._def && node._def.info) {
                 var info = node._def.info;
                 var textInfo = (typeof info === "function" ? info.call(node) : info);
-                infoText = infoText + marked(textInfo);
+                infoText = infoText + RED.utils.renderMarkdown(textInfo);
             }
             if (node.info) {
-                infoText = infoText + marked(node.info || "")
+                infoText = infoText + RED.utils.renderMarkdown(node.info || "")
             }
             setInfoText(infoText, infoSection.content);
 
@@ -21565,7 +21666,8 @@ RED.sidebar.context = (function() {
                                 RED.utils.createObjectElement(RED.utils.decodeObject(payload,format), {
                                     typeHint: data.format,
                                     sourceId: id+"."+k,
-                                    tools: tools
+                                    tools: tools,
+                                    path: ""
                                 }).appendTo(propRow.children()[1]);
                             }
                         })
@@ -21609,7 +21711,8 @@ RED.sidebar.context = (function() {
                                                 RED.utils.createObjectElement(RED.utils.decodeObject(payload,format), {
                                                     typeHint: data.format,
                                                     sourceId: id+"."+k,
-                                                    tools: tools
+                                                    tools: tools,
+                                                    path: ""
                                                 }).appendTo(propRow.children()[1]);
                                             }
                                         });
@@ -21629,7 +21732,8 @@ RED.sidebar.context = (function() {
                     RED.utils.createObjectElement(RED.utils.decodeObject(payload,format), {
                         typeHint: v.format,
                         sourceId: id+"."+k,
-                        tools: tools
+                        tools: tools,
+                        path: ""
                     }).appendTo(propRow.children()[1]);
                     if (contextStores.length > 1) {
                         $("<span>",{class:"red-ui-sidebar-context-property-storename"}).text(v.store).appendTo($(propRow.children()[0]))
@@ -21661,7 +21765,16 @@ RED.sidebar.context = (function() {
         init: init
     }
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added function checkNodeInstallStatus()
+ * - Added function checkNodeRemoveStatus()
+ * - Get nodes from Homegear repository
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -21718,7 +21831,6 @@ RED.palette.editor = (function() {
             callback();
         },delta);
     }
-
     function changeNodeState(id,state,shade,callback) {
         /*shade.show();
         var start = Date.now();
@@ -21924,7 +22036,11 @@ RED.palette.editor = (function() {
                         var setElements = nodeEntry.sets[setName];
                         if (set.err) {
                             errorCount++;
-                            $("<li>").text(set.err).appendTo(nodeEntry.errorList);
+                            var errMessage = set.err;
+                            if (set.err.message) {
+                                errMessage = set.err.message;
+                            }
+                            $("<li>").text(errMessage).appendTo(nodeEntry.errorList);
                         }
                         if (set.enabled) {
                             activeTypeCount += set.types.length;
@@ -22170,7 +22286,7 @@ RED.palette.editor = (function() {
         })
 
         RED.actions.add("core:manage-palette",function() {
-            RED.comms.homegear().invoke("managementGetNodePackages", function(message) {
+                RED.comms.homegear().invoke("managementGetNodePackages", function(message) {
                 var nodesFromPackages = message.result;
                 for (var entry in nodeEntries) {
                     if (nodeEntries.hasOwnProperty(entry)) {
@@ -22527,7 +22643,7 @@ RED.palette.editor = (function() {
             initInstallTab();
         })
 
-        packageList = $('<ol>',{style:"position: absolute;top: 78px;bottom: 0;left: 0;right: 0px;"}).appendTo(installTab).editableList({
+        packageList = $('<ol>',{style:"position: absolute;top: 79px;bottom: 0;left: 0;right: 0px;"}).appendTo(installTab).editableList({
             addButton: false,
             scrollOnAdd: false,
             addItem: function(container,i,object) {
@@ -22812,7 +22928,18 @@ RED.palette.editor = (function() {
         install: install
     }
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added support for multiple inputs.
+ * - Replaced "link " (with space) with "link-"
+ * - Removed Node-RED labels
+ *
+ * Todo after update:
+ * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
+ * - Search for "link " and replace with "link-"
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -23018,6 +23145,7 @@ RED.editor = (function() {
     function updateNodeProperties(node, outputMap) {
         node.resize = true;
         node.dirty = true;
+        node.dirtyStatus = true;
         var removedLinks = [];
         if (node.inputPorts) {
             if (node.inputs < node.inputPorts.length) {
@@ -23406,11 +23534,12 @@ RED.editor = (function() {
 
         // Add dummy fields to prevent 'Enter' submitting the form in some
         // cases, and also prevent browser auto-fill of password
-        // Add in reverse order as they are prepended...
-        $('<input type="password" style="display: none;" />').prependTo(dialogForm);
-        $('<input type="text" style="display: none;" />').prependTo(dialogForm);
+        //  - the elements cannot be hidden otherwise Chrome will ignore them.
+        //  - the elements need to have id's that imply password/username
+        $('<span style="position: absolute; top: -2000px;"><input id="red-ui-trap-password" type="password"/></span>').prependTo(dialogForm);
+        $('<span style="position: absolute; top: -2000px;"><input id="red-ui-trap-username"  type="text"/></span>').prependTo(dialogForm);
         dialogForm.on("submit", function(e) { e.preventDefault();});
-        dialogForm.find('input').attr("autocomplete","disable");
+        dialogForm.find('input').attr("autocomplete","off");
         return dialogForm;
     }
 
@@ -24140,6 +24269,8 @@ RED.editor = (function() {
                                                 if (inputsChanged) {
                                                     changed = true;
                                                 }
+                                            } else {
+                                                newValue = parseInt(newValue);
                                             }
                                         }
                                         if (d === "outputs") {
@@ -24181,11 +24312,13 @@ RED.editor = (function() {
                                                 newValue = parseInt(newValue);
                                             }
                                         }
+                                        if (editing_node._def.defaults[d].type) {
+                                            if (newValue == "_ADD_") {
+                                                newValue = "";
+                                            }
+                                        }
                                         if (editing_node[d] != newValue) {
                                             if (editing_node._def.defaults[d].type) {
-                                                if (newValue == "_ADD_") {
-                                                    newValue = "";
-                                                }
                                                 // Change to a related config node
                                                 var configNode = RED.nodes.node(editing_node[d]);
                                                 if (configNode) {
@@ -24251,7 +24384,7 @@ RED.editor = (function() {
 
                         if (!$("#node-input-show-label").prop('checked')) {
                             // Not checked - hide label
-                            if (!/^link (in|out)$/.test(node.type)) {
+                            if (!/^link-(in|out)$/.test(node.type)) {
                                 // Not a link node - default state is true
                                 if (node.l !== false) {
                                     changes.l = node.l
@@ -24268,7 +24401,7 @@ RED.editor = (function() {
                             }
                         } else {
                             // Checked - show label
-                            if (!/^link (in|out)$/.test(node.type)) {
+                            if (!/^link-(in|out)$/.test(node.type)) {
                                 // Not a link node - default state is true
                                 if (node.hasOwnProperty('l') && !node.l) {
                                     changes.l = node.l
@@ -25345,7 +25478,7 @@ RED.editor = (function() {
             editor.toolbar = customEditTypes['_markdown'].buildToolbar(toolbarRow,editor);
             if (options.expandable !== false) {
                 var expandButton = $('<button type="button" class="red-ui-button" style="float: right;"><i class="fa fa-expand"></i></button>').appendTo(editor.toolbar);
-
+                RED.popover.tooltip(expandButton, RED._("markdownEditor.expand"));
                 expandButton.on("click", function(e) {
                     e.preventDefault();
                     var value = editor.getValue();
@@ -25419,7 +25552,7 @@ RED.editor = (function() {
         /**
          * Register a type editor.
          * @param {string} type - the type name
-         * @param {object} options - the editor definition
+         * @param {object} definition - the editor definition
          * @function
          * @memberof RED.editor
          */
@@ -25750,7 +25883,7 @@ RED.editor = (function() {
                         var f = $(this).val();
                         var args = RED._('jsonata:'+f+".args",{defaultValue:''});
                         var title = "<h5>"+f+"("+args+")</h5>";
-                        var body = marked(RED._('jsonata:'+f+'.desc',{defaultValue:''}));
+                        var body = RED.utils.renderMarkdown(RED._('jsonata:'+f+'.desc',{defaultValue:''}));
                         $("#red-ui-editor-type-expression-help").html(title+"<p>"+body+"</p>");
 
                     })
@@ -25855,6 +25988,7 @@ RED.editor = (function() {
                         }
                         expressionEditor.getSession().setValue(v||"",-1);
                     });
+                    funcSelect.change();
 
                     var tabs = RED.tabs.create({
                         element: $("#red-ui-editor-type-expression-tabs"),
@@ -26211,7 +26345,7 @@ RED.editor = (function() {
             options.push({id:"red-ui-editor-type-json-menu-duplicate", icon:"fa fa-copy", label:RED._("jsonEditor.duplicate"),onselect:function(){
                 var newKey = item.key;
                 if (item.parent.type === 'array') {
-                    newKey = parent.children.length;
+                    newKey = item.parent.children.length;
                 } else {
                     var m = /^(.*?)(-(\d+))?$/.exec(newKey);
                     var usedKeys = {};
@@ -26406,9 +26540,9 @@ RED.editor = (function() {
             var val = $('<input type="text" class="red-ui-editor-type-json-editor-value">').css({width:w+"px"}).val(""+valValue).insertAfter(valueLabel).typedInput({
                 types:[
                     'str','num','bool',
-                    {value:"null",label:"null",hasValue:false},
-                    {value:"array",label:"array",hasValue:false},
-                    {value:"object",label:"object",hasValue:false}
+                    {value:"null",label:RED._("common.type.null"),hasValue:false},
+                    {value:"array",label:RED._("common.type.array"),hasValue:false,icon:"red/images/typedInput/json.png"},
+                    {value:"object",label:RED._("common.type.object"),hasValue:false,icon:"red/images/typedInput/json.png"}
                 ],
                 default: valType
             });
@@ -26432,10 +26566,10 @@ RED.editor = (function() {
                     item.value = valValue;
                     var valClass;
                     switch(valType) {
-                        case 'str':    item.children && (orphanedChildren = item.children); item.treeList.makeLeaf(true); item.type = "string";  valClass = "red-ui-debug-msg-type-string"; valValue = '"'+valValue+'"'; break;
-                        case 'num':    item.children && (orphanedChildren = item.children); item.treeList.makeLeaf(true); item.type = "number";  valClass = "red-ui-debug-msg-type-number"; break;
-                        case 'bool':   item.children && (orphanedChildren = item.children); item.treeList.makeLeaf(true); item.type = "boolean"; valClass = "red-ui-debug-msg-type-other";  item.value = (valValue === "true"); break;
-                        case 'null':   item.children && (orphanedChildren = item.children); item.treeList.makeLeaf(true); item.type = "null";    valClass = "red-ui-debug-msg-type-null"; item.value = valValue = "null"; break;
+                        case 'str':    if (item.children) { orphanedChildren = item.children } item.treeList.makeLeaf(true); item.type = "string";  valClass = "red-ui-debug-msg-type-string"; valValue = '"'+valValue+'"'; break;
+                        case 'num':    if (item.children) { orphanedChildren = item.children } item.treeList.makeLeaf(true); item.type = "number";  valClass = "red-ui-debug-msg-type-number"; break;
+                        case 'bool':   if (item.children) { orphanedChildren = item.children } item.treeList.makeLeaf(true); item.type = "boolean"; valClass = "red-ui-debug-msg-type-other";  item.value = (valValue === "true"); break;
+                        case 'null':   if (item.children) { orphanedChildren = item.children } item.treeList.makeLeaf(true); item.type = "null";    valClass = "red-ui-debug-msg-type-null"; item.value = valValue = "null"; break;
                         case 'object':
                             item.treeList.makeParent(orphanedChildren);
                             item.type = "object";
@@ -26590,7 +26724,7 @@ RED.editor = (function() {
                             } else if (activeTab === "json-raw") {
                                 result = expressionEditor.getValue();
                             }
-                            onComplete && onComplete(result);
+                            if (onComplete) { onComplete(result) }
                             RED.tray.close();
                         }
                     }
@@ -26682,7 +26816,7 @@ RED.editor = (function() {
                                     } catch(err) {
                                         rootNode = null;
                                         list.treeList('data',[{
-                                            label: "Invalid JSON: "+err.toString()
+                                            label: RED._("jsonEditor.error.invalidJSON")+err.toString()
                                         }]);
                                     }
                                 }
@@ -26753,7 +26887,7 @@ RED.editor = (function() {
             '<button type="button" class="red-ui-button" data-style="bq"><i class="fa fa-quote-left"></i></button>'+
             '<button type="button" class="red-ui-button" data-style="hr"><i class="fa fa-minus"></i></button>'+
             '<button type="button" class="red-ui-button" data-style="link"><i class="fa fa-link"></i></button>'+
-        '</span>'
+        '</span>'+
     '</div>';
 
     var template = '<script type="text/x-red" data-template-name="_markdown">'+
@@ -26828,7 +26962,7 @@ RED.editor = (function() {
                         clearTimeout(changeTimer);
                         changeTimer = setTimeout(function() {
                             var currentScrollTop = $(".red-ui-editor-type-markdown-panel-preview").scrollTop();
-                            $(".red-ui-editor-type-markdown-panel-preview").html(marked(expressionEditor.getValue()));
+                            $(".red-ui-editor-type-markdown-panel-preview").html(RED.utils.renderMarkdown(expressionEditor.getValue()));
                             $(".red-ui-editor-type-markdown-panel-preview").scrollTop(currentScrollTop);
                         },200);
                     })
@@ -26837,7 +26971,7 @@ RED.editor = (function() {
                     }
 
                     if (value) {
-                        $(".red-ui-editor-type-markdown-panel-preview").html(marked(expressionEditor.getValue()));
+                        $(".red-ui-editor-type-markdown-panel-preview").html(RED.utils.renderMarkdown(expressionEditor.getValue()));
                     }
                     panels = RED.panels.create({
                         id:"red-ui-editor-type-markdown-panels",
@@ -30113,7 +30247,20 @@ RED.actionList = (function() {
     };
 
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added support for multiple inputs
+ * - Hided status
+ * - Removed "convertToSubflow()"
+ * - Replaced property types with types supported by Homegear
+ *
+ * Todo after update:
+ * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
+ * - Search for "link " and replace with "link-"
+ * - Search for Node-RED property item types (num, str, json, bin, env) and replace them with Node-BLUE-supported types.
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -30136,12 +30283,18 @@ RED.subflow = (function() {
     var currentLocale = "en-US";
 
     var _subflowEditTemplate = '<script type="text/x-red" data-template-name="subflow">'+
-        '<div class="form-row"><label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label><input type="text" id="node-input-name"></div>'+
+        '<div class="form-row">'+
+            '<label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label>'+
+            '<input type="text" id="node-input-name" data-i18n="[placeholder]common.label.name">'+
+        '</div>'+
         '<div id="subflow-input-ui"></div>'+
         '</script>';
 
     var _subflowTemplateEditTemplate = '<script type="text/x-red" data-template-name="subflow-template">'+
-        '<div class="form-row"><label for="subflow-input-name" data-i18n="[append]common.label.name"><i class="fa fa-tag"></i>  </label><input type="text" id="subflow-input-name"></div>'+
+        '<div class="form-row">'+
+            '<label for="subflow-input-name" data-i18n="[append]common.label.name"><i class="fa fa-tag"></i>  </label>'+
+            '<input type="text" id="subflow-input-name" data-i18n="[placeholder]common.label.name">'+
+        '</div>'+
         '<div class="form-row">'+
             '<ul style="margin-bottom: 20px;" id="subflow-env-tabs"></ul>'+
         '</div>'+
@@ -30253,7 +30406,7 @@ RED.subflow = (function() {
             }
         }
         activeSubflow.changed = true;
-
+        RED.palette.refresh();
         return {subflowInputs: removedSubflowInputs, links: removedLinks}
     }
 
@@ -30938,8 +31091,8 @@ RED.subflow = (function() {
             }
             $("<option/>", opt).text(item.text).appendTo(locales);
         });
-        currentLocale = RED.i18n.lang();
-        locales.val(currentLocale);
+        var locale = RED.i18n.lang();
+        locales.val(locale);
 
         locales.on("change", function() {
             currentLocale = $(this).val();
@@ -31184,7 +31337,7 @@ RED.subflow = (function() {
              }
              langs.forEach(function(l) {
                  var row = $('<div>').appendTo(content);
-                 $('<span>').css({display:"inline-block",width:"50px"}).text(l+(l===currentLocale?"*":"")).appendTo(row);
+                 $('<span>').css({display:"inline-block",width:"120px"}).text(RED._("languages."+l)+(l===currentLocale?"*":"")).appendTo(row); 
                  $('<span>').text(ui.label[l]||"").appendTo(row);
              });
              return content;
@@ -31507,7 +31660,8 @@ RED.subflow = (function() {
         }
 
         var labels = ui.label || {};
-        var labelText = lookupLabel(labels, labels["en-US"]||tenv.name, currentLocale);
+        var locale = RED.i18n.lang();
+        var labelText = lookupLabel(labels, labels["en-US"]||tenv.name, locale);
         var label = $('<label>').appendTo(row);
         var labelContainer = $('<span></span>').appendTo(label);
         if (ui.icon) {
@@ -31559,7 +31713,7 @@ RED.subflow = (function() {
                 input = $('<select>').css('width','70%').appendTo(row);
                 if (ui.opts.opts) {
                     ui.opts.opts.forEach(function(o) {
-                        $('<option>').val(o.v).text(lookupLabel(o.l, o.l['en-US']||o.v, currentLocale)).appendTo(input);
+                        $('<option>').val(o.v).text(lookupLabel(o.l, o.l['en-US']||o.v, locale)).appendTo(input);
                     })
                 }
                 input.val(val.value);
@@ -31864,7 +32018,14 @@ RED.subflow = (function() {
 
     }
 })();
-;/** This file was modified by Sathya Laufer */
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Modified settings for Node-BLUE
+ *
+ * Todo after update:
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -34096,100 +34257,122 @@ RED.projects = (function() {
                 resultCallbackArgs = data;
             }
         }).fail(function(xhr,textStatus,err) {
+            var responses;
+
             if (options.responses && options.responses[xhr.status]) {
-                var responses = options.responses[xhr.status];
+                responses = options.responses[xhr.status];
                 if (typeof responses === 'function') {
                     resultCallback = responses;
                     resultCallbackArgs = {error:responses.statusText};
                     return;
-                } else if (options.handleAuthFail !== false && xhr.responseJSON.code === 'git_auth_failed') {
-                    var url = activeProject.git.remotes[xhr.responseJSON.remote||options.remote||'origin'].fetch;
+                } else if (options.handleAuthFail !== false && (xhr.responseJSON.code === 'git_auth_failed' || xhr.responseJSON.code === 'git_host_key_verification_failed')) {
+                    if (xhr.responseJSON.code === 'git_auth_failed') {
+                        var url = activeProject.git.remotes[xhr.responseJSON.remote||options.remote||'origin'].fetch;
 
-                    var message = $('<div>'+
+                        var message = $('<div>'+
                         '<div class="form-row">'+RED._("projects.send-req.auth-req")+':</div>'+
                         '<div class="form-row"><div style="margin-left: 20px;">'+url+'</div></div>'+
                         '</div>');
 
-                    var isSSH = false;
-                    if (/^https?:\/\//.test(url)) {
-                        $('<div class="form-row"><label for="projects-user-auth-username">'+RED._("projects.send-req.username")+'</label><input id="projects-user-auth-username" type="text"></input></div>'+
-                          '<div class="form-row"><label for=projects-user-auth-password">'+RED._("projects.send-req.password")+'</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
-                    } else if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(url)) {
-                        isSSH = true;
-                        var row = $('<div class="form-row"></div>').appendTo(message);
-                        $('<label for="projects-user-auth-key">SSH Key</label>').appendTo(row);
-                        var projectRepoSSHKeySelect = $('<select id="projects-user-auth-key">').width('70%').appendTo(row);
-                        $.getJSON("settings/user/keys", function(data) {
-                            var count = 0;
-                            data.keys.forEach(function(key) {
-                                projectRepoSSHKeySelect.append($("<option></option>").val(key.name).text(key.name));
-                                count++;
+                        var isSSH = false;
+                        if (/^https?:\/\//.test(url)) {
+                            $('<div class="form-row"><label for="projects-user-auth-username">'+RED._("projects.send-req.username")+'</label><input id="projects-user-auth-username" type="text"></input></div>'+
+                            '<div class="form-row"><label for=projects-user-auth-password">'+RED._("projects.send-req.password")+'</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
+                        } else if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(url)) {
+                            isSSH = true;
+                            var row = $('<div class="form-row"></div>').appendTo(message);
+                            $('<label for="projects-user-auth-key">SSH Key</label>').appendTo(row);
+                            var projectRepoSSHKeySelect = $('<select id="projects-user-auth-key">').width('70%').appendTo(row);
+                            $.getJSON("settings/user/keys", function(data) {
+                                var count = 0;
+                                data.keys.forEach(function(key) {
+                                    projectRepoSSHKeySelect.append($("<option></option>").val(key.name).text(key.name));
+                                    count++;
+                                });
+                                if (count === 0) {
+                                    //TODO: handle no keys yet setup
+                                }
                             });
-                            if (count === 0) {
-                                //TODO: handle no keys yet setup
-                            }
-                        });
-                        row = $('<div class="form-row"></div>').appendTo(message);
-                        $('<label for="projects-user-auth-passphrase">'+RED._("projects.send-req.passphrase")+'</label>').appendTo(row);
-                        $('<input id="projects-user-auth-passphrase" type="password"></input>').appendTo(row);
-                    }
+                            row = $('<div class="form-row"></div>').appendTo(message);
+                            $('<label for="projects-user-auth-passphrase">'+RED._("projects.send-req.passphrase")+'</label>').appendTo(row);
+                            $('<input id="projects-user-auth-passphrase" type="password"></input>').appendTo(row);
+                        }
 
-                    var notification = RED.notify(message,{
-                        type:"error",
-                        fixed: true,
-                        modal: true,
-                        buttons: [
-                            {
-                                //id: "node-dialog-delete",
-                                //class: 'leftButton',
-                                text: RED._("common.label.cancel"),
-                                click: function() {
-                                    notification.close();
-                                }
-                            },{
-                                text: '<span><i class="fa fa-refresh"></i> ' +RED._("projects.send-req.retry") +'</span>',
-                                click: function() {
-                                    body = body || {};
-                                    var authBody = {};
-                                    if (isSSH) {
-                                        authBody.keyFile = $('#projects-user-auth-key').val();
-                                        authBody.passphrase = $('#projects-user-auth-passphrase').val();
-                                    } else {
-                                        authBody.username = $('#projects-user-auth-username').val();
-                                        authBody.password = $('#projects-user-auth-password').val();
+                        var notification = RED.notify(message,{
+                            type:"error",
+                            fixed: true,
+                            modal: true,
+                            buttons: [
+                                {
+                                    //id: "node-dialog-delete",
+                                    //class: 'leftButton',
+                                    text: RED._("common.label.cancel"),
+                                    click: function() {
+                                        notification.close();
                                     }
-                                    var done = function(err) {
-                                        if (err) {
-                                            console.log(RED._("projects.send-req.update-failed"));
-                                            console.log(err);
+                                },{
+                                    text: '<span><i class="fa fa-refresh"></i> ' +RED._("projects.send-req.retry") +'</span>',
+                                    click: function() {
+                                        body = body || {};
+                                        var authBody = {};
+                                        if (isSSH) {
+                                            authBody.keyFile = $('#projects-user-auth-key').val();
+                                            authBody.passphrase = $('#projects-user-auth-passphrase').val();
                                         } else {
-                                            sendRequest(options,body);
-                                            notification.close();
+                                            authBody.username = $('#projects-user-auth-username').val();
+                                            authBody.password = $('#projects-user-auth-password').val();
                                         }
+                                        var done = function(err) {
+                                            if (err) {
+                                                console.log(RED._("projects.send-req.update-failed"));
+                                                console.log(err);
+                                            } else {
+                                                sendRequest(options,body);
+                                                notification.close();
+                                            }
 
-                                    }
-                                    sendRequest({
-                                        url: "projects/"+activeProject.name+"/remotes/"+(xhr.responseJSON.remote||options.remote||'origin'),
-                                        type: "PUT",
-                                        responses: {
-                                            0: function(error) {
-                                                done(error,null);
-                                            },
-                                            200: function(data) {
-                                                done(null,data);
-                                            },
-                                            400: {
-                                                'unexpected_error': function(error) {
-                                                    done(error,null);
-                                                }
-                                            },
                                         }
-                                    },{auth:authBody});
+                                        sendRequest({
+                                            url: "projects/"+activeProject.name+"/remotes/"+(xhr.responseJSON.remote||options.remote||'origin'),
+                                            type: "PUT",
+                                            responses: {
+                                                0: function(error) {
+                                                    done(error,null);
+                                                },
+                                                200: function(data) {
+                                                    done(null,data);
+                                                },
+                                                400: {
+                                                    'unexpected_error': function(error) {
+                                                        done(error,null);
+                                                    }
+                                                },
+                                            }
+                                        },{auth:authBody});
+                                    }
                                 }
-                            }
-                        ]
-                    });
-                    return;
+                            ]
+                        });
+                        return;
+                    } else if (xhr.responseJSON.code === 'git_host_key_verification_failed') {
+                        var message = $('<div>'+
+                            '<div class="form-row">'+RED._("projects.send-req.host-key-verify-failed")+'</div>'+
+                            '</div>');
+                        var notification = RED.notify(message,{
+                            type:"error",
+                            fixed: true,
+                            modal: true,
+                            buttons: [
+                                {
+                                    text: RED._("common.label.close"),
+                                    click: function() {
+                                        notification.close();
+                                    }
+                                }
+                            ]
+                        });
+                        return;
+                    }
                 } else if (responses[xhr.responseJSON.code]) {
                     resultCallback = responses[xhr.responseJSON.code];
                     resultCallbackArgs = xhr.responseJSON;
@@ -34223,6 +34406,8 @@ RED.projects = (function() {
         var branchFilterTerm = "";
         var branchFilterCreateItem;
         var branches = [];
+        var branchNames = new Set();
+        var remotes = [];
         var branchPrefix = "";
         var container = $('<div class="red-ui-projects-branch-list">').appendTo(options.container);
 
@@ -34230,18 +34415,30 @@ RED.projects = (function() {
             delay: 200,
             change: function() {
                 branchFilterTerm = $(this).val();
-                if (/(\.\.|\/\.|[?*[~^: \\]|\/\/|\/.$|\/$)/.test(branchFilterTerm)) {
+                // if there is a / then
+                //  - check what preceeds it is a known remote
+
+                var valid = false;
+                var hasRemote = false;
+                var m = /^([^/]+)\/[^/.~*?\[]/.exec(branchFilterTerm);
+                if (m && remotes.indexOf(m[1]) > -1) {
+                    valid = true;
+                    hasRemote = true;
+                }
+
+                if (!valid && /(\.\.|\/\.|[?*[~^: \\]|\/\/|\/.$|\/$)/.test(branchFilterTerm)) {
                     if (!branchFilterCreateItem.hasClass("input-error")) {
                         branchFilterCreateItem.addClass("input-error");
                         branchFilterCreateItem.find("i").addClass("fa-warning").removeClass("fa-code-fork");
                     }
-                    branchFilterCreateItem.find("span").text(RED._("projects.create-branch-list.invalid")+": "+branchPrefix+branchFilterTerm);
+                    branchFilterCreateItem.find("span").text(RED._("projects.create-branch-list.invalid")+": "+(hasRemote?"":branchPrefix)+branchFilterTerm);
                 } else {
                     if (branchFilterCreateItem.hasClass("input-error")) {
                         branchFilterCreateItem.removeClass("input-error");
                         branchFilterCreateItem.find("i").removeClass("fa-warning").addClass("fa-code-fork");
                     }
-                    branchFilterCreateItem.find(".red-ui-sidebar-vc-branch-list-entry-create-name").text(branchPrefix+branchFilterTerm);
+                    branchFilterCreateItem.find("span").text(RED._("projects.create-branch-list.create")+":");
+                    branchFilterCreateItem.find(".red-ui-sidebar-vc-branch-list-entry-create-name").text((hasRemote?"":branchPrefix)+branchFilterTerm);
                 }
                 branchList.editableList("filter");
             }
@@ -34274,8 +34471,12 @@ RED.projects = (function() {
                     if (!entry.hasOwnProperty('commit')) {
                         body.name = branchFilter.val();
                         body.create = true;
-                        if (options.remote) {
-                            body.name = options.remote()+"/"+body.name;
+
+                        if (options.remotes) {
+                            var m = /^([^/]+)\/[^/.~*?\[]/.exec(body.name);
+                            if (!m || remotes.indexOf(m[1]) === -1) {
+                                body.name = remotes[0]+"/"+body.name;
+                            }
                         }
                     } else {
                         if ($(this).hasClass('selected')) {
@@ -34290,11 +34491,17 @@ RED.projects = (function() {
             },
             filter: function(data) {
                 var isCreateEntry = (!data.hasOwnProperty('commit'));
+                var filterTerm = branchFilterTerm;
+                if (remotes.length > 0) {
+                    var m = /^([^/]+)\/[^/.~*?\[]/.exec(filterTerm);
+                    if (filterTerm !== "" && (!m || remotes.indexOf(m[1]) == -1)) {
+                        filterTerm = remotes[0]+"/"+filterTerm;
+                    }
+                }
                 return (
                             isCreateEntry &&
                             (
-                                branchFilterTerm !== "" &&
-                                branches.indexOf(branchPrefix+branchFilterTerm) === -1
+                                filterTerm !== "" && !branchNames.has(filterTerm)
                             )
                      ) ||
                      (
@@ -34309,12 +34516,14 @@ RED.projects = (function() {
                 branchList.editableList('empty');
                 var start = Date.now();
                 var spinner = addSpinnerOverlay(container).addClass("red-ui-component-spinner-contain");
-                if (options.remote) {
-                    branchPrefix = options.remote()+"/";
+                if (options.remotes) {
+                    remotes = options.remotes();
+                    branchPrefix = remotes[0]+"/";
                 } else {
                     branchPrefix = "";
+                    remotes = [];
                 }
-
+                branchNames = new Set();
                 sendRequest({
                     url: url,
                     type: "GET",
@@ -34326,6 +34535,7 @@ RED.projects = (function() {
                             branches = result.branches;
                             result.branches.forEach(function(b) {
                                 branchList.editableList('addItem',b);
+                                branchNames.add(b.name);
                             });
                             branchList.editableList('addItem',{});
                             setTimeout(function() {
@@ -34703,7 +34913,7 @@ RED.projects.settings = (function() {
         container.empty();
         var desc;
         if (activeProject.description) {
-            desc = marked(activeProject.description);
+            desc = RED.utils.renderMarkdown(activeProject.description);
         } else {
             desc = '<span class="red-ui-help-info-none">' + RED._("sidebar.project.noDescriptionAvailable") + '</span>';
         }
@@ -36239,13 +36449,13 @@ RED.projects.userSettings = (function() {
         $('<div class="red-ui-settings-section-description"></div>').appendTo(gitconfigContainer).text(RED._("editor:sidebar.project.userSettings.committerTip"));
 
         var row = $('<div class="red-ui-settings-row"></div>').appendTo(gitconfigContainer);
-        $('<label for=""></label>').text(RED._("editor:sidebar.project.userSettings.userName")).appendTo(row);
-        gitUsernameInput = $('<input type="text">').appendTo(row);
+        $('<label for="user-settings-gitconfig-username"></label>').text(RED._("editor:sidebar.project.userSettings.userName")).appendTo(row);
+        gitUsernameInput = $('<input type="text" id="user-settings-gitconfig-username">').appendTo(row);
         gitUsernameInput.val(currentGitSettings.user.name||"");
 
         row = $('<div class="red-ui-settings-row"></div>').appendTo(gitconfigContainer);
-        $('<label for=""></label>').text(RED._("editor:sidebar.project.userSettings.email")).appendTo(row);
-        gitEmailInput = $('<input type="text">').appendTo(row);
+        $('<label for="user-settings-gitconfig-email"></label>').text(RED._("editor:sidebar.project.userSettings.email")).appendTo(row);
+        gitEmailInput = $('<input type="text" id="user-settings-gitconfig-email">').appendTo(row);
         gitEmailInput.val(currentGitSettings.user.email||"");
     }
 
@@ -36963,7 +37173,7 @@ RED.sidebar.versionControl = (function() {
 
         var unstagedContent = $('<div class="red-ui-sidebar-vc-change-container"></div>').appendTo(localChanges.content);
         var header = $('<div class="red-ui-sidebar-vc-change-header">'+RED._("sidebar.project.versionControl.localFiles")+'</div>').appendTo(unstagedContent);
-        stageAllButton = $('<button class="red-ui-button red-ui-button-small" style="float: right"><i class="fa fa-plus"></i> '+RED._("sidebar.project.versionControl.all")+'</button>')
+        stageAllButton = $('<button class="red-ui-button red-ui-button-small" style="position: absolute; right: 5px; top: 5px;"><i class="fa fa-plus"></i> '+RED._("sidebar.project.versionControl.all")+'</button>')
             .appendTo(header)
             .on("click", function(evt) {
                 evt.preventDefault();
@@ -36995,7 +37205,7 @@ RED.sidebar.versionControl = (function() {
         unmergedContent = $('<div class="red-ui-sidebar-vc-change-container"></div>').appendTo(localChanges.content);
 
         header = $('<div class="red-ui-sidebar-vc-change-header">'+RED._("sidebar.project.versionControl.unmergedChanges")+'</div>').appendTo(unmergedContent);
-        bg = $('<div style="float: right"></div>').appendTo(header);
+        bg = $('<div style="position: absolute; right: 5px; top: 5px;"></div>').appendTo(header);
         var abortMergeButton = $('<button class="red-ui-button red-ui-button-small" style="margin-right: 5px;">'+RED._("sidebar.project.versionControl.abortMerge")+'</button>')
             .appendTo(bg)
             .on("click", function(evt) {
@@ -37060,7 +37270,7 @@ RED.sidebar.versionControl = (function() {
 
         header = $('<div class="red-ui-sidebar-vc-change-header">'+RED._("sidebar.project.versionControl.changeToCommit")+'</div>').appendTo(stagedContent);
 
-        bg = $('<div style="float: right"></div>').appendTo(header);
+        bg = $('<div style="position: absolute; right: 5px; top: 5px;"></div>').appendTo(header);
         var showCommitBox = function() {
             commitMessage.val("");
             submitCommitButton.prop("disabled",true);
@@ -37457,10 +37667,9 @@ RED.sidebar.versionControl = (function() {
         var remoteBranchList = utils.createBranchList({
             placeholder: RED._("sidebar.project.versionControl.createRemoteBranchPlaceholder"),
             currentLabel: RED._("sidebar.project.versionControl.upstream"),
-            remote: function() {
+            remotes: function() {
                 var project = RED.projects.getActiveProject();
-                var remotes = Object.keys(project.git.remotes);
-                return remotes[0];
+                return Object.keys(project.git.remotes);
             },
             container: remoteBranchSubRow,
             onselect: function(body) {

@@ -40,125 +40,140 @@
 #include "RpcClient.h"
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
+class Client {
+ public:
+  struct Hint {
+    enum Enum {
+      updateHintAll = 0,
+      updateHintLinks = 1
+    };
+  };
 
-class Client
-{
-public:
-	struct Hint
-	{
-		enum Enum
-		{
-			updateHintAll = 0,
-			updateHintLinks = 1
-		};
-	};
+  struct EventInfo {
+    int64_t time = -1;
+    int32_t uniqueId = 0;
+    uint64_t id = 0;
+    int32_t channel = -1;
+    std::string name;
+    BaseLib::PVariable value;
+  };
 
-	struct EventInfo
-	{
-		int64_t time = -1;
-		int32_t uniqueId = 0;
-		uint64_t id = 0;
-		int32_t channel = -1;
-		std::string name;
-		BaseLib::PVariable value;
-	};
+  Client();
 
-	Client();
+  virtual ~Client();
 
-	virtual ~Client();
+  void dispose();
 
-	void dispose();
+  void init();
 
-	void init();
+  bool lifetick();
 
-	bool lifetick();
+  void disconnectRega();
 
-	void disconnectRega();
+  void initServerMethods(std::pair<std::string, std::string> address);
 
-	void initServerMethods(std::pair<std::string, std::string> address);
+  void broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
 
-	void broadcastNodeEvent(const std::string& nodeId, const std::string& topic, const BaseLib::PVariable& value);
+  void broadcastEvent(const std::string &source,
+                      uint64_t id,
+                      int32_t channel,
+                      const std::string &deviceAddress,
+                      const std::shared_ptr<std::vector<std::string>> &valueKeys,
+                      const std::shared_ptr<std::vector<BaseLib::PVariable>> &values);
 
-	void broadcastEvent(const std::string& source, uint64_t id, int32_t channel, const std::string& deviceAddress, const std::shared_ptr<std::vector<std::string>>& valueKeys, const std::shared_ptr<std::vector<BaseLib::PVariable>>& values);
+  void systemListMethods(std::pair<std::string, std::string> &address);
 
-	void systemListMethods(std::pair<std::string, std::string>& address);
+  void listDevices(std::pair<std::string, std::string> &address);
 
-	void listDevices(std::pair<std::string, std::string>& address);
+  void broadcastError(int32_t level, const std::string &message);
 
-	void broadcastError(int32_t level, const std::string& message);
+  void broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions);
 
-	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+  void broadcastNewEvent(BaseLib::PVariable eventDescription);
 
-	void broadcastNewEvent(BaseLib::PVariable eventDescription);
+  void broadcastDeleteDevices(std::vector<uint64_t> &ids,
+                              BaseLib::PVariable deviceAddresses,
+                              BaseLib::PVariable deviceInfo);
 
-	void broadcastDeleteDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceAddresses, BaseLib::PVariable deviceInfo);
+  void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 
-	void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
+  void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 
-	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
+  void broadcastUpdateEvent(const std::string& id, int32_t type, uint64_t peerID, int32_t channel, const std::string& variable);
 
-	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
+  void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
-    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+  void broadcastRequestUiRefresh(const std::string &id);
 
-    void broadcastRequestUiRefresh(const std::string& id);
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
 
-	void broadcastPtyOutput(std::string& output);
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
 
-	void sendUnknownDevices(std::pair<std::string, std::string>& address);
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
 
-	void sendError(const std::pair<std::string, std::string>& address, int32_t level, const std::string& message);
+  void broadcastPtyOutput(std::string &output);
 
-	std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string path, std::string id);
+  void sendUnknownDevices(std::pair<std::string, std::string> &address);
 
-	std::shared_ptr<RemoteRpcServer> addSingleConnectionServer(std::pair<std::string, std::string> address, BaseLib::PRpcClientInfo clientInfo, std::string id);
+  void sendError(const std::pair<std::string, std::string> &address, int32_t level, const std::string &message);
 
-	std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket, std::string clientId, BaseLib::PRpcClientInfo clientInfo, std::string address, bool nodeEvents);
+  std::shared_ptr<RemoteRpcServer> addServer(std::pair<std::string, std::string> address,
+                                             BaseLib::PRpcClientInfo clientInfo,
+                                             std::string path,
+                                             std::string id);
 
-	void removeServer(std::pair<std::string, std::string> address);
+  std::shared_ptr<RemoteRpcServer> addSingleConnectionServer(std::pair<std::string, std::string> address,
+                                                             BaseLib::PRpcClientInfo clientInfo,
+                                                             std::string id);
 
-	void removeServer(int32_t uid);
+  std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket,
+                                                      std::string clientId,
+                                                      BaseLib::PRpcClientInfo clientInfo,
+                                                      std::string address,
+                                                      bool nodeEvents);
 
-	std::shared_ptr<RemoteRpcServer> getServer(std::pair<std::string, std::string>);
+  void removeServer(std::pair<std::string, std::string> address);
 
-	BaseLib::PVariable listClientServers(std::string id);
+  void removeServer(int32_t uid);
 
-	BaseLib::PVariable clientServerInitialized(std::string id);
+  std::shared_ptr<RemoteRpcServer> getServer(std::pair<std::string, std::string>);
 
-	void reset();
+  BaseLib::PVariable listClientServers(std::string id);
 
-	BaseLib::PVariable getLastEvents(std::set<uint64_t> ids, uint32_t timespan);
+  BaseLib::PVariable clientServerInitialized(std::string id);
 
-	BaseLib::PVariable getNodeEvents();
+  void reset();
 
-private:
-	bool _disposing = false;
-	std::shared_ptr<RpcClient> _client;
-	std::mutex _serversMutex;
-	int32_t _serverId = 0;
-	std::map<int32_t, std::shared_ptr<RemoteRpcServer>> _servers;
-	std::mutex _nodeClientsMutex;
-	std::set<int32_t> _nodeClients;
-	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-	std::mutex _lifetick1Mutex;
-	std::pair<int64_t, bool> _lifetick1;
-	std::mutex _eventBufferMutex;
-	int32_t _eventBufferPosition = 0;
-	std::atomic_int _uniqueEventId;
-	std::array<EventInfo, 1024> _eventBuffer;
-	int64_t _lastGarbageCollection = 0;
-	std::mutex _nodeEventCacheMutex;
-	std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> _nodeEventCache;
+  BaseLib::PVariable getLastEvents(std::set<uint64_t> ids, uint32_t timespan);
 
-	void collectGarbage();
+  BaseLib::PVariable getNodeEvents();
 
-	std::string getIPAddress(std::string address);
+ private:
+  bool _disposing = false;
+  std::shared_ptr<RpcClient> _client;
+  std::mutex _serversMutex;
+  int32_t _serverId = 0;
+  std::map<int32_t, std::shared_ptr<RemoteRpcServer>> _servers;
+  std::mutex _nodeClientsMutex;
+  std::set<int32_t> _nodeClients;
+  std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+  std::mutex _lifetick1Mutex;
+  std::pair<int64_t, bool> _lifetick1;
+  std::mutex _eventBufferMutex;
+  int32_t _eventBufferPosition = 0;
+  std::atomic_int _uniqueEventId;
+  std::array<EventInfo, 1024> _eventBuffer;
+  int64_t _lastGarbageCollection = 0;
+  std::mutex _nodeEventCacheMutex;
+  std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> _nodeEventCache;
+
+  void collectGarbage();
+
+  std::string getIPAddress(std::string address);
 };
 
 }

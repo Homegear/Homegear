@@ -1,1 +1,1 @@
-{"httpNodeRoot":"/","version":"1.0.1","context":{"default":"memory","stores":["memory"]},"flowEncryptionType":"system","tlsConfigDisableLocalFiles":false,"editorTheme":{"projects":{"enabled":false},"languages":["de","en-US"]}}
+{"httpNodeRoot":"/","version":"1.0.6","context":{"default":"memory","stores":["memory"]},"flowEncryptionType":"system","tlsConfigDisableLocalFiles":false,"editorTheme":{"projects":{"enabled":false},"languages":["de","en-US"]}}

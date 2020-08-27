@@ -34,115 +34,101 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear
-{
-namespace RpcMethods
-{
+namespace Homegear {
+namespace RpcMethods {
 
-class RPCAddStoryToBuilding : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddStoryToBuilding()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCAddStoryToBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddStoryToBuilding() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCCreateBuilding : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCreateBuilding()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RPCCreateBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCreateBuilding() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCDeleteBuilding : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteBuilding()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCDeleteBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteBuilding() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetStoriesInBuilding : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetStoriesInBuilding()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetStoriesInBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetStoriesInBuilding() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetBuildings : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetBuildings()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetBuildings : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetBuildings() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCGetBuildingMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetBuildingMetadata()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetBuildingMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetBuildingMetadata() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCRemoveStoryFromBuilding : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveStoryFromBuilding()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveStoryFromBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveStoryFromBuilding() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCSetBuildingMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetBuildingMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-    }
+class RPCSetBuildingMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetBuildingMetadata() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCUpdateBuilding : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUpdateBuilding()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RPCUpdateBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUpdateBuilding() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct,
+                                                    BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
 }
 }
-
 
 #endif //HOMEGEAR_BUILDINGRPCMETHODS_H

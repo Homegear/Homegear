@@ -36,49 +36,47 @@
 
 #include <termios.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class CliClient : public Ipc::IIpcClient
-{
-public:
-	explicit CliClient(const std::string& socketPath);
+class CliClient : public Ipc::IIpcClient {
+ public:
+  explicit CliClient(const std::string &socketPath);
 
-	~CliClient() override;
+  ~CliClient() override;
 
-    void stop() override;
+  void stop() override;
 
-	int32_t terminal(const std::string& command);
-private:
-	std::atomic_bool _printEvents{false};
-	int32_t _currentFamily = -1;
-	uint64_t _currentPeer = 0;
+  int32_t terminal(const std::string &command);
+ private:
+  std::atomic_bool _printEvents{false};
+  int32_t _currentFamily = -1;
+  uint64_t _currentPeer = 0;
 
-	std::mutex _outputMutex;
+  std::mutex _outputMutex;
 
-	std::mutex _onConnectWaitMutex;
-	std::condition_variable _onConnectConditionVariable;
+  std::mutex _onConnectWaitMutex;
+  std::condition_variable _onConnectConditionVariable;
 
-	std::string getBreadcrumb() const;
+  std::string getBreadcrumb() const;
 
-	void onConnect() override;
+  void onConnect() override;
 
-	void onDisconnect() override;
+  void onDisconnect() override;
 
-	static void loadHistory();
-	static void safeHistory();
+  static void loadHistory();
+  static void safeHistory();
 
-	void invokeGeneralCommand(const std::string& command);
+  void invokeGeneralCommand(const std::string &command);
 
-	// {{{ RPC methods
-	Ipc::PVariable broadcastEvent(Ipc::PArray& parameters) override;
+  // {{{ RPC methods
+  Ipc::PVariable broadcastEvent(Ipc::PArray &parameters) override;
 
-	Ipc::PVariable output(Ipc::PArray& parameters);
-	// }}}
+  Ipc::PVariable output(Ipc::PArray &parameters);
+  // }}}
 
-	void standardOutput(const std::string& text);
+  void standardOutput(const std::string &text);
 
-	void errorOutput(const std::string& text);
+  void errorOutput(const std::string &text);
 };
 
 }

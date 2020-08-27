@@ -191,7 +191,7 @@ if [ ! -z /data/fake-hwclock.data ]; then
     date -u -s "$(cat /data/fake-hwclock.data)"
 fi
 
-modprobe zram num_devices=3
+modprobe zram num_devices=2
 
 echo 134217728 > /sys/block/zram0/disksize
 echo 134217728 > /sys/block/zram1/disksize

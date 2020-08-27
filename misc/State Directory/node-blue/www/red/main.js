@@ -1,4 +1,9 @@
-/** This file was modified by Sathya Laufer */
+/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added IPv6 address to local host detection.
+ **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation

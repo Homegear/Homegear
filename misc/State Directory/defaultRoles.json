@@ -787,6 +787,23 @@
                     ]
                 },
                 {
+                    "element": "Base.shadingButtons",
+                    "roleIdsIn": [
+                        [
+                            501001,
+                            501003,
+                            501002
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            501001,
+                            501003,
+                            501002
+                        ]
+                    ]
+                },
+                {
                     "element": "Base.shadingButtonsUpDown",
                     "roleIdsIn": [
                         [
@@ -802,7 +819,7 @@
                     ]
                 },
                 {
-                    "element": "shadingButtonsSingleStepButtonsUpDownPositionPositionSlatsWindalarm",
+                    "element": "Base.shadingButtonsSingleStepPositionPositionSlatsWindalarm",
                     "roleIdsIn": [
                         [],
                         [
