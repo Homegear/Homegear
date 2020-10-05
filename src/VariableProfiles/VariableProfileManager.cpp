@@ -128,8 +128,10 @@ void VariableProfileManager::load() {
 
         variableProfile->variableCount++;
 
-        if (*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
-        else variableProfile->activeVariables++;
+        if (*profileAssociation->currentValue != *profileAssociation->profileValue) {
+          variableProfile->isActive = false;
+          profileAssociation->isActive = false;
+        } else variableProfile->activeVariables++;
 
         _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable][variableProfile->id] = profileAssociation;
       }
@@ -171,16 +173,23 @@ void VariableProfileManager::variableEvent(const std::string &source, uint64_t i
                   profileAssociation.second->currentValue = value;
 
                   if (*profileAssociation.second->currentValue == *profileAssociation.second->profileValue) {
-                    profileIterator->second->activeVariables++;
+                    if (!profileAssociation.second->isActive) {
+                      profileAssociation.second->isActive = true;
+                      profileIterator->second->activeVariables++;
+                      if (profileIterator->second->activeVariables > profileIterator->second->variableCount) profileIterator->second->activeVariables = profileIterator->second->variableCount;
+                    }
                   } else {
-                    profileIterator->second->activeVariables--;
+                    if (profileAssociation.second->isActive) {
+                      profileAssociation.second->isActive = false;
+                      profileIterator->second->activeVariables--;
+                      if (profileIterator->second->activeVariables < 0) profileIterator->second->activeVariables = 0;
+                    }
                   }
 
                   if (profileIterator->second->activeVariables == profileIterator->second->variableCount) {
                     profileIterator->second->isActive = true;
                     updates.emplace_back(profileIterator->first, true);
                   } else if (profileIterator->second->isActive) {
-
                     profileIterator->second->isActive = false;
                     updates.emplace_back(profileIterator->first, false);
                   }
@@ -446,8 +455,10 @@ BaseLib::PVariable VariableProfileManager::addVariableProfile(const BaseLib::PRp
 
       variableProfile->variableCount++;
 
-      if (*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
-      else variableProfile->activeVariables++;
+      if (*profileAssociation->currentValue != *profileAssociation->profileValue) {
+        variableProfile->isActive = false;
+        profileAssociation->isActive = false;
+      } else variableProfile->activeVariables++;
 
       _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable][variableProfile->id] = profileAssociation;
     }
@@ -683,8 +694,10 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
 
         variableProfile->variableCount++;
 
-        if (*profileAssociation->currentValue != *profileAssociation->profileValue) variableProfile->isActive = false;
-        else variableProfile->activeVariables++;
+        if (*profileAssociation->currentValue != *profileAssociation->profileValue) {
+          variableProfile->isActive = false;
+          profileAssociation->isActive = false;
+        } else variableProfile->activeVariables++;
 
         _profilesByVariable[valueEntry->peerId][valueEntry->channel][valueEntry->variable][variableProfile->id] = profileAssociation;
       }
