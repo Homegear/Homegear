@@ -62,6 +62,7 @@ struct VariableProfile {
 typedef std::shared_ptr<VariableProfile> PVariableProfile;
 
 struct VariableProfileAssociation {
+  bool isActive = true;
   uint64_t profileId = 0;
   bool ignoreValueFromDevice = true;
   uint32_t deviceRefractoryPeriod = 60;
