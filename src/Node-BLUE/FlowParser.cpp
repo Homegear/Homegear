@@ -111,7 +111,7 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
 
       int32_t inputs = 0;
       int32_t outputs = 0;
-      
+
       auto inputsIterator = flowElement->structValue->find("inputs");
       if (inputsIterator != flowElement->structValue->end()) inputs = inputsIterator->second->integerValue;
       auto outputsIterator = flowElement->structValue->find("outputs");
