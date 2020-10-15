@@ -111,13 +111,13 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
 
       int32_t inputs = 0;
       int32_t outputs = 0;
-
+      
       auto inputsIterator = flowElement->structValue->find("inputs");
       if (inputsIterator != flowElement->structValue->end()) inputs = inputsIterator->second->integerValue;
       auto outputsIterator = flowElement->structValue->find("outputs");
       if (outputsIterator != flowElement->structValue->end()) outputs = outputsIterator->second->integerValue;
 
-      int32_t currentOffset = std::max(nodeHeight, std::max(inputs * nodeConnectorHeight, outputs * nodeConnectorHeight));
+      int32_t currentOffset = yIterator->second->integerValue + std::max(nodeHeight, std::max(inputs * nodeConnectorHeight, outputs * nodeConnectorHeight));
       if (currentOffset > yOffset) yOffset = currentOffset;
     }
   }
