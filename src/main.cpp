@@ -417,18 +417,18 @@ void setLimits() {
     //Set rlimit for core dumps
     getrlimit(RLIMIT_CORE, &limits);
     limits.rlim_cur = limits.rlim_max;
-    GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+    GD::out.printInfo("Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
     setrlimit(RLIMIT_CORE, &limits);
     getrlimit(RLIMIT_CORE, &limits);
-    GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    GD::out.printInfo("Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
   }
 #ifdef RLIMIT_RTPRIO //Not existant on BSD systems
   getrlimit(RLIMIT_RTPRIO, &limits);
   limits.rlim_cur = limits.rlim_max;
-  GD::out.printInfo("Info: Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+  GD::out.printInfo("Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
   setrlimit(RLIMIT_RTPRIO, &limits);
   getrlimit(RLIMIT_RTPRIO, &limits);
-  GD::out.printInfo("Info: Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
+  GD::out.printInfo("Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
 #endif
 }
 

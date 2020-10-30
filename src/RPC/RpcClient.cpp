@@ -310,7 +310,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
         if (server->autoConnect) {
           server->socket->setHostname(server->hostname);
           server->socket->setPort(server->address.second);
-          if (server->settings) {
+          if (server->settings && (!server->settings->caFile.empty() || !server->settings->certFile.empty() || ! server->settings->keyFile.empty())) {
             std::unordered_map<std::string, BaseLib::TcpSocket::PCertificateInfo> certificates;
             BaseLib::TcpSocket::PCertificateInfo
                 certificateInfo = std::make_shared<BaseLib::TcpSocket::CertificateInfo>();
