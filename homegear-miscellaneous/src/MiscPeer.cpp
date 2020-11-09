@@ -836,7 +836,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
                 }
                 else
                 {
-                    std::string eventSource = "scriptEngine";
+                    std::string eventSource = clientInfo->initInterfaceId.empty() ? "scriptEngine" : clientInfo->initInterfaceId;
                     raiseEvent(eventSource, _peerID, channel, valueKeys, values);
                     raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
                 }

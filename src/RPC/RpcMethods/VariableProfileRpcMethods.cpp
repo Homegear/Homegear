@@ -43,7 +43,7 @@ BaseLib::PVariable RpcActivateVariableProfile::invoke(BaseLib::PRpcClientInfo cl
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("executeVariableProfile"))
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("activateVariableProfile"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
     return GD::variableProfileManager->activateVariableProfile(clientInfo, (uint64_t)parameters->at(0)->integerValue64);
