@@ -51,265 +51,264 @@
 #include <string>
 #include <queue>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace ScriptEngine
-{
+namespace ScriptEngine {
 
-class ScriptEngineServer : public BaseLib::IQueue
-{
-public:
-    ScriptEngineServer();
+class ScriptEngineServer : public BaseLib::IQueue {
+ public:
+  ScriptEngineServer();
 
-    virtual ~ScriptEngineServer();
+  virtual ~ScriptEngineServer();
 
-    bool lifetick();
+  bool lifetick();
 
-    bool start();
+  bool start();
 
-    void stop();
+  void stop();
 
-    void homegearShuttingDown();
+  void homegearShuttingDown();
 
-    void homegearReloading();
+  void homegearReloading();
 
-    void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
+  void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
-    void devTestClient();
+  void devTestClient();
 
-    uint32_t scriptCount();
+  uint32_t scriptCount();
 
-    std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> getRunningScripts();
+  std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> getRunningScripts();
 
-    void executeScript(PScriptInfo& scriptInfo, bool wait);
+  void executeScript(PScriptInfo &scriptInfo, bool wait);
 
-    std::string checkSessionId(const std::string& sessionId);
+  std::string checkSessionId(const std::string &sessionId);
 
-    BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray& parameters);
+  BaseLib::PVariable executePhpNodeMethod(BaseLib::PArray &parameters);
 
-    BaseLib::PVariable executeDeviceMethod(BaseLib::PArray& parameters);
+  BaseLib::PVariable executeDeviceMethod(BaseLib::PArray &parameters);
 
-    void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
+  void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
-    void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+  void broadcastNewDevices(std::vector<uint64_t> &ids, const BaseLib::PVariable& deviceDescriptions);
 
-    void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
+  void broadcastDeleteDevices(const BaseLib::PVariable& deviceInfo);
 
-    void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+  void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
-    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+  void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
-    BaseLib::PVariable getAllScripts();
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
 
-private:
-    class QueueEntry : public BaseLib::IQueueEntry
-    {
-    public:
-        QueueEntry() {}
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
 
-        QueueEntry(PScriptEngineClientData clientData, std::vector<char>& packet)
-        {
-            this->clientData = clientData;
-            this->packet = packet;
-        }
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
 
-        QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters)
-        {
-            this->clientData = clientData;
-            this->methodName = methodName;
-            this->parameters = parameters;
-        }
+  BaseLib::PVariable getAllScripts();
 
-        virtual ~QueueEntry() {}
+ private:
+  class QueueEntry : public BaseLib::IQueueEntry {
+   public:
+    QueueEntry() {}
 
-        PScriptEngineClientData clientData;
+    QueueEntry(PScriptEngineClientData clientData, std::vector<char> &packet) {
+      this->clientData = clientData;
+      this->packet = packet;
+    }
 
-        // {{{ Request
-        std::string methodName;
-        BaseLib::PArray parameters;
-        // }}}
+    QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) {
+      this->clientData = clientData;
+      this->methodName = methodName;
+      this->parameters = parameters;
+    }
 
-        // {{{ Response
-        std::vector<char> packet;
-        // }}}
-    };
+    virtual ~QueueEntry() {}
 
-    struct ClientScriptInfo
-    {
-        int32_t scriptId = 0;
-        BaseLib::PRpcClientInfo clientInfo;
-    };
-    typedef std::shared_ptr<ClientScriptInfo> PClientScriptInfo;
+    PScriptEngineClientData clientData;
 
-    BaseLib::Output _out;
-    std::string _socketPath;
-    std::atomic_bool _shuttingDown;
-    std::atomic_bool _stopServer;
-    std::thread _mainThread;
-    int32_t _backlog = 100;
-    std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-    std::atomic<int32_t> _processCallbackHandlerId{-1};
-    std::mutex _newProcessMutex;
-    std::mutex _processMutex;
-    std::mutex _resourceMutex;
-    std::map<pid_t, PScriptEngineProcess> _processes;
-    std::mutex _currentScriptIdMutex;
-    int32_t _currentScriptId = 0;
-    std::mutex _stateMutex;
-    std::map<int32_t, PScriptEngineClientData> _clients;
-    int32_t _currentClientId = 0;
-    int64_t _lastGargabeCollection = 0;
-    BaseLib::PRpcClientInfo _scriptEngineClientInfo;
-    std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
-    std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters)>> _localRpcMethods;
-    std::mutex _executeScriptMutex;
-    std::mutex _packetIdMutex;
-    int32_t _currentPacketId = 0;
-    std::mutex _scriptFinishedThreadMutex;
-    std::thread _scriptFinishedThread;
-    std::mutex _nodeClientIdMapMutex;
-    std::map<std::string, int32_t> _nodeClientIdMap;
-    std::mutex _deviceClientIdMapMutex;
-    std::map<uint64_t, int32_t> _deviceClientIdMap;
-
-    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-    std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-
-    std::mutex _lifetick1Mutex;
-    std::pair<int64_t, bool> _lifetick1;
-    std::mutex _lifetick2Mutex;
-    std::pair<int64_t, bool> _lifetick2;
-
-    // {{{ Debugging / Valgrinding
-    pid_t _manualClientCurrentProcessId = 1;
-    std::mutex _unconnectedProcessesMutex;
-    std::queue<pid_t> _unconnectedProcesses;
+    // {{{ Request
+    std::string methodName;
+    BaseLib::PArray parameters;
     // }}}
 
-    void collectGarbage();
-
-    bool getFileDescriptor(bool deleteOldSocket = false);
-
-    void mainThread();
-
-    void readClient(PScriptEngineClientData& clientData);
-
-    BaseLib::PVariable send(PScriptEngineClientData& clientData, std::vector<char>& data);
-
-    BaseLib::PVariable sendRequest(PScriptEngineClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait);
-
-    void sendResponse(PScriptEngineClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
-
-    void closeClientConnection(PScriptEngineClientData client);
-
-    PScriptEngineProcess getFreeProcess(bool nodeProcess, uint32_t maxThreadCount = 0);
-
-    void unregisterNode(std::string nodeId);
-
-    void unregisterDevice(uint64_t peerId);
-
-    void invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode);
-
-    void invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode);
-
-    void stopDevices();
-
-    void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
-
-    // {{{ RPC methods
-    BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData& clientData, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable scriptFinished(PScriptEngineClientData& clientData, int32_t scriptId, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable scriptOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable scriptHeaders(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable peerExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable listRpcClients(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable raiseDeleteDevice(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable getFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable setFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    BaseLib::PVariable deleteFamilySetting(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-
-    // {{{ MQTT
-    BaseLib::PVariable mqttPublish(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+    // {{{ Response
+    std::vector<char> packet;
     // }}}
+  };
 
-    // {{{ User methods
-    BaseLib::PVariable auth(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  struct ClientScriptInfo {
+    int32_t scriptId = 0;
+    BaseLib::PRpcClientInfo clientInfo;
+  };
+  typedef std::shared_ptr<ClientScriptInfo> PClientScriptInfo;
 
-    BaseLib::PVariable createUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::Output _out;
+  std::string _socketPath;
+  std::atomic_bool _shuttingDown;
+  std::atomic_bool _stopServer;
+  std::thread _mainThread;
+  int32_t _backlog = 100;
+  std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+  std::atomic<int32_t> _processCallbackHandlerId{-1};
+  std::mutex _newProcessMutex;
+  std::mutex _processMutex;
+  std::mutex _resourceMutex;
+  std::map<pid_t, PScriptEngineProcess> _processes;
+  std::mutex _currentScriptIdMutex;
+  int32_t _currentScriptId = 0;
+  std::mutex _stateMutex;
+  std::map<int32_t, PScriptEngineClientData> _clients;
+  int32_t _currentClientId = 0;
+  int64_t _lastGargabeCollection = 0;
+  BaseLib::PRpcClientInfo _scriptEngineClientInfo;
+  std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
+  std::map<std::string, std::function<BaseLib::PVariable(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters)>> _localRpcMethods;
+  std::mutex _executeScriptMutex;
+  std::mutex _packetIdMutex;
+  int32_t _currentPacketId = 0;
+  std::mutex _scriptFinishedThreadMutex;
+  std::thread _scriptFinishedThread;
+  std::mutex _nodeClientIdMapMutex;
+  std::map<std::string, int32_t> _nodeClientIdMap;
+  std::mutex _deviceClientIdMapMutex;
+  std::map<uint64_t, int32_t> _deviceClientIdMap;
 
-    BaseLib::PVariable deleteUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+  std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-    BaseLib::PVariable getUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  std::mutex _lifetick1Mutex;
+  std::pair<int64_t, bool> _lifetick1;
+  std::mutex _lifetick2Mutex;
+  std::pair<int64_t, bool> _lifetick2;
 
-    BaseLib::PVariable getUsersGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  // {{{ Debugging / Valgrinding
+  pid_t _manualClientCurrentProcessId = 1;
+  std::mutex _unconnectedProcessesMutex;
+  std::queue<pid_t> _unconnectedProcesses;
+  // }}}
 
-    BaseLib::PVariable setUserMetadata(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void collectGarbage();
 
-    BaseLib::PVariable updateUser(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  bool getFileDescriptor(bool deleteOldSocket = false);
 
-    BaseLib::PVariable userExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void mainThread();
 
-    BaseLib::PVariable listUsers(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void readClient(PScriptEngineClientData &clientData);
 
-    BaseLib::PVariable createOauthKeys(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable send(PScriptEngineClientData &clientData, std::vector<char> &data);
 
-    BaseLib::PVariable refreshOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable sendRequest(PScriptEngineClientData &clientData, std::string methodName, const BaseLib::PArray &parameters, bool wait);
 
-    BaseLib::PVariable verifyOauthKey(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-    // }}}
+  void sendResponse(PScriptEngineClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
-    // {{{ Group methods
-    BaseLib::PVariable createGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void closeClientConnection(const PScriptEngineClientData& client);
 
-    BaseLib::PVariable deleteGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  PScriptEngineProcess getFreeProcess(bool nodeProcess, uint32_t maxThreadCount = 0);
 
-    BaseLib::PVariable getGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void unregisterNode(std::string nodeId);
 
-    BaseLib::PVariable getGroups(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void unregisterDevice(uint64_t peerId);
 
-    BaseLib::PVariable groupExists(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void invokeScriptFinished(PScriptEngineProcess process, int32_t id, int32_t exitCode);
 
-    BaseLib::PVariable updateGroup(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-    // }}}
+  void invokeScriptFinishedEarly(PScriptInfo scriptInfo, int32_t exitCode);
 
-    // {{{ Module methods
-    BaseLib::PVariable listModules(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void stopDevices();
 
-    BaseLib::PVariable loadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
 
-    BaseLib::PVariable unloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  // {{{ RPC methods
+  BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData &clientData, BaseLib::PArray &parameters);
 
-    BaseLib::PVariable reloadModule(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-    // }}}
+  BaseLib::PVariable scriptFinished(PScriptEngineClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters);
 
-    // {{{ Licensing methods
-    BaseLib::PVariable checkLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable scriptOutput(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
-    BaseLib::PVariable removeLicense(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable scriptHeaders(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
-    BaseLib::PVariable getLicenseStates(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable peerExists(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
-    BaseLib::PVariable getTrialStartTime(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-    // }}}
+  BaseLib::PVariable listRpcClients(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
-    // {{{ Flows
-    BaseLib::PVariable nodeEvent(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable raiseDeleteDevice(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
-    BaseLib::PVariable nodeOutput(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
+  BaseLib::PVariable getFamilySetting(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
-    BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData& clientData, PClientScriptInfo scriptInfo, BaseLib::PArray& parameters);
-    // }}}
-    // }}}
+  BaseLib::PVariable setFamilySetting(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable deleteFamilySetting(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  // {{{ MQTT
+  BaseLib::PVariable mqttPublish(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  // }}}
+
+  // {{{ User methods
+  BaseLib::PVariable auth(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable createUser(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable deleteUser(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getUserMetadata(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getUsersGroups(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setUserMetadata(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable updateUser(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable userExists(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable listUsers(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable createOauthKeys(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable refreshOauthKey(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable verifyOauthKey(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  // }}}
+
+  // {{{ Group methods
+  BaseLib::PVariable createGroup(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable deleteGroup(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getGroup(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getGroups(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable groupExists(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable updateGroup(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  // }}}
+
+  // {{{ Module methods
+  BaseLib::PVariable listModules(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable loadModule(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable unloadModule(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable reloadModule(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  // }}}
+
+  // {{{ Licensing methods
+  BaseLib::PVariable checkLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable removeLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getLicenseStates(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getTrialStartTime(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  // }}}
+
+  // {{{ Flows
+  BaseLib::PVariable nodeEvent(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable nodeOutput(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  // }}}
+  // }}}
 };
 
 }

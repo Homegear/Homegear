@@ -31,67 +31,55 @@
 #include "FamilyServer.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-FamilyServer::FamilyServer()
-{
-    _out.init(GD::bl.get());
-    _out.setPrefix("Family Server: ");
+FamilyServer::FamilyServer() {
+  _out.init(GD::bl.get());
+  _out.setPrefix("Family Server: ");
 
-    _rpcMethods.emplace(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PRpcClientInfo& clientInfo, BaseLib::PArray& parameters)>>("rpcTest", std::bind(&FamilyServer::rpcTest, this, std::placeholders::_1, std::placeholders::_2)));
+  _rpcMethods.emplace(std::pair<std::string, std::function<BaseLib::PVariable(BaseLib::PRpcClientInfo &clientInfo, BaseLib::PArray &parameters)>>("rpcTest", std::bind(&FamilyServer::rpcTest, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
-bool FamilyServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string& methodName)
-{
-    try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
+bool FamilyServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &methodName) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
 
-        auto methodIterator = _rpcMethods.find(methodName);
-        return methodIterator != _rpcMethods.end();
-    }
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return false;
+    auto methodIterator = _rpcMethods.find(methodName);
+    return methodIterator != _rpcMethods.end();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
 }
 
-BaseLib::PVariable FamilyServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, const std::string& methodName, BaseLib::PArray& parameters)
-{
-    try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+BaseLib::PVariable FamilyServer::callRpcMethod(BaseLib::PRpcClientInfo clientInfo, const std::string &methodName, BaseLib::PArray &parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-        auto methodIterator = _rpcMethods.find(methodName);
-        if(methodIterator == _rpcMethods.end())
-        {
-            _out.printError("Warning: RPC method not found: " + methodName);
-            return BaseLib::Variable::createError(-32601, "Requested method not found.");
-        }
+    auto methodIterator = _rpcMethods.find(methodName);
+    if (methodIterator == _rpcMethods.end()) {
+      _out.printError("Warning: RPC method not found: " + methodName);
+      return BaseLib::Variable::createError(-32601, "Requested method not found.");
+    }
 
-        return methodIterator->second(clientInfo, parameters);
-    }
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+    return methodIterator->second(clientInfo, parameters);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 // {{{ RPC methods
-BaseLib::PVariable FamilyServer::rpcTest(BaseLib::PRpcClientInfo& clientInfo, BaseLib::PArray& parameters)
-{
-    try
-    {
-        return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime());
-    }
-    catch(const std::exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
+BaseLib::PVariable FamilyServer::rpcTest(BaseLib::PRpcClientInfo &clientInfo, BaseLib::PArray &parameters) {
+  try {
+    return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime());
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
 

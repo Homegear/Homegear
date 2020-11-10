@@ -34,28 +34,25 @@
 #include <homegear-base/BaseLib.h>
 #include <homegear-node/NodeInfo.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-class FlowInfoClient
-{
-public:
-	int32_t id = 0;
+class FlowInfoClient {
+ public:
+  int32_t id = 0;
 
-	// {{{ Input parameters
-	Flows::PVariable flow;
-	// }}}
+  // {{{ Input parameters
+  Flows::PVariable flow;
+  // }}}
 
-	std::unordered_map<std::string, Flows::PNodeInfo> nodes;
+  std::unordered_map<std::string, Flows::PNodeInfo> nodes;
 
-	FlowInfoClient() {}
+  FlowInfoClient() {}
 
-	virtual ~FlowInfoClient() {}
+  virtual ~FlowInfoClient() {}
 
-protected:
+ protected:
 };
 
 typedef std::shared_ptr<FlowInfoClient> PFlowInfoClient;

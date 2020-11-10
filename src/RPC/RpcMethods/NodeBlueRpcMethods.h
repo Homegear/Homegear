@@ -34,42 +34,38 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear
-{
-namespace RpcMethods
-{
+namespace Homegear {
+namespace RpcMethods {
 
-class RPCAddNodesToFlow : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddNodesToFlow()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-    }
+class RPCAddNodesToFlow : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddNodesToFlow() {
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCFlowHasTag : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCFlowHasTag()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCFlowHasTag : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCFlowHasTag() {
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCRemoveNodesFromFlow : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveNodesFromFlow()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCRemoveNodesFromFlow : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveNodesFromFlow() {
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 }

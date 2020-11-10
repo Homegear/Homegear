@@ -42,95 +42,94 @@
 #include <mutex>
 #include <map>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
 class RpcClient;
 
-class RemoteRpcServer
-{
-public:
-	std::shared_ptr<ClientSettings::Settings> settings;
+class RemoteRpcServer {
+ public:
+  std::shared_ptr<ClientSettings::Settings> settings;
 
-	int32_t creationTime = 0;
-	std::atomic_bool removed;
-	std::atomic_bool initialized;
-	bool useSSL = false;
-	bool keepAlive = false;
-	bool autoConnect = true;
-	bool binary = false;
-	bool json = false;
-	bool webSocket = false;
-	bool newFormat = false;
-	bool subscribePeers = false;
-	bool nodeEvents = false;
-	bool reconnectInfinitely = false;
-	bool sendNewDevices = true;
-	std::string hostname;
-	std::pair<std::string, std::string> address;
-	std::string path;
-	std::string id;
-	BaseLib::RpcClientType type = BaseLib::RpcClientType::generic;
-	int32_t uid = -1;
-	std::shared_ptr<std::set<uint64_t>> knownDevices;
-	std::map<std::string, bool> knownMethods;
-	std::shared_ptr<BaseLib::TcpSocket> socket;
-	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-	std::mutex sendMutex;
-	int32_t lastPacketSent = -1;
-	std::set<uint64_t> subscribedPeers;
+  int32_t creationTime = 0;
+  std::atomic_bool removed;
+  std::atomic_bool initialized;
+  bool useSSL = false;
+  bool keepAlive = false;
+  bool autoConnect = true;
+  bool binary = false;
+  bool json = false;
+  bool webSocket = false;
+  bool newFormat = false;
+  bool subscribePeers = false;
+  bool nodeEvents = false;
+  bool reconnectInfinitely = false;
+  bool sendNewDevices = true;
+  std::string hostname;
+  std::pair<std::string, std::string> address;
+  std::string path;
+  std::string id;
+  BaseLib::RpcClientType type = BaseLib::RpcClientType::generic;
+  int32_t uid = -1;
+  std::shared_ptr<std::set<uint64_t>> knownDevices;
+  std::map<std::string, bool> knownMethods;
+  std::shared_ptr<BaseLib::TcpSocket> socket;
+  std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+  std::mutex sendMutex;
+  int32_t lastPacketSent = -1;
+  std::set<uint64_t> subscribedPeers;
 
-	BaseLib::PRpcClientInfo& getServerClientInfo() { return _serverClientInfo; }
+  BaseLib::PRpcClientInfo &getServerClientInfo() { return _serverClientInfo; }
 
-	RemoteRpcServer(BaseLib::PRpcClientInfo& serverClientInfo);
+  RemoteRpcServer(BaseLib::PRpcClientInfo &serverClientInfo);
 
-	RemoteRpcServer(std::shared_ptr<RpcClient>& client, BaseLib::PRpcClientInfo& serverClientInfo);
+  RemoteRpcServer(std::shared_ptr<RpcClient> &client, BaseLib::PRpcClientInfo &serverClientInfo);
 
-	virtual ~RemoteRpcServer();
+  virtual ~RemoteRpcServer();
 
-	/**
-	 * Queues a method for sending to this event server.
-	 *
-	 * @param method The method to queue. The first part of the pair is the method name, the second part the parameters.
-	 */
-	void queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> method);
+  /**
+   * Queues a method for sending to this event server.
+   *
+   * @param method The method to queue. The first part of the pair is the method name, the second part the parameters.
+   */
+  void queueMethod(std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> method);
 
-	/**
-     * Invokes a client RPC method.
-     * @param methodName
-     * @param parameters
-     * @return Returns the result of the method call.
-     */
-	BaseLib::PVariable invoke(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+  /**
+   * Invokes a client RPC method.
+   * @param methodName
+   * @param parameters
+   * @return Returns the result of the method call.
+   */
+  BaseLib::PVariable invoke(std::string &methodName, std::shared_ptr<std::list<BaseLib::PVariable>> &parameters);
 
-private:
-	std::shared_ptr<RpcClient> _client;
-	BaseLib::PRpcClientInfo _serverClientInfo;
-	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-	std::shared_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-	std::shared_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
+ private:
+  std::shared_ptr<RpcClient> _client;
+  BaseLib::PRpcClientInfo _serverClientInfo;
+  std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+  std::shared_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+  std::shared_ptr<BaseLib::Rpc::XmlrpcEncoder> _xmlRpcEncoder;
 
-	//{{{ Method queue
-	static const int32_t _methodBufferSize = 1000;
-	int32_t _methodBufferHead = 0;
-	int32_t _methodBufferTail = 0;
-	std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>> _methodBuffer[_methodBufferSize];
-	std::mutex _methodProcessingThreadMutex;
-	std::thread _methodProcessingThread;
-	bool _methodProcessingMessageAvailable = false;
-	std::condition_variable _methodProcessingConditionVariable;
-	std::atomic_bool _stopMethodProcessingThread;
+  //{{{ Method queue
+  static const int32_t _methodBufferSize = 1000;
+  int32_t _methodBufferHead = 0;
+  int32_t _methodBufferTail = 0;
+  std::shared_ptr<std::pair<std::string, std::shared_ptr<std::list<BaseLib::PVariable>>>>
+      _methodBuffer[_methodBufferSize];
+  std::mutex _methodProcessingThreadMutex;
+  std::thread _methodProcessingThread;
+  bool _methodProcessingMessageAvailable = false;
+  std::condition_variable _methodProcessingConditionVariable;
+  std::atomic_bool _stopMethodProcessingThread;
 
-	std::atomic<uint32_t> _droppedEntries;
-	std::atomic<int64_t> _lastQueueFullError;
-	//}}}
+  std::atomic<uint32_t> _droppedEntries;
+  std::atomic<int64_t> _lastQueueFullError;
+  //}}}
 
-	void processMethods();
+  void processMethods();
 
-	BaseLib::PVariable invokeClientMethod(std::string& methodName, std::shared_ptr<std::list<BaseLib::PVariable>>& parameters);
+  BaseLib::PVariable invokeClientMethod(std::string &methodName,
+                                        std::shared_ptr<std::list<BaseLib::PVariable>> &parameters);
 };
 
 }

@@ -31,30 +31,24 @@
 #include "IpcClientData.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-IpcClientData::IpcClientData()
-{
-	init();
-	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+IpcClientData::IpcClientData() {
+  init();
+  fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 }
 
-IpcClientData::IpcClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor)
-{
-	init();
-	fileDescriptor = clientFileDescriptor;
+IpcClientData::IpcClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) {
+  init();
+  fileDescriptor = clientFileDescriptor;
 }
 
-
-IpcClientData::~IpcClientData()
-{
+IpcClientData::~IpcClientData() {
 }
 
-void IpcClientData::init()
-{
-	binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
-	buffer.resize(1024);
+void IpcClientData::init() {
+  binaryRpc = std::unique_ptr<BaseLib::Rpc::BinaryRpc>(new BaseLib::Rpc::BinaryRpc(GD::bl.get()));
+  buffer.resize(1024);
 }
 
 }

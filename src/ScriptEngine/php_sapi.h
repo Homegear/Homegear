@@ -58,21 +58,20 @@
 #include <ext/standard/info.h>
 
 #if PHP_VERSION_ID >= 70400
-struct hg_stream_handle
-{
-    std::string buffer;
-    size_t position = 0;
+struct hg_stream_handle {
+  std::string buffer;
+  size_t position = 0;
 };
 #endif
 
-void php_homegear_build_argv(std::vector<std::string>& arguments);
+void php_homegear_build_argv(std::vector<std::string> &arguments);
 int php_homegear_init();
 void php_homegear_deinit();
 
 #if PHP_VERSION_ID >= 70400
-ssize_t hg_zend_stream_reader(void* handle, char* buf, size_t len);
-size_t hg_zend_stream_fsizer(void* handle);
-void hg_zend_stream_closer(void* handle);
+ssize_t hg_zend_stream_reader(void *handle, char *buf, size_t len);
+size_t hg_zend_stream_fsizer(void *handle);
+void hg_zend_stream_closer(void *handle);
 #endif
 
 #endif

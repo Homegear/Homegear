@@ -48,9 +48,9 @@
 
 void php_device_startup();
 
-bool php_init_device(PScriptInfo scriptInfo, zend_class_entry* homegearDeviceClassEntry, zval* homegearDeviceObject);
+bool php_init_device(PScriptInfo scriptInfo, zend_class_entry *homegearDeviceClassEntry, zval *homegearDeviceObject);
 
-BaseLib::PVariable php_device_object_invoke_local(PScriptInfo& scriptInfo, zval* homegearDeviceObject, std::string& methodName, BaseLib::PArray& parameters);
+BaseLib::PVariable php_device_object_invoke_local(PScriptInfo &scriptInfo, zval *homegearDeviceObject, std::string &methodName, BaseLib::PArray &parameters);
 
 #endif
 #endif

@@ -33,20 +33,17 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-class IpcResponse
-{
-public:
-	std::atomic_bool finished;
-	int32_t packetId = 0;
-	BaseLib::PVariable response;
+class IpcResponse {
+ public:
+  std::atomic_bool finished;
+  int32_t packetId = 0;
+  BaseLib::PVariable response;
 
-	IpcResponse()
-	{
-		finished = false;
-	}
+  IpcResponse() {
+    finished = false;
+  }
 };
 
 typedef std::shared_ptr<IpcResponse> PIpcResponse;

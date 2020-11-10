@@ -609,12 +609,12 @@
             "icon": "door_open_2",
             "translations": {
                 "de-DE": {
-                    "0": "geöffnet",
-                    "1": "geschlossen"
+                    "0": "geschlossen",
+                    "1": "geöffnet"
                 },
                 "en-US": {
-                    "0": "opened",
-                    "1": "closed"
+                    "0": "closed",
+                    "1": "opened"
                 }
             }
         }
@@ -646,12 +646,12 @@
             },
             "translations": {
                 "de-DE": {
-                    "0": "geöffnet",
-                    "1": "geschlossen"
+                    "0": "geschlossen",
+                    "1": "geöffnet"
                 },
                 "en-US": {
-                    "0": "opened",
-                    "1": "closed"
+                    "0": "closed",
+                    "1": "opened"
                 }
             }
         }
@@ -787,6 +787,23 @@
                     ]
                 },
                 {
+                    "element": "Base.shadingButtons",
+                    "roleIdsIn": [
+                        [
+                            501001,
+                            501003,
+                            501002
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            501001,
+                            501003,
+                            501002
+                        ]
+                    ]
+                },
+                {
                     "element": "Base.shadingButtonsUpDown",
                     "roleIdsIn": [
                         [
@@ -802,7 +819,7 @@
                     ]
                 },
                 {
-                    "element": "Base.shadingButtonsSingleStepButtonsUpDownPositionPositionSlatsWindalarm",
+                    "element": "Base.shadingButtonsSingleStepPositionPositionSlatsWindalarm",
                     "roleIdsIn": [
                         [],
                         [
