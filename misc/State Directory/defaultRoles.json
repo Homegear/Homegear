@@ -1059,40 +1059,64 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.shadingButtonsPositionSlats",
+                    "element": "Base.shadingAwningButtonsPositionWindalarm",
                     "roleIdsIn": [
-                        [
-                            502001,
-                            502003,
-                            502002
-                        ],
+                        [],
                         [
                             502004
+                        ],
+                        [
+                            502008
                         ]
                     ],
                     "roleIdsOut": [
                         [
-                            502001,
-                            502003,
-                            502002
+                            {
+                                "id": 502005,
+                                "value": false
+                            },
+                            {
+                                "id": 502006,
+                                "value": false
+                            },
+                            {
+                                "id": 502005,
+                                "value": true
+                            }
                         ],
                         [
                             502004
-                        ]
+                        ],
+                        []
                     ]
                 },
                 {
-                    "element": "Base.shadingButtonsUpDown",
+                 "element": "Base.shadingAwningButtonsPosition",
                     "roleIdsIn": [
+                        [],
                         [
-                            502001
+                            502004
                         ]
                     ],
                     "roleIdsOut": [
                         [
-                            502001
+                            {
+                                "id": 502005,
+                                "value": false
+                            },
+                            {
+                                "id": 502006,
+                                "value": false
+                            },
+                            {
+                                "id": 502005,
+                                "value": true
+                            },
+                            [
+                                502004
+                            ]
                         ]
-                    ]
+                    ] 
                 }
             ],
             "icon": "awning_1",
@@ -1198,6 +1222,78 @@
         "translations": {
             "en-US": "shading - awning - position",
             "de-DE": "Beschattung - Markise - Position"
+        },
+        "uiRef": 502000
+    },
+      {
+        "id": 502005,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - awning - retract and extend",
+            "de-DE": "Beschattung - Markise - einfahren und ausfahren"
+        },
+        "uiRef": 502000,
+        "ui": {
+            "translations": {
+                "de-DE": {
+                    "0": "Einfahren",
+                    "1": "Ausfahren"
+                },
+                "en-US": {
+                    "0": "Retract",
+                    "1": "Extend"
+                }
+            }
+        }
+    },
+    {
+        "id": 502006,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - awning - step",
+            "de-DE": "Beschattung - Markise - Stufe"
+        },
+        "uiRef": 502000,
+        "ui": {
+            "translations": {
+                "de-DE": {
+                    "0": "Hoch",
+                    "1": "Runter"
+                },
+                "en-US": {
+                    "0": "Up",
+                    "1": "Down"
+                }
+            }
+        }
+    },
+    {
+        "id": 502007,
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "shading - slats - position",
+            "de-DE": "Beschattung - Markise - Lamellenposition"
+        },
+        "uiRef": 502000
+    },
+    {
+        "id": 502008,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - awning - windalert",
+            "de-DE": "Beschattung - Markise - Windalarm"
         },
         "uiRef": 502000
     },
