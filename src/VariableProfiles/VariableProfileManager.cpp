@@ -37,7 +37,6 @@ VariableProfileManager::VariableProfileManager() {
   _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 
   _profileManagerClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-  _profileManagerClientInfo->scriptEngineServer = true;
   _profileManagerClientInfo->initInterfaceId = "profileManager";
   _profileManagerClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
   std::vector<uint64_t> groups{2};

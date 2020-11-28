@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+
+PHP_ZEND_VERSION     := $(shell sed -ne 's/\#define ZEND_MODULE_API_NO //p' Zend/zend_modules.h)-zts
+
+override_dh_auto_configure:
+	# We can for example download needed files here.
+	# All shell commands are supported
+
+override_dh_auto_build:
+	./configure  --prefix /usr/share/homegear/php --enable-embed=static --with-config-file-path=/etc/homegear --with-config-file-scan-dir=/etc/homegear/php.conf.d --includedir=/usr/include/php8-homegear --libdir=/usr/share/homegear/php --libexecdir=${prefix}/lib --datadir=${prefix}/share --program-suffix=-homegear --sysconfdir=/etc/homegear --localstatedir=/var --mandir=${prefix}/man --disable-debug --disable-rpath --with-pic --with-layout=GNU --enable-bcmath --enable-calendar --enable-ctype --enable-dba --without-gdbm --without-qdbm --enable-inifile --enable-flatfile --enable-dom --with-enchant=/usr --enable-exif --with-gettext=/usr --with-gmp=/usr/include/%target% --with-sodium --enable-fileinfo --enable-filter --enable-ftp --enable-hash --enable-json --enable-pdo --enable-mbregex --enable-mbregex-backtrack --enable-mbstring --enable-phar --enable-posix --with-pdo-mysql --with-mysqli=mysqlnd --with-curl --with-zlib-dir=/usr --with-openssl --with-libedit=/usr --enable-libxml --enable-session --enable-simplexml --enable-parallel --with-xmlrpc --enable-soap --enable-sockets --enable-tokenizer --enable-xml --enable-xmlreader --enable-xmlwriter --with-mhash=yes --enable-sysvmsg --enable-sysvsem --enable-sysvshm --enable-zip --disable-cli --disable-cgi --enable-pcntl --enable-intl --enable-opcache --enable-zts
+	make
+	make install
+
+override_dh_auto_install:
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	mkdir -p $(CURDIR)/debian/php8-homegear-dev/usr/include/php8-homegear
+	cp -r /usr/include/php8-homegear/php/*/* $(CURDIR)/debian/php8-homegear-dev/usr/include/php8-homegear
+	mkdir -p $(CURDIR)/debian/php8-homegear-dev/usr/lib
+	cp /usr/share/homegear/php/lib/libphp.a $(CURDIR)/debian/php8-homegear-dev/usr/lib/libphp8-homegear.a
+	mkdir -p $(CURDIR)/debian/php8-homegear-dev/usr/share/homegear/php-dev/$(PHP_ZEND_VERSION)
+	cp /usr/share/homegear/php/$(PHP_ZEND_VERSION)/opcache.* $(CURDIR)/debian/php8-homegear-dev/usr/share/homegear/php-dev/$(PHP_ZEND_VERSION)/
+%:
+	dh $@
