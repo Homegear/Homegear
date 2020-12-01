@@ -40,30 +40,56 @@
 void php_homegear_node_invoke_rpc(std::string &methodName, BaseLib::PVariable &parameters, zval *return_value, bool wait) {
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   if (!SEG(rpcCallback)) RETURN_FALSE;
   if (!parameters) parameters.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
   BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters, wait);
   if (result->errorStruct) {
     zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
-    RETURN_NULL()
+    RETURN_NULL();
   }
   Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_log_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_log);
+ZEND_BEGIN_ARG_INFO_EX(hg_node_frontend_event_log_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_frontend_event_log);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_invoke_node_method_arg_info, 0, 3, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_invoke_node_method);
+ZEND_BEGIN_ARG_INFO_EX(hg_node_output_arg_info, nullptr, 0, 2)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_output);
+ZEND_BEGIN_ARG_INFO_EX(hg_node_node_event_arg_info, nullptr, 0, 3)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_node_event);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_node_data_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_node_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_node_data_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_node_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_flow_data_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_flow_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_flow_data_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_flow_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_global_data_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_global_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_global_data_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_global_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_internal_message_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_internal_message);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_config_parameter_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_config_parameter);
 
 ZEND_FUNCTION(hg_node_log) {
@@ -442,19 +468,19 @@ ZEND_FUNCTION(hg_node_get_config_parameter) {
 }
 
 static const zend_function_entry homegear_node_base_methods[] = {
-    ZEND_ME_MAPPING(log, hg_node_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(frontendEventLog, hg_node_frontend_event_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(invokeNodeMethod, hg_node_invoke_node_method, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(output, hg_node_output, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setNodeData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getFlowData, hg_node_get_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setFlowData, hg_node_set_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getGlobalData, hg_node_get_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setInternalMessage, hg_node_set_internal_message, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(log, hg_node_log, hg_node_log_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(frontendEventLog, hg_node_frontend_event_log, hg_node_frontend_event_log_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(invokeNodeMethod, hg_node_invoke_node_method, hg_node_invoke_node_method_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(output, hg_node_output, hg_node_output_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, hg_node_node_event_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, hg_node_get_node_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setNodeData, hg_node_set_node_data, hg_node_set_node_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getFlowData, hg_node_get_flow_data, hg_node_get_flow_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setFlowData, hg_node_set_flow_data, hg_node_set_flow_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getGlobalData, hg_node_get_global_data, hg_node_get_global_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, hg_node_set_global_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setInternalMessage, hg_node_set_internal_message, hg_node_set_internal_message_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, hg_node_get_config_parameter_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     {NULL, NULL, NULL}
 };
 

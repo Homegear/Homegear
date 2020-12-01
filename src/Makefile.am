@@ -4,7 +4,7 @@ AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 AM_LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
 if HAVE_PHP_HEADERS
 # {{{ PHP libraries
-LIBS += -Wl,-Bstatic -lphp7-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ledit -lrt -lltdl -lgmp -lenchant -lrt -lm -lnsl -lxml2 -lxslt -licuuc -licui18n -licuio -lzip -lcrypt -lcrypto -lssl -lgnutls -lonig
+LIBS += -Wl,-Bstatic -lphp8-homegear -Wl,-Bdynamic -lz -lexslt -lresolv -ledit -lrt -lltdl -lgmp -lenchant -lrt -lm -lnsl -lxml2 -lxslt -licuuc -licui18n -licuio -lzip -lcrypto -lssl -lgnutls -lonig -lsodium -lutil
 # }}}
 endif
 
@@ -35,9 +35,9 @@ libscriptengine_a_SOURCES = ScriptEngine/php_homegear_globals.cpp ScriptEngine/p
 homegear_LDADD += libscriptengine.a
 libscriptengine_a_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 if BSDSYSTEM
-libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend -I/usr/include/php7-homegear/php -I/usr/include/php7-homegear/php/main -I/usr/include/php7-homegear/php/sapi -I/usr/include/php7-homegear/php/TSRM -I/usr/include/php7-homegear/php/Zend
+libscriptengine_a_CPPFLAGS += -I/usr/include/php8-homegear -I/usr/include/php8-homegear/main -I/usr/include/php8-homegear/sapi -I/usr/include/php8-homegear/TSRM -I/usr/include/php8-homegear/Zend -I/usr/include/php8-homegear/php -I/usr/include/php8-homegear/php/main -I/usr/include/php8-homegear/php/sapi -I/usr/include/php8-homegear/php/TSRM -I/usr/include/php8-homegear/php/Zend
 else
-libscriptengine_a_CPPFLAGS += -I/usr/include/php7-homegear -I/usr/include/php7-homegear/main -I/usr/include/php7-homegear/sapi -I/usr/include/php7-homegear/TSRM -I/usr/include/php7-homegear/Zend -I/usr/include/php7-homegear/php -I/usr/include/php7-homegear/php/main -I/usr/include/php7-homegear/php/sapi -I/usr/include/php7-homegear/php/TSRM -I/usr/include/php7-homegear/php/Zend
+libscriptengine_a_CPPFLAGS += -I/usr/include/php8-homegear -I/usr/include/php8-homegear/main -I/usr/include/php8-homegear/sapi -I/usr/include/php8-homegear/TSRM -I/usr/include/php8-homegear/Zend -I/usr/include/php8-homegear/php -I/usr/include/php8-homegear/php/main -I/usr/include/php8-homegear/php/sapi -I/usr/include/php8-homegear/php/TSRM -I/usr/include/php8-homegear/php/Zend
 endif
 else
 AM_CPPFLAGS += -DNO_SCRIPTENGINE

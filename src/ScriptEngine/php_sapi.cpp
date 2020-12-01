@@ -43,11 +43,11 @@
 #if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
-#if PHP_VERSION_ID >= 70500
-#error "PHP 7.4 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
+#if PHP_VERSION_ID >= 80100
+#error "PHP 8.1 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
- * 2. Check if content of hg_stream_open() equals zend_stream_open() in zend_stream.c
+ * 2. Check if content of marked part in hg_stream_open() equals zend_stream_open() in zend_stream.c
  * 3. Check if ext/opcache changed references to ZEND_HANDLE_STREAM, because the stream is interpreted as php_stream
  *    there, which causes PHP to crash when a script is started from Homegear. This is the only extension that needs to
  *    be checked, because we force Homegear to work with Opcache. The references everywhere else can't expect the file
@@ -86,7 +86,9 @@ static int php_homegear_send_headers(sapi_headers_struct *sapi_headers);
 static size_t php_homegear_read_post(char *buf, size_t count_bytes);
 static char *php_homegear_read_cookies();
 static void php_homegear_register_variables(zval *track_vars_array);
-#if PHP_VERSION_ID >= 70100
+#if PHP_VERSION_ID >= 80000
+static void php_homegear_log_message(const char *message, int syslog_type_int);
+#elif PHP_VERSION_ID >= 70100
 static void php_homegear_log_message(char *message, int syslog_type_int);
 #else
 static void php_homegear_log_message(char* message);
@@ -99,121 +101,227 @@ static PHP_MINFO_FUNCTION(homegear);
 
 #define SEG(v) php_homegear_get_globals()->v
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(print_v_arg_info, 0, 1, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(print_v);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_script_id_arg_info, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_script_id);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_register_thread_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_register_thread);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_list_modules_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_list_modules);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_load_module_arg_info, 0, 1, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_load_module);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_unload_module_arg_info, 0, 1, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_unload_module);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_reload_module_arg_info, 0, 1, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_reload_module);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_auth_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_auth);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_create_user_arg_info, 0, 3, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_create_user);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_delete_user_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_delete_user);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_user_metadata_arg_info, 0, 1, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_user_metadata);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_set_user_metadata_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_user_metadata);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_set_user_privileges_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_user_privileges);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_update_user_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_update_user);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_user_exists_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_user_exists);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_users_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_users);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_log_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_log);
+ZEND_BEGIN_ARG_INFO_EX(hg_set_language_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_language);
+ZEND_BEGIN_ARG_INFO_EX(hg_set_script_log_level_arg_info,  nullptr,0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_script_log_level);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_http_contents_arg_info, 0, 5, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_http_contents);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_download_arg_info, 0, 6, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_download);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_json_encode_arg_info, 0, 1, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_json_encode);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_json_decode_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_json_decode);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_ssdp_search_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_ssdp_search);
+ZEND_BEGIN_ARG_INFO_EX(hg_configure_gateway_arg_info, nullptr, 0, 6)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_configure_gateway);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_check_license_arg_info, 0, 3, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_check_license);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_remove_license_arg_info, 0, 3, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_remove_license);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_license_states_arg_info, 0, 1, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_license_states);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_poll_event_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_poll_event);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_list_rpc_clients_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_list_rpc_clients);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_peer_exists_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_peer_exists);
+ZEND_BEGIN_ARG_INFO_EX(hg_subscribe_peer_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_subscribe_peer);
+ZEND_BEGIN_ARG_INFO_EX(hg_unsubscribe_peer_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_unsubscribe_peer);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_shutting_down_arg_info, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_shutting_down);
+ZEND_BEGIN_ARG_INFO_EX(hg_gpio_export_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_export);
+ZEND_BEGIN_ARG_INFO_EX(hg_gpio_open_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_open);
+ZEND_BEGIN_ARG_INFO_EX(hg_gpio_close_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_close);
+ZEND_BEGIN_ARG_INFO_EX(hg_gpio_set_direction_arg_info, nullptr, 0, 2)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_set_direction);
+ZEND_BEGIN_ARG_INFO_EX(hg_gpio_set_edge_arg_info, nullptr, 0, 2)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_set_edge);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_gpio_get_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_get);
+ZEND_BEGIN_ARG_INFO_EX(hg_gpio_set_arg_info, nullptr, 0, 2)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_set);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_gpio_poll_arg_info, 0, 2, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_gpio_poll);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_serial_open_arg_info, 0, 2, IS_RESOURCE, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_serial_open);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_serial_close_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_serial_close);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_serial_read_arg_info, 0, 2, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_serial_read);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_serial_readline_arg_info, 0, 2, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_serial_readline);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_serial_write_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_serial_write);
 #ifdef I2CSUPPORT
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_i2c_open_arg_info, 0, 2, IS_RESOURCE, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_i2c_open);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_i2c_close_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_i2c_close);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_i2c_read_arg_info, 0, 3, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_i2c_read);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_i2c_write_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_i2c_write);
 #endif
 
 //{{{ Overwrite non thread safe function
 //Todo: Remove once thread safe
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_getenv_arg_info, 0, 0, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_getenv);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_putenv_arg_info, 0, 1, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_putenv);
 // }}}
 
 
 static const zend_function_entry homegear_functions[] = {
-    ZEND_FE(print_v, NULL)
-    ZEND_FE(hg_get_script_id, NULL)
-    ZEND_FE(hg_register_thread, NULL)
-    ZEND_FE(hg_list_modules, NULL)
-    ZEND_FE(hg_load_module, NULL)
-    ZEND_FE(hg_unload_module, NULL)
-    ZEND_FE(hg_reload_module, NULL)
-    ZEND_FE(hg_auth, NULL)
-    ZEND_FE(hg_create_user, NULL)
-    ZEND_FE(hg_delete_user, NULL)
-    ZEND_FE(hg_get_user_metadata, NULL)
-    ZEND_FE(hg_set_user_metadata, NULL)
-    ZEND_FE(hg_set_user_privileges, NULL)
-    ZEND_FE(hg_update_user, NULL)
-    ZEND_FE(hg_user_exists, NULL)
-    ZEND_FE(hg_users, NULL)
-    ZEND_FE(hg_log, NULL)
-    ZEND_FE(hg_set_script_log_level, NULL)
-    ZEND_FE(hg_get_http_contents, NULL)
-    ZEND_FE(hg_download, NULL)
-    ZEND_FE(hg_json_encode, NULL)
-    ZEND_FE(hg_json_decode, NULL)
-    ZEND_FE(hg_ssdp_search, NULL)
-    ZEND_FE(hg_configure_gateway, NULL)
-    ZEND_FE(hg_check_license, NULL)
-    ZEND_FE(hg_remove_license, NULL)
-    ZEND_FE(hg_get_license_states, NULL)
-    ZEND_FE(hg_poll_event, NULL)
-    ZEND_FE(hg_list_rpc_clients, NULL)
-    ZEND_FE(hg_peer_exists, NULL)
-    ZEND_FE(hg_subscribe_peer, NULL)
-    ZEND_FE(hg_unsubscribe_peer, NULL)
-    ZEND_FE(hg_shutting_down, NULL)
-    ZEND_FE(hg_gpio_export, NULL)
-    ZEND_FE(hg_gpio_open, NULL)
-    ZEND_FE(hg_gpio_close, NULL)
-    ZEND_FE(hg_gpio_set_direction, NULL)
-    ZEND_FE(hg_gpio_set_edge, NULL)
-    ZEND_FE(hg_gpio_get, NULL)
-    ZEND_FE(hg_gpio_set, NULL)
-    ZEND_FE(hg_gpio_poll, NULL)
-    ZEND_FE(hg_serial_open, NULL)
-    ZEND_FE(hg_serial_close, NULL)
-    ZEND_FE(hg_serial_read, NULL)
-    ZEND_FE(hg_serial_readline, NULL)
-    ZEND_FE(hg_serial_write, NULL)
-    ZEND_FE(hg_getenv, NULL)
-    ZEND_FE(hg_putenv, NULL)
+    ZEND_FE(print_v, print_v_arg_info)
+    ZEND_FE(hg_get_script_id, hg_get_script_id_arg_info)
+    ZEND_FE(hg_register_thread, hg_register_thread_arg_info)
+    ZEND_FE(hg_list_modules, hg_list_modules_arg_info)
+    ZEND_FE(hg_load_module, hg_load_module_arg_info)
+    ZEND_FE(hg_unload_module, hg_unload_module_arg_info)
+    ZEND_FE(hg_reload_module, hg_reload_module_arg_info)
+    ZEND_FE(hg_auth, hg_auth_arg_info)
+    ZEND_FE(hg_create_user, hg_create_user_arg_info)
+    ZEND_FE(hg_delete_user, hg_delete_user_arg_info)
+    ZEND_FE(hg_get_user_metadata, hg_get_user_metadata_arg_info)
+    ZEND_FE(hg_set_user_metadata, hg_set_user_metadata_arg_info)
+    ZEND_FE(hg_set_user_privileges, hg_set_user_privileges_arg_info)
+    ZEND_FE(hg_update_user, hg_update_user_arg_info)
+    ZEND_FE(hg_user_exists, hg_user_exists_arg_info)
+    ZEND_FE(hg_users, hg_users_arg_info)
+    ZEND_FE(hg_log, hg_log_arg_info)
+    ZEND_FE(hg_set_script_log_level, hg_set_script_log_level_arg_info)
+    ZEND_FE(hg_get_http_contents, hg_get_http_contents_arg_info)
+    ZEND_FE(hg_download, hg_download_arg_info)
+    ZEND_FE(hg_json_encode, hg_json_encode_arg_info)
+    ZEND_FE(hg_json_decode, hg_json_decode_arg_info)
+    ZEND_FE(hg_ssdp_search, hg_ssdp_search_arg_info)
+    ZEND_FE(hg_configure_gateway, hg_configure_gateway_arg_info)
+    ZEND_FE(hg_check_license, hg_check_license_arg_info)
+    ZEND_FE(hg_remove_license, hg_remove_license_arg_info)
+    ZEND_FE(hg_get_license_states, hg_get_license_states_arg_info)
+    ZEND_FE(hg_poll_event, hg_poll_event_arg_info)
+    ZEND_FE(hg_list_rpc_clients, hg_list_rpc_clients_arg_info)
+    ZEND_FE(hg_peer_exists, hg_peer_exists_arg_info)
+    ZEND_FE(hg_subscribe_peer, hg_subscribe_peer_arg_info)
+    ZEND_FE(hg_unsubscribe_peer, hg_unsubscribe_peer_arg_info)
+    ZEND_FE(hg_shutting_down, hg_shutting_down_arg_info)
+    ZEND_FE(hg_gpio_export, hg_gpio_export_arg_info)
+    ZEND_FE(hg_gpio_open, hg_gpio_open_arg_info)
+    ZEND_FE(hg_gpio_close, hg_gpio_close_arg_info)
+    ZEND_FE(hg_gpio_set_direction, hg_gpio_set_direction_arg_info)
+    ZEND_FE(hg_gpio_set_edge, hg_gpio_set_edge_arg_info)
+    ZEND_FE(hg_gpio_get, hg_gpio_get_arg_info)
+    ZEND_FE(hg_gpio_set, hg_gpio_set_arg_info)
+    ZEND_FE(hg_gpio_poll, hg_gpio_poll_arg_info)
+    ZEND_FE(hg_serial_open, hg_serial_open_arg_info)
+    ZEND_FE(hg_serial_close, hg_serial_close_arg_info)
+    ZEND_FE(hg_serial_read, hg_serial_read_arg_info)
+    ZEND_FE(hg_serial_readline, hg_serial_readline_arg_info)
+    ZEND_FE(hg_serial_write, hg_serial_write_arg_info)
+    ZEND_FE(hg_getenv, hg_getenv_arg_info)
+    ZEND_FE(hg_putenv, hg_putenv_arg_info)
 #ifdef I2CSUPPORT
-    ZEND_FE(hg_i2c_open, NULL)
-    ZEND_FE(hg_i2c_close, NULL)
-    ZEND_FE(hg_i2c_read, NULL)
-    ZEND_FE(hg_i2c_write, NULL)
+    ZEND_FE(hg_i2c_open, hg_i2c_open_arg_info)
+    ZEND_FE(hg_i2c_close, hg_i2c_close_arg_info)
+    ZEND_FE(hg_i2c_read, hg_i2c_read_arg_info)
+    ZEND_FE(hg_i2c_write, hg_i2c_write_arg_info)
 #endif
     {NULL, NULL, NULL}
 };
@@ -327,7 +435,11 @@ void hg_zend_stream_closer(void *handle) {
 }
 #endif
 
+#if PHP_VERSION_ID >= 80000
+zend_result hg_stream_open(const char *filename, zend_file_handle *handle) {
+#else
 int hg_stream_open(const char *filename, zend_file_handle *handle) {
+#endif
   std::string file(filename);
   if (file.size() > 3 && (file.compare(file.size() - 4, 4, ".hgs") == 0 || file.compare(file.size() - 4, 4, ".hgn") == 0)) {
     std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
@@ -421,7 +533,7 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
       } else return FAILURE;
     }
   } else {
-    //{{{ 100% from zend_stream_open in zend_stream.c
+    //{{{ From zend_stream_open in zend_stream.c
 #if PHP_VERSION_ID < 70400
     handle->type = ZEND_HANDLE_FP;
     handle->opened_path = nullptr;
@@ -578,7 +690,9 @@ static int php_homegear_send_headers(sapi_headers_struct *sapi_headers) {
 	}
 }*/
 
-#if PHP_VERSION_ID >= 70100
+#if PHP_VERSION_ID >= 80000
+static void php_homegear_log_message(const char *message, int syslog_type_int)
+#elif PHP_VERSION_ID >= 70100
 static void php_homegear_log_message(char *message, int syslog_type_int)
 #else
 static void php_homegear_log_message(char* message)
@@ -708,14 +822,14 @@ static void php_homegear_register_variables(zval *track_vars_array) {
 void php_homegear_invoke_rpc(std::string &methodName, BaseLib::PVariable &parameters, zval *return_value, bool wait) {
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script ID is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   if (!SEG(rpcCallback)) RETURN_FALSE;
   if (!parameters) parameters.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
   BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters, wait);
   if (result->errorStruct) {
     zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
-    RETURN_NULL()
+    RETURN_NULL();
   }
   Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
@@ -775,7 +889,7 @@ ZEND_FUNCTION(hg_register_thread) {
   {
     std::lock_guard<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
     std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(scriptId);
-    if (eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != token) RETURN_FALSE
+    if (eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != token) RETURN_FALSE;
     phpEvents = eventsIterator->second;
   }
   SEG(id) = scriptId;
@@ -785,7 +899,7 @@ ZEND_FUNCTION(hg_register_thread) {
   SEG(logLevel) = phpEvents->getLogLevel();
   SEG(peerId) = phpEvents->getPeerId();
   SEG(nodeId) = phpEvents->getNodeId();
-  RETURN_TRUE
+  RETURN_TRUE;
 }
 
 // {{{ Module functions
@@ -1143,11 +1257,11 @@ ZEND_FUNCTION(hg_poll_event) {
   if (_disposed) RETURN_NULL();
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   if (!SEG(user).empty()) {
     zend_throw_exception(homegear_exception_class_entry, "Can't poll events when user privileges are set.", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   int argc = 0;
   zval *args = nullptr;
@@ -1166,7 +1280,7 @@ ZEND_FUNCTION(hg_poll_event) {
     if (eventsIterator == Homegear::PhpEvents::eventsMap.end()) {
       eventsMapGuard.unlock();
       zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
-      RETURN_FALSE
+      RETURN_FALSE;
     }
     if (!eventsIterator->second) eventsIterator->second = std::make_shared<Homegear::PhpEvents>(SEG(token), SEG(outputCallback), SEG(rpcCallback));
     phpEvents = eventsIterator->second;
@@ -1242,7 +1356,7 @@ ZEND_FUNCTION(hg_poll_event) {
       ZVAL_LONG(&element, eventData->value->integerValue64);
       add_assoc_zval_ex(return_value, "BUTTONID", sizeof("BUTTONID") - 1, &element);
     }
-  } else RETURN_FALSE
+  } else RETURN_FALSE;
 }
 
 ZEND_FUNCTION(hg_list_rpc_clients) {
@@ -1266,7 +1380,7 @@ ZEND_FUNCTION(hg_subscribe_peer) {
   if (_disposed) RETURN_NULL();
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   int argc = 0;
   zval *args = nullptr;
@@ -1305,7 +1419,7 @@ ZEND_FUNCTION(hg_subscribe_peer) {
     if (eventsIterator == Homegear::PhpEvents::eventsMap.end()) {
       eventsMapGuard.unlock();
       zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
-      RETURN_FALSE
+      RETURN_FALSE;
     }
     if (!eventsIterator->second) eventsIterator->second.reset(new Homegear::PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
     phpEvents = eventsIterator->second;
@@ -1317,7 +1431,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer) {
   if (_disposed) RETURN_NULL();
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   int argc = 0;
   zval *args = nullptr;
@@ -1355,7 +1469,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer) {
     if (eventsIterator == Homegear::PhpEvents::eventsMap.end()) {
       eventsMapGuard.unlock();
       zend_throw_exception(homegear_exception_class_entry, "Script id is invalid.", -1);
-      RETURN_FALSE
+      RETURN_FALSE;
     }
     if (!eventsIterator->second) eventsIterator->second.reset(new Homegear::PhpEvents(SEG(token), SEG(outputCallback), SEG(rpcCallback)));
     phpEvents = eventsIterator->second;
@@ -1417,7 +1531,7 @@ ZEND_FUNCTION(hg_set_script_log_level) {
   {
     std::lock_guard<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
     std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(SEG(id));
-    if (eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token)) RETURN_FALSE
+    if (eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token)) RETURN_FALSE;
     eventsIterator->second->setLogLevel(logLevel);
   }
 
@@ -1696,7 +1810,7 @@ ZEND_FUNCTION(hg_configure_gateway) {
     std::vector<uint8_t> key;
     if (!BaseLib::Security::Hash::sha256(Homegear::GD::bl->hf.getUBinary(password), key) || key.empty()) {
       zend_throw_exception(homegear_exception_class_entry, "Could not encrypt data.", -1);
-      RETURN_NULL()
+      RETURN_NULL();
     }
     aes.setKey(key);
 
@@ -1722,7 +1836,7 @@ ZEND_FUNCTION(hg_configure_gateway) {
     socket.open();
     if (!socket.connected()) {
       zend_throw_exception(homegear_exception_class_entry, "Could not connect to gateway.", -1);
-      RETURN_NULL()
+      RETURN_NULL();
     }
     socket.proofwrite(encodedRequest);
 
@@ -1780,7 +1894,7 @@ ZEND_FUNCTION(hg_configure_gateway) {
   }
   catch (std::exception &ex) {
     zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
-    RETURN_NULL()
+    RETURN_NULL();
   }
 }
 
@@ -1846,8 +1960,8 @@ ZEND_FUNCTION(hg_get_license_states) {
 }
 
 ZEND_FUNCTION(hg_shutting_down) {
-  if (_disposed || Homegear::GD::bl->shuttingDown) RETURN_TRUE
-  RETURN_FALSE
+  if (_disposed || Homegear::GD::bl->shuttingDown) RETURN_TRUE;
+  RETURN_FALSE;
 }
 
 ZEND_FUNCTION(hg_gpio_export) {
@@ -2374,54 +2488,54 @@ ZEND_BEGIN_ARG_INFO_EX(php_homegear_two_args, 0, 0, 2)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry homegear_methods[] = {
-    ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PRIVATE)
-    ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PRIVATE | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getScriptId, hg_get_script_id, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(registerThread, hg_register_thread, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(log, hg_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setScriptLogLevel, hg_set_script_log_level, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(download, hg_download, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(jsonEncode, hg_json_encode, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(jsonDecode, hg_json_decode, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(ssdpSearch, hg_ssdp_search, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(configureGateway, hg_configure_gateway, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(pollEvent, hg_poll_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setLanguage, hg_set_language, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
+    ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getScriptId, hg_get_script_id, hg_get_script_id_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(registerThread, hg_register_thread, hg_register_thread_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(log, hg_log, hg_log_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setScriptLogLevel, hg_set_script_log_level, hg_set_script_log_level_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getHttpContents, hg_get_http_contents, hg_get_http_contents_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(download, hg_download, hg_download_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(jsonEncode, hg_json_encode, hg_json_encode_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(jsonDecode, hg_json_decode, hg_json_decode_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(ssdpSearch, hg_ssdp_search, hg_ssdp_search_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(configureGateway, hg_configure_gateway, hg_configure_gateway_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(pollEvent, hg_poll_event, hg_poll_event_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setLanguage, hg_set_language, hg_set_language_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setUserPrivileges, hg_set_user_privileges, hg_set_user_privileges_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(subscribePeer, hg_subscribe_peer, hg_subscribe_peer_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(unsubscribePeer, hg_unsubscribe_peer, hg_unsubscribe_peer_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(shuttingDown, hg_shutting_down, hg_shutting_down_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     {NULL, NULL, NULL}
 };
 
 static const zend_function_entry homegear_gpio_methods[] = {
-    ZEND_ME_MAPPING(export, hg_gpio_export, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(open, hg_gpio_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(close, hg_gpio_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setDirection, hg_gpio_set_direction, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setEdge, hg_gpio_set_edge, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(get, hg_gpio_get, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(set, hg_gpio_set, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(poll, hg_gpio_poll, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(export, hg_gpio_export, hg_gpio_export_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(open, hg_gpio_open, hg_gpio_open_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(close, hg_gpio_close, hg_gpio_close_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setDirection, hg_gpio_set_direction, hg_gpio_set_direction_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setEdge, hg_gpio_set_edge, hg_gpio_set_edge_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(get, hg_gpio_get, hg_gpio_get_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(set, hg_gpio_set, hg_gpio_set_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(poll, hg_gpio_poll, hg_gpio_poll_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     {NULL, NULL, NULL}
 };
 
 static const zend_function_entry homegear_serial_methods[] = {
-    ZEND_ME_MAPPING(open, hg_serial_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(close, hg_serial_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(read, hg_serial_read, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(readline, hg_serial_readline, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(write, hg_serial_write, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(open, hg_serial_open, hg_serial_open_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(close, hg_serial_close, hg_serial_close_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(read, hg_serial_read, hg_serial_read_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(readline, hg_serial_readline, hg_serial_readline_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(write, hg_serial_write, hg_serial_write_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     {NULL, NULL, NULL}
 };
 
 #ifdef I2CSUPPORT
 static const zend_function_entry homegear_i2c_methods[] = {
-        ZEND_ME_MAPPING(open, hg_i2c_open, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-        ZEND_ME_MAPPING(close, hg_i2c_close, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-        ZEND_ME_MAPPING(read, hg_i2c_read, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-        ZEND_ME_MAPPING(write, hg_i2c_write, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(open, hg_i2c_open, hg_i2c_open_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(close, hg_i2c_close, hg_i2c_close_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(read, hg_i2c_read, hg_i2c_read_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+        ZEND_ME_MAPPING(write, hg_i2c_write, hg_i2c_write_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         {NULL, NULL, NULL}
 };
 #endif
