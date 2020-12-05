@@ -70,7 +70,7 @@ esac
 AC_CHECK_LIB([mysqlclient], [mysql_init], [AM_CONDITIONAL(HAVE_MYSQLCLIENT, true)], [AM_CONDITIONAL(HAVE_MYSQLCLIENT, false)])
 AC_CHECK_HEADERS([curl/curl.h], [AM_CONDITIONAL(HAVE_CURL_HEADERS, true)], [AM_CONDITIONAL(HAVE_CURL_HEADERS, false)])
 AC_CHECK_LIB([curl], [curl_easy_send], [AM_CONDITIONAL(HAVE_CURL, true)], [AM_CONDITIONAL(HAVE_CURL, false)])
-AC_CHECK_HEADERS([php7-homegear/main/php_config.h], [AM_CONDITIONAL(HAVE_PHP_HEADERS, true)], [AM_CONDITIONAL(HAVE_PHP_HEADERS, false)])
+AC_CHECK_HEADERS([php8-homegear/main/php_config.h], [AM_CONDITIONAL(HAVE_PHP_HEADERS, true)], [AM_CONDITIONAL(HAVE_PHP_HEADERS, false)])
 
 AC_DEFINE_UNQUOTED([LIBHOMEGEARNODE_VERSION], [`./getVersionNodeLib.sh`], [Define libhomegear-node version])
 AC_DEFINE_UNQUOTED([LIBHOMEGEARIPC_VERSION], [`./getVersionIpcLib.sh`], [Define libhomegear-ipc version])
