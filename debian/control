@@ -3,7 +3,7 @@ Maintainer: Sathya Laufer <sathya@laufers.net>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 8), libhomegear-base (= <BASELIBVER>), libhomegear-node, libhomegear-ipc, libsqlite3-dev (>= 3.7.13), libreadline6-dev | libreadline-dev, libgcrypt20-dev, libgpg-error-dev (>= 1.10), libgnutls28-dev, php7-homegear-dev, libxslt1-dev, libedit-dev, libenchant-dev, libqdbm-dev, libltdl-dev, zlib1g-dev, libtinfo-dev, libgmp-dev, libxml2-dev, libssl-dev, libcurl4-gnutls-dev, zlib1g-dev, libicu-dev, libonig-dev, libsodium-dev
+Build-Depends: debhelper (>= 8), libhomegear-base (= <BASELIBVER>), libhomegear-node, libhomegear-ipc, libsqlite3-dev (>= 3.7.13), libreadline6-dev | libreadline-dev, libgcrypt20-dev, libgpg-error-dev (>= 1.10), libgnutls28-dev, php8-homegear-dev | php7-homegear-dev, libxslt1-dev, libedit-dev, libenchant-dev, libqdbm-dev, libltdl-dev, zlib1g-dev, libtinfo-dev, libgmp-dev, libxml2-dev, libssl-dev, libcurl4-gnutls-dev, zlib1g-dev, libicu-dev, libonig-dev, libsodium-dev
 Homepage: https://homegear.eu
 
 Package: homegear
