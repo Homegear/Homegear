@@ -64,7 +64,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _nodeManager = std::make_unique<NodeManager>(&_frontendConnected);
+  _nodeManager = std::make_unique<NodeManager>(&_nodeEventsEnabled);
 
   _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, false);
   _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
@@ -1454,6 +1454,8 @@ void NodeBlueServer::restartFlows() {
       _out.printInfo("Info: Closing connections to Flows clients...");
       closeClientConnections();
     }
+    _out.printInfo("Info: Reloading node information...");
+    _nodeManager->fillManagerModuleInfo();
     getMaxThreadCounts();
     _out.printInfo("Info: Starting Flows...");
     startFlows();
@@ -1534,6 +1536,11 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       }
       contentString = _nodeManager->getNodeLocales(language);
       responseEncoding = "application/json";
+    } else if (path.compare(0, 16, "node-blue/nodes/") == 0 && path.size() > 16) {
+      auto id = path.substr(16);
+      auto idPair = BaseLib::HelperFunctions::splitLast(id, '/');
+      contentString = _nodeManager->getFrontendCode(idPair.second);
+      responseEncoding = "text/html";
     } else if (path.compare(0, 18, "node-blue/locales/") == 0) {
       if (!sessionValid) return "unauthorized";
       std::string localePath = _webroot + "static/locales/";
@@ -1816,6 +1823,16 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
         return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
       }
 
+      _nodeManager->fillManagerModuleInfo();
+
+      auto moduleInfo = _nodeManager->getNodesAddedInfo(moduleIterator->second->stringValue);
+      if (moduleInfo->arrayValue->empty()) {
+        _out.printError("Error: Could not install node: Node could not be loaded after installation.");
+        return R"({"result":"error","error":"Node could not be loaded after installation. See error log for more details."})";
+      }
+
+      if (_nodeEventsEnabled) GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
+
       return R"({"result":"success"})";
     } else if (path == "node-blue/settings/user") {
       if (!sessionValid) return "unauthorized";
@@ -1897,21 +1914,27 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       if (!dataId.empty() && !key.empty()) _bl->db->deleteNodeData(dataId, key);
     } else if (path.compare(0, 16, "node-blue/nodes/") == 0 && path.size() > 16) {
       responseEncoding = "application/json";
-      auto node = path.substr(16);
+      auto module = path.substr(16);
       _out.printInfo("Info: Uninstalling node (1)...");
       std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
       _out.printInfo("Info: Uninstalling node (2)...");
 
       std::string method = "managementUninstallNode";
       auto parameters = std::make_shared<BaseLib::Array>();
-      parameters->push_back(std::make_shared<BaseLib::Variable>(node));
+      parameters->push_back(std::make_shared<BaseLib::Variable>(module));
       BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
       if (result->errorStruct) {
         _out.printError("Error: Could not uninstall node: " + result->structValue->at("faultString")->stringValue);
         return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
       }
 
-      return "{\"result\":\"success\",\"commandStatusId\":" + std::to_string(result->integerValue64) + "}";
+      auto moduleInfo = _nodeManager->getNodesRemovedInfo(module);
+
+      _nodeManager->fillManagerModuleInfo();
+
+      if (_nodeEventsEnabled && !moduleInfo->arrayValue->empty()) GD::rpcClient->broadcastNodeEvent("", "notification/node/removed", moduleInfo);
+
+      return "{\"result\":\"success\"}";
     }
 
     return contentString;

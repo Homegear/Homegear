@@ -97,7 +97,7 @@ class NodeManager {
     std::string name;
     std::string module;
     std::string version;
-    bool local = false;
+    bool local = true;
     std::unordered_map<NodeType, PNodeInfo> nodes;
   };
   typedef std::shared_ptr<ManagerModuleInfo> PManagerNodeInfo;
@@ -117,6 +117,16 @@ class NodeManager {
   BaseLib::PVariable getModuleInfo();
 
   /**
+   * Returns information required for the node added frontend notification.
+   */
+  BaseLib::PVariable getNodesAddedInfo(const std::string &module);
+
+  /**
+   * Returns information required for the node removed frontend notification.
+   */
+  BaseLib::PVariable getNodesRemovedInfo(const std::string &module);
+
+  /**
    * Returns the icons of all modules.
    */
   BaseLib::PVariable getIcons();
@@ -125,6 +135,11 @@ class NodeManager {
    * Returns the content of all *.hni files.
    */
   std::string getFrontendCode();
+
+  /**
+   * Returns the content of a single *.hni files.
+   */
+  std::string getFrontendCode(const std::string &type);
 
   std::string getNodeLocales(std::string &language);
 
@@ -153,6 +168,11 @@ class NodeManager {
    * Clears all node information. This causes the information to be loaded again from file system on first call to loadNode()
    */
   void clearManagerModuleInfo();
+
+  /*
+   * Clears and reloads all node information
+   */
+  void fillManagerModuleInfo();
  private:
   std::mutex _nodeLoadersMutex;
   std::unique_ptr<NodeLoader> _pythonNodeLoader;
@@ -172,8 +192,6 @@ class NodeManager {
   NodeManager(const NodeManager &) = delete;
 
   NodeManager &operator=(const NodeManager &) = delete;
-
-  void fillManagerModuleInfo();
 };
 
 }

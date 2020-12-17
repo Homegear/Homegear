@@ -584,7 +584,8 @@ var RED = (function() {
                     var id = m.id;
                     RED.nodes.addNodeSet(m);
                     addedTypes = addedTypes.concat(m.types);
-                    RED.i18n.loadNodeCatalog(id, function() {
+                    //RED.i18n.loadNodeCatalog(id, function() { //Removed by Homegear GmbH
+                    RED.i18n.loadNodeCatalogs(function() { //Added by Homegear GmbH - it is not possible at the moment to load the translations of a single module
                         $.get('nodes/'+id, function(data) {
                             appendNodeConfig(data);
                         });
@@ -26329,16 +26330,6 @@ RED.sidebar.context = (function() {
     }
 })();
 ;/**
- * This file was modified by Homegear GmbH
- *
- * Changes:
- * - Added function checkNodeInstallStatus()
- * - Added function checkNodeRemoveStatus()
- * - Get nodes from Homegear repository
- *
- * Todo after update:
-
-/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26394,8 +26385,7 @@ RED.palette.editor = (function() {
         },delta);
     }
     function changeNodeState(id,state,shade,callback) {
-        //Removed by Homegear GmbH
-        /*shade.show();
+        shade.show();
         var start = Date.now();
         $.ajax({
             url:"nodes/"+id,
@@ -26414,24 +26404,7 @@ RED.palette.editor = (function() {
                 shade.hide();
                 callback(xhr);
             });
-        })*/
-    }
-    //Function added by Homegear GmbH
-    function checkNodeInstallStatus(callback, commandStatusId) {
-        RED.comms.homegear().invoke("managementGetCommandStatus", function(response) {
-            if(!response.result.finished)
-            {
-                setTimeout(checkNodeInstallStatus, 2000, callback, commandStatusId);
-            }
-            else
-            {
-                RED.eventLog.startEvent(response.result.output);
-                if(response.result.exitCode != 0) {
-                    RED.notify(RED._('palette.editor.errors.installFailed',{module: id,message: ""}),"error",false);
-                }
-                else callback();
-            }
-        }, commandStatusId);
+        })
     }
     function installNodeModule(id,version,url,callback) {
         var requestBody = {
@@ -26449,38 +26422,17 @@ RED.palette.editor = (function() {
             data: JSON.stringify(requestBody),
             contentType: "application/json; charset=utf-8"
         }).done(function(data,textStatus,xhr) {
-            //callback(); //Removed by Homegear GmbH
-            if(data.result == "error") RED.notify(RED._('palette.editor.errors.installFailed',{module: id, message: data.error}),"error",false); //Added by Homegear GmbH
-            else setTimeout(checkNodeInstallStatus, 2000, callback, data.commandStatusId); //Added by Homegear GmbH
+            callback();
         }).fail(function(xhr,textStatus,err) {
             callback(xhr);
         });
-    }
-    //Function added by Homegear GmbH
-    function checkNodeRemoveStatus(callback, commandStatusId) {
-        RED.comms.homegear().invoke("managementGetCommandStatus", function(response) {
-            if(!response.result.finished)
-            {
-                setTimeout(checkNodeRemoveStatus, 2000, callback, commandStatusId);
-            }
-            else
-            {
-                RED.eventLog.startEvent(response.result.output);
-                if(response.result.exitCode != 0) {
-                    RED.notify(RED._('palette.editor.errors.removeFailed',{module: id,message: ""}),"error",false);
-                }
-                else callback();
-            }
-        }, commandStatusId);
     }
     function removeNodeModule(id,callback) {
         $.ajax({
             url:"nodes/"+id,
             type: "DELETE"
         }).done(function(data,textStatus,xhr) {
-            //callback(); Removed by Homegear GmbH
-            if(data.result == "error") RED.notify(RED._('palette.editor.errors.removeFailed',{module: id, message: data.error}),"error",false); //Added by Homegear GmbH
-            else setTimeout(checkNodeRemoveStatus, 2000, callback, data.commandStatusId); //Added by Homegear GmbH
+            callback();
         }).fail(function(xhr,textStatus,err) {
             callback(xhr);
         })
@@ -26627,8 +26579,7 @@ RED.palette.editor = (function() {
                         nodeEntries[module].setUseCount[setName] = inUseCount;
                         nodeEntries[module].totalUseCount += inUseCount;
 
-                        //Removed by Homegear GmbH
-                        /*if (inUseCount > 0) {
+                        if (inUseCount > 0) {
                             setElements.enableButton.text(RED._('palette.editor.inuse'));
                             setElements.enableButton.addClass('disabled');
                         } else {
@@ -26638,7 +26589,7 @@ RED.palette.editor = (function() {
                             } else {
                                 setElements.enableButton.text(RED._('palette.editor.enable'));
                             }
-                        }*/
+                        }
                         setElements.setRow.toggleClass("red-ui-palette-module-set-disabled",!set.enabled);
                     }
                 }
@@ -26649,28 +26600,27 @@ RED.palette.editor = (function() {
                     nodeEntry.errorRow.show();
                 }
 
-                //var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount; //Removed by Homegear GmbH
-                //nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount})); //Removed by Homegear GmbH
+                var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount;
+                nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
 
                 if (nodeEntries[module].totalUseCount > 0) {
-                    //nodeEntry.enableButton.text(RED._('palette.editor.inuse')); //Removed by Homegear GmbH
-                    //nodeEntry.enableButton.addClass('disabled'); //Removed by Homegear GmbH
+                    nodeEntry.enableButton.text(RED._('palette.editor.inuse'));
+                    nodeEntry.enableButton.addClass('disabled');
                     nodeEntry.removeButton.hide();
                 } else {
-                    //nodeEntry.enableButton.removeClass('disabled'); //Removed by Homegear GmbH
+                    nodeEntry.enableButton.removeClass('disabled');
                     if (moduleInfo.local) {
                         nodeEntry.removeButton.css('display', 'inline-block');
                     }
                     if (activeTypeCount === 0) {
-                        //nodeEntry.enableButton.text(RED._('palette.editor.enableall')); //Removed by Homegear GmbH
+                        nodeEntry.enableButton.text(RED._('palette.editor.enableall'));
                     } else {
-                        //nodeEntry.enableButton.text(RED._('palette.editor.disableall')); //Removed by Homegear GmbH
+                        nodeEntry.enableButton.text(RED._('palette.editor.disableall'));
                     }
                     nodeEntry.container.toggleClass("disabled",(activeTypeCount === 0));
                 }
             }
-            //Removed by Homegear GmbH
-            /*if (moduleInfo.pending_version) {
+            if (moduleInfo.pending_version) {
                 nodeEntry.versionSpan.html(moduleInfo.version+' <i class="fa fa-long-arrow-right"></i> '+moduleInfo.pending_version).appendTo(nodeEntry.metaRow)
                 nodeEntry.updateButton.text(RED._('palette.editor.updated')).addClass('disabled').css('display', 'inline-block');
             } else if (loadedIndex.hasOwnProperty(module)) {
@@ -26682,7 +26632,7 @@ RED.palette.editor = (function() {
                 }
             } else {
                 nodeEntry.updateButton.hide();
-            }*/
+            }
         }
 
     }
@@ -26749,8 +26699,7 @@ RED.palette.editor = (function() {
 
     function initInstallTab() {
         if (loadedList.length === 0) {
-            //Removed by Homegear GmbH
-            /*loadedList = [];
+            loadedList = [];
             loadedIndex = {};
             packageList.editableList('empty');
 
@@ -26778,47 +26727,6 @@ RED.palette.editor = (function() {
                         searchInput.searchBox('change');
                     }
                 })
-            });*/
-            RED.comms.homegear().invoke("managementGetSystemInfo", function(response) {
-                if(response.error)
-                {
-                    RED.notify(RED._("notification.error",{message:RED._("notification.errors.loadCatalogManagementError")}),"error",false);
-                    return;
-                }
-
-                var repositoryType = response.result.repositoryType;
-                var system = response.result.system;
-                var codename = response.result.codename;
-                var architecture = response.result.architecture;
-
-                loadedList = [];
-                loadedIndex = {};
-                packageList.editableList('empty');
-
-                $(".red-ui-palette-module-shade-status").text(RED._('palette.editor.loading'));
-                var catalogues = RED.settings.theme('palette.catalogues')||['https://apt.node-blue.com/' + repositoryType + '/' + system + '/' + codename + '/catalog_all.json','https://apt.node-blue.com/' + repositoryType + '/' + system + '/' + codename + '/catalog_' + architecture + '.json'];
-                catalogueLoadStatus = [];
-                catalogueLoadErrors = false;
-                catalogueCount = catalogues.length;
-                if (catalogues.length > 1) {
-                    $(".red-ui-palette-module-shade-status").html(RED._('palette.editor.loading')+"<br>0/"+catalogues.length);
-                }
-                $("#red-ui-palette-module-install-shade").show();
-                catalogueLoadStart = Date.now();
-                var handled = 0;
-                catalogues.forEach(function(catalog,index) {
-                    $.getJSON(catalog, {_: new Date().getTime()},function(v) {
-                        handleCatalogResponse(null,catalog,index,v);
-                        refreshNodeModuleList();
-                    }).fail(function(jqxhr, textStatus, error) {
-                        handleCatalogResponse(jqxhr,catalog,index);
-                    }).always(function() {
-                        handled++;
-                        if (handled === catalogueCount) {
-                            searchInput.searchBox('change');
-                        }
-                    })
-                });
             });
         }
     }
@@ -26883,24 +26791,8 @@ RED.palette.editor = (function() {
         })
 
         RED.actions.add("core:manage-palette",function() {
-            //{{{ Added by Homegear GmbH
-            RED.comms.homegear().invoke("managementGetNodePackages", function(message) {
-                var nodesFromPackages = message.result;
-                for (var entry in nodeEntries) {
-                    if (nodeEntries.hasOwnProperty(entry)) {
-                        for(var set in nodeEntries[entry].info.sets) {
-                            if (nodeEntries[entry].info.sets.hasOwnProperty(set)) {
-                                if(nodesFromPackages.hasOwnProperty(nodeEntries[entry].info.sets[set].id)) {
-                                    nodeEntries[entry].info.package = nodesFromPackages[nodeEntries[entry].info.sets[set].id];
-                                }
-                            }
-                        }
-                    }
-                }
                 RED.userSettings.show('palette');
             });
-            //}}}
-        });
 
         RED.events.on('registry:module-updated', function(ns) {
             refreshNodeModule(ns.module);
@@ -27060,8 +26952,8 @@ RED.palette.editor = (function() {
                     var errorRow = $('<div class="red-ui-palette-module-meta red-ui-palette-module-errors"><i class="fa fa-warning"></i></div>').hide().appendTo(headerRow);
                     var errorList = $('<ul class="red-ui-palette-module-error-list"></ul>').appendTo(errorRow);
                     var buttonRow = $('<div>',{class:"red-ui-palette-module-meta"}).appendTo(headerRow);
-                    //var setButton = $('<a href="#" class="red-ui-button red-ui-button-small red-ui-palette-module-set-button"><i class="fa fa-angle-right red-ui-palette-module-node-chevron"></i> </a>').appendTo(buttonRow); //Removed by Homegear GmbH
-                    //var setCount = $('<span>').appendTo(setButton); //Removed by Homegear GmbH
+                    var setButton = $('<a href="#" class="red-ui-button red-ui-button-small red-ui-palette-module-set-button"><i class="fa fa-angle-right red-ui-palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
+                    var setCount = $('<span>').appendTo(setButton);
                     var buttonGroup = $('<div>',{class:"red-ui-palette-module-button-group"}).appendTo(buttonRow);
 
                     var updateButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.update')).appendTo(buttonGroup);
@@ -27079,23 +26971,12 @@ RED.palette.editor = (function() {
                     removeButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
                     removeButton.on("click", function(evt) {
                         evt.preventDefault();
-                        //remove(entry,container,function(err){}); //Removed by Homegear GmbH
-                        //{{{ Added by Homegear GmbH
-                        remove(entry,container,function(err){
-                            for (var set in entry.sets) {
-                                if (entry.sets.hasOwnProperty(set)) {
-                                    RED.nodes.removeNodeSet(entry.sets[set].id);
-                                }
-                            }
-                            refreshNodeModuleList();
-                        });
-                        //}}}
+                        remove(entry,container,function(err){});
                     })
-                    //if (!entry.local) { //Removed by Homegear GmbH
-                    if (!entry.local || !entry.hasOwnProperty('package')) { //Added by Homegear GmbH
+                    if (!entry.local) {
                         removeButton.hide();
                     }
-                    //var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.disableall')).appendTo(buttonGroup); //Removed by Homegear GmbH
+                    var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.disableall')).appendTo(buttonGroup);
 
                     var contentRow = $('<div>',{class:"red-ui-palette-module-content"}).appendTo(container);
                     var shade = $('<div class="red-ui-palette-module-shade hide"><img src="red/images/spin.svg" class="red-ui-palette-spinner"/></div>').appendTo(container);
@@ -27103,17 +26984,16 @@ RED.palette.editor = (function() {
                     object.elements = {
                         updateButton: updateButton,
                         removeButton: removeButton,
-                        //enableButton: enableButton, //Removed by Homegear GmbH
+                        enableButton: enableButton,
                         errorRow: errorRow,
                         errorList: errorList,
-                        //setCount: setCount, //Removed by Homegear GmbH
+                        setCount: setCount,
                         container: container,
                         shade: shade,
                         versionSpan: versionSpan,
                         sets: {}
                     }
-                    //Removed by Homegear GmbH
-                    /*setButton.on("click", function(evt) {
+                    setButton.on("click", function(evt) {
                         evt.preventDefault();
                         if (container.hasClass('expanded')) {
                             container.removeClass('expanded');
@@ -27122,7 +27002,7 @@ RED.palette.editor = (function() {
                             container.addClass('expanded');
                             contentRow.slideDown();
                         }
-                    })*/
+                    })
 
                     var setList = Object.keys(entry.sets)
                     setList.sort(function(A,B) {
@@ -27138,8 +27018,7 @@ RED.palette.editor = (function() {
                             typeSwatches[t] = $('<span>',{class:"red-ui-palette-module-type-swatch"}).appendTo(typeDiv);
                             $('<span>',{class:"red-ui-palette-module-type-node"}).text(t).appendTo(typeDiv);
                         })
-                        //Removed by Homegear GmbH
-                        /*var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').appendTo(buttonGroup);
+                        var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').appendTo(buttonGroup);
                         enableButton.on("click", function(evt) {
                             evt.preventDefault();
                             if (object.setUseCount[setName] === 0) {
@@ -27154,16 +27033,15 @@ RED.palette.editor = (function() {
                                     }
                                 });
                             }
-                        })*/
+                        })
 
                         object.elements.sets[set.name] = {
                             setRow: setRow,
-                            //enableButton: enableButton, //Removed by Homegear GmbH
+                            enableButton: enableButton,
                             swatches: typeSwatches
                         };
                     });
-                    //Removed by Homegear GmbH
-                    /*enableButton.on("click", function(evt) {
+                    enableButton.on("click", function(evt) {
                         evt.preventDefault();
                         if (object.totalUseCount === 0) {
                             changeNodeState(entry.name,(container.hasClass('disabled')),shade,function(xhr){
@@ -27174,7 +27052,7 @@ RED.palette.editor = (function() {
                                 }
                             });
                         }
-                    })*/
+                    })
                     refreshNodeModule(entry.name);
                 } else {
                     $('<div>',{class:"red-ui-search-empty"}).text(RED._('search.empty')).appendTo(container);
@@ -27306,16 +27184,7 @@ RED.palette.editor = (function() {
                     installButton.on("click", function(e) {
                         e.preventDefault();
                         if (!$(this).hasClass('disabled')) {
-                            //install(entry,container,function(xhr) {}); //Removed by Homegear GmbH
-                            //{{{ Added by Homegear GmbH
-                            install(entry,container,function(xhr) {
-                                if(!xhr) {
-                                    installButton.addClass('disabled');
-                                    installButton.text(RED._('palette.editor.installed'));
-                                    location.reload();
-                                }
-                            });
-                            //}}}
+                            install(entry,container,function(xhr) {});
                         }
                     })
                     if (nodeEntries.hasOwnProperty(entry.id)) {
@@ -27508,8 +27377,7 @@ RED.palette.editor = (function() {
                             RED.actions.invoke("core:show-event-log");
                         });
                         RED.eventLog.startEvent(RED._("palette.editor.confirm.button.remove")+" : "+entry.name);
-                        //removeNodeModule(entry.name, function(xhr) { //Removed by Homegear GmbH
-                        removeNodeModule(entry.package, function(xhr) { //Added by Homegear GmbH
+                        removeNodeModule(entry.name, function(xhr) {
                             spinner.remove();
                             if (xhr) {
                                 if (xhr.responseJSON) {
@@ -36736,7 +36604,6 @@ RED.subflow = (function() {
                     valueField.typedInput({default:'string',types:isTemplateNode?DEFAULT_ENV_TYPE_LIST:DEFAULT_ENV_TYPE_LIST_INC_CRED}); //Added by Homegear GmbH
                     valueField.typedInput('type', opt.type);
                     if (opt.type === "cred") {
-                        console.log("Hi");
                         if (opt.value) {
                             valueField.typedInput('value', opt.value);
                         } else if (node.credentials && node.credentials[opt.name]) {

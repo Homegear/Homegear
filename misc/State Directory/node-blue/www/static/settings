@@ -1,1 +1,1 @@
-{"httpNodeRoot":"/","version":"1.2.6","context":{"default":"memory","stores":["memory"]},"flowEncryptionType":"system","tlsConfigDisableLocalFiles":false,"editorTheme":{"projects":{"enabled":false},"languages":["de","en-US"]}}
+{"httpNodeRoot":"/","version":"1.2.6","context":{"default":"memory","stores":["memory"]},"flowEncryptionType":"system","tlsConfigDisableLocalFiles":false,"editorTheme":{"projects":{"enabled":false},"languages":["de","en-US"],"palette":{"catalogues":["https://catalog.node-blue.com/catalog.json"]}}}

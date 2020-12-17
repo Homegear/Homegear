@@ -117,6 +117,11 @@ void NodeManager::clearManagerModuleInfo() {
 void NodeManager::fillManagerModuleInfo() {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+
+    _managerModuleInfo.clear();
+    _managerModuleInfoByNodeType.clear();
+    _nodeInfoByNodeType.clear();
+
     std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
     std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.nodeBluePath() + "nodes/");
     for (auto &directory : directories) {
@@ -311,6 +316,68 @@ BaseLib::PVariable NodeManager::getModuleInfo() {
   return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 }
 
+BaseLib::PVariable NodeManager::getNodesAddedInfo(const std::string &module) {
+  try {
+    std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+
+    auto moduleInfoIterator = _managerModuleInfo.find(module);
+    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    auto module = moduleInfoIterator->second;
+
+    auto moduleInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    moduleInfo->arrayValue->reserve(module->nodes.size());
+    for (auto &node : module->nodes) {
+      auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(module->module + "/" + node.first));
+      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
+      auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+      typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
+      nodeListEntry->structValue->emplace("types", typesEntry);
+      nodeListEntry->structValue->emplace("added", std::make_shared<BaseLib::Variable>(true));
+      nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
+      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(module->local));
+      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(module->module));
+      nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(module->version));
+      moduleInfo->arrayValue->emplace_back(nodeListEntry);
+    }
+    return moduleInfo;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+}
+
+BaseLib::PVariable NodeManager::getNodesRemovedInfo(const std::string &module) {
+  try {
+    std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+
+    auto moduleInfoIterator = _managerModuleInfo.find(module);
+    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    auto module = moduleInfoIterator->second;
+
+    auto moduleInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    moduleInfo->arrayValue->reserve(module->nodes.size());
+    for (auto &node : module->nodes) {
+      auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(module->module + "/" + node.first));
+      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
+      auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+      typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
+      nodeListEntry->structValue->emplace("types", typesEntry);
+      nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(false));
+      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(module->local));
+      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(module->module));
+      moduleInfo->arrayValue->emplace_back(nodeListEntry);
+    }
+    return moduleInfo;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+}
+
 std::unordered_map<NodeManager::NodeType, uint32_t> NodeManager::getMaxThreadCounts() {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
@@ -361,6 +428,40 @@ std::string NodeManager::getFrontendCode() {
         }
       }
     }
+    return code;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::string();
+}
+
+std::string NodeManager::getFrontendCode(const std::string &type) {
+  try {
+    std::string code;
+    code.reserve(1 * 1024 * 1024);
+    std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+    auto moduleInfoIterator = _managerModuleInfoByNodeType.find(type);
+    if (moduleInfoIterator == _managerModuleInfoByNodeType.end()) return "";
+
+    auto nodeInfoIterator = moduleInfoIterator->second->nodes.find(type);
+    if (nodeInfoIterator == moduleInfoIterator->second->nodes.end()) return "";
+    auto node = nodeInfoIterator->second;
+
+    auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(moduleInfoIterator->second->module).append("/");
+
+    auto extensionPos = node->filename.find('.'); //There might be two points, so we can't search for the last one
+    if (extensionPos == std::string::npos) return "";
+    auto filePrefix = node->filename.substr(0, extensionPos);
+    if (BaseLib::Io::fileExists(modulePath + filePrefix + ".hni")) {
+      auto content = BaseLib::Io::getFileContent(modulePath + filePrefix + ".hni");
+      if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
+      code.append(content);
+    } else if (BaseLib::Io::fileExists(modulePath + filePrefix + ".html")) {
+      auto content = BaseLib::Io::getFileContent(modulePath + filePrefix + ".html");
+      if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
+      code.append(content);
+    }
+
     return code;
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
