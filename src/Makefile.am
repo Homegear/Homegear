@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-AM_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
+AM_CPPFLAGS = -Wall -std=c++14 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 AM_LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=/lib/homegear -Wl,-rpath=/usr/lib/homegear -Wl,-rpath=/usr/local/lib/homegear
 if HAVE_PHP_HEADERS
 # {{{ PHP libraries
@@ -33,7 +33,7 @@ if WITH_SCRIPTENGINE
 noinst_LIBRARIES = libscriptengine.a
 libscriptengine_a_SOURCES = ScriptEngine/php_homegear_globals.cpp ScriptEngine/php_device.cpp ScriptEngine/php_node.cpp ScriptEngine/php_sapi.cpp ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
 homegear_LDADD += libscriptengine.a
-libscriptengine_a_CPPFLAGS = -Wall -std=c++11 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
+libscriptengine_a_CPPFLAGS = -Wall -std=c++14 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 if BSDSYSTEM
 libscriptengine_a_CPPFLAGS += -I/usr/include/php8-homegear -I/usr/include/php8-homegear/main -I/usr/include/php8-homegear/sapi -I/usr/include/php8-homegear/TSRM -I/usr/include/php8-homegear/Zend -I/usr/include/php8-homegear/php -I/usr/include/php8-homegear/php/main -I/usr/include/php8-homegear/php/sapi -I/usr/include/php8-homegear/php/TSRM -I/usr/include/php8-homegear/php/Zend
 else

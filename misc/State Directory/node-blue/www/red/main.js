@@ -22,7 +22,7 @@
  **/
 
 $(function() {
-    if ((window.location.hostname !== "localhost") && (window.location.hostname !== "127.0.0.1") && (window.location.hostname !== "::1")) {
+    if ((window.location.hostname !== "localhost") && (window.location.hostname !== "127.0.0.1") && (window.location.hostname !== "::1")) { //Modified by Homegear GmbH
         document.title = document.title+" : "+window.location.hostname;
     }
     RED.init({

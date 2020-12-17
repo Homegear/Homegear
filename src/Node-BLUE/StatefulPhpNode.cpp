@@ -36,8 +36,8 @@
 
 namespace Homegear {
 
-StatefulPhpNode::StatefulPhpNode(const std::string &path, const std::string &nodeNamespace, const std::string &type, const std::atomic_bool *frontendConnected)
-    : INode(path, nodeNamespace, type, frontendConnected) {
+StatefulPhpNode::StatefulPhpNode(const std::string &path, const std::string &type, const std::atomic_bool *frontendConnected)
+    : INode(path, type, frontendConnected) {
 }
 
 StatefulPhpNode::~StatefulPhpNode() = default;

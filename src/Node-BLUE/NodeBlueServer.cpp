@@ -42,6 +42,8 @@
 
 #include <sys/stat.h>
 
+#include <memory>
+
 namespace Homegear {
 
 namespace NodeBlue {
@@ -62,10 +64,12 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
-  _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
-  _jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
-  _jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+  _nodeManager = std::make_unique<NodeManager>(&_frontendConnected);
+
+  _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, false);
+  _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
+  _jsonEncoder = std::make_unique<BaseLib::Rpc::JsonEncoder>(GD::bl.get());
+  _jsonDecoder = std::make_unique<BaseLib::Rpc::JsonDecoder>(GD::bl.get());
   _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
   _dummyClientInfo->flowsServer = true;
   _dummyClientInfo->initInterfaceId = "nodeBlue";
@@ -109,6 +113,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceDescription()));
   _rpcMethods.emplace("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceInfo()));
   _rpcMethods.emplace("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetEvent()));
+  _rpcMethods.emplace("getLastEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLastEvents()));
   _rpcMethods.emplace("getInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstallMode()));
   _rpcMethods.emplace("getInstanceId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstanceId()));
   _rpcMethods.emplace("getKeyMismatchDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetKeyMismatchDevice()));
@@ -432,9 +437,9 @@ void NodeBlueServer::collectGarbage() {
 void NodeBlueServer::getMaxThreadCounts() {
   try {
     _maxThreadCounts.clear();
-    std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
-    for (auto &infoEntry : nodeInfo) {
-      _maxThreadCounts[infoEntry->nodeName] = infoEntry->maxThreadCount;
+    auto threadCounts = _nodeManager->getMaxThreadCounts();
+    for (auto &entry : threadCounts) {
+      _maxThreadCounts[entry.first] = entry.second;
     }
   }
   catch (const std::exception &ex) {
@@ -882,7 +887,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
           if (typeIterator->second->stringValue == "bool") {
             valueIterator->second->type = BaseLib::VariableType::tBoolean;
             valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
-          } else if (typeIterator->second->stringValue == "float") {
+          } else if (typeIterator->second->stringValue == "float" || typeIterator->second->stringValue == "num") {
             valueIterator->second->type = BaseLib::VariableType::tFloat;
             valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
           } else if (typeIterator->second->stringValue == "int") {
@@ -918,7 +923,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
             if (typeIterator->second->stringValue == "bool") {
               valueIterator->second->type = BaseLib::VariableType::tBoolean;
               valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
-            } else if (typeIterator->second->stringValue == "float") {
+            } else if (typeIterator->second->stringValue == "float" || typeIterator->second->stringValue == "num") {
               valueIterator->second->type = BaseLib::VariableType::tFloat;
               valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
             } else if (typeIterator->second->stringValue == "int") {
@@ -1241,11 +1246,7 @@ void NodeBlueServer::startFlows() {
         if (typeIterator != node.second->structValue->end()) {
           if (typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
           auto threadCountIterator = _maxThreadCounts.find(typeIterator->second->stringValue);
-          if (threadCountIterator == _maxThreadCounts.end()) {
-            GD::out.printError("Error: Could not determine maximum thread count of node \"" + typeIterator->second->stringValue + "\". Node is unknown.");
-            continue;
-          }
-          maxThreadCount += threadCountIterator->second;
+          maxThreadCount += (threadCountIterator == _maxThreadCounts.end() ? 0 : threadCountIterator->second);
         } else GD::out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
       }
 
@@ -1531,7 +1532,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
           break;
         }
       }
-      contentString = NodeManager::getNodeLocales(language);
+      contentString = _nodeManager->getNodeLocales(language);
       responseEncoding = "application/json";
     } else if (path.compare(0, 18, "node-blue/locales/") == 0) {
       if (!sessionValid) return "unauthorized";
@@ -1640,7 +1641,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       responseJson->structValue->emplace("rev", std::make_shared<BaseLib::Variable>(md5String));
       _jsonEncoder->encode(responseJson, contentString);
       responseEncoding = "application/json";
-    } else if (path == "node-blue/settings" || path == "node-blue/theme" || path == "node-blue/library/flows" || path == "node-blue/icons" || path == "node-blue/debug/view/debug-utils.js") {
+    } else if (path == "node-blue/settings" || path == "node-blue/theme" || path == "node-blue/library/flows" || path == "node-blue/debug/view/debug-utils.js") {
       if (!sessionValid) return "unauthorized";
       path = _webroot + "static/" + path.substr(10);
       if (GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
@@ -1659,32 +1660,21 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       if (!sessionValid) return "unauthorized";
       path = _webroot + "static/" + path.substr(10);
 
-      std::vector<NodeManager::PNodeInfo> nodeInfo = NodeManager::getNodeInfo();
       if (http.getHeader().fields["accept"] == "text/html") {
         responseEncoding = "text/html";
-        for (auto &infoEntry : nodeInfo) {
-          contentString += infoEntry->frontendCode;
-        }
+        contentString = _nodeManager->getFrontendCode();
       } else {
         responseEncoding = "application/json";
-        BaseLib::PVariable frontendNodeList = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-        for (auto &infoEntry : nodeInfo) {
-          BaseLib::PVariable nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-          nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(infoEntry->nodeId));
-          nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(infoEntry->readableName));
-          nodeListEntry->structValue->emplace("types", std::make_shared<BaseLib::Variable>(BaseLib::PArray(new BaseLib::Array{std::make_shared<BaseLib::Variable>(infoEntry->nodeName)})));
-          nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-          nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(!infoEntry->coreNode));
-          nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(infoEntry->nodeName));
-          nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(infoEntry->version));
-          frontendNodeList->arrayValue->push_back(nodeListEntry);
-        }
-        _jsonEncoder->encode(frontendNodeList, contentString);
+        _jsonEncoder->encode(_nodeManager->getModuleInfo(), contentString);
       }
+    } else if (path == "node-blue/icons") {
+      if (!sessionValid) return "unauthorized";
+      responseEncoding = "application/json";
+      _jsonEncoder->encode(_nodeManager->getIcons(), contentString);
     } else if (path.compare(0, 16, "node-blue/icons/") == 0) {
       if (!sessionValid) return "unauthorized";
       auto pathPair = BaseLib::HelperFunctions::splitFirst(path.substr(16), '/');
-      std::string path = _bl->settings.nodeBluePath() + "nodes/" + pathPair.first + "/" + pathPair.second;
+      std::string path = _bl->settings.nodeBluePath() + "nodes/" + pathPair.first + "/icons/" + pathPair.second;
       if (GD::bl->io.fileExists(path)) contentString = GD::bl->io.getFileContent(path);
       else {
         path = _webroot + "icons/" + pathPair.second;
@@ -3234,12 +3224,10 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData &clientDat
       }
     } else {
       filename = parameters->at(2)->stringValue.substr(parameters->at(2)->stringValue.find_last_of('/') + 1);
+      uint32_t threadCount = 0;
       auto threadCountIterator = _maxThreadCounts.find(parameters->at(0)->stringValue);
-      if (threadCountIterator == _maxThreadCounts.end()) {
-        GD::out.printError("Error: Could not determine maximum thread count of node \"" + parameters->at(0)->stringValue + "\". Node is unknown.");
-        return BaseLib::Variable::createError(-32500, "Unknown application error.");
-      }
-      scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCountIterator->second);
+      if (threadCountIterator != _maxThreadCounts.end()) threadCount = threadCountIterator->second;
+      scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCount);
     }
     GD::scriptEngineServer->executeScript(scriptInfo, wait);
     return BaseLib::PVariable(new BaseLib::Variable());

@@ -51,7 +51,7 @@ class NodeLoader {
 
   virtual ~NodeLoader();
 
-  Flows::PINode createNode(const std::atomic_bool *nodeEventsEnabled, const std::string &nodeNamespace, const std::string &type, const std::string &nodePath);
+  Flows::PINode createNode(const std::atomic_bool *nodeEventsEnabled, const std::string &type, const std::string &nodePath);
 
  private:
   std::string _soPath;
@@ -65,46 +65,76 @@ class NodeLoader {
 
 class NodeManager {
  public:
+  typedef std::string NodeId; //Node ID from Homegear
+  typedef std::string NodeType; //Node type from Homegear
+  typedef std::string ModuleName;
+
+  enum class NodeCodeType {
+    undefined,
+    none, //No code file
+    cpp, //.so
+    statefulPhp, //.s.php
+    statefulPhpEncrypted, //.s.hgn
+    simplePhp, //.php
+    simplePhpEncrypted, //.hgn
+    python, //.py
+    pythonEncrypted, //.hgnpy
+    javascript, //.js
+    javascriptEncrypted //.hgnjs
+  };
+
   struct NodeInfo {
+    std::atomic_bool locked{false};
+    std::atomic_int referenceCounter{0};
+    NodeCodeType codeType = NodeCodeType::undefined;
+    uint32_t maxThreadCount = 0;
     std::string filename;
-    std::string fullPath;
-    std::string nodeId;
-    std::string nodeName;
-    std::string readableName;
-    std::string version;
-    bool coreNode = false;
-    int32_t maxThreadCount = 1;
-    std::string frontendListEntry;
-    std::string frontendCode;
+    std::string fullCodefilePath;
   };
   typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
-  struct NodeUsageInfo {
-    std::atomic_bool locked;
-    std::atomic_int referenceCounter;
+  struct ManagerModuleInfo {
+    std::string name;
+    std::string module;
+    std::string version;
+    std::unordered_map<NodeType, PNodeInfo> nodes;
   };
-  typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
+  typedef std::shared_ptr<ManagerModuleInfo> PManagerNodeInfo;
 
   explicit NodeManager(const std::atomic_bool *nodeEventsEnabled);
 
   virtual ~NodeManager();
 
   /**
-   * Returns a vector of type NodeInfo with information about all nodes.
-   * @return Returns a vector of type NodeInfo.
+   * Returns a map with the maximum thread count of all node types.
    */
-  static std::vector<PNodeInfo> getNodeInfo();
+  std::unordered_map<NodeType, uint32_t> getMaxThreadCounts();
 
-  static std::string getNodeLocales(std::string &language);
+  /**
+   * Returns a struct with information about all modules as required by the frontend.
+   */
+  BaseLib::PVariable getModuleInfo();
+
+  /**
+   * Returns the icons of all modules.
+   */
+  BaseLib::PVariable getIcons();
+
+  /**
+   * Returns the content of all *.hni files.
+   */
+  std::string getFrontendCode();
+
+  std::string getNodeLocales(std::string &language);
 
   /**
    * Loads a node. The node needs to be in Homegear's node path.
-   * @param name The name of the node (e. g. variable).
+   * @param type The type (= name) of the node (e. g. variable-in).
    * @param id The id of the node (e. g. 142947a.387ef34ad)
    * @param[out] node If loading was successful, this variable contains the loaded node.
    * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
    */
-  int32_t loadNode(const std::string &nodeNamespace, const std::string &type, const std::string &id, Flows::PINode &node);
+  int32_t loadNode(std::string type, const std::string &id, Flows::PINode &node);
 
   /**
    * Unloads a previously loaded node.
@@ -118,23 +148,31 @@ class NodeManager {
    */
   Flows::PINode getNode(const std::string &id);
 
+  /*
+   * Clears all node information. This causes the information to be loaded again from file system on first call to loadNode()
+   */
+  void clearManagerModuleInfo();
  private:
   std::mutex _nodeLoadersMutex;
   std::unique_ptr<NodeLoader> _pythonNodeLoader;
   std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
 
-  typedef std::string NodeId; //Node ID from Homegear
-  typedef std::string NodeName; //Node name from Homegear
-
   std::mutex _nodesMutex;
   std::unordered_map<NodeId, Flows::PINode> _nodes;
-  std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
+  std::unordered_map<ModuleName, PManagerNodeInfo> _managerModuleInfo;
+  std::unordered_map<NodeType, PManagerNodeInfo> _managerModuleInfoByNodeType;
+  /**
+   * This map is just a shortcut for faster access as node info is accessed a lot.
+   */
+  std::unordered_map<NodeType, PNodeInfo> _nodeInfoByNodeType;
 
   const std::atomic_bool *_nodeEventsEnabled;
 
   NodeManager(const NodeManager &) = delete;
 
   NodeManager &operator=(const NodeManager &) = delete;
+
+  void fillManagerModuleInfo();
 };
 
 }

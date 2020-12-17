@@ -2477,8 +2477,8 @@ void DatabaseController::createDefaultRoles() {
                   if (type->stringValue == "bool") typeValue = (int32_t)BaseLib::VariableType::tBoolean;
                   else if (type->stringValue == "int") typeValue = (int32_t)BaseLib::VariableType::tInteger;
                   else if (type->stringValue == "int64") typeValue = (int32_t)BaseLib::VariableType::tInteger64;
-                  else if (type->stringValue == "float") typeValue = (int32_t)BaseLib::VariableType::tFloat;
-                  else if (type->stringValue == "string") typeValue = (int32_t)BaseLib::VariableType::tString;
+                  else if (type->stringValue == "float" || type->stringValue == "num") typeValue = (int32_t)BaseLib::VariableType::tFloat;
+                  else if (type->stringValue == "string" || type->stringValue == "str") typeValue = (int32_t)BaseLib::VariableType::tString;
                   else if (type->stringValue == "bin") typeValue = (int32_t)BaseLib::VariableType::tBinary;
                   else if (type->stringValue == "array") typeValue = (int32_t)BaseLib::VariableType::tArray;
                   else if (type->stringValue == "object") typeValue = (int32_t)BaseLib::VariableType::tStruct;

@@ -171,6 +171,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _flowsPostMutex;
   std::mutex _flowsFileMutex;
   std::mutex _nodesInstallMutex;
+  std::atomic_bool _frontendConnected;
+  std::unique_ptr<NodeManager> _nodeManager;
   std::map<std::string, uint32_t> _maxThreadCounts;
   std::vector<NodeManager::PNodeInfo> _nodeInfo;
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;

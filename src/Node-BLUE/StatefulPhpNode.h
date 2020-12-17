@@ -41,7 +41,7 @@ class StatefulPhpNode : public Flows::INode {
  private:
   Flows::PVariable _nodeInfo;
  public:
-  StatefulPhpNode(const std::string &path, const std::string &nodeNamespace, const std::string &type, const std::atomic_bool *frontendConnected);
+  StatefulPhpNode(const std::string &path, const std::string &type, const std::atomic_bool *frontendConnected);
 
   ~StatefulPhpNode() override;
 

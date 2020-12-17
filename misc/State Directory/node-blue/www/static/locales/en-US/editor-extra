@@ -1,4 +1,7 @@
 {
+    "event": {
+        "connectingHomegear": "Connecting to Homegear"
+    },
     "menu": {
         "label": {
             "powered": "Powered by Node-RED",

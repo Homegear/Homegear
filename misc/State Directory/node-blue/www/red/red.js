@@ -1,4 +1,61 @@
-/**
+(function() {
+    var isIE11 = !!window.MSInputMethodContext && !!document.documentMode;
+
+    if (isIE11) {
+        // IE11 DOMTokenList.toggle does not support the two-argument variety
+        window.DOMTokenList.prototype.toggle = function(cl,bo) {
+            if (arguments.length === 1) {
+                bo = !this.contains(cl);
+            }
+            this[!!bo?"add":"remove"](cl);
+        }
+
+        // IE11 does not provide classList on SVGElements
+        if (! ("classList" in SVGElement.prototype)) {
+            Object.defineProperty(SVGElement.prototype, 'classList', Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'classList'));
+        }
+
+        // IE11 does not provide children on SVGElements
+        if (! ("children" in SVGElement.prototype)) {
+            Object.defineProperty(SVGElement.prototype, 'children', Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'children'));
+        }
+
+        Array.from = function() {
+            if (arguments.length > 1) {
+                throw new Error("Node-RED's IE11 Array.from polyfill doesn't support multiple arguments");
+            }
+            var arrayLike = arguments[0]
+            var result = [];
+            if (arrayLike.forEach) {
+                arrayLike.forEach(function(i) {
+                    result.push(i);
+                })
+            } else {
+                for (var i=0;i<arrayLike.length;i++) {
+                    result.push(arrayList[i]);
+                }
+            }
+            return result;
+        }
+
+        if (new Set([0]).size === 0) {
+            // IE does not support passing an iterable to Set constructor
+            var _Set = Set;
+            /*global Set:true */
+            Set = function Set(iterable) {
+                var set = new _Set();
+                if (iterable) {
+                    iterable.forEach(set.add, set);
+                }
+                return set;
+            };
+            Set.prototype = _Set.prototype;
+            Set.prototype.constructor = Set;
+        }
+
+    }
+})();
+;/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +98,7 @@ jQuery.propHooks.disabled = {
  * - Get events and fixed inputs on startup
  * - Added function homegearReady()
  * - Changed some menu entries
- * - Load main content after Node-BLUE is connected to Homegear
+ * - Load main content only after Node-BLUE is connected to Homegear
  *
  * Todo after update:
  **/
@@ -62,6 +119,8 @@ jQuery.propHooks.disabled = {
  * limitations under the License.
  **/
 var RED = (function() {
+    //Added by Homegear GmbH. Prevents loading of nodes multiple times. The latter happened for example after installing
+    //nodes from the palette.
     var firstHomegearReady = true;
 
     function appendNodeConfig(nodeConfig,done) {
@@ -124,6 +183,7 @@ var RED = (function() {
     }
 
     function loadNodeList() {
+        loader.reportProgress(RED._("event.loadPalette"), 20)
         $.ajax({
             headers: {
                 "Accept":"application/json"
@@ -132,6 +192,7 @@ var RED = (function() {
             url: 'nodes',
             success: function(data) {
                 RED.nodes.setNodeList(data);
+                loader.reportProgress(RED._("event.loadNodeCatalogs"), 25)
                 RED.i18n.loadNodeCatalogs(function() {
                     loadIconList(loadNodes);
                 });
@@ -156,6 +217,7 @@ var RED = (function() {
     }
 
     function loadNodes() {
+        loader.reportProgress(RED._("event.loadNodes",{count:""}), 30)
         var lang = localStorage.getItem("editor-language")||i18n.detectLanguage();
 
         $.ajax({
@@ -167,15 +229,19 @@ var RED = (function() {
             url: 'nodes',
             success: function(data) {
                 var configs = data.trim().split(/(?=<!-- --- \[red-module:\S+\] --- -->)/);
+                var totalCount = configs.length;
+
                 var stepConfig = function() {
+                    loader.reportProgress(RED._("event.loadNodes",{count:(totalCount-configs.length)+"/"+totalCount}), 30 + ((totalCount-configs.length)/totalCount)*40 )
+
                     if (configs.length === 0) {
                         $("#red-ui-editor").i18n();
                         $("#red-ui-palette > .red-ui-palette-spinner").hide();
                         $(".red-ui-palette-scroll").removeClass("hide");
                         $("#red-ui-palette-search").removeClass("hide");
-                        loadFlows(function() {
-                            if (RED.settings.theme("projects.enabled",false)) {
-                                RED.projects.refresh(function(activeProject) {
+                        if (RED.settings.theme("projects.enabled",false)) {
+                            RED.projects.refresh(function(activeProject) {
+                                loadFlows(function() {
                                     RED.sidebar.info.refresh()
                                     if (!activeProject) {
                                         // Projects enabled but no active project
@@ -189,12 +255,14 @@ var RED = (function() {
                                     }
                                     completeLoad();
                                 });
-                            } else {
+                            });
+                        } else {
+                            loadFlows(function() {
                                 // Projects disabled by the user
                                 RED.sidebar.info.refresh()
                                 completeLoad();
-                            }
-                        });
+                            });
+                        }
                     } else {
                         var config = configs.shift();
                         appendNodeConfig(config,stepConfig);
@@ -206,6 +274,7 @@ var RED = (function() {
     }
 
     function loadFlows(done) {
+        loader.reportProgress(RED._("event.loadFlows"),80 )
         $.ajax({
             headers: {
                 "Accept":"application/json",
@@ -216,11 +285,22 @@ var RED = (function() {
                 if (nodes) {
                     var currentHash = window.location.hash;
                     RED.nodes.version(nodes.rev);
-                    RED.nodes.import(nodes.flows);
-                    RED.nodes.dirty(false);
-                    RED.view.redraw(true);
-                    if (/^#flow\/.+$/.test(currentHash)) {
-                        RED.workspaces.show(currentHash.substring(6));
+                    loader.reportProgress(RED._("event.importFlows"),90 )
+                    try {
+                        RED.nodes.import(nodes.flows);
+                        RED.nodes.dirty(false);
+                        RED.view.redraw(true);
+                        if (/^#flow\/.+$/.test(currentHash)) {
+                            RED.workspaces.show(currentHash.substring(6));
+                        }
+                    } catch(err) {
+                        RED.notify(
+                            RED._("event.importError", {message: err.message}),
+                            {
+                                fixed: true,
+                                type: 'error'
+                            }
+                        );
                     }
                 }
                 done();
@@ -242,6 +322,7 @@ var RED = (function() {
                 return;
             }
             if (notificationId === "project-update") {
+                loader.start("Loading project",0)
                 RED.nodes.clear();
                 RED.history.clear();
                 RED.view.redraw(true);
@@ -257,6 +338,7 @@ var RED = (function() {
                             "revert": RED._("notification.project.revert", {project: msg.project}),
                             "merge-complete": RED._("notification.project.merge-complete")
                         }[msg.action];
+                        loader.end()
                         RED.notify("<p>"+message+"</p>");
                         RED.sidebar.info.refresh()
                     });
@@ -398,6 +480,7 @@ var RED = (function() {
                 delete persistentNotifications[notificationId];
             }
         });
+        //{{{ Added by Homegear GmbH replacing status
         RED.comms.subscribe("statusTop/#",function(topic,msg) {
             var parts = topic.split("/");
             var node = RED.nodes.node(parts[1]);
@@ -410,7 +493,7 @@ var RED = (function() {
                 node.statusTop = msg;
                 node.dirty = true;
                 node.dirtyStatus = true;
-                RED.view.redraw();
+                RED.view.redrawStatus(node);
             }
         });
         RED.comms.subscribe("statusBottom/#",function(topic,msg) {
@@ -420,10 +503,24 @@ var RED = (function() {
                 if (msg.hasOwnProperty("text") && /^[a-zA-Z]/.test(msg.text)) {
                     msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
                 }
-                node.statusBottom = msg;
+                node.status = msg;
                 node.dirty = true;
                 node.dirtyStatus = true;
-                RED.view.redraw();
+                RED.view.redrawStatus(node);
+            }
+        });
+        //Same as statusBottom
+        RED.comms.subscribe("status/#",function(topic,msg) {
+            var parts = topic.split("/");
+            var node = RED.nodes.node(parts[1]);
+            if (node) {
+                if (msg.hasOwnProperty("text") && /^[a-zA-Z]/.test(msg.text)) {
+                    msg.text = node._(msg.text.toString(),{defaultValue:msg.text.toString()});
+                }
+                node.status = msg;
+                node.dirty = true;
+                node.dirtyStatus = true;
+                RED.view.redrawStatus(node);
             }
         });
         RED.comms.subscribe("highlightLink/#",function(topic,msg) {
@@ -473,9 +570,10 @@ var RED = (function() {
                     RED.view.redraw();
                 }, timeout, node);
                 node.dirty = true;
-                RED.view.redraw();
+                RED.view.redraw(node);
             }
         });
+        //}}}
         RED.comms.subscribe("notification/node/#",function(topic,msg) {
             var i,m;
             var typeList;
@@ -537,8 +635,14 @@ var RED = (function() {
             var id = topic.substring(9);
             RED.eventLog.log(id,payload);
         });
-        RED.comms.getEvents();
-        RED.comms.getFixedInputs();
+        RED.comms.getEvents(); //Added by Homegear GmbH
+        RED.comms.getFixedInputs(); //Added by Homegear GmbH
+
+        $(".red-ui-header-toolbar").show();
+
+        setTimeout(function() {
+            loader.end();
+        },100);
     }
 
     function showAbout() {
@@ -547,16 +651,15 @@ var RED = (function() {
             '<img width="50px" src="red/images/node-red-icon.svg" />'+
             '</div>';
 
-            RED.sidebar.info.set(aboutHeader+RED.utils.renderMarkdown(data));
-            RED.sidebar.info.show();
+            RED.sidebar.help.set(aboutHeader+RED.utils.renderMarkdown(data));
         });
     }
 
+    //Function added by Homegear GmbH
     function homegearReady() {
         if(!firstHomegearReady) return;
         firstHomegearReady = false;
         $("#red-ui-main-container").show();
-        $(".red-ui-header-toolbar").show();
 
         loadNodeList();
     }
@@ -594,9 +697,17 @@ var RED = (function() {
             {id:"menu-item-workspace-delete",label:RED._("menu.label.delete"),onselect:"core:remove-flow"}
         ]});
         menuOptions.push({id:"menu-item-subflow",label:RED._("menu.label.subflows"), options: [
-            {id:"menu-item-subflow-create",label:RED._("menu.label.createSubflow"),onselect:"core:create-subflow"}/*
-            {id:"menu-item-subflow-convert",label:RED._("menu.label.selectionToSubflow"),disabled:true,onselect:"core:convert-to-subflow"},*/
+            {id:"menu-item-subflow-create",label:RED._("menu.label.createSubflow"),onselect:"core:create-subflow"}/*,
+            {id:"menu-item-subflow-convert",label:RED._("menu.label.selectionToSubflow"),disabled:true,onselect:"core:convert-to-subflow"},*/ //Commented by Homegear GmbH because sublow conversion is not implemented with multiple input support
         ]});
+        menuOptions.push({id:"menu-item-group",label:RED._("menu.label.groups"), options: [
+            {id:"menu-item-group-group",label:RED._("menu.label.groupSelection"),disabled:true,onselect:"core:group-selection"},
+            {id:"menu-item-group-ungroup",label:RED._("menu.label.ungroupSelection"),disabled:true,onselect:"core:ungroup-selection"},
+            null,
+            {id:"menu-item-group-merge",label:RED._("menu.label.groupMergeSelection"),disabled:true,onselect:"core:merge-selection-to-group"},
+            {id:"menu-item-group-remove",label:RED._("menu.label.groupRemoveSelection"),disabled:true,onselect:"core:remove-selection-from-group"}
+        ]});
+
         menuOptions.push(null);
         if (RED.settings.theme('palette.editable') !== false) {
             menuOptions.push({id:"menu-item-edit-palette",label:RED._("menu.label.editPalette"),onselect:"core:manage-palette"});
@@ -610,11 +721,14 @@ var RED = (function() {
             menuOptions.push({id: "menu-item-keyboard-shortcuts", label: RED._("menu.label.keyboardShortcuts"), onselect: "core:show-help"});
         }
         menuOptions.push({id:"menu-item-help",
+            //label: RED.settings.theme("menu.menu-item-help.label",RED._("menu.label.help")), // Changed by Homegear GmbH
             label: RED.settings.theme("menu.menu-item-help.label",RED._("menu.label.nodebluewebsite")),
+            //href: RED.settings.theme("menu.menu-item-help.url","http://nodered.org/docs") // Changed by Homegear GmbH
             href: RED.settings.theme("menu.menu-item-help.url","https://doc.homegear.eu/node-blue/")
         });
-        menuOptions.push(null);
+        menuOptions.push(null); //Added by Homegear GmbH
         menuOptions.push({id:"menu-item-node-red-version", label:"v"+RED.settings.version, onselect: "core:show-about" });
+        //{{{ Added by Homegear GmbH
         menuOptions.push({id:"menu-item-node-red",
             label: RED.settings.theme("menu.menu-item-logout.label",RED._("menu.label.powered")),
             href: RED.settings.theme("menu.menu-item-logout.url","https://nodered.org/")
@@ -624,7 +738,7 @@ var RED = (function() {
             label: RED.settings.theme("menu.menu-item-logout.label",RED._("menu.label.logout")),
             hrefLocal: RED.settings.theme("menu.menu-item-logout.url","signin.php?logout=1")
         });
-
+        //}}}
 
         $('<li><a id="red-ui-header-button-sidemenu" class="button" href="#"><i class="fa fa-bars"></i></a></li>').appendTo(".red-ui-header-toolbar")
         RED.menu.init({id:"red-ui-header-button-sidemenu",options: menuOptions});
@@ -632,7 +746,6 @@ var RED = (function() {
     }
 
     function loadEditor() {
-
         RED.workspaces.init();
         RED.statusBar.init();
         RED.view.init();
@@ -659,6 +772,7 @@ var RED = (function() {
         }
 
         RED.subflow.init();
+        RED.group.init();
         RED.clipboard.init();
         RED.search.init();
         RED.actionList.init();
@@ -671,16 +785,20 @@ var RED = (function() {
         buildMainMenu();
 
         RED.nodes.init();
-        RED.comms.connect();
-        RED.comms.homegear().ready(homegearReady);
 
-        //$("#red-ui-main-container").show();
-        //$(".red-ui-header-toolbar").show();
+        loader.reportProgress(RED._("event.connectingHomegear"), 10); //Added by Homegear GmbH
+
+        RED.comms.connect();
+        RED.comms.homegear().ready(homegearReady); //Added by Homegear GmbH
+
+        //$("#red-ui-main-container").show(); //Commented by Homegear GmbH
+
 
         RED.actions.add("core:show-about", showAbout);
 
-        //loadNodeList();
+        //loadNodeList(); //Commented by Homegear GmbH
     }
+
 
     function buildEditor(options) {
         var header = $('<div id="red-ui-header"></div>').appendTo(options.target);
@@ -696,6 +814,10 @@ var RED = (function() {
         '</div>').appendTo(options.target);
         $('<div id="red-ui-editor-node-configs"></div>').appendTo(options.target);
         $('<div id="red-ui-full-shade" class="hide"></div>').appendTo(options.target);
+
+        loader.init().appendTo("#red-ui-main-container");
+        loader.start("...",0);
+
         $.getJSON(options.apiRootUrl+"theme", function(theme) {
             if (theme.header) {
                 if (theme.header.url) {
@@ -728,13 +850,40 @@ var RED = (function() {
         options.target.addClass("red-ui-editor");
 
         buildEditor(options);
+
         RED.i18n.init(options, function() {
             RED.settings.init(options, loadEditor);
         })
     }
 
+    var loader = {
+        init: function() {
+            var wrapper = $('<div id="red-ui-loading-progress"></div>').hide();
+            var container = $('<div>').appendTo(wrapper);
+            var label = $('<div>',{class:"red-ui-loading-bar-label"}).appendTo(container);
+            var bar = $('<div>',{class:"red-ui-loading-bar"}).appendTo(container);
+            var fill =$('<span>').appendTo(bar);
+            return wrapper;
+        },
+        start: function(text, prcnt) {
+            if (text) {
+                loader.reportProgress(text,prcnt)
+            }
+            $("#red-ui-loading-progress").show();
+        },
+        reportProgress: function(text, prcnt) {
+            $(".red-ui-loading-bar-label").text(text);
+            $(".red-ui-loading-bar span").width(prcnt+"%")
+        },
+        end: function() {
+            $("#red-ui-loading-progress").hide();
+            loader.reportProgress("",0);
+        }
+    }
+
     return {
-        init: init
+        init: init,
+        loader: loader
     }
 })();
 ;/**
@@ -771,14 +920,19 @@ var RED = (function() {
              }
          }
      }
-     function emit(evt,arg) {
+     function emit() {
+         var evt = arguments[0]
+         var args = Array.prototype.slice.call(arguments,1);
+         if (RED.events.DEBUG) {
+             console.warn(evt,args);
+         }
          if (handlers[evt]) {
              for (var i=0;i<handlers[evt].length;i++) {
                  try {
-                     handlers[evt][i](arg);
+                     handlers[evt][i].apply(null, args);
                  } catch(err) {
-                     console.log("RED.events.emit error: ["+evt+"] "+(err.toString()));
-                     console.log(err);
+                     console.warn("RED.events.emit error: ["+evt+"] "+(err.toString()));
+                     console.warn(err);
                  }
              }
 
@@ -820,8 +974,9 @@ RED.i18n = (function() {
     return {
         init: function(options, done) {
             apiRootUrl = options.apiRootUrl||"";
+            //var preferredLanguage = localStorage.getItem("editor-language"); //Commented by Homegear GmbH
             var opts = {
-                lng: locale ? locale[0] : null, //Get locale from locale array defined in index.php
+                lng: locale ? locale[0] : null, //Added by Homegear GmbH: Get locale from locale array defined in index.php
                 resGetPath: apiRootUrl+'locales/__ns__?lng=__lng__',
                 dynamicLoad: false,
                 load:'current',
@@ -829,11 +984,14 @@ RED.i18n = (function() {
                     namespaces: ["editor","node-red","jsonata","infotips"],
                     defaultNs: "editor"
                 },
-                fallbackLng: locale ? locale : ['en-US'],
-                fallbackNS: ['node-red', 'editor'],
+                fallbackLng: ['en-US'],
+                fallbackNS: ['node-red', 'editor'], //Added by Homegear GmbH
                 useCookie: false,
                 returnObjectTrees: true
             };
+            /*if (preferredLanguage) { //Commented by Homegear GmbH
+                opts.lng = preferredLanguage;
+            }*/
             i18n.init(opts,function() {
                 done();
             });
@@ -848,15 +1006,47 @@ RED.i18n = (function() {
 
         },
         lang: function() {
-            var locale = locale ? locale : ['en-US'];
+            // Gets the active message catalog language. This is based on what
+            // locale the editor is using and what languages are available.
+            //
+            var locale = locale ? locale : ['en-US']; //Added by Homegear GmbH
             return locale[0];
+            //Commented by Homegear GmbH
+            /*var preferredLangs = i18n.functions.toLanguages(localStorage.getItem("editor-language")||i18n.detectLanguage());
+            var knownLangs = RED.settings.theme("languages")||["en-US"];
+            for (var i=0;i<preferredLangs.length;i++) {
+                if (knownLangs.indexOf(preferredLangs[i]) > -1) {
+                    return preferredLangs[i]
+                }
+            }
+            return 'end-US'*/
         },
         loadNodeCatalog: function(namespace,done) {
-            i18n.loadNamespace(namespace,done);
+            //Commented by Homegear GmbH as all translations are loaded in loadNodeCatalogs. This saves GET requests.
+            /*var languageList = i18n.functions.toLanguages(localStorage.getItem("editor-language")||i18n.detectLanguage());
+            var toLoad = languageList.length;
+            languageList.forEach(function(lang) {
+                $.ajax({
+                    headers: {
+                        "Accept":"application/json"
+                    },
+                    cache: false,
+                    url: apiRootUrl+'nodes/'+namespace+'/messages?lng='+lang,
+                    success: function(data) {
+                        i18n.addResourceBundle(lang,namespace,data);
+                        toLoad--;
+                        if (toLoad === 0) {
+                            done();
+                        }
+                    }
+                });
+            })*/
+            i18n.loadNamespace(namespace,done); //Added by Homegear GmbH
         },
 
         loadNodeCatalogs: function(done) {
-            var languageList = locale ? locale : i18n.functions.toLanguages(i18n.detectLanguage());
+            //var languageList = i18n.functions.toLanguages(localStorage.getItem("editor-language")||i18n.detectLanguage()); //Commented by Homegear GmbH
+            var languageList = locale ? locale : i18n.functions.toLanguages(i18n.detectLanguage()); //Added by Homegear GmbH
             var toLoad = languageList.length;
 
             languageList.forEach(function(lang) {
@@ -865,7 +1055,8 @@ RED.i18n = (function() {
                         "Accept":"application/json"
                     },
                     cache: false,
-                    url: apiRootUrl+'locales/nodes?lng='+lang,
+                    //url: apiRootUrl+'nodes/messages?lng='+lang, //Commented by Homegear GmbH
+                    url: apiRootUrl+'locales/nodes?lng='+lang, //Added by Homegear GmbH
                     success: function(data) {
                         var namespaces = Object.keys(data);
                         namespaces.forEach(function(ns) {
@@ -1011,7 +1202,7 @@ RED.settings = (function () {
                     if (auth_tokens) {
                         jqXHR.setRequestHeader("Authorization","Bearer "+auth_tokens.access_token);
                     }
-                    jqXHR.setRequestHeader("Node-BLUE-API-Version","v2");
+                    jqXHR.setRequestHeader("Node-BLUE-API-Version","v2"); //Changed by Homegear GmbH
                 }
             }
         });
@@ -1032,7 +1223,7 @@ RED.settings = (function () {
                 if (!RED.settings.user || RED.settings.user.anonymous) {
                     RED.settings.remove("auth-tokens");
                 }
-                console.log("Node-BLUE: " + data.version);
+                console.log("Node-BLUE: " + data.version); //Changed by Homegear GmbH
                 console.groupCollapsed("Versions");
                 console.log("jQuery",$().jquery)
                 console.log("jQuery UI",$.ui.version);
@@ -1164,7 +1355,11 @@ RED.user = (function() {
             closeOnEscape: !!opts.cancelable,
             width: 600,
             resizable: false,
-            draggable: false
+            draggable: false,
+            close: function( event, ui ) {
+                $("#node-dialog-login").dialog('destroy').remove();
+                RED.keyboard.enable()
+            }
         });
 
         $("#node-dialog-login-fields").empty();
@@ -1223,10 +1418,10 @@ RED.user = (function() {
                             data: body
                         }).done(function(data,textStatus,xhr) {
                             RED.settings.set("auth-tokens",data);
-                            $("#node-dialog-login").dialog('destroy').remove();
                             if (opts.updateMenu) {
                                 updateUserMenu();
                             }
+                            $("#node-dialog-login").dialog("close");
                             done();
                         }).fail(function(jqXHR,textStatus,errorThrown) {
                             RED.settings.remove("auth-tokens");
@@ -1268,7 +1463,8 @@ RED.user = (function() {
                 }
                 if (opts.cancelable) {
                     $("#node-dialog-login-cancel").button().on("click", function( event ) {
-                        $("#node-dialog-login").dialog('destroy').remove();
+                        $("#node-dialog-login").dialog('close');
+
                     });
                 }
 
@@ -1277,8 +1473,7 @@ RED.user = (function() {
                 $("#node-dialog-login-image").load(function() {
                     dialog.dialog("open");
                 }).attr("src",loginImageSrc);
-
-
+                RED.keyboard.disable();
             }
         });
     }
@@ -3087,20 +3282,20 @@ RED.state = {
     IMPORT_DRAGGING: 8,
     QUICK_JOINING: 9,
     PANNING: 10,
-    SELECTING_NODE: 11
+    SELECTING_NODE: 11,
+    GROUP_DRAGGING: 12,
+    GROUP_RESIZE: 13
 }
 ;/**
  * This file was modified by Homegear GmbH
  *
  * Changes:
  * - Added support for multiple inputs.
- * - Added node namespace
+ * - (Added node namespace)
  * - Added Homegear tag
- * - Replaced "link " (with space) with "link-"
  *
  * Todo after update:
  * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
- * - Search for "link " and replace with "link-"
  **/
 
 /**
@@ -3121,7 +3316,7 @@ RED.state = {
 RED.nodes = (function() {
 
     var node_defs = {};
-    var nodes = [];
+    var nodes = {};
     var nodeTabMap = {};
 
     var configNodes = {};
@@ -3132,13 +3327,16 @@ RED.nodes = (function() {
     var subflows = {};
     var loadedFlowVersion = null;
 
+    var groups = {};
+    var groupsByZ = {};
+
     var initialLoad;
 
     var dirty = false;
 
     function setDirty(d) {
         dirty = d;
-        RED.events.emit("nodes:change",{dirty:dirty});
+        RED.events.emit("workspace:dirty",{dirty:dirty});
     }
 
     var registry = (function() {
@@ -3291,6 +3489,7 @@ RED.nodes = (function() {
     })();
 
     function getID() {
+        // return Math.floor(Math.random()*15728640 + 1048576).toString(16)
         return (1+Math.random()*4294967295).toString(16);
     }
 
@@ -3298,24 +3497,17 @@ RED.nodes = (function() {
         if (n.type.indexOf("subflow") !== 0) {
             n["_"] = n._def._;
         } else {
+            var subflowId = n.type.substring(8);
+            var sf = RED.nodes.subflow(subflowId);
+            if (sf) {
+                sf.instances.push(sf);
+            }
             n["_"] = RED._;
         }
         if (n._def.category == "config") {
             configNodes[n.id] = n;
         } else {
-            n.inputPorts = [];
-            if (n.inputs) {
-                for (var i=0;i<n.inputs;i++) {
-                    n.inputPorts.push(i);
-                }
-            }
-            n.outputPorts = [];
             if (n.wires && (n.wires.length > n.outputs)) { n.outputs = n.wires.length; }
-            if (n.outputs) {
-                for (var i=0;i<n.outputs;i++) {
-                    n.outputPorts.push(i);
-                }
-            }
             n.dirty = true;
             updateConfigNodeUsers(n);
             if (n._def.category == "subflows" && typeof n.i === "undefined") {
@@ -3325,7 +3517,7 @@ RED.nodes = (function() {
                 });
                 n.i = nextId+1;
             }
-            nodes.push(n);
+            nodes[n.id] = n;
             if (nodeTabMap[n.z]) {
                 nodeTabMap[n.z][n.id] = n;
             } else {
@@ -3336,17 +3528,14 @@ RED.nodes = (function() {
     }
     function addLink(l) {
         links.push(l);
+        RED.events.emit("links:add",l);
     }
 
     function getNode(id) {
         if (id in configNodes) {
             return configNodes[id];
-        } else {
-            for (var n in nodes) {
-                if (nodes[n].id == id) {
-                    return nodes[n];
-                }
-            }
+        } else if (id in nodes) {
+            return nodes[id];
         }
         return null;
     }
@@ -3360,50 +3549,60 @@ RED.nodes = (function() {
             delete configNodes[id];
             RED.events.emit('nodes:remove',node);
             RED.workspaces.refresh();
-        } else {
-            node = getNode(id);
-            if (node) {
-                nodes.splice(nodes.indexOf(node),1);
-                if (nodeTabMap[node.z]) {
-                    delete nodeTabMap[node.z][node.id];
-                }
-                removedLinks = links.filter(function(l) { return (l.source === node) || (l.target === node); });
-                removedLinks.forEach(function(l) {links.splice(links.indexOf(l), 1); });
-                var updatedConfigNode = false;
-                for (var d in node._def.defaults) {
-                    if (node._def.defaults.hasOwnProperty(d)) {
-                        var property = node._def.defaults[d];
-                        if (property.type) {
-                            var type = registry.getNodeType(property.type);
-                            if (type && type.category == "config") {
-                                var configNode = configNodes[node[d]];
-                                if (configNode) {
-                                    updatedConfigNode = true;
-                                    if (configNode._def.exclusive) {
-                                        removeNode(node[d]);
-                                        removedNodes.push(configNode);
-                                    } else {
-                                        var users = configNode.users;
-                                        users.splice(users.indexOf(node),1);
-                                    }
+        } else if (id in nodes) {
+            node = nodes[id];
+            delete nodes[id]
+            if (nodeTabMap[node.z]) {
+                delete nodeTabMap[node.z][node.id];
+            }
+            removedLinks = links.filter(function(l) { return (l.source === node) || (l.target === node); });
+            removedLinks.forEach(removeLink);
+            var updatedConfigNode = false;
+            for (var d in node._def.defaults) {
+                if (node._def.defaults.hasOwnProperty(d)) {
+                    var property = node._def.defaults[d];
+                    if (property.type) {
+                        var type = registry.getNodeType(property.type);
+                        if (type && type.category == "config") {
+                            var configNode = configNodes[node[d]];
+                            if (configNode) {
+                                updatedConfigNode = true;
+                                if (configNode._def.exclusive) {
+                                    removeNode(node[d]);
+                                    removedNodes.push(configNode);
+                                } else {
+                                    var users = configNode.users;
+                                    users.splice(users.indexOf(node),1);
                                 }
                             }
                         }
                     }
                 }
-                if (updatedConfigNode) {
-                    RED.workspaces.refresh();
-                }
-                try {
-                    if (node._def.oneditdelete) {
-                        node._def.oneditdelete.call(node);
-                    }
-                } catch(err) {
-                    console.log("oneditdelete",node.id,node.type,err.toString());
-                }
-                RED.events.emit('nodes:remove',node);
             }
+
+            if (node.type.indexOf("subflow:") === 0) {
+                var subflowId = node.type.substring(8);
+                var sf = RED.nodes.subflow(subflowId);
+                if (sf) {
+                    sf.instances.splice(sf.instances.indexOf(node),1);
+                }
+            }
+
+            if (updatedConfigNode) {
+                RED.workspaces.refresh();
+            }
+            try {
+                if (node._def.oneditdelete) {
+                    node._def.oneditdelete.call(node);
+                }
+            } catch(err) {
+                console.log("oneditdelete",node.id,node.type,err.toString());
+            }
+            RED.events.emit('nodes:remove',node);
         }
+
+
+
         if (node && node._def.onremove) {
             // Deprecated: never documented but used by some early nodes
             console.log("Deprecated API warning: node type ",node.type," has an onremove function - should be oneditremove - please report");
@@ -3413,6 +3612,10 @@ RED.nodes = (function() {
     }
 
     function moveNodeToTab(node, z) {
+        if (node.type === "group") {
+            moveGroupToTab(node,z);
+            return;
+        }
         if (nodeTabMap[node.z]) {
             delete nodeTabMap[node.z][node.id];
         }
@@ -3421,6 +3624,15 @@ RED.nodes = (function() {
         }
         nodeTabMap[z][node.id] = node;
         node.z = z;
+        RED.events.emit("nodes:change",node);
+    }
+    function moveGroupToTab(group, z) {
+        var index = groupsByZ[group.z].indexOf(group);
+        groupsByZ[group.z].splice(index,1);
+        groupsByZ[z] = groupsByZ[z] || [];
+        groupsByZ[z].push(group);
+        group.z = z;
+        RED.events.emit("groups:change",group);
     }
 
     function removeLink(l) {
@@ -3428,6 +3640,7 @@ RED.nodes = (function() {
         if (index != -1) {
             links.splice(index,1);
         }
+        RED.events.emit("links:remove",l);
     }
 
     function addWorkspace(ws,targetIndex) {
@@ -3440,38 +3653,66 @@ RED.nodes = (function() {
         } else {
             workspacesOrder.splice(targetIndex,0,ws.id);
         }
+        RED.events.emit('flows:add',ws);
+        if (targetIndex !== undefined) {
+            RED.events.emit('flows:reorder',workspacesOrder)
+        }
     }
     function getWorkspace(id) {
         return workspaces[id];
     }
     function removeWorkspace(id) {
-        delete workspaces[id];
-        delete nodeTabMap[id];
-        workspacesOrder.splice(workspacesOrder.indexOf(id),1);
-
+        var ws = workspaces[id];
         var removedNodes = [];
         var removedLinks = [];
-        var n;
-        var node;
-        for (n=0;n<nodes.length;n++) {
-            node = nodes[n];
-            if (node.z == id) {
-                removedNodes.push(node);
-            }
-        }
-        for(n in configNodes) {
-            if (configNodes.hasOwnProperty(n)) {
-                node = configNodes[n];
-                if (node.z == id) {
-                    removedNodes.push(node);
+        var removedGroups = [];
+        if (ws) {
+            delete workspaces[id];
+            delete nodeTabMap[id];
+            workspacesOrder.splice(workspacesOrder.indexOf(id),1);
+            var i;
+            var node;
+            // TODO: this should use nodeTabMap
+            for (i in nodes) {
+                if (nodes.hasOwnProperty(i)) {
+                    node = nodes[i];
+                    if (node.z == id) {
+                        removedNodes.push(node);
+                    }
                 }
             }
+            for(i in configNodes) {
+                if (configNodes.hasOwnProperty(i)) {
+                    node = configNodes[i];
+                    if (node.z == id) {
+                        removedNodes.push(node);
+                    }
+                }
+            }
+
+            for (i=0;i<removedNodes.length;i++) {
+                var result = removeNode(removedNodes[i].id);
+                removedLinks = removedLinks.concat(result.links);
+            }
+
+            // Must get 'removedGroups' in the right order.
+            //  - start with the top-most groups
+            //  - then recurse into them
+            removedGroups = (groupsByZ[id] || []).filter(function(g) { return !g.g; });
+            for (i=0;i<removedGroups.length;i++) {
+                removedGroups[i].nodes.forEach(function(n) {
+                    if (n.type === "group") {
+                        removedGroups.push(n);
+                    }
+                });
+            }
+            // Now remove them in the reverse order
+            for (i=removedGroups.length-1; i>=0; i--) {
+                removeGroup(removedGroups[i]);
+            }
+            RED.events.emit('flows:remove',ws);
         }
-        for (n=0;n<removedNodes.length;n++) {
-            var result = removeNode(removedNodes[n].id);
-            removedLinks = removedLinks.concat(result.links);
-        }
-        return {nodes:removedNodes,links:removedLinks};
+        return {nodes:removedNodes,links:removedLinks, groups: removedGroups};
     }
 
     function addSubflow(sf, createNewIds) {
@@ -3509,6 +3750,10 @@ RED.nodes = (function() {
             paletteLabel: function() { return RED.nodes.subflow(sf.id).name },
             inputLabels: function(i) { return sf.inputLabels?sf.inputLabels[i]:null },
             outputLabels: function(i) { return sf.outputLabels?sf.outputLabels[i]:null },
+            oneditprepare: function() {
+                RED.subflow.buildEditForm("subflow",this);
+                RED.subflow.buildPropertiesForm(this);
+            },
             oneditresize: function(size) {
                 // var rows = $(".dialog-form>div:not(.node-input-env-container-row)");
                 var height = size.height;
@@ -3523,29 +3768,36 @@ RED.nodes = (function() {
                 module: "node-red"
             }
         });
+        sf.instances = [];
         sf._def = RED.nodes.getType("subflow:"+sf.id);
+        RED.events.emit("subflows:add",sf);
     }
     function getSubflow(id) {
         return subflows[id];
     }
     function removeSubflow(sf) {
-        delete subflows[sf.id];
-        delete nodeTabMap[sf.id];
-        registry.removeNodeType("subflow:"+sf.id);
+        if (subflows[sf.id]) {
+            delete subflows[sf.id];
+            delete nodeTabMap[sf.id];
+            registry.removeNodeType("subflow:"+sf.id);
+            RED.events.emit("subflows:remove",sf);
+        }
     }
 
     function subflowContains(sfid,nodeid) {
-        for (var i=0;i<nodes.length;i++) {
-            var node = nodes[i];
-            if (node.z === sfid) {
-                var m = /^subflow:(.+)$/.exec(node.type);
-                if (m) {
-                    if (m[1] === nodeid) {
-                        return true;
-                    } else {
-                        var result = subflowContains(m[1],nodeid);
-                        if (result) {
+        for (var i in nodes) {
+            if (nodes.hasOwnProperty(i)) {
+                var node = nodes[i];
+                if (node.z === sfid) {
+                    var m = /^subflow:(.+)$/.exec(node.type);
+                    if (m) {
+                        if (m[1] === nodeid) {
                             return true;
+                        } else {
+                            var result = subflowContains(m[1],nodeid);
+                            if (result) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -3582,8 +3834,8 @@ RED.nodes = (function() {
         var node = {};
         node.id = n.id;
         node.type = n.type;
-        node.namespace = n.namespace ? n.namespace : n.type;
-        if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Needed for autogenerated nodes
+        //node.namespace = n.namespace ? n.namespace : n.type; //Added by Homegear GmbH. Uncomment to reactivate deprecated namespaces
+        if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Added by Homegear Gmbh. Needed for autogenerated nodes
         for (var d in n._def.defaults) {
             if (n._def.defaults.hasOwnProperty(d)) {
                 node[d] = n[d];
@@ -3602,11 +3854,17 @@ RED.nodes = (function() {
         var node = {};
         node.id = n.id;
         node.type = n.type;
-        node.namespace = n._def.namespace ? n._def.namespace : n.type;
-        if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Needed for autogenerated nodes
+        //node.namespace = n._def.namespace ? n._def.namespace : n.type; //Added by Homegear GmbH. Uncomment to reactivate deprecated namespaces
+        if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Added by Homegear Gmbh. Needed for autogenerated nodes
         node.z = n.z;
+        if (node.z === 0 || node.z === "") {
+            delete node.z;
+        }
         if (n.d === true) {
             node.d = true;
+        }
+        if (n.g) {
+            node.g = n.g;
         }
         if (node.type == "unknown") {
             for (var p in n._orig) {
@@ -3620,19 +3878,33 @@ RED.nodes = (function() {
                     node[d] = n[d];
                 }
             }
-            if(exportCreds && n.credentials) {
+            if (exportCreds) {
                 var credentialSet = {};
-                node.credentials = {};
-                for (var cred in n._def.credentials) {
-                    if (n._def.credentials.hasOwnProperty(cred)) {
-                        if (n._def.credentials[cred].type == 'password') {
+                if (/^subflow:/.test(node.type) && n.credentials) {
+                    // A subflow instance node can have arbitrary creds
+                    for (var sfCred in n.credentials) {
+                        if (n.credentials.hasOwnProperty(sfCred)) {
                             if (!n.credentials._ ||
-                                n.credentials["has_"+cred] != n.credentials._["has_"+cred] ||
-                                (n.credentials["has_"+cred] && n.credentials[cred])) {
+                                n.credentials["has_"+sfCred] != n.credentials._["has_"+sfCred] ||
+                                (n.credentials["has_"+sfCred] && n.credentials[sfCred])) {
+                                credentialSet[sfCred] = n.credentials[sfCred];
+                            }
+                        }
+                    }
+                } else if (n.credentials) {
+                    node.credentials = {};
+                    // All other nodes have a well-defined list of possible credentials
+                    for (var cred in n._def.credentials) {
+                        if (n._def.credentials.hasOwnProperty(cred)) {
+                            if (n._def.credentials[cred].type == 'password') {
+                                if (!n.credentials._ ||
+                                    n.credentials["has_"+cred] != n.credentials._["has_"+cred] ||
+                                    (n.credentials["has_"+cred] && n.credentials[cred])) {
+                                    credentialSet[cred] = n.credentials[cred];
+                                }
+                            } else if (n.credentials[cred] != null && (!n.credentials._ || n.credentials[cred] != n.credentials._[cred])) {
                                 credentialSet[cred] = n.credentials[cred];
                             }
-                        } else if (n.credentials[cred] != null && (!n.credentials._ || n.credentials[cred] != n.credentials._[cred])) {
-                            credentialSet[cred] = n.credentials[cred];
                         }
                     }
                 }
@@ -3640,6 +3912,15 @@ RED.nodes = (function() {
                     node.credentials = credentialSet;
                 }
             }
+        }
+        if (n.type === "group") {
+            node.x = n.x;
+            node.y = n.y;
+            node.w = n.w;
+            node.h = n.h;
+            // In 1.1.0, we have seen an instance of this array containing `undefined`
+            // Until we know how that can happen, add a filter here to remove them
+            node.nodes = node.nodes.filter(function(n) { return !!n }).map(function(n) { return n.id });
         }
         if (n._def.category != "config") {
             node.x = n.x;
@@ -3653,7 +3934,8 @@ RED.nodes = (function() {
                 var w = wires[j];
                 if (w.target.type != "subflow") {
                     if (w.sourcePort < node.wires.length) {
-                        node.wires[w.sourcePort].push({"id":w.target.id,"port":w.targetPort});
+                        //node.wires[w.sourcePort].push(w.target.id); //Removed by Homegear GmbH
+                        node.wires[w.sourcePort].push({"id":w.target.id,"port":w.targetPort}); //Added by Homegear GmbH to support multiple inputs
                     }
                 }
             }
@@ -3671,7 +3953,7 @@ RED.nodes = (function() {
                 }
             }
             if ((!n._def.defaults || !n._def.defaults.hasOwnProperty("l")) && n.hasOwnProperty('l')) {
-                var isLink = /^link-(in|out)$/.test(node.type);
+                var isLink = /^link (in|out)$/.test(node.type);
                 if (isLink == n.l) {
                     node.l = n.l;
                 }
@@ -3683,7 +3965,7 @@ RED.nodes = (function() {
         return node;
     }
 
-    function convertSubflow(n) {
+    function convertSubflow(n, exportCreds) {
         var node = {};
         node.id = n.id;
         node.type = n.type;
@@ -3693,6 +3975,24 @@ RED.nodes = (function() {
         node.in = [];
         node.out = [];
         node.env = n.env;
+
+        if (exportCreds) {
+            var credentialSet = {};
+            // A subflow node can have arbitrary creds
+            for (var sfCred in n.credentials) {
+                if (n.credentials.hasOwnProperty(sfCred)) {
+                    if (!n.credentials._ ||
+                        n.credentials["has_"+sfCred] != n.credentials._["has_"+sfCred] ||
+                        (n.credentials["has_"+sfCred] && n.credentials[sfCred])) {
+                        credentialSet[sfCred] = n.credentials[sfCred];
+                    }
+                }
+            }
+            if (Object.keys(credentialSet).length > 0) {
+                node.credentials = credentialSet;
+            }
+        }
+
         node.color = n.color;
 
         n.in.forEach(function(p) {
@@ -3701,7 +4001,8 @@ RED.nodes = (function() {
             for (var i=0;i<wires.length;i++) {
                 var w = wires[i];
                 if (w.target.type != "subflow") {
-                    nIn.wires.push({id:w.target.id,port:wires[i].targetPort})
+                    //nIn.wires.push({id:w.target.id}) //Removed by Homegear GmbH
+                    nIn.wires.push({id:w.target.id,port:wires[i].targetPort}) //Added by Homegear GmbH to support multiple inputs
                 }
             }
             node.in.push(nIn);
@@ -3713,7 +4014,8 @@ RED.nodes = (function() {
                 if (wires[i].source.type != "subflow") {
                     nOut.wires.push({id:wires[i].source.id,port:wires[i].sourcePort})
                 } else {
-                    nOut.wires.push({id:n.id,port:wires[i].sourcePort})
+                    //nOut.wires.push({id:n.id,port:0}) //Removed by Homegear GmbH
+                    nOut.wires.push({id:n.id,port:wires[i].sourcePort}) //Added by Homegear GmbH to support multiple inputs
                 }
             }
             node.out.push(nOut);
@@ -3745,11 +4047,31 @@ RED.nodes = (function() {
 
         return node;
     }
+
+    function createExportableSubflow(id) {
+        var sf = getSubflow(id);
+        var nodeSet = [sf];
+        var sfNodeIds = Object.keys(nodeTabMap[sf.id]||{});
+        for (var i=0, l=sfNodeIds.length; i<l; i++) {
+            nodeSet.push(nodeTabMap[sf.id][sfNodeIds[i]]);
+        }
+        return createExportableNodeSet(nodeSet);
+    }
     /**
      * Converts the current node selection to an exportable JSON Object
      **/
-    function createExportableNodeSet(set, exportedSubflows, exportedConfigNodes) {
+    function createExportableNodeSet(set, exportedIds, exportedSubflows, exportedConfigNodes) {
         var nns = [];
+
+        exportedIds = exportedIds || {};
+        set = set.filter(function(n) {
+            if (exportedIds[n.id]) {
+                return false;
+            }
+            exportedIds[n.id] = true;
+            return true;
+        })
+
         exportedConfigNodes = exportedConfigNodes || {};
         exportedSubflows = exportedSubflows || {};
         for (var n=0;n<set.length;n++) {
@@ -3765,11 +4087,11 @@ RED.nodes = (function() {
                             subflowSet.push(n);
                         }
                     });
-                    var exportableSubflow = createExportableNodeSet(subflowSet, exportedSubflows, exportedConfigNodes);
+                    var exportableSubflow = createExportableNodeSet(subflowSet, exportedIds, exportedSubflows, exportedConfigNodes);
                     nns = exportableSubflow.concat(nns);
                 }
             }
-            if (node.type != "subflow") {
+            if (node.type !== "subflow") {
                 var convertedNode = RED.nodes.convertNode(node);
                 for (var d in node._def.defaults) {
                     if (node._def.defaults[d].type && node[d] in configNodes) {
@@ -3786,6 +4108,9 @@ RED.nodes = (function() {
                     }
                 }
                 nns.push(convertedNode);
+                if (node.type === "group") {
+                    nns = nns.concat(createExportableNodeSet(node.nodes, exportedIds, exportedSubflows, exportedConfigNodes));
+                }
             } else {
                 var convertedSubflow = convertSubflow(node);
                 nns.push(convertedSubflow);
@@ -3808,7 +4133,12 @@ RED.nodes = (function() {
         }
         for (i in subflows) {
             if (subflows.hasOwnProperty(i)) {
-                nns.push(convertSubflow(subflows[i]));
+                nns.push(convertSubflow(subflows[i], exportCredentials));
+            }
+        }
+        for (i in groups) {
+            if (groups.hasOwnProperty(i)) {
+                nns.push(convertNode(groups[i]));
             }
         }
         for (i in configNodes) {
@@ -3816,9 +4146,10 @@ RED.nodes = (function() {
                 nns.push(convertNode(configNodes[i], exportCredentials));
             }
         }
-        for (i=0;i<nodes.length;i++) {
-            var node = nodes[i];
-            nns.push(convertNode(node, exportCredentials));
+        for (i in nodes) {
+            if (nodes.hasOwnProperty(i)) {
+                nns.push(convertNode(nodes[i], exportCredentials));
+            }
         }
         return nns;
     }
@@ -3888,11 +4219,164 @@ RED.nodes = (function() {
         return true;
     }
 
-    function importNodes(newNodesObj,createNewIds,createMissingWorkspace) {
+    function identifyImportConflicts(importedNodes) {
+        var imported = {
+            tabs: {},
+            subflows: {},
+            groups: {},
+            configs: {},
+            nodes: {},
+            all: [],
+            conflicted: {},
+            zMap: {},
+        }
+
+        importedNodes.forEach(function(n) {
+            imported.all.push(n);
+            if (n.type === "tab") {
+                imported.tabs[n.id] = n;
+            } else if (n.type === "subflow") {
+                imported.subflows[n.id] = n;
+            } else if (n.type === "group") {
+                imported.groups[n.id] = n;
+            } else if (n.hasOwnProperty("x") && n.hasOwnProperty("y")) {
+                imported.nodes[n.id] = n;
+            } else {
+                imported.configs[n.id] = n;
+            }
+            var nodeZ = n.z || "__global__";
+            imported.zMap[nodeZ] = imported.zMap[nodeZ] || [];
+            imported.zMap[nodeZ].push(n)
+            if (nodes[n.id] || configNodes[n.id] || workspaces[n.id] || subflows[n.id] || groups[n.id]) {
+                imported.conflicted[n.id] = n;
+            }
+        })
+        return imported;
+
+    }
+
+
+    /**
+     * Replace the provided nodes.
+     * This must contain complete Subflow defs or complete Flow Tabs.
+     * It does not replace an individual node in the middle of a flow.
+     */
+    function replaceNodes(newNodes) {
+        var zMap = {};
+        var newSubflows = {};
+        var newConfigNodes = {};
+        var removedNodes = [];
+        // Figure out what we're being asked to replace - subflows/configNodes
+        // TODO: config nodes
+        newNodes.forEach(function(n) {
+            if (n.type === "subflow") {
+                newSubflows[n.id] = n;
+            } else if (!n.hasOwnProperty('x') && !n.hasOwnProperty('y')) {
+                newConfigNodes[n.id] = n;
+            }
+            if (n.z) {
+                zMap[n.z] = zMap[n.z] || [];
+                zMap[n.z].push(n);
+            }
+        })
+
+        // Filter out config nodes inside a subflow def that is being replaced
+        var configNodeIds = Object.keys(newConfigNodes);
+        configNodeIds.forEach(function(id) {
+            var n = newConfigNodes[id];
+            if (newSubflows[n.z]) {
+                // This config node is in a subflow to be replaced.
+                //  - remove from the list as it'll get handled with the subflow
+                delete newConfigNodes[id];
+            }
+        });
+        // Rebuild the list of ids
+        configNodeIds = Object.keys(newConfigNodes);
+
+        // ------------------------------
+        // Replace subflow definitions
+        //
+        // For each of the subflows to be replaced:
+        var newSubflowIds = Object.keys(newSubflows);
+        newSubflowIds.forEach(function(id) {
+            var n = newSubflows[id];
+            // Get a snapshot of the existing subflow definition
+            removedNodes = removedNodes.concat(createExportableSubflow(id));
+            // Remove the old subflow definition - but leave the instances in place
+            var removalResult = RED.subflow.removeSubflow(n.id, true);
+            // Create the list of nodes for the new subflow def
+            var subflowNodes = [n].concat(zMap[n.id]);
+            // Import the new subflow - no clashes should occur as we've removed
+            // the old version
+            var result = importNodes(subflowNodes);
+            newSubflows[id] = getSubflow(id);
+        })
+
+        // Having replaced the subflow definitions, now need to update the
+        // instance nodes.
+        RED.nodes.eachNode(function(n) {
+            if (/^subflow:/.test(n.type)) {
+                var sfId = n.type.substring(8);
+                if (newSubflows[sfId]) {
+                    // This is an instance of one of the replaced subflows
+                    //  - update the new def's instances array to include this one
+                    newSubflows[sfId].instances.push(n);
+                    //  - update the instance's _def to point to the new def
+                    n._def = RED.nodes.getType(n.type);
+                    //  - set all the flags so the view refreshes properly
+                    n.dirty = true;
+                    n.changed = true;
+                    n._colorChanged = true;
+                }
+            }
+        })
+
+        newSubflowIds.forEach(function(id) {
+            var n = newSubflows[id];
+            RED.events.emit("subflows:change",n);
+        })
+        // Just in case the imported subflow changed color.
+        RED.utils.clearNodeColorCache();
+
+        // ------------------------------
+        // Replace config nodes
+        //
+        configNodeIds.forEach(function(id) {
+            removedNodes = removedNodes.concat(convertNode(getNode(id)));
+            removeNode(id);
+            importNodes([newConfigNodes[id]])
+        });
+
+        return {
+            removedNodes: removedNodes
+        }
+
+    }
+
+    /**
+     * Options:
+     *  - generateIds - whether to replace all node ids
+     *  - addFlow - whether to import nodes to a new tab
+     *  - importToCurrent
+     *  - importMap - how to resolve any conflicts.
+     *       - id:import - import as-is
+     *       - id:copy - import with new id
+     *       - id:replace - import over the top of existing
+     */
+    function importNodes(newNodesObj,options) { // createNewIds,createMissingWorkspace) {
+        options = options || {
+            generateIds: false,
+            addFlow: false,
+        }
+        options.importMap = options.importMap || {};
+
+        var createNewIds = options.generateIds;
+        var createMissingWorkspace = options.addFlow;
         var i;
         var n;
         var newNodes;
         var nodeZmap = {};
+        var recoveryWorkspace;
         if (typeof newNodesObj === "string") {
             if (newNodesObj === "") {
                 return;
@@ -3917,13 +4401,58 @@ RED.nodes = (function() {
         // copies of the flow would get loaded at the same time.
         // If the user hit deploy they would have saved those duplicates.
         var seenIds = {};
+        var existingNodes = [];
+        var nodesToReplace = [];
+
         newNodes = newNodes.filter(function(n) {
+            var id = n.id;
             if (seenIds[n.id]) {
                 return false;
             }
             seenIds[n.id] = true;
+
+            if (!options.generateIds) {
+                if (!options.importMap[id]) {
+                    // No conflict resolution for this node
+                    var existing = nodes[id] || configNodes[id] || workspaces[id] || subflows[id] || groups[id];
+                    if (existing) {
+                        existingNodes.push({existing:existing, imported:n});
+                    }
+                } else if (options.importMap[id] === "replace") {
+                    nodesToReplace.push(n);
+                    return false;
+                }
+            }
+
             return true;
         })
+
+        if (existingNodes.length > 0) {
+            var errorMessage = RED._("clipboard.importDuplicate",{count:existingNodes.length});
+            var nodeList = $("<ul>");
+            var existingNodesCount = Math.min(5,existingNodes.length);
+            for (var i=0;i<existingNodesCount;i++) {
+                var conflict = existingNodes[i];
+                $("<li>").text(
+                    conflict.existing.id+
+                    " [ "+conflict.existing.type+ ((conflict.imported.type !== conflict.existing.type)?" | "+conflict.imported.type:"")+" ]").appendTo(nodeList)
+            }
+            if (existingNodesCount !== existingNodes.length) {
+                $("<li>").text(RED._("deploy.confirm.plusNMore",{count:existingNodes.length-existingNodesCount})).appendTo(nodeList)
+            }
+            var wrapper = $("<p>").append(nodeList);
+
+            var existingNodesError = new Error(errorMessage+wrapper.html());
+            existingNodesError.code = "import_conflict";
+            existingNodesError.importConfig = identifyImportConflicts(newNodes);
+            throw existingNodesError;
+        }
+        var removedNodes;
+        if (nodesToReplace.length > 0) {
+            var replaceResult = replaceNodes(nodesToReplace);
+            removedNodes = replaceResult.removedNodes;
+        }
+
 
         var isInitialLoad = false;
         if (!initialLoad) {
@@ -3933,10 +4462,12 @@ RED.nodes = (function() {
         var unknownTypes = [];
         for (i=0;i<newNodes.length;i++) {
             n = newNodes[i];
+            var id = n.id;
             // TODO: remove workspace in next release+1
             if (n.type != "workspace" &&
                 n.type != "tab" &&
                 n.type != "subflow" &&
+                n.type != "group" &&
                 !registry.getNodeType(n.type) &&
                 n.type.substring(0,8) != "subflow:" &&
                 unknownTypes.indexOf(n.type)==-1) {
@@ -3945,11 +4476,32 @@ RED.nodes = (function() {
             if (n.z) {
                 nodeZmap[n.z] = nodeZmap[n.z] || [];
                 nodeZmap[n.z].push(n);
+            } else if (isInitialLoad && n.hasOwnProperty('x') && n.hasOwnProperty('y') && !n.z) {
+                // Hit the rare issue where node z values get set to 0.
+                // Repair the flow - but we really need to track that down.
+                if (!recoveryWorkspace) {
+                    recoveryWorkspace = {
+                        id: RED.nodes.id(),
+                        type: "tab",
+                        disabled: false,
+                        label: RED._("clipboard.recoveredNodes"),
+                        info: RED._("clipboard.recoveredNodesInfo")
+                    }
+                    addWorkspace(recoveryWorkspace);
+                    RED.workspaces.add(recoveryWorkspace);
+                    nodeZmap[recoveryWorkspace.id] = [];
+                }
+                n.z = recoveryWorkspace.id;
+                nodeZmap[recoveryWorkspace.id].push(n);
             }
 
         }
         if (!isInitialLoad && unknownTypes.length > 0) {
-            var typeList = "<ul><li>"+unknownTypes.join("</li><li>")+"</li></ul>";
+            var typeList = $("<ul>");
+            unknownTypes.forEach(function(t) {
+                $("<li>").text(t).appendTo(typeList);
+            })
+            typeList = typeList[0].outerHTML;
             RED.notify("<p>"+RED._("clipboard.importUnrecognised",{count:unknownTypes.length})+"</p>"+typeList,"error",false,10000);
         }
 
@@ -3982,15 +4534,21 @@ RED.nodes = (function() {
         var workspace_map = {};
         var new_subflows = [];
         var subflow_map = {};
-        var subflow_blacklist = {};
+        var subflow_denylist = {};
         var node_map = {};
         var new_nodes = [];
         var new_links = [];
+        var new_groups = [];
+        var new_group_set = new Set();
         var nid;
         var def;
         var configNode;
         var missingWorkspace = null;
         var d;
+
+        if (recoveryWorkspace) {
+            new_workspaces.push(recoveryWorkspace);
+        }
 
         // Find all tabs and subflow templates
         for (i=0;i<newNodes.length;i++) {
@@ -4003,7 +4561,10 @@ RED.nodes = (function() {
                 if (defaultWorkspace == null) {
                     defaultWorkspace = n;
                 }
-                if (createNewIds) {
+                if (activeWorkspace === 0) {
+                    activeWorkspace = n.id;
+                }
+                if (createNewIds || options.importMap[n.id] === "copy") {
                     nid = getID();
                     workspace_map[n.id] = nid;
                     n.id = nid;
@@ -4012,12 +4573,15 @@ RED.nodes = (function() {
                 RED.workspaces.add(n);
                 new_workspaces.push(n);
             } else if (n.type === "subflow") {
-                var matchingSubflow = checkForMatchingSubflow(n,nodeZmap[n.id]);
+                var matchingSubflow;
+                if (!options.importMap[n.id]) {
+                    matchingSubflow = checkForMatchingSubflow(n,nodeZmap[n.id]);
+                }
                 if (matchingSubflow) {
-                    subflow_blacklist[n.id] = matchingSubflow;
+                    subflow_denylist[n.id] = matchingSubflow;
                 } else {
                     subflow_map[n.id] = n;
-                    if (createNewIds) {
+                    if (createNewIds || options.importMap[n.id] === "copy") {
                         nid = getID();
                         n.id = nid;
                     }
@@ -4043,7 +4607,7 @@ RED.nodes = (function() {
                         n.status.id = getID();
                     }
                     new_subflows.push(n);
-                    addSubflow(n,createNewIds);
+                    addSubflow(n,createNewIds || options.importMap[n.id] === "copy");
                 }
             }
         }
@@ -4063,9 +4627,9 @@ RED.nodes = (function() {
             def = registry.getNodeType(n.type);
             if (def && def.category == "config") {
                 var existingConfigNode = null;
-                if (createNewIds) {
+                if (createNewIds || options.importMap[n.id] === "copy") {
                     if (n.z) {
-                        if (subflow_blacklist[n.z]) {
+                        if (subflow_denylist[n.z]) {
                             continue;
                         } else if (subflow_map[n.z]) {
                             n.z = subflow_map[n.z].id;
@@ -4084,23 +4648,28 @@ RED.nodes = (function() {
                             }
                         }
                     }
-                    existingConfigNode = RED.nodes.node(n.id);
-                    if (existingConfigNode) {
-                        if (n.z && existingConfigNode.z !== n.z) {
-                            existingConfigNode = null;
-                            // Check the config nodes on n.z
-                            for (var cn in configNodes) {
-                                if (configNodes.hasOwnProperty(cn)) {
-                                    if (configNodes[cn].z === n.z && compareNodes(configNodes[cn],n,false)) {
-                                        existingConfigNode = configNodes[cn];
-                                        node_map[n.id] = configNodes[cn];
-                                        break;
+                    if (options.importMap[n.id] !== "copy") {
+                        existingConfigNode = RED.nodes.node(n.id);
+                        if (existingConfigNode) {
+                            if (n.z && existingConfigNode.z !== n.z) {
+                                existingConfigNode = null;
+                                // Check the config nodes on n.z
+                                for (var cn in configNodes) {
+                                    if (configNodes.hasOwnProperty(cn)) {
+                                        if (configNodes[cn].z === n.z && compareNodes(configNodes[cn],n,false)) {
+                                            existingConfigNode = configNodes[cn];
+                                            node_map[n.id] = configNodes[cn];
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-
+                } else {
+                    if (n.z && !workspaces[n.z]) {
+                        n.z = activeWorkspace;
+                    }
                 }
 
                 if (!existingConfigNode || existingConfigNode._def.exclusive) { //} || !compareNodes(existingConfigNode,n,true) || existingConfigNode.z !== n.z) {
@@ -4108,11 +4677,13 @@ RED.nodes = (function() {
                         id:n.id,
                         z:n.z,
                         type:n.type,
-                        namespace:n.namespace,
                         info: n.info,
                         users:[],
                         _config:{}
                     };
+                    if (!n.z) {
+                        delete configNode.z;
+                    }
                     if (n.hasOwnProperty('d')) {
                         configNode.d = n.d;
                     }
@@ -4132,12 +4703,11 @@ RED.nodes = (function() {
                     }
                     configNode.label = def.label;
                     configNode._def = def;
-                    if (createNewIds) {
+                    if (createNewIds || options.importMap[n.id] === "copy") {
                         configNode.id = getID();
                     }
                     node_map[n.id] = configNode;
                     new_nodes.push(configNode);
-                    RED.nodes.add(configNode);
                 }
             }
         }
@@ -4154,23 +4724,27 @@ RED.nodes = (function() {
                         y:parseFloat(n.y || 0),
                         z:n.z,
                         type:0,
-                        wires:n.wires||[],
-                        inputLabels: n.inputLabels,
-                        outputLabels: n.outputLabels,
-                        icon: n.icon,
                         info: n.info,
                         changed:false,
-                        fixedInputs:0,
                         _config:{}
-                    };
+                    }
+                    if (n.type !== "group") {
+                        node.wires = n.wires||[];
+                        node.inputLabels = n.inputLabels;
+                        node.outputLabels = n.outputLabels;
+                        node.icon = n.icon;
+                    }
                     if (n.hasOwnProperty('l')) {
                         node.l = n.l;
                     }
                     if (n.hasOwnProperty('d')) {
                         node.d = n.d;
                     }
-                    if (createNewIds) {
-                        if (subflow_blacklist[n.z]) {
+                    if (n.hasOwnProperty('g')) {
+                        node.g = n.g;
+                    }
+                    if (createNewIds || options.importMap[n.id] === "copy") {
+                        if (subflow_denylist[n.z]) {
                             continue;
                         } else if (subflow_map[node.z]) {
                             node.z = subflow_map[node.z].id;
@@ -4204,16 +4778,26 @@ RED.nodes = (function() {
                         }
                     }
                     node.type = n.type;
-                    node.namespace = n.namespace ? n.namespace : (def.namespace ? def.namespace : n.type);
-                    if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Needed for autogenerated nodes
+                    //node.namespace = n.namespace ? n.namespace : (def.namespace ? def.namespace : n.type); //Added by Homegear GmbH. Uncomment to reactivate deprecated namespace.
+                    if(n.hasOwnProperty("homegearTag")) node.homegearTag = n.homegearTag; //Added by Homegear GmbH. Needed for autogenerated nodes
                     node._def = def;
-                    if (n.type.substring(0,7) === "subflow") {
+                    if (node.type === "group") {
+                        node._def = RED.group.def;
+                        for (d in node._def.defaults) {
+                            if (node._def.defaults.hasOwnProperty(d) && d !== 'inputs' && d !== 'outputs') {
+                                node[d] = n[d];
+                                node._config[d] = JSON.stringify(n[d]);
+                            }
+                        }
+                        node._config.x = node.x;
+                        node._config.y = node.y;
+                    } else if (n.type.substring(0,7) === "subflow") {
                         var parentId = n.type.split(":")[1];
-                        var subflow = subflow_blacklist[parentId]||subflow_map[parentId]||getSubflow(parentId);
-                        if (createNewIds) {
+                        var subflow = subflow_denylist[parentId]||subflow_map[parentId]||getSubflow(parentId);
+                        if (createNewIds || options.importMap[n.id] === "copy") {
                             parentId = subflow.id;
                             node.type = "subflow:"+parentId;
-                            node.namespace = node.type;
+                            //node.namespace = node.type; //Added by Homegear GmbH. Uncomment to reactivate deprecated namespace.
                             node._def = registry.getNodeType(node.type);
                             delete node.i;
                         }
@@ -4245,6 +4829,9 @@ RED.nodes = (function() {
                                 delete node.wires;
                                 delete node.inputLabels;
                                 delete node.outputLabels;
+                                if (!n.z) {
+                                    delete node.z;
+                                }
                             }
                             var orig = {};
                             for (var p in n) {
@@ -4255,7 +4842,7 @@ RED.nodes = (function() {
                             node._orig = orig;
                             node.name = n.type;
                             node.type = "unknown";
-                            node.namespace = "unknown";
+                            //node.namespace = "unknown"; //Added by Homegear GmbH. Uncomment to reactivate deprecated namespace.
                         }
                         if (node._def.category != "config") {
                             if (n.hasOwnProperty('inputs')) {
@@ -4299,13 +4886,14 @@ RED.nodes = (function() {
                             }
                         }
                     }
-                    addNode(node);
-                    RED.editor.validateNode(node);
                     node_map[n.id] = node;
                     // If an 'unknown' config node, it will not have been caught by the
                     // proper config node handling, so needs adding to new_nodes here
                     if (node.type === "unknown" || node._def.category !== "config") {
                         new_nodes.push(node);
+                    } else if (node.type === "group") {
+                        new_groups.push(node);
+                        new_group_set.add(node.id);
                     }
                 }
             }
@@ -4316,8 +4904,8 @@ RED.nodes = (function() {
             "catch":"scope",
             "status":"scope",
             "complete": "scope",
-            "link-in":"links",
-            "link-out":"links"
+            "link in":"links",
+            "link out":"links"
         }
 
         // Remap all wires and config node references
@@ -4327,9 +4915,12 @@ RED.nodes = (function() {
                 for (var w1=0;w1<n.wires.length;w1++) {
                     var wires = (n.wires[w1] instanceof Array)?n.wires[w1]:[n.wires[w1]];
                     for (var w2=0;w2<wires.length;w2++) {
-                        if (node_map.hasOwnProperty(wires[w2].id) && wires[w2].port < node_map[wires[w2].id].inputs) {
-                            if (n.z === node_map[wires[w2].id].z) {
-                                var link = {source:n,sourcePort:w1,target:node_map[wires[w2].id],targetPort:wires[w2].port};
+                        //if (node_map.hasOwnProperty(wires[w2])) { //Removed by Homegear GmbH
+                        if (node_map.hasOwnProperty(wires[w2].id) && wires[w2].port < node_map[wires[w2].id].inputs) { //Added by Homegear GmbH to support multiple inputs
+                            //if (n.z === node_map[wires[w2]].z) { //Removed by Homegear GmbH
+                            if (n.z === node_map[wires[w2].id].z) { //Added by Homegear GmbH to support multiple inputs
+                                //var link = {source:n,sourcePort:w1,target:node_map[wires[w2]]}; //Removed by Homegear GmbH
+                                var link = {source:n,sourcePort:w1,target:node_map[wires[w2].id],targetPort:wires[w2].port}; //Added by Homegear GmbH to support multiple inputs
                                 addLink(link);
                                 new_links.push(link);
                             } else {
@@ -4340,12 +4931,17 @@ RED.nodes = (function() {
                 }
                 delete n.wires;
             }
+            if (n.g && node_map[n.g]) {
+                n.g = node_map[n.g].id;
+            } else {
+                delete n.g
+            }
             for (var d3 in n._def.defaults) {
                 if (n._def.defaults.hasOwnProperty(d3)) {
                     if (n._def.defaults[d3].type && node_map[n[d3]]) {
-                        n[d3] = node_map[n[d3]].id;
-                        configNode = RED.nodes.node(n[d3]);
-                        if (configNode && configNode.users.indexOf(n) === -1) {
+                        configNode = node_map[n[d3]];
+                        n[d3] = configNode.id;
+                        if (configNode.users.indexOf(n) === -1) {
                             configNode.users.push(n);
                         }
                     } else if (nodeTypeArrayReferences.hasOwnProperty(n.type) && nodeTypeArrayReferences[n.type] === d3 && n[d3] !== undefined && n[d3] !== null) {
@@ -4360,22 +4956,20 @@ RED.nodes = (function() {
             }
             // If importing into a subflow, ensure an outbound-link doesn't
             // get added
-            if (activeSubflow && /^link-/.test(n.type) && n.links) {
+            if (activeSubflow && /^link /.test(n.type) && n.links) {
                 n.links = n.links.filter(function(id) {
                     var otherNode = RED.nodes.node(id);
                     return (otherNode && otherNode.z === activeWorkspace)
                 });
             }
-
-            // With all properties now remapped to point at valid nodes,
-            // we can validate the node
-            RED.editor.validateNode(n);
         }
         for (i=0;i<new_subflows.length;i++) {
             n = new_subflows[i];
             n.in.forEach(function(input) {
-                input.wires.forEach(function(wire, index) {
-                    var link = {source:input, sourcePort: index, target:node_map[wire.id], targetPort: wire.port};
+                //input.wires.forEach(function(wire) { //Removed by Homegear GmbH
+                input.wires.forEach(function(wire, index) { //Added by Homegear GmbH to support multiple inputs
+                    //var link = {source:input, sourcePort:0, target:node_map[wire.id]}; //Removed by Homegear GmbH
+                    var link = {source:input, sourcePort: index, target:node_map[wire.id], targetPort: wire.port}; //Added by Homegear GmbH to support multiple inputs
                     addLink(link);
                     new_links.push(link);
                 });
@@ -4408,26 +5002,108 @@ RED.nodes = (function() {
                 delete n.status.wires;
             }
         }
+        // Order the groups to ensure they are outer-most to inner-most
+        var groupDepthMap = {};
+        for (i=0;i<new_groups.length;i++) {
+            n = new_groups[i];
+
+            if (n.g && !new_group_set.has(n.g)) {
+                delete n.g;
+            }
+            n.nodes = n.nodes.map(function(id) {
+                return node_map[id];
+            })
+            // Just in case the group references a node that doesn't exist for some reason
+            n.nodes = n.nodes.filter(function(v) {
+                if (v) {
+                    // Repair any nodes that have forgotten they are in this group
+                    if (v.g !== n.id) {
+                        v.g = n.id;
+                    }
+                }
+                return !!v
+            });
+            if (!n.g) {
+                groupDepthMap[n.id] = 0;
+            }
+        }
+        var changedDepth;
+        do {
+            changedDepth = false;
+            for (i=0;i<new_groups.length;i++) {
+                n = new_groups[i];
+                if (n.g) {
+                    if (groupDepthMap[n.id] !== groupDepthMap[n.g] + 1) {
+                        groupDepthMap[n.id] = groupDepthMap[n.g] + 1;
+                        changedDepth = true;
+                    }
+                }
+            }
+        } while(changedDepth);
+
+        new_groups.sort(function(A,B) {
+            return groupDepthMap[A.id] - groupDepthMap[B.id];
+        });
+        for (i=0;i<new_groups.length;i++) {
+            n = new_groups[i];
+            addGroup(n);
+        }
+
+        // Now the nodes have been fully updated, add them.
+        for (i=0;i<new_nodes.length;i++) {
+            var node = new_nodes[i];
+            addNode(node);
+        }
+        // Finally validate them all.
+        // This has to be done after everything is added so that any checks for
+        // dependent config nodes will pass
+        for (i=0;i<new_nodes.length;i++) {
+            var node = new_nodes[i];
+            RED.editor.validateNode(node);
+        }
 
         RED.workspaces.refresh();
-        return [new_nodes,new_links,new_workspaces,new_subflows,missingWorkspace];
+
+
+        if (recoveryWorkspace) {
+            var notification = RED.notify(RED._("clipboard.recoveredNodesNotification",{flowName:RED._("clipboard.recoveredNodes")}),{
+                type:"warning",
+                fixed:true,
+                buttons: [
+                    {text: RED._("common.label.close"), click: function() { notification.close() }}
+                ]
+            });
+        }
+
+        return {
+            nodes:new_nodes,
+            links:new_links,
+            groups:new_groups,
+            workspaces:new_workspaces,
+            subflows:new_subflows,
+            missingWorkspace: missingWorkspace,
+            removedNodes: removedNodes
+        }
     }
 
     // TODO: supports filter.z|type
     function filterNodes(filter) {
         var result = [];
-        var searchSet = nodes;
+        var searchSet = null;
         var doZFilter = false;
         if (filter.hasOwnProperty("z")) {
-            if (Object.hasOwnProperty("values") && nodeTabMap.hasOwnProperty(filter.z) ) {
-                searchSet = Object.values(nodeTabMap[filter.z]);
+            if (nodeTabMap.hasOwnProperty(filter.z)) {
+                searchSet = Object.keys(nodeTabMap[filter.z]);
             } else {
                 doZFilter = true;
             }
         }
+        if (searchSet === null) {
+            searchSet = Object.keys(nodes);
+        }
 
         for (var n=0;n<searchSet.length;n++) {
-            var node = searchSet[n];
+            var node = nodes[searchSet[n]];
             if (filter.hasOwnProperty("type") && node.type !== filter.type) {
                 continue;
             }
@@ -4462,6 +5138,7 @@ RED.nodes = (function() {
             if (filter.hasOwnProperty("sourcePort") && link.sourcePort !== filter.sourcePort) {
                 continue;
             }
+            //Block added by Homegear GmbH to support multiple inputs
             if (filter.hasOwnProperty("targetPort") && link.targetPort !== filter.targetPort) {
                 continue;
             }
@@ -4499,11 +5176,14 @@ RED.nodes = (function() {
     }
 
     function clear() {
-        nodes = [];
+        nodes = {};
         links = [];
         nodeTabMap = {};
         configNodes = {};
         workspacesOrder = [];
+        groups = {};
+        groupsByZ = {};
+
         var subflowIds = Object.keys(subflows);
         subflowIds.forEach(function(id) {
             RED.subflow.removeSubflow(id)
@@ -4514,15 +5194,19 @@ RED.nodes = (function() {
         });
         defaultWorkspace = null;
         initialLoad = null;
+        workspaces = {};
+
         RED.nodes.dirty(false);
-        RED.view.redraw(true);
+        RED.view.redraw(true, true);
         RED.palette.refresh();
         RED.workspaces.refresh();
         RED.sidebar.config.refresh();
         RED.sidebar.info.refresh();
 
+        RED.events.emit("workspace:clear");
+
         // var node_defs = {};
-        // var nodes = [];
+        // var nodes = {};
         // var configNodes = {};
         // var links = [];
         // var defaultWorkspace;
@@ -4531,6 +5215,31 @@ RED.nodes = (function() {
         // var subflows = {};
         // var loadedFlowVersion = null;
     }
+
+    function addGroup(group) {
+        groupsByZ[group.z] = groupsByZ[group.z] || [];
+        groupsByZ[group.z].push(group);
+        groups[group.id] = group;
+        RED.events.emit("groups:add",group);
+    }
+    function removeGroup(group) {
+        var i = groupsByZ[group.z].indexOf(group);
+        groupsByZ[group.z].splice(i,1);
+        if (groupsByZ[group.z].length === 0) {
+            delete groupsByZ[group.z];
+        }
+        if (group.g) {
+            if (groups[group.g]) {
+                var index = groups[group.g].nodes.indexOf(group);
+                groups[group.g].nodes.splice(index,1);
+            }
+        }
+        RED.group.markDirty(group);
+
+        delete groups[group.id];
+        RED.events.emit("groups:remove",group);
+    }
+
 
     return {
         init: function() {
@@ -4557,12 +5266,13 @@ RED.nodes = (function() {
                         if (configNodes.hasOwnProperty(n.id)) {
                             delete configNodes[n.id];
                         } else {
-                            nodes.splice(nodes.indexOf(n),1);
+                            delete nodes[n.id];
                             if (nodeTabMap[n.z]) {
                                 delete nodeTabMap[n.z][n.id];
                             }
                         }
                         reimportList.push(convertNode(n));
+                        RED.events.emit('nodes:remove',n);
                     });
 
                     // Remove any links between nodes that are going to be reimported.
@@ -4575,11 +5285,12 @@ RED.nodes = (function() {
                     });
                     removeLinks.forEach(removeLink);
 
-
-                    RED.view.redraw(true);
-                    var result = importNodes(reimportList,false);
+                    // Force the redraw to be synchronous so the view updates
+                    // *now* and removes the unknown node
+                    RED.view.redraw(true, true);
+                    var result = importNodes(reimportList,{generateIds:false});
                     var newNodeMap = {};
-                    result[0].forEach(function(n) {
+                    result.nodes.forEach(function(n) {
                         newNodeMap[n.id] = n;
                     });
                     RED.nodes.eachLink(function(l) {
@@ -4630,10 +5341,17 @@ RED.nodes = (function() {
         subflow: getSubflow,
         subflowContains: subflowContains,
 
+        addGroup: addGroup,
+        removeGroup: removeGroup,
+        group: function(id) { return groups[id] },
+        groups: function(z) { return groupsByZ[z]||[] },
+
         eachNode: function(cb) {
-            for (var n=0;n<nodes.length;n++) {
-                if (cb(nodes[n]) === false) {
-                    break;
+            for (var id in nodes) {
+                if (nodes.hasOwnProperty(id)) {
+                    if (cb(nodes[id]) === false) {
+                        break;
+                    }
                 }
             }
         },
@@ -4685,6 +5403,8 @@ RED.nodes = (function() {
         filterLinks: filterLinks,
 
         import: importNodes,
+
+        identifyImportConflicts: identifyImportConflicts,
 
         getAllFlowNodes: getAllFlowNodes,
         createExportableNodeSet: createExportableNodeSet,
@@ -5510,17 +6230,7 @@ RED.nodes.fontAwesome = (function() {
         "fa-youtube": "\uf167",
     };
 
-    var iconList = [];
-    var isUsed = {};
-    Object.keys(iconMap).forEach(function(icon) {
-        var unicode = iconMap[icon];
-        // skip icons with a same unicode
-        if (isUsed[unicode] !== true) {
-            iconList.push(icon);
-            isUsed[unicode] = true;
-        }
-    });
-    isUsed = undefined;
+    var iconList = Object.keys(iconMap);
 
     return {
         getIconUnicode: function(name) {
@@ -5540,7 +6250,6 @@ RED.nodes.fontAwesome = (function() {
  *
  * Todo after update:
  * - Search for new occurrences of "inputs" and "ports" and apply changes where necessary.
- **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -5565,6 +6274,7 @@ RED.history = (function() {
         var i;
         var len;
         var node;
+        var group;
         var subflow;
         var modifiedTabs = {};
         var inverseEv;
@@ -5580,22 +6290,38 @@ RED.history = (function() {
                     inverseEv.events.push(r);
                 }
             } else if (ev.t == 'replace') {
-                inverseEv = {
-                    t: 'replace',
-                    config: RED.nodes.createCompleteNodeSet(),
-                    changed: {},
-                    rev: RED.nodes.version()
-                };
-                RED.nodes.clear();
-                var imported = RED.nodes.import(ev.config);
-                imported[0].forEach(function(n) {
-                    if (ev.changed[n.id]) {
-                        n.changed = true;
-                        inverseEv.changed[n.id] = true;
-                    }
-                })
+                if (ev.complete) {
+                    // This is a replace of everything. We can short-cut
+                    // the logic by clearing everyting first, then importing
+                    // the ev.config.
+                    // Used by RED.diff.mergeDiff
+                    inverseEv = {
+                        t: 'replace',
+                        config: RED.nodes.createCompleteNodeSet(),
+                        changed: {},
+                        rev: RED.nodes.version()
+                    };
+                    RED.nodes.clear();
+                    var imported = RED.nodes.import(ev.config);
+                    imported.nodes.forEach(function(n) {
+                        if (ev.changed[n.id]) {
+                            n.changed = true;
+                            inverseEv.changed[n.id] = true;
+                        }
+                    })
 
-                RED.nodes.version(ev.rev);
+                    RED.nodes.version(ev.rev);
+                } else {
+                    var importMap = {};
+                    ev.config.forEach(function(n) {
+                        importMap[n.id] = "replace";
+                    })
+                    var importedResult = RED.nodes.import(ev.config,{importMap: importMap})
+                    inverseEv = {
+                        t: 'replace',
+                        config: importedResult.removedNodes
+                    }
+                }
             } else if (ev.t == 'add') {
                 inverseEv = {
                     t: "delete",
@@ -5609,6 +6335,14 @@ RED.history = (function() {
                         }
                         inverseEv.nodes.push(node);
                         RED.nodes.remove(ev.nodes[i]);
+                        if (node.g) {
+                            var group = RED.nodes.group(node.g);
+                            var index = group.nodes.indexOf(node);
+                            if (index !== -1) {
+                                group.nodes.splice(index,1);
+                                RED.group.markDirty(group);
+                            }
+                        }
                     }
                 }
                 if (ev.links) {
@@ -5616,6 +6350,17 @@ RED.history = (function() {
                     for (i=0;i<ev.links.length;i++) {
                         inverseEv.links.push(ev.links[i]);
                         RED.nodes.removeLink(ev.links[i]);
+                    }
+                }
+                if (ev.groups) {
+                    inverseEv.groups = [];
+                    for (i = ev.groups.length - 1;i>=0;i--) {
+                        group = ev.groups[i];
+                        modifiedTabs[group.z] = true;
+                        // The order of groups is important
+                        //  - to invert the action, the order is reversed
+                        inverseEv.groups.unshift(group);
+                        RED.nodes.removeGroup(group);
                     }
                 }
                 if (ev.workspaces) {
@@ -5740,12 +6485,42 @@ RED.history = (function() {
                         n.dirty = true;
                     });
                 }
+                if (ev.groups) {
+                    inverseEv.groups = [];
+                    var groupsToAdd = {};
+                    ev.groups.forEach(function(g) { groupsToAdd[g.id] = g; });
+                    for (i = ev.groups.length - 1;i>=0;i--) {
+                        RED.nodes.addGroup(ev.groups[i])
+                        modifiedTabs[ev.groups[i].z] = true;
+                        // The order of groups is important
+                        //  - to invert the action, the order is reversed
+                        inverseEv.groups.unshift(ev.groups[i]);
+                        if (ev.groups[i].g) {
+                            if (!groupsToAdd[ev.groups[i].g]) {
+                                group = RED.nodes.group(ev.groups[i].g);
+                            } else {
+                                group = groupsToAdd[ev.groups[i].g];
+                            }
+                            if (group.nodes.indexOf(ev.groups[i]) === -1) {
+                                group.nodes.push(ev.groups[i]);
+                            }
+                            RED.group.markDirty(ev.groups[i])
+                        }
+                    }
+                }
                 if (ev.nodes) {
                     inverseEv.nodes = [];
                     for (i=0;i<ev.nodes.length;i++) {
                         RED.nodes.add(ev.nodes[i]);
                         modifiedTabs[ev.nodes[i].z] = true;
                         inverseEv.nodes.push(ev.nodes[i].id);
+                        if (ev.nodes[i].g) {
+                            group = RED.nodes.group(ev.nodes[i].g);
+                            if (group.nodes.indexOf(ev.nodes[i]) === -1) {
+                                group.nodes.push(ev.nodes[i]);
+                            }
+                            RED.group.markDirty(group)
+                        }
                     }
                 }
                 if (ev.links) {
@@ -5774,9 +6549,12 @@ RED.history = (function() {
                                 }
                                 node.dirty = true;
                             }
+                            RED.events.emit("nodes:change",node);
                         }
                     }
-
+                }
+                if (subflow) {
+                    RED.events.emit("subflows:change", subflow);
                 }
             } else if (ev.t == "move") {
                 inverseEv = {
@@ -5807,6 +6585,13 @@ RED.history = (function() {
                         RED.nodes.addLink(ev.removedLinks[i]);
                     }
                 }
+                if (ev.addToGroup) {
+                    RED.group.removeFromGroup(ev.addToGroup,ev.nodes.map(function(n) { return n.n }),false);
+                    inverseEv.removeFromGroup = ev.addToGroup;
+                } else if (ev.removeFromGroup) {
+                    RED.group.addToGroup(ev.removeFromGroup,ev.nodes.map(function(n) { return n.n }));
+                    inverseEv.addToGroup = ev.removeFromGroup;
+                }
             } else if (ev.t == "edit") {
                 inverseEv = {
                     t: "edit",
@@ -5821,15 +6606,28 @@ RED.history = (function() {
                             var currentConfigNode = RED.nodes.node(ev.node[i]);
                             if (currentConfigNode) {
                                 currentConfigNode.users.splice(currentConfigNode.users.indexOf(ev.node),1);
+                                RED.events.emit("nodes:change",currentConfigNode);
                             }
                             var newConfigNode = RED.nodes.node(ev.changes[i]);
                             if (newConfigNode) {
                                 newConfigNode.users.push(ev.node);
+                                RED.events.emit("nodes:change",newConfigNode);
                             }
                         }
                         ev.node[i] = ev.changes[i];
                     }
                 }
+                var eventType;
+                switch(ev.node.type) {
+                    case 'tab': eventType = "flows"; break;
+                    case 'group': eventType = "groups"; break;
+                    case 'subflow': eventType = "subflows"; break;
+                    default: eventType = "nodes"; break;
+                }
+                eventType += ":change";
+                RED.events.emit(eventType,ev.node);
+
+
                 if (ev.node.type === 'tab' && ev.changes.hasOwnProperty('disabled')) {
                     $("#red-ui-tab-"+(ev.node.id.replace(".","-"))).toggleClass('red-ui-workspace-disabled',!!ev.node.disabled);
                     $("#red-ui-workspace").toggleClass("red-ui-workspace-disabled",!!ev.node.disabled);
@@ -5889,6 +6687,7 @@ RED.history = (function() {
                             }
                         }
                     }
+                    ev.node.__outputs = inverseEv.changes.outputs;
                     RED.editor.updateNodeProperties(ev.node,outputMap);
                     RED.editor.validateNode(ev.node);
                 }
@@ -5917,7 +6716,9 @@ RED.history = (function() {
                 if (ev.nodes) {
                     inverseEv.movedNodes = [];
                     var z = ev.activeWorkspace;
-                    RED.nodes.filterNodes({z:ev.subflow.subflow.id}).forEach(function(n) {
+                    var fullNodeList = RED.nodes.filterNodes({z:ev.subflow.subflow.id});
+                    fullNodeList = fullNodeList.concat(RED.nodes.groups(ev.subflow.subflow.id))
+                    fullNodeList.forEach(function(n) {
                         n.x += ev.subflow.offsetX;
                         n.y += ev.subflow.offsetY;
                         n.dirty = true;
@@ -5958,6 +6759,9 @@ RED.history = (function() {
                 if (ev.subflow) {
                     RED.nodes.addSubflow(ev.subflow.subflow);
                     inverseEv.subflow = ev.subflow;
+                    if (ev.subflow.subflow.g) {
+                        RED.group.addToGroup(RED.nodes.group(ev.subflow.subflow.g),ev.subflow.subflow);
+                    }
                 }
                 if (ev.subflows) {
                     inverseEv.nodes = [];
@@ -5969,6 +6773,9 @@ RED.history = (function() {
                 if (ev.movedNodes) {
                     ev.movedNodes.forEach(function(nid) {
                         nn = RED.nodes.node(nid);
+                        if (!nn) {
+                            nn = RED.nodes.group(nid);
+                        }
                         nn.x -= ev.subflow.offsetX;
                         nn.y -= ev.subflow.offsetY;
                         nn.dirty = true;
@@ -5982,7 +6789,7 @@ RED.history = (function() {
                         RED.nodes.addLink(ev.links[i]);
                     }
                 }
-                if  (ev.createdLinks) {
+                if (ev.createdLinks) {
                     inverseEv.removedLinks = [];
                     for (i=0;i<ev.createdLinks.length;i++) {
                         inverseEv.removedLinks.push(ev.createdLinks[i]);
@@ -5997,6 +6804,60 @@ RED.history = (function() {
                 if (ev.order) {
                     RED.workspaces.order(ev.order);
                 }
+            } else if (ev.t == "createGroup") {
+                inverseEv = {
+                    t: "ungroup",
+                    dirty: RED.nodes.dirty(),
+                    groups: []
+                }
+                if (ev.groups) {
+                    for (i=0;i<ev.groups.length;i++) {
+                        inverseEv.groups.push(ev.groups[i]);
+                        RED.group.ungroup(ev.groups[i]);
+                    }
+                }
+            } else if (ev.t == "ungroup") {
+                inverseEv = {
+                    t: "createGroup",
+                    dirty: RED.nodes.dirty(),
+                    groups: []
+                }
+                if (ev.groups) {
+                    for (i=0;i<ev.groups.length;i++) {
+                        inverseEv.groups.push(ev.groups[i]);
+                        var nodes = ev.groups[i].nodes.slice();
+                        ev.groups[i].nodes = [];
+                        RED.nodes.addGroup(ev.groups[i]);
+                        RED.group.addToGroup(ev.groups[i],nodes);
+                    }
+                }
+            } else if (ev.t == "addToGroup") {
+                inverseEv = {
+                    t: "removeFromGroup",
+                    dirty: RED.nodes.dirty(),
+                    group: ev.group,
+                    nodes: ev.nodes,
+                    reparent: ev.reparent
+                }
+                if (ev.nodes) {
+                    RED.group.removeFromGroup(ev.group,ev.nodes,(ev.hasOwnProperty('reparent')&&ev.hasOwnProperty('reparent')!==undefined)?ev.reparent:true);
+                }
+            } else if (ev.t == "removeFromGroup") {
+                inverseEv = {
+                    t: "addToGroup",
+                    dirty: RED.nodes.dirty(),
+                    group: ev.group,
+                    nodes: ev.nodes,
+                    reparent: ev.reparent
+                }
+                if (ev.nodes) {
+                    RED.group.addToGroup(ev.group,ev.nodes);
+                }
+            }
+
+            if(ev.callback && typeof ev.callback === 'function') {
+                inverseEv.callback = ev.callback;
+                ev.callback(ev);
             }
 
             Object.keys(modifiedTabs).forEach(function(id) {
@@ -6007,9 +6868,8 @@ RED.history = (function() {
             });
 
             RED.nodes.dirty(ev.dirty);
+            RED.view.updateActive();
             RED.view.select(null);
-            RED.view.redraw(true);
-            RED.palette.refresh();
             RED.workspaces.refresh();
             RED.sidebar.config.refresh();
             RED.subflow.refresh();
@@ -6028,6 +6888,9 @@ RED.history = (function() {
         },
         list: function() {
             return undoHistory;
+        },
+        listRedo: function() {
+            return redoHistory;
         },
         depth: function() {
             return undoHistory.length;
@@ -6066,10 +6929,10 @@ RED.history = (function() {
  * This file was modified by Homegear GmbH
  *
  * Changes:
- * - Removed Node-RED standard validations.
+ * - Added Homegear standard validations.
  *
  * Todo after update:
- **/
+ */
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -6090,16 +6953,34 @@ RED.validators = {
     number: function(blankAllowed){return function(v) { return (blankAllowed&&(v===''||v===undefined)) || (v!=='' && !isNaN(v));}},
     regex: function(re){return function(v) { return re.test(v);}},
     typedInput: function(ptypeName,isConfig) { return function(v) {
-        var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName);
-        if(!ptype) return true;
-        return ptype.typedInput('validate');
+        var ptype = $("#node-"+(isConfig?"config-":"")+"input-"+ptypeName).val() || this[ptypeName];
+        if (ptype === 'json') {
+            try {
+                JSON.parse(v);
+                return true;
+            } catch(err) {
+                return false;
+            }
+        } else if (ptype === 'msg' || ptype === 'flow' || ptype === 'global' ) {
+            return RED.utils.validatePropertyExpression(v);
+        } else if (ptype === 'num') {
+            return /^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/.test(v);
+        }
+        //{{{ Added by Homegear GmbH
+        else if (ptype === 'int') {
+            return /^[+-]?[0-9]*$/.test(v);
+        } else if (ptype === 'float') {
+            return /^[+-]?[0-9]*$/.test(v);
+        }
+        //}}}
+        return true;
     }}
 };
 ;/**
  * This file was modified by Homegear GmbH
  *
  * Changes:
- * - 
+ * - Don't parse message payload with JSON parser as it is already a JSON
  *
  * Todo after update:
  **/
@@ -6158,13 +7039,15 @@ RED.utils = (function() {
         } else if (value === null) {
             result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-null">null</span>');
         } else if (typeof value === 'object') {
-            if (value.hasOwnProperty('type') && value.type === 'Buffer' && value.hasOwnProperty('data')) {
+            if (value.hasOwnProperty('type') && value.type === 'undefined') {
+                result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-null">undefined</span>');
+            } else if (value.hasOwnProperty('type') && value.type === 'Buffer' && value.hasOwnProperty('data')) {
                 result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-meta"></span>').text('buffer['+value.length+']');
             } else if (value.hasOwnProperty('type') && value.type === 'array' && value.hasOwnProperty('data')) {
                 result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-meta"></span>').text('array['+value.length+']');
             } else if (value.hasOwnProperty('type') && value.type === 'function') {
                 result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-meta"></span>').text('function');
-            } else if (value.hasOwnProperty('type') && value.type === 'number') {
+            } else if (value.hasOwnProperty('type') && (value.type === 'number' || value.type === 'bigint')) {
                 result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-number"></span>').text(value.data);
             } else {
                 result = $('<span class="red-ui-debug-msg-object-value red-ui-debug-msg-type-meta">object</span>');
@@ -6406,10 +7289,6 @@ RED.utils = (function() {
         if (path !== undefined && rootPath !== undefined) {
              strippedKey = path.substring(rootPath.length+(path[rootPath.length]==="."?1:0));
         }
-        else {
-            path = "";
-            rootPath = "";
-        }
         var element = $('<span class="red-ui-debug-msg-element"></span>');
         element.collapse = function() {
             element.find(".red-ui-debug-msg-expandable").parent().addClass("collapsed");
@@ -6458,7 +7337,9 @@ RED.utils = (function() {
         }
         if (obj === null || obj === undefined) {
             $('<span class="red-ui-debug-msg-type-null">'+obj+'</span>').appendTo(entryObj);
-        } else if (obj.__enc__ && obj.type === 'number') {
+        } else if (obj.__enc__ && obj.type === 'undefined') {
+            $('<span class="red-ui-debug-msg-type-null">undefined</span>').appendTo(entryObj);
+        } else if (obj.__enc__ && (obj.type === 'number' || obj.type === 'bigint')) {
             e = $('<span class="red-ui-debug-msg-type-number red-ui-debug-msg-object-header"></span>').text(obj.data).appendTo(entryObj);
         } else if (typeHint === "function" || (obj.__enc__ && obj.type === 'function')) {
             e = $('<span class="red-ui-debug-msg-type-meta red-ui-debug-msg-object-header"></span>').text("function").appendTo(entryObj);
@@ -6916,9 +7797,9 @@ RED.utils = (function() {
     function separateIconPath(icon) {
         var result = {module: "", file: ""};
         if (icon) {
-            var index = icon.indexOf('icons/');
-            if (index !== -1) {
-                icon = icon.substring(index+6);
+            var index = icon.indexOf(RED.settings.apiRootUrl+'icons/');
+            if (index === 0) {
+                icon = icon.substring((RED.settings.apiRootUrl+'icons/').length);
             }
             index = icon.indexOf('/');
             if (index !== -1) {
@@ -6948,7 +7829,12 @@ RED.utils = (function() {
 
         var iconPath = separateIconPath(icon_url);
         if (!iconPath.module) {
-            iconPath.module = def.namespace;
+            if (def.set) {
+                iconPath.module = def.set.module;
+            } else {
+                // Handle subflow instance nodes that don't have def.set
+                iconPath.module = "node-red";
+            }
         }
         return iconPath;
     }
@@ -6964,10 +7850,15 @@ RED.utils = (function() {
     }
 
     function getNodeIcon(def,node) {
-        if (def.category === 'config') {
+        if (node && node.type === '_selection_') {
+            return "font-awesome/fa-object-ungroup";
+        } else if (node && node.type === 'group') {
+            return "font-awesome/fa-object-group"
+        } else if (def.category === 'config') {
             return RED.settings.apiRootUrl+"icons/node-red/cog.svg"
         } else if (node && node.type === 'tab') {
-            return RED.settings.apiRootUrl+"icons/node-red/subflow.svg"
+            return "red-ui-icons/red-ui-icons-flow"
+            // return RED.settings.apiRootUrl+"images/subflow_tab.svg"
         } else if (node && node.type === 'unknown') {
             return RED.settings.apiRootUrl+"icons/node-red/alert.svg"
         } else if (node && node.icon) {
@@ -6995,16 +7886,11 @@ RED.utils = (function() {
             }
         }
 
-        // This could be a non-core node trying to use a core icon.
-        iconPath.module = 'node-red';
-
         if (/.png$/i.test(iconPath.file)) {
             var originalFile = iconPath.file;
             iconPath.file = iconPath.file.replace(/.png$/,".svg");
             if (isIconExists(iconPath)) {
                 return RED.settings.apiRootUrl+"icons/"+iconPath.module+"/"+iconPath.file;
-            } else {
-                return RED.settings.apiRootUrl+"icons/"+def.namespace+"/"+originalFile;
             }
             iconPath.file = originalFile;
         }
@@ -7031,6 +7917,8 @@ RED.utils = (function() {
         var l;
         if (node.type === 'tab') {
             l = node.label || defaultLabel
+        } else if (node.type === 'group') {
+            l = node.name || defaultLabel
         } else {
             l = node._def.label;
             try {
@@ -7102,9 +7990,9 @@ RED.utils = (function() {
         } else if ((format === 'number') && (payload === "-Infinity")) {
             payload = -Infinity;
         } else if (format === 'Object' || /^array/.test(format) || format === 'boolean' || format === 'number' ) {
-            //payload = JSON.parse(payload);
+            //payload = JSON.parse(payload); //Removed by Homegear GmbH
         } else if (/error/i.test(format)) {
-            //payload = JSON.parse(payload);
+            //payload = JSON.parse(payload); //Removed by Homegear GmbH
             payload = (payload.name?payload.name+": ":"")+payload.message;
         } else if (format === 'null') {
             payload = null;
@@ -7164,9 +8052,61 @@ RED.utils = (function() {
             }
             // If the specified name is not defined in font-awesome, show arrow-in icon.
             iconUrl = RED.settings.apiRootUrl+"icons/node-red/arrow-in.svg"
+        } else if (iconPath.module === "red-ui-icons") {
+            var redIconElement = $('<i/>').appendTo(iconContainer);
+            redIconElement.addClass("red-ui-palette-icon red-ui-icons " + iconPath.file);
+            return;
         }
         var imageIconElement = $('<div/>',{class:"red-ui-palette-icon"}).appendTo(iconContainer);
         imageIconElement.css("backgroundImage", "url("+iconUrl+")");
+    }
+
+    function createNodeIcon(node) {
+        var def = node._def;
+        var nodeDiv = $('<div>',{class:"red-ui-search-result-node"})
+        if (node.type === "_selection_") {
+            nodeDiv.addClass("red-ui-palette-icon-selection");
+        } else if (node.type === "group") {
+            nodeDiv.addClass("red-ui-palette-icon-group");
+        } else if (node.type === 'tab') {
+            nodeDiv.addClass("red-ui-palette-icon-flow");
+        } else {
+            var colour = RED.utils.getNodeColor(node.type,def);
+            // if (node.type === 'tab') {
+            //     colour = "#C0DEED";
+            // }
+            nodeDiv.css('backgroundColor',colour);
+            var borderColor = getDarkerColor(colour);
+            if (borderColor !== colour) {
+                nodeDiv.css('border-color',borderColor)
+            }
+        }
+
+        var icon_url = RED.utils.getNodeIcon(def,node);
+        var iconContainer = $('<div/>',{class:"red-ui-palette-icon-container"}).appendTo(nodeDiv);
+        RED.utils.createIconElement(icon_url, iconContainer, true);
+        return nodeDiv;
+    }
+
+    function getDarkerColor(c) {
+        var r,g,b;
+        if (/^#[a-f0-9]{6}$/i.test(c)) {
+            r = parseInt(c.substring(1, 3), 16);
+            g = parseInt(c.substring(3, 5), 16);
+            b = parseInt(c.substring(5, 7), 16);
+        } else if (/^#[a-f0-9]{3}$/i.test(c)) {
+            r = parseInt(c.substring(1, 2)+c.substring(1, 2), 16);
+            g = parseInt(c.substring(2, 3)+c.substring(2, 3), 16);
+            b = parseInt(c.substring(3, 4)+c.substring(3, 4), 16);
+        } else {
+            return c;
+        }
+        var l = 0.3 * r/255 + 0.59 * g/255 + 0.11 * b/255 ;
+        r = Math.max(0,r-50);
+        g = Math.max(0,g-50);
+        b = Math.max(0,b-50);
+        var s = ((r<<16) + (g<<8) + b).toString(16);
+        return '#'+'000000'.slice(0, 6-s.length)+s;
     }
 
     return {
@@ -7186,7 +8126,9 @@ RED.utils = (function() {
         parseContextKey: parseContextKey,
         createIconElement: createIconElement,
         sanitize: sanitize,
-        renderMarkdown: renderMarkdown
+        renderMarkdown: renderMarkdown,
+        createNodeIcon: createNodeIcon,
+        getDarkerColor: getDarkerColor
     }
 })();
 ;/**
@@ -7233,7 +8175,7 @@ RED.utils = (function() {
  * methods:
  *   - addItem(itemData)
  *   - insertItemAt : function(data,index) - add an item at the specified index
- *   - removeItem(itemData)
+ *   - removeItem(itemData, detach) - remove the item. Optionally detach to preserve any event handlers on the item's label
  *   - getItemAt(index)
  *   - indexOf(itemData)
  *   - width(width)
@@ -7291,6 +8233,9 @@ RED.utils = (function() {
                     if (v!=="auto" && v!=="") {
                         that.topContainer.css(s,v);
                         that.uiContainer.css(s,"0");
+                        if (s === "top" && that.options.header) {
+                            that.uiContainer.css(s,"20px")
+                        }
                         that.element.css(s,'auto');
                     }
                 })
@@ -7325,7 +8270,7 @@ RED.utils = (function() {
                 this.element.css("maxHeight",null);
             }
             if (this.options.height !== 'auto') {
-                this.uiContainer.css("overflow-x","hidden");
+                this.uiContainer.css("overflow-x","hidden"); //Added by Homegear GmbH
                 this.uiContainer.css("overflow-y","scroll");
                 if (!isNaN(this.options.height)) {
                     this.uiHeight = this.options.height;
@@ -7384,7 +8329,7 @@ RED.utils = (function() {
             if (this.options.resizeItem) {
                 var that = this;
                 this.element.children().each(function(i) {
-                    that.options.resizeItem($(this).find(".red-ui-editableList-item-content"),i);
+                    that.options.resizeItem($(this).children(".red-ui-editableList-item-content"),i);
                 });
             }
         },
@@ -7424,7 +8369,7 @@ RED.utils = (function() {
                 var items = this.element.children();
                 var that = this;
                 items.sort(function(A,B) {
-                    return that.activeSort($(A).find(".red-ui-editableList-item-content").data('data'),$(B).find(".red-ui-editableList-item-content").data('data'));
+                    return that.activeSort($(A).children(".red-ui-editableList-item-content").data('data'),$(B).children(".red-ui-editableList-item-content").data('data'));
                 });
                 $.each(items,function(idx,li) {
                     that.element.append(li);
@@ -7460,28 +8405,6 @@ RED.utils = (function() {
             var that = this;
             data = data || {};
             var li = $('<li>');
-            var added = false;
-            if (this.activeSort) {
-                var items = this.items();
-                var skip = false;
-                items.each(function(i,el) {
-                    if (added) { return }
-                    var itemData = el.data('data');
-                    if (that.activeSort(data,itemData) < 0) {
-                         li.insertBefore(el.closest("li"));
-                         added = true;
-                    }
-                });
-            }
-            if (!added) {
-                if (index <= 0) {
-                    li.prependTo(this.element);
-                } else if (index > that.element.children().length-1) {
-                    li.appendTo(this.element);
-                } else {
-                    li.insertBefore(this.element.children().eq(index));
-                }
-            }
             var row = $('<div/>').addClass("red-ui-editableList-item-content").appendTo(li);
             row.data('data',data);
             if (this.options.sortable === true) {
@@ -7504,9 +8427,31 @@ RED.utils = (function() {
                     });
                 });
             }
+            var added = false;
+            if (this.activeSort) {
+                var items = this.items();
+                var skip = false;
+                items.each(function(i,el) {
+                    if (added) { return }
+                    var itemData = el.data('data');
+                    if (that.activeSort(data,itemData) < 0) {
+                         li.insertBefore(el.closest("li"));
+                         added = true;
+                    }
+                });
+            }
+            if (!added) {
+                if (index <= 0) {
+                    li.prependTo(this.element);
+                } else if (index > that.element.children().length-1) {
+                    li.appendTo(this.element);
+                } else {
+                    li.insertBefore(this.element.children().eq(index));
+                }
+            }
             if (this.options.addItem) {
                 var index = that.element.children().length-1;
-                setTimeout(function() {
+                // setTimeout(function() {
                     that.options.addItem(row,index,data);
                     if (that.activeFilter) {
                         try {
@@ -7522,7 +8467,7 @@ RED.utils = (function() {
                             that.uiContainer.scrollTop(that.element.height());
                         },0);
                     }
-                },0);
+                // },0);
             }
         },
         addItem: function(data) {
@@ -7533,17 +8478,21 @@ RED.utils = (function() {
                 this.addItem(items[i]);
             }
         },
-        removeItem: function(data) {
+        removeItem: function(data,detach) {
             var items = this.element.children().filter(function(f) {
-                return data === $(this).find(".red-ui-editableList-item-content").data('data');
+                return data === $(this).children(".red-ui-editableList-item-content").data('data');
             });
-            items.remove();
+            if (detach) {
+                items.detach();
+            } else {
+                items.remove();
+            }
             if (this.options.removeItem) {
                 this.options.removeItem(data);
             }
         },
         items: function() {
-            return this.element.children().map(function(i) { return $(this).find(".red-ui-editableList-item-content"); });
+            return this.element.children().map(function(i) { return $(this).children(".red-ui-editableList-item-content"); });
         },
         empty: function() {
             this.element.empty();
@@ -7566,14 +8515,14 @@ RED.utils = (function() {
         },
         show: function(item) {
             var items = this.element.children().filter(function(f) {
-                return item === $(this).find(".red-ui-editableList-item-content").data('data');
+                return item === $(this).children(".red-ui-editableList-item-content").data('data');
             });
             if (items.length > 0) {
                 this.uiContainer.scrollTop(this.uiContainer.scrollTop()+items.position().top)
             }
         },
         getItem: function(li) {
-            var el = li.find(".red-ui-editableList-item-content");
+            var el = li.children(".red-ui-editableList-item-content");
             if (el.length) {
                 return el.data('data');
             } else {
@@ -7611,7 +8560,8 @@ RED.utils = (function() {
  *
  * methods:
  *   - data(items) - clears existing items and replaces with new data
- *
+ *   - clearSelection - clears the selected items
+ *   - filter(filterFunc) - filters the tree using the provided function
  * events:
  *   - treelistselect : function(event, item) {}
  *   - treelistconfirm : function(event,item) {}
@@ -7623,7 +8573,8 @@ RED.utils = (function() {
  *         label: 'Local', // label for the item
  *         sublabel: 'Local', // a sub-label for the item
  *         icon: 'fa fa-rocket', // (optional) icon for the item
- *         selected: true/false, // (optional) if present, display checkbox accordingly
+ *         checkbox: true/false, // (optional) if present, display checkbox accordingly
+ *         selected: true/false, // (optional) whether the item is selected or not
  *         children: [] | function(done,item) // (optional) an array of child items, or a function
  *                                       // that will call the `done` callback with an array
  *                                       // of child items
@@ -7643,11 +8594,11 @@ RED.utils = (function() {
  * properties and functions:
  *
  *   item.parent - set to the parent item
+ *   item.depth - the depth in the tree (0 == root)
  *   item.treeList.container
  *   item.treeList.label - the label element for the item
- *   item.treeList.depth - the depth in the tree (0 == root)
  *   item.treeList.parentList  - the editableList instance this item is in
- *   item.treeList.remove() - removes the item from the tree
+ *   item.treeList.remove(detach) - removes the item from the tree. Optionally detach to preserve any event handlers on the item's label
  *   item.treeList.makeLeaf(detachChildElements) - turns an element with children into a leaf node,
  *                                                 removing the UI decoration etc.
  *                                                 detachChildElements - any children with custom
@@ -7662,8 +8613,8 @@ RED.utils = (function() {
  *                                            Optionally selects the item after adding.
  *   item.treeList.expand(done) - expands the parent item to show children. Optional 'done' callback.
  *   item.treeList.collapse() - collapse the parent item to hide children.
- *
- *
+ *   item.treeList.sortChildren(sortFunction) - does a one-time sort of the children using sortFunction
+ *   item.treeList.replaceElement(element) - replace the custom element for the item
  *
  *
  */
@@ -7684,6 +8635,8 @@ RED.utils = (function() {
                 var target;
                 switch(evt.keyCode) {
                     case 13: // ENTER
+                        evt.preventDefault();
+                        evt.stopPropagation();
                         if (selected.children) {
                             if (selected.treeList.container.hasClass("expanded")) {
                                 selected.treeList.collapse()
@@ -7696,6 +8649,8 @@ RED.utils = (function() {
 
                     break;
                     case 37: // LEFT
+                        evt.preventDefault();
+                        evt.stopPropagation();
                         if (selected.children&& selected.treeList.container.hasClass("expanded")) {
                             selected.treeList.collapse()
                         } else if (selected.parent) {
@@ -7703,6 +8658,8 @@ RED.utils = (function() {
                         }
                     break;
                     case 38: // UP
+                        evt.preventDefault();
+                        evt.stopPropagation();
                         target = that._getPreviousSibling(selected);
                         if (target) {
                             target = that._getLastDescendant(target);
@@ -7712,6 +8669,8 @@ RED.utils = (function() {
                         }
                     break;
                     case 39: // RIGHT
+                        evt.preventDefault();
+                        evt.stopPropagation();
                         if (selected.children) {
                             if (!selected.treeList.container.hasClass("expanded")) {
                                 selected.treeList.expand()
@@ -7719,6 +8678,8 @@ RED.utils = (function() {
                         }
                     break
                     case 40: //DOWN
+                        evt.preventDefault();
+                        evt.stopPropagation();
                         if (selected.children && Array.isArray(selected.children) && selected.children.length > 0 && selected.treeList.container.hasClass("expanded")) {
                             target = selected.children[0];
                         } else {
@@ -7735,10 +8696,11 @@ RED.utils = (function() {
                 }
             });
             this._data = [];
-
+            this._items = {};
+            this._selected = new Set();
             this._topList = $('<ol class="red-ui-treeList-list">').css({
                 position:'absolute',
-                top: 0,
+                top:0,
                 left:0,
                 right:0,
                 bottom:0
@@ -7752,6 +8714,9 @@ RED.utils = (function() {
                     that._addSubtree(that._topList,container,item,0);
                 }
             };
+            if (this.options.header) {
+                topListOptions.header = this.options.header;
+            }
             if (this.options.rootSortable !== false && !!this.options.sortable) {
                 topListOptions.sortable = this.options.sortable;
                 topListOptions.connectWith = '.red-ui-treeList-sortable';
@@ -7799,7 +8764,7 @@ RED.utils = (function() {
                 return candidates[index+1];
             }
         },
-        _addChildren: function(container,parent,children,depth) {
+        _addChildren: function(container,parent,children,depth,onCompleteChildren) {
             var that = this;
             var subtree = $('<ol class="red-ui-treeList-list">').appendTo(container).editableList({
                 connectWith: ".red-ui-treeList-sortable",
@@ -7828,15 +8793,38 @@ RED.utils = (function() {
                         that._trigger("changeparent",null,evt);
                     });
                     that._trigger("sort",null,parent);
-                }
+                },
+                filter: parent.treeList.childFilter
             });
             if (!!that.options.sortable) {
                 subtree.addClass('red-ui-treeList-sortable');
             }
-            for (var i=0;i<children.length;i++) {
-                children[i].parent = parent;
-                subtree.editableList('addItem',children[i])
+            var sliceSize = 30;
+            var index = 0;
+            var addSlice = function() {
+                var start = index;
+                for (var i=0;i<sliceSize;i++) {
+                    index = start+i;
+                    if (index === children.length) {
+                        setTimeout(function() {
+                            if (onCompleteChildren) {
+                                onCompleteChildren();
+                            }
+                        },10);
+                        return;
+                    }
+                    children[index].parent = parent;
+                    subtree.editableList('addItem',children[index])
+                }
+                index++;
+                if (index < children.length) {
+                    setTimeout(function() {
+                        addSlice();
+                    },10);
+                }
             }
+            addSlice();
+            subtree.hide()
             return subtree;
         },
         _fixDepths: function(parent,child) {
@@ -7873,23 +8861,184 @@ RED.utils = (function() {
             }
             return reparentedEvent;
         },
-        _addSubtree: function(parentList, container, item, depth) {
+        _initItem: function(item,depth) {
+            if (item.treeList) {
+                return;
+            }
             var that = this;
+            this._items[item.id] = item;
             item.treeList = {};
-            item.treeList.depth = depth;
-            item.treeList.container = container;
-
-            item.treeList.parentList = parentList;
-            item.treeList.remove = function() {
-                parentList.editableList('removeItem',item);
+            item.depth = depth;
+            item.treeList.remove = function(detach) {
+                if (item.treeList.parentList) {
+                    item.treeList.parentList.editableList('removeItem',item,detach);
+                }
                 if (item.parent) {
                     var index = item.parent.children.indexOf(item);
                     item.parent.children.splice(index,1)
                     that._trigger("sort",null,item.parent);
                 }
+                that._selected.delete(item);
+                delete item.treeList;
+                delete that._items[item.id];
+            }
+            item.treeList.insertChildAt = function(newItem,position,select) {
+                newItem.parent = item;
+                item.children.splice(position,0,newItem);
+                var processChildren = function(parent,i) {
+                    that._initItem(i,parent.depth+1)
+                    i.parent = parent;
+                    if (i.children && typeof i.children !== 'function') {
+                        i.children.forEach(function(item) {
+                            processChildren(i, item, parent.depth+2)
+                        });
+                    }
+                }
+                processChildren(item,newItem);
+
+                if (!item.deferBuild && item.treeList.childList) {
+                    item.treeList.childList.editableList('insertItemAt',newItem,position)
+                    if (select) {
+                        setTimeout(function() {
+                            that.select(newItem)
+                        },100);
+                    }
+                    that._trigger("sort",null,item);
+
+                    if (that.activeFilter) {
+                        that.filter(that.activeFilter);
+                    }
+                }
+            }
+            item.treeList.addChild = function(newItem,select) {
+                item.treeList.insertChildAt(newItem,item.children.length,select);
+            }
+            item.treeList.expand = function(done) {
+                if (!item.children) {
+                    if (done) { done(false) }
+                    return;
+                }
+                if (!item.treeList.container) {
+                    item.expanded = true;
+                    if (done) { done(false) }
+                    return;
+                }
+                var container = item.treeList.container;
+                if (container.hasClass("expanded")) {
+                    if (done) { done(false) }
+                    return;
+                }
+
+                if (!container.hasClass("built") && (item.deferBuild || typeof item.children === 'function')) {
+                    container.addClass('built');
+                    var childrenAdded = false;
+                    var spinner;
+                    var startTime = 0;
+                    var started = Date.now();
+                    var completeBuild = function(children) {
+                        childrenAdded = true;
+                        item.treeList.childList = that._addChildren(container,item,children,depth, function() {
+                            if (done) { done(true) }
+                            that._trigger("childrenloaded",null,item)
+                        });
+                        var delta = Date.now() - startTime;
+                        if (delta < 400) {
+                            setTimeout(function() {
+                                item.treeList.childList.slideDown('fast');
+                                if (spinner) {
+                                    spinner.remove();
+                                }
+                            },400-delta);
+                        } else {
+                            item.treeList.childList.slideDown('fast');
+                            if (spinner) {
+                                spinner.remove();
+                            }
+                        }
+                        item.expanded = true;
+                    }
+                    if (typeof item.children === 'function') {
+                        item.children(completeBuild,item);
+                    } else {
+                        delete item.deferBuild;
+                        completeBuild(item.children);
+                    }
+                    if (!childrenAdded) {
+                        startTime = Date.now();
+                        spinner = $('<div class="red-ui-treeList-spinner">').css({
+                            "background-position": (35+depth*20)+'px 50%'
+                        }).appendTo(container);
+                    }
+
+                } else {
+                    if (that._loadingData || item.children.length > 20) {
+                        item.treeList.childList.show();
+                    } else {
+                        item.treeList.childList.slideDown('fast');
+                    }
+                    item.expanded = true;
+                    if (done) { done(!that._loadingData) }
+                }
+                container.addClass("expanded");
+            }
+            item.treeList.collapse = function() {
+                if (!item.children) {
+                    return;
+                }
+                item.expanded = false;
+                if (item.treeList.container) {
+                    if (item.children.length < 20) {
+                        item.treeList.childList.slideUp('fast');
+                    } else {
+                        item.treeList.childList.hide();
+                    }
+                    item.treeList.container.removeClass("expanded");
+                }
+            }
+            item.treeList.sortChildren = function(sortFunc) {
+                if (!item.children) {
+                    return;
+                }
+                item.children.sort(sortFunc);
+                if (item.treeList.childList) {
+                    // Do a one-off sort of the list, which means calling sort twice:
+                    // 1. first with the desired sort function
+                    item.treeList.childList.editableList('sort',sortFunc);
+                    // 2. and then with null to remove it
+                    item.treeList.childList.editableList('sort',null);
+                }
+            }
+            item.treeList.replaceElement = function (element) {
+                if (item.element) {
+                    if (item.treeList.container) {
+                        $(item.element).remove();
+                        $(element).appendTo(item.treeList.label);
+                        var labelPaddingWidth = (item.gutter?item.gutter.width()+2:0)+(item.depth*20);
+                        $(element).css({
+                            width: "calc(100% - "+(labelPaddingWidth+20+(item.icon?20:0))+"px)"
+                        })
+                    }
+                    item.element = element;
+                }
             }
 
-            var label = $("<div>",{class:"red-ui-treeList-label"}).appendTo(container);
+            if (item.children && typeof item.children !== "function") {
+                item.children.forEach(function(i) {
+                    that._initItem(i,depth+1);
+                })
+            }
+        },
+        _addSubtree: function(parentList, container, item, depth) {
+            var that = this;
+            this._initItem(item,depth);
+            // item.treeList = {};
+            // item.treeList.depth = depth;
+            item.treeList.container = container;
+
+            item.treeList.parentList = parentList;
+
+            var label = $("<div>",{class:"red-ui-treeList-label"});
+            label.appendTo(container);
             item.treeList.label = label;
             if (item.class) {
                 label.addClass(item.class);
@@ -7941,6 +9090,7 @@ RED.utils = (function() {
                 treeListIcon.off("click.red-ui-treeList-expand");
                 delete item.children;
                 container.removeClass("expanded");
+                delete item.expanded;
             }
             item.treeList.makeParent = function(children) {
                 if (treeListIcon.children().length) {
@@ -7969,88 +9119,8 @@ RED.utils = (function() {
                 })
                 if (!item.children) {
                     item.children = children||[];
-                    item.treeList.childList = that._addChildren(container,item,item.children,depth).hide();
+                    item.treeList.childList = that._addChildren(container,item,item.children,depth);
                 }
-            }
-            item.treeList.insertChildAt = function(newItem,position,select) {
-                newItem.parent = item;
-                item.children.splice(position,0,newItem);
-
-                if (!item.deferBuild) {
-                    item.treeList.childList.editableList('insertItemAt',newItem,position)
-                    if (select) {
-                        setTimeout(function() {
-                            that.select(newItem)
-                        },100);
-                    }
-                    that._trigger("sort",null,item);
-                }
-            }
-            item.treeList.addChild = function(newItem,select) {
-                item.treeList.insertChildAt(newItem,item.children.length,select);
-            }
-            item.treeList.expand = function(done) {
-                if (!item.children) {
-                    return;
-                }
-                if (container.hasClass("expanded")) {
-                    if (done) { done() }
-                    return;
-                }
-                if (!container.hasClass("built") && (item.deferBuild || typeof item.children === 'function')) {
-                    container.addClass('built');
-                    var childrenAdded = false;
-                    var spinner;
-                    var startTime = 0;
-                    var completeBuild = function(children) {
-                        childrenAdded = true;
-                        item.treeList.childList = that._addChildren(container,item,children,depth).hide();
-                        var delta = Date.now() - startTime;
-                        if (delta < 400) {
-                            setTimeout(function() {
-                                item.treeList.childList.slideDown('fast');
-                                if (spinner) {
-                                    spinner.remove();
-                                }
-                            },400-delta);
-                        } else {
-                            item.treeList.childList.slideDown('fast');
-                            if (spinner) {
-                                spinner.remove();
-                            }
-                        }
-                        if (done) { done() }
-                        that._trigger("childrenloaded",null,item)
-                    }
-                    if (typeof item.children === 'function') {
-                        item.children(completeBuild,item);
-                    } else {
-                        delete item.deferBuild;
-                        completeBuild(item.children);
-                    }
-                    if (!childrenAdded) {
-                        startTime = Date.now();
-                        spinner = $('<div class="red-ui-treeList-spinner">').css({
-                            "background-position": (35+depth*20)+'px 50%'
-                        }).appendTo(container);
-                    }
-
-                } else {
-                    if (that._loadingData) {
-                        item.treeList.childList.show();
-                    } else {
-                        item.treeList.childList.slideDown('fast');
-                    }
-                    if (done) { done() }
-                }
-                container.addClass("expanded");
-            }
-            item.treeList.collapse = function() {
-                if (!item.children) {
-                    return;
-                }
-                item.treeList.childList.slideUp('fast');
-                container.removeClass("expanded");
             }
 
             var treeListIcon = $('<span class="red-ui-treeList-icon"></span>').appendTo(label);
@@ -8058,15 +9128,19 @@ RED.utils = (function() {
                 item.treeList.makeParent();
             }
 
-            if (item.hasOwnProperty('selected')) {
-                var selectWrapper = $('<span class="red-ui-treeList-icon"></span>').appendTo(label);
+            if (item.checkbox) {
+                var selectWrapper = $('<span class="red-ui-treeList-icon"></span>');
                 var cb = $('<input class="red-ui-treeList-checkbox" type="checkbox">').prop('checked',item.selected).appendTo(selectWrapper);
-                label.toggleClass("selected",item.selected);
                 cb.on('click', function(e) {
                     e.stopPropagation();
                 });
                 cb.on('change', function(e) {
                     item.selected = this.checked;
+                    if (item.selected) {
+                        that._selected.add(item);
+                    } else {
+                        that._selected.delete(item);
+                    }
                     label.toggleClass("selected",this.checked);
                     that._trigger("select",e,item);
                 })
@@ -8081,10 +9155,15 @@ RED.utils = (function() {
                         cb.trigger("click");
                     }
                 }
+                selectWrapper.appendTo(label)
             } else {
                 label.on("click", function(e) {
-                    that._topList.find(".selected").removeClass("selected");
+                    if (!that.options.multi) {
+                        that.clearSelection();
+                    }
                     label.addClass("selected");
+                    that._selected.add(item);
+
                     that._trigger("select",e,item)
                 })
                 label.on("dblclick", function(e) {
@@ -8092,9 +9171,30 @@ RED.utils = (function() {
                         that._trigger("confirm",e,item);
                     }
                 })
+                item.treeList.select = function(v) {
+                    if (!that.options.multi) {
+                        that.clearSelection();
+                    }
+                    label.toggleClass("selected",v);
+                    if (v) {
+                        that._selected.add(item);
+                        that._trigger("select",null,item)
+                    } else {
+                        that._selected.delete(item);
+                    }
+                    that.reveal(item);
+                }
+            }
+            label.toggleClass("selected",!!item.selected);
+            if (item.selected) {
+                that._selected.add(item);
             }
             if (item.icon) {
-                $('<span class="red-ui-treeList-icon"><i class="'+item.icon+'" /></span>').appendTo(label);
+                if (typeof item.icon === "string") {
+                    $('<span class="red-ui-treeList-icon"><i class="'+item.icon+'" /></span>').appendTo(label);
+                } else {
+                    $('<span class="red-ui-treeList-icon">').appendTo(label).append(item.icon);
+                }
             }
             if (item.hasOwnProperty('label') || item.hasOwnProperty('sublabel')) {
                 if (item.hasOwnProperty('label')) {
@@ -8112,12 +9212,13 @@ RED.utils = (function() {
             }
             if (item.children) {
                 if (Array.isArray(item.children) && !item.deferBuild) {
-                    item.treeList.childList = that._addChildren(container,item,item.children,depth).hide();
+                    item.treeList.childList = that._addChildren(container,item,item.children,depth);
                 }
                 if (item.expanded) {
                     item.treeList.expand();
                 }
             }
+            // label.appendTo(container);
         },
         empty: function() {
             this._topList.editableList('empty');
@@ -8126,6 +9227,7 @@ RED.utils = (function() {
             var that = this;
             if (items !== undefined) {
                 this._data = items;
+                this._items = {};
                 this._topList.editableList('empty');
                 this._loadingData = true;
                 for (var i=0; i<items.length;i++) {
@@ -8140,33 +9242,149 @@ RED.utils = (function() {
                 return this._data;
             }
         },
-        show: function(id) {
-            for (var i=0;i<this._data.length;i++) {
-                if (this._data[i].id === id) {
-                    this._topList.editableList('show',this._data[i]);
+        show: function(item, done) {
+            if (typeof item === "string") {
+                item = this._items[item]
+            }
+            if (!item) {
+                return;
+            }
+            var that = this;
+            var stack = [];
+            var i = item;
+            while(i) {
+                stack.unshift(i);
+                i = i.parent;
+            }
+            var isOpening = false;
+            var handleStack = function(opening) {
+                isOpening = isOpening ||opening
+                var item = stack.shift();
+                if (stack.length === 0) {
+                    setTimeout(function() {
+                        that.reveal(item);
+                        if (done) { done(); }
+                    },isOpening?200:0);
+                } else {
+                    item.treeList.expand(handleStack)
                 }
             }
+            handleStack();
         },
-        select: function(item) {
-            this._topList.find(".selected").removeClass("selected");
-            item.treeList.label.addClass("selected");
-            this._trigger("select",null,item)
+        reveal: function(item) {
+            if (typeof item === "string") {
+                item = this._items[item]
+            }
+            if (!item) {
+                return;
+            }
+            var listOffset = this._topList.offset().top;
+            var itemOffset = item.treeList.label.offset().top;
+            var scrollTop = this._topList.parent().scrollTop();
+            itemOffset -= listOffset+scrollTop;
+            var treeHeight = this._topList.parent().height();
+            var itemHeight = item.treeList.label.outerHeight();
+            if (itemOffset < itemHeight/2) {
+                this._topList.parent().scrollTop(scrollTop+itemOffset-itemHeight/2-itemHeight)
+            } else if (itemOffset+itemHeight > treeHeight) {
+                this._topList.parent().scrollTop(scrollTop+((itemOffset+2.5*itemHeight)-treeHeight));
+            }
+        },
+        select: function(item, triggerEvent, deselectExisting) {
+            var that = this;
+            if (!this.options.multi && deselectExisting !== false) {
+                this.clearSelection();
+            }
+            if (Array.isArray(item)) {
+                item.forEach(function(i) {
+                    that.select(i,triggerEvent,false);
+                })
+                return;
+            }
+            if (typeof item === "string") {
+                item = this._items[item]
+            }
+            if (!item) {
+                return;
+            }
+            // this.show(item.id);
+            item.selected = true;
+            this._selected.add(item);
 
+            if (item.treeList.label) {
+                item.treeList.label.addClass("selected");
+            }
+            if (triggerEvent !== false) {
+                this._trigger("select",null,item)
+            }
+        },
+        clearSelection: function() {
+            this._selected.forEach(function(item) {
+                item.selected = false;
+                if (item.treeList.label) {
+                    item.treeList.label.removeClass("selected")
+                }
+            });
+            this._selected.clear();
         },
         selected: function() {
-            var s = this._topList.find(".selected");
+            var selected = [];
+            this._selected.forEach(function(item) {
+                selected.push(item);
+            })
             if (this.options.multi) {
-                var res = [];
-                s.each(function() {
-                    res.push($(this).parent().data('data'));
-                })
-                return res;
+                return selected;
             }
-            if (s.length) {
-                return s.parent().data('data');
+            if (selected.length) {
+                return selected[0]
             } else {
+                // TODO: This may be a bug.. it causes the call to return itself
+                // not undefined.
                 return undefined;
             }
+        },
+        filter: function(filterFunc) {
+            this.activeFilter = filterFunc;
+            var totalCount = 0;
+            var filter = function(item) {
+                var matchCount = 0;
+                if (filterFunc && filterFunc(item)) {
+                    matchCount++;
+                    totalCount++;
+                }
+                var childCount = 0;
+                if (item.children && typeof item.children !== "function") {
+                    if (item.treeList.childList) {
+                        childCount = item.treeList.childList.editableList('filter', filter);
+                    } else {
+                        item.treeList.childFilter = filter;
+                        if (filterFunc) {
+                            item.children.forEach(function(i) {
+                                if (filter(i)) {
+                                    childCount++;
+                                }
+                            })
+
+                        }
+                    }
+                    matchCount += childCount;
+                    if (filterFunc && childCount > 0) {
+                        setTimeout(function() {
+                            item.treeList.expand();
+                        },10);
+                    }
+                }
+                if (!filterFunc) {
+                    totalCount++;
+                    return true
+                }
+                return matchCount > 0
+            }
+            this._topList.editableList('filter', filter);
+            return totalCount;
+        },
+        get: function(id) {
+            return this._items[id] || null;
         }
     });
 
@@ -8200,26 +9418,26 @@ RED.utils = (function() {
             this.partialFlag = false;
             this.stateValue = 0;
             var initialState = this.element.prop('checked');
-            this.options = [
+            this.states = [
                 $('<span class="red-ui-checkboxSet-option hide"><i class="fa fa-square-o"></i></span>').appendTo(this.uiElement),
                 $('<span class="red-ui-checkboxSet-option hide"><i class="fa fa-check-square-o"></i></span>').appendTo(this.uiElement),
                 $('<span class="red-ui-checkboxSet-option hide"><i class="fa fa-minus-square-o"></i></span>').appendTo(this.uiElement)
             ];
             if (initialState) {
-                this.options[1].show();
+                this.states[1].show();
             } else {
-                this.options[0].show();
+                this.states[0].show();
             }
 
             this.element.on("change", function() {
                 if (this.checked) {
-                    that.options[0].hide();
-                    that.options[1].show();
-                    that.options[2].hide();
+                    that.states[0].hide();
+                    that.states[1].show();
+                    that.states[2].hide();
                 } else {
-                    that.options[1].hide();
-                    that.options[0].show();
-                    that.options[2].hide();
+                    that.states[1].hide();
+                    that.states[0].show();
+                    that.states[2].hide();
                 }
                 var isChecked = this.checked;
                 that.children.forEach(function(child) {
@@ -8279,17 +9497,17 @@ RED.utils = (function() {
                 var trueState = this.partialFlag||state;
                 this.element.prop('checked',trueState);
                 if (state === true) {
-                    this.options[0].hide();
-                    this.options[1].show();
-                    this.options[2].hide();
+                    this.states[0].hide();
+                    this.states[1].show();
+                    this.states[2].hide();
                 } else if (state === false) {
-                    this.options[2].hide();
-                    this.options[1].hide();
-                    this.options[0].show();
+                    this.states[2].hide();
+                    this.states[1].hide();
+                    this.states[0].show();
                 } else if (state === null) {
-                    this.options[0].hide();
-                    this.options[1].hide();
-                    this.options[2].show();
+                    this.states[0].hide();
+                    this.states[1].hide();
+                    this.states[2].show();
                 }
                 if (!suppressEvent) {
                     this.element.trigger('change',null);
@@ -8426,7 +9644,7 @@ RED.menu = (function() {
                 }
             } else if (opt.href) {
                 link.attr("target","_blank").attr("href",opt.href);
-            } else if (opt.hrefLocal) {
+            } else if (opt.hrefLocal) { //Block added by Homegear GmbH to open local link in same window
                 link.attr("target","_self").attr("href",opt.hrefLocal);
             } else if (!opt.options) {
                 item.addClass("disabled");
@@ -8467,17 +9685,17 @@ RED.menu = (function() {
                     evt.preventDefault();
                     if (topMenu.is(":visible")) {
                         $(document).off("click.red-ui-menu");
-                        menuParent.parent().removeClass("open");
+                        menuParent.parent().removeClass("open"); //Added by Homegear GmbH
                         topMenu.hide();
                     } else {
                         $(document).on("click.red-ui-menu", function(evt) {
                             $(document).off("click.red-ui-menu");
                             activeMenu = null;
-                            menuParent.parent().removeClass("open");
+                            menuParent.parent().removeClass("open"); //Added by Homegear GmbH
                             topMenu.hide();
                         });
                         $(".red-ui-menu").hide();
-                        menuParent.parent().addClass("open"); //Add class "open" so the active menu button stays black
+                        menuParent.parent().addClass("open"); //Added by Homegear GmbH. Add class "open" so the active menu button stays black
                         topMenu.show();
                     }
                 })
@@ -8637,6 +9855,10 @@ RED.panels = (function() {
         if (!vertical) {
             container.addClass("red-ui-panels-horizontal");
         }
+
+        $(children[0]).addClass("red-ui-panel");
+        $(children[1]).addClass("red-ui-panel");
+
         var separator = $('<div class="red-ui-panels-separator"></div>').insertAfter(children[0]);
         var startPosition;
         var panelSizes = [];
@@ -8660,11 +9882,11 @@ RED.panels = (function() {
                     var newSizes = [panelSizes[0]+delta,panelSizes[1]-delta];
                     if (vertical) {
                         $(children[0]).height(newSizes[0]);
-                        $(children[1]).height(newSizes[1]);
+                        // $(children[1]).height(newSizes[1]);
                         ui.position.top -= delta;
                     } else {
                         $(children[0]).width(newSizes[0]);
-                        $(children[1]).width(newSizes[1]);
+                        // $(children[1]).width(newSizes[1]);
                         ui.position.left -= delta;
                     }
                     if (options.resize) {
@@ -8679,6 +9901,9 @@ RED.panels = (function() {
 
         var panel = {
             ratio: function(ratio) {
+                if (ratio === undefined) {
+                    return panelRatio;
+                }
                 panelRatio = ratio;
                 modifiedSizes = true;
                 if (ratio === 0 || ratio === 1) {
@@ -8707,10 +9932,10 @@ RED.panels = (function() {
                     panelSizes = [topPanelSize,bottomPanelSize];
                     if (vertical) {
                         $(children[0]).outerHeight(panelSizes[0]);
-                        $(children[1]).outerHeight(panelSizes[1]);
+                        // $(children[1]).outerHeight(panelSizes[1]);
                     } else {
                         $(children[0]).outerWidth(panelSizes[0]);
-                        $(children[1]).outerWidth(panelSizes[1]);
+                        // $(children[1]).outerWidth(panelSizes[1]);
                     }
                 }
                 if (options.resize) {
@@ -8774,7 +9999,7 @@ RED.popover = (function() {
             leftTop: 9
         }
     }
-    var popoverCallbackInterval = null;
+    var popoverCallbackInterval = null; //Added by Homegear GmbH
     function createPopover(options) {
         var target = options.target;
         var direction = options.direction || "right";
@@ -8784,24 +10009,26 @@ RED.popover = (function() {
         var autoClose = options.autoClose;
         var width = options.width||"auto";
         var size = options.size||"default";
+        //{{{ Added by Homegear GmbH
         var offsetX = options.offsetX||0;
         var offsetY = options.offsetY||0;
         var intervalCallback = options.intervalCallback||null;
         var dialog1 = options.dialog1||null;
         var dialog2 = options.dialog2||null;
+        //}}}
         if (!deltaSizes[size]) {
             throw new Error("Invalid RED.popover size value:",size);
         }
 
         var timer = null;
         var active;
-        var divHover = false;
+        var divHover = false; //Added by Homegear GmbH
         var div;
 
         var openPopup = function(instant) {
             if (active) {
-                if(popoverCallbackInterval) clearInterval(popoverCallbackInterval);
-                $('.red-ui-popover').remove();
+                if(popoverCallbackInterval) clearInterval(popoverCallbackInterval); //Added by Homegear GmbH
+                $('.red-ui-popover').remove(); //Added by Homegear GmbH
                 var existingPopover = target.data("red-ui-popover");
                 if (options.tooltip && existingPopover) {
                     active = false;
@@ -8830,12 +10057,13 @@ RED.popover = (function() {
                 div.appendTo("body");
 
                 var targetPos = target.offset();
-                targetPos.top += offsetY;
-                targetPos.left += offsetX;
+                targetPos.top += offsetY; //Added by Homegear GmbH
+                targetPos.left += offsetX; //Added by Homegear GmbH
                 var targetWidth = target.outerWidth();
                 var targetHeight = target.outerHeight();
                 var divHeight = div.height();
                 var divWidth = div.width();
+                var paddingRight = 10;
 
                 var viewportTop = $(window).scrollTop();
                 var viewportLeft = $(window).scrollLeft();
@@ -8857,7 +10085,7 @@ RED.popover = (function() {
                         d = "right";
                         top = targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top;
                         left = targetPos.left+targetWidth+deltaSizes[size].leftRight;
-                    } else if (left+divWidth > viewportRight) {
+                    } else if (left+divWidth+paddingRight > viewportRight) {
                         d = "left";
                         top = targetPos.top+targetHeight/2-divHeight/2-deltaSizes[size].top;
                         left = targetPos.left-deltaSizes[size].leftLeft-divWidth;
@@ -8888,12 +10116,30 @@ RED.popover = (function() {
                         closePopup(true);
                     });
                 }
+                if (trigger === 'hover' && options.interactive) {
+                    div.on('mouseenter', function(e) {
+                        clearTimeout(timer);
+                        active = true;
+                    })
+                    div.on('mouseleave', function(e) {
+                        if (timer) {
+                            clearTimeout(timer);
+                        }
+                        if (active) {
+                            timer = setTimeout(function() {
+                                active = false;
+                                closePopup();
+                            },delay.hide);
+                        }
+                    })
+                }
                 if (instant) {
                     div.show();
                 } else {
                     div.fadeIn("fast");
                 }
 
+                //{{{ Added by Homegear GmbH
                 if(trigger === 'hover') {
                     div.on('mouseenter', function(e) {
                         if (timer) {
@@ -8930,12 +10176,13 @@ RED.popover = (function() {
                 if(intervalCallback) {                    
                     popoverCallbackInterval = setInterval(intervalCallback, 1000);
                 }
+                //}}}
             }
         }
         var closePopup = function(instant) {
             $(document).off('mousedown.red-ui-popover');
             if (!active) {
-                if(popoverCallbackInterval) clearInterval(popoverCallbackInterval);
+                if(popoverCallbackInterval) clearInterval(popoverCallbackInterval); //Added by Homegear GmbH
                 if (div) {
                     if (instant) {
                         div.remove();
@@ -8952,11 +10199,13 @@ RED.popover = (function() {
 
         if (trigger === 'hover') {
             target.on('mouseenter',function(e) {
-                if (timer) {
+                if (timer) { //if statement added by Homegear GmbH to only clear timer when existant
                     clearTimeout(timer);
                 }
-                active = true;
-                timer = setTimeout(openPopup,delay.show);
+                if (!active) {
+                    active = true;
+                    timer = setTimeout(openPopup,delay.show);
+                }
             });
             target.on('mouseleave disabled', function(e) {
                 if (timer) {
@@ -9051,6 +10300,85 @@ RED.popover = (function() {
                 delay: { show: 750, hide: 50 }
             });
         },
+        menu: function(options) {
+            var list = $('<ul class="red-ui-menu"></ul>');
+            if (options.style === 'compact') {
+                list.addClass("red-ui-menu-compact");
+            }
+            var menuOptions = options.options || [];
+            var first;
+            menuOptions.forEach(function(opt) {
+                var item = $('<li>').appendTo(list);
+                var link = $('<a href="#"></a>').text(opt.label).appendTo(item);
+                link.on("click", function(evt) {
+                    evt.preventDefault();
+                    if (opt.onselect) {
+                        opt.onselect();
+                    }
+                    menu.hide();
+                })
+                if (!first) { first = link}
+            })
+            var container = RED.popover.panel(list);
+            var menu = {
+                show: function(opts) {
+                    $(document).on("keydown.red-ui-menu", function(evt) {
+                        var currentItem = list.find(":focus").parent();
+                        if (evt.keyCode === 40) {
+                            evt.preventDefault();
+                            // DOWN
+                            if (currentItem.length > 0) {
+                                if (currentItem.index() === menuOptions.length-1) {
+                                    console.log("WARP TO TOP")
+                                    // Wrap to top of list
+                                    list.children().first().children().first().focus();
+                                } else {
+                                    console.log("GO DOWN ONE")
+                                    currentItem.next().children().first().focus();
+                                }
+                            } else {
+                                list.children().first().children().first().focus();
+                            }
+                        } else if (evt.keyCode === 38) {
+                            evt.preventDefault();
+                            // UP
+                            if (currentItem.length > 0) {
+                                if (currentItem.index() === 0) {
+                                    console.log("WARP TO BOTTOM")
+                                    // Wrap to bottom of list
+                                    list.children().last().children().first().focus();
+                                } else {
+                                    console.log("GO UP ONE")
+                                    currentItem.prev().children().first().focus();
+                                }
+                            } else {
+                                list.children().last().children().first().focus();
+                            }
+                        } else if (evt.keyCode === 27) {
+                            // ESCAPE
+                            evt.preventDefault();
+                            menu.hide(true);
+                        }
+                        evt.stopPropagation();
+                    })
+                    opts.onclose = function() {
+                        $(document).off("keydown.red-ui-menu");
+                        if (options.onclose) {
+                            options.onclose(true);
+                        }
+                    }
+                    container.show(opts);
+                },
+                hide: function(cancelled) {
+                    $(document).off("keydown.red-ui-menu");
+                    container.hide(options.disposeOnClose);
+                    if (options.onclose) {
+                        options.onclose(cancelled);
+                    }
+                }
+            }
+            return menu;
+        },
         panel: function(content) {
             var panel = $('<div class="red-ui-editor-dialog red-ui-popover-panel"></div>');
             panel.css({ display: "none" });
@@ -9058,18 +10386,22 @@ RED.popover = (function() {
             content.appendTo(panel);
             var closeCallback;
 
-            function hide() {
+            function hide(dispose) {
                 $(document).off("mousedown.red-ui-popover-panel-close");
+                $(document).off("keydown.red-ui-popover-panel-close");
                 panel.hide();
                 panel.css({
                     height: "auto"
                 });
-                panel.remove();
+                if (dispose !== false) {
+                    panel.remove();
+                }
             }
             function show(options) {
                 var closeCallback = options.onclose;
                 var target = options.target;
-                var align = options.align || "left";
+                var align = options.align || "right";
+                var offset = options.offset || [0,0];
 
                 var pos = target.offset();
                 var targetWidth = target.width();
@@ -9077,7 +10409,7 @@ RED.popover = (function() {
                 var panelHeight = panel.height();
                 var panelWidth = panel.width();
 
-                var top = (targetHeight+pos.top);
+                var top = (targetHeight+pos.top) + offset[1];
                 if (top+panelHeight > $(window).height()) {
                     top -= (top+panelHeight)-$(window).height() + 5;
                 }
@@ -9085,25 +10417,35 @@ RED.popover = (function() {
                     panelHeight.height(panelHeight+top)
                     top = 0;
                 }
-                if (align === "left") {
+                if (align === "right") {
                     panel.css({
                         top: top+"px",
-                        left: (pos.left)+"px",
+                        left: (pos.left+offset[0])+"px",
                     });
-                } else if(align === "right") {
+                } else if (align === "left") {
                     panel.css({
                         top: top+"px",
-                        left: (pos.left-panelWidth)+"px",
+                        left: (pos.left-panelWidth+offset[0])+"px",
                     });
                 }
                 panel.slideDown(100);
+
+                $(document).on("keydown.red-ui-popover-panel-close", function(event) {
+                    if (event.keyCode === 27) {
+                        // ESCAPE
+                        if (closeCallback) {
+                            closeCallback();
+                        }
+                        hide(options.dispose);
+                    }
+                });
 
                 $(document).on("mousedown.red-ui-popover-panel-close", function(event) {
                     if(!$(event.target).closest(panel).length && !$(event.target).closest(".red-ui-editor-dialog").length) {
                         if (closeCallback) {
                             closeCallback();
                         }
-                        hide();
+                        hide(options.dispose);
                     }
                     // if ($(event.target).closest(target).length) {
                     //     event.preventDefault();
@@ -9159,12 +10501,17 @@ RED.popover = (function() {
             this.element.addClass("red-ui-searchBox-input");
             this.uiContainer = this.element.wrap("<div>").parent();
             this.uiContainer.addClass("red-ui-searchBox-container");
+
+            if (this.options.style === "compact") {
+                this.uiContainer.addClass("red-ui-searchBox-compact");
+            }
+
             if (this.element.parents("form").length === 0) {
                 var form = this.element.wrap("<form>").parent();
                 form.addClass("red-ui-searchBox-form");
             }
             $('<i class="fa fa-search"></i>').prependTo(this.uiContainer);
-            this.clearButton = $('<a href="#"><i class="fa fa-times"></i></a>').appendTo(this.uiContainer);
+            this.clearButton = $('<a class="red-ui-searchBox-clear" href="#"><i class="fa fa-times"></i></a>').appendTo(this.uiContainer);
             this.clearButton.on("click",function(e) {
                 e.preventDefault();
                 that.element.val("");
@@ -9172,12 +10519,71 @@ RED.popover = (function() {
                 that.element.trigger("focus");
             });
 
+            if (this.options.options) {
+                this.uiContainer.addClass("red-ui-searchBox-has-options");
+                this.optsButton = $('<a class="red-ui-searchBox-opts" href="#"><i class="fa fa-caret-down"></i></a>').appendTo(this.uiContainer);
+                var menuShown = false;
+                this.optsMenu = RED.popover.menu({
+                    style: this.options.style,
+                    options: this.options.options.map(function(opt) {
+                        return {
+                            label: opt.label,
+                            onselect: function() {
+                                that.element.val(opt.value+" ");
+                                that._change(opt.value,true);
+                            }
+                        }
+                    }),
+                    onclose: function(cancelled) {
+                        menuShown = false;
+                        that.element.trigger("focus");
+                    },
+                    disposeOnClose: false
+                });
+
+                var showMenu = function() {
+                    menuShown = true;
+                    that.optsMenu.show({
+                        target: that.optsButton,
+                        align: "left",
+                        offset: [that.optsButton.width()-2,-1],
+                        dispose: false
+                    })
+                }
+                this.optsButton.on("click",function(e) {
+                    e.preventDefault();
+                    if (!menuShown) {
+                        showMenu();
+                    } else {
+                        // TODO: This doesn't quite work because the panel's own
+                        // mousedown handler triggers a close before this click
+                        // handler fires.
+                        that.optsMenu.hide(true);
+                    }
+                });
+                this.optsButton.on("keydown",function(e) {
+                    if (!menuShown && e.keyCode === 40) {
+                        //DOWN
+                        showMenu();
+                    }
+                });
+                this.element.on("keydown",function(e) {
+                    if (!menuShown && e.keyCode === 40) {
+                        //DOWN
+                        showMenu();
+                    }
+                });
+            }
+
             this.resultCount = $('<span>',{class:"red-ui-searchBox-resultCount hide"}).appendTo(this.uiContainer);
 
             this.element.val("");
             this.element.on("keydown",function(evt) {
                 if (evt.keyCode === 27) {
                     that.element.val("");
+                }
+                if (evt.keyCode === 13) {
+                    evt.preventDefault();
                 }
             })
             this.element.on("keyup",function(evt) {
@@ -9267,7 +10673,7 @@ RED.tabs = (function() {
         var currentTabWidth;
         var currentActiveTabWidth = 0;
         var collapsibleMenu;
-
+        var preferredOrder = options.order;
         var ul = options.element || $("#"+options.id);
         var wrapper = ul.wrap( "<div>" ).parent();
         var scrollContainer = ul.wrap( "<div>" ).parent();
@@ -9370,11 +10776,11 @@ RED.tabs = (function() {
                                     activateTab(id);
                                 }
                             };
-                            if (tabs[id].pinned) {
-                                pinnedOptions.push(opt);
-                            } else {
+                            // if (tabs[id].pinned) {
+                            //     pinnedOptions.push(opt);
+                            // } else {
                                 options.push(opt);
-                            }
+                            // }
                         });
                         options = pinnedOptions.concat(options);
                         collapsibleMenu = RED.menu.init({options: options});
@@ -9391,7 +10797,7 @@ RED.tabs = (function() {
                     if (collapsibleMenu.is(":visible")) {
                         $(document).off("click.red-ui-tabmenu");
                     } else {
-                        $(".red-ui-menu").hide();
+                        $(".red-ui-menu.red-ui-menu-dropdown").hide();
                         $(document).on("click.red-ui-tabmenu", function(evt) {
                             $(document).off("click.red-ui-tabmenu");
                             collapsibleMenu.hide();
@@ -9601,23 +11007,39 @@ RED.tabs = (function() {
             var tabWidth;
 
             if (options.collapsible) {
+                var availableCount = collapsedButtonsRow.children().length;
+                var visibleCount = collapsedButtonsRow.children(":visible").length;
                 tabWidth = width - collapsedButtonsRow.width()-10;
-                if (tabWidth < 198) {
-                    var delta = 198 - tabWidth;
+                var maxTabWidth = 198;
+                var minTabWidth = 80;
+                if (tabWidth <= minTabWidth || (tabWidth < maxTabWidth && visibleCount > 5)) {
+                    // The tab is too small. Hide the next button to make room
+                    // Start at the end of the button row, -1 for the menu button
                     var b = collapsedButtonsRow.find("a:last").prev();
+                    var index = collapsedButtonsRow.children().length - 2;
+                    // Work backwards to find the first visible button
                     while (b.is(":not(:visible)")) {
                         b = b.prev();
+                        index--;
                     }
-                    if (!b.hasClass("red-ui-tab-link-button-pinned")) {
+                    // If it isn't a pinned button, hide it to get the room
+                    if (tabWidth <= minTabWidth || visibleCount>6) {//}!b.hasClass("red-ui-tab-link-button-pinned")) {
                         b.hide();
                     }
-                    tabWidth = width - collapsedButtonsRow.width()-10;
+                    tabWidth = Math.max(minTabWidth,width - collapsedButtonsRow.width()-10);
                 } else {
-                    var space = width - 198 - collapsedButtonsRow.width();
+                    if (visibleCount !== availableCount) {
+                        if (visibleCount < 6) {
+                            tabWidth = minTabWidth;
+                        } else {
+                            tabWidth = maxTabWidth;
+                        }
+                    }
+                    var space = width - tabWidth - collapsedButtonsRow.width();
                     if (space > 40) {
                         collapsedButtonsRow.find("a:not(:visible):first").show();
-                        tabWidth = width - collapsedButtonsRow.width()-10;
                     }
+                    tabWidth = width - collapsedButtonsRow.width()-10;
                 }
                 tabs.css({width:tabWidth});
 
@@ -9707,7 +11129,7 @@ RED.tabs = (function() {
             }
         }
 
-        return {
+        var tabAPI =  {
             addTab: function(tab,targetIndex) {
                 if (options.onselect) {
                     var selection = ul.find("li.red-ui-tab.selected");
@@ -9769,11 +11191,93 @@ RED.tabs = (function() {
                         evt.preventDefault();
                         activateTab(tab.id);
                     });
+                    pinnedLink.data("tabId",tab.id)
                     if (tab.pinned) {
                         pinnedLink.addClass("red-ui-tab-link-button-pinned");
                         pinnedTabsCount++;
                     }
                     RED.popover.tooltip($(pinnedLink), tab.name, tab.action);
+                    if (options.onreorder) {
+                        var pinnedLinkIndex;
+                        var pinnedLinks = [];
+                        var startPinnedIndex;
+                        pinnedLink.draggable({
+                            distance: 10,
+                            axis:"x",
+                            containment: ".red-ui-tab-link-buttons",
+                            start: function(event,ui) {
+                                dragActive = true;
+                                $(".red-ui-tab-link-buttons").width($(".red-ui-tab-link-buttons").width());
+                                if (dblClickArmed) { dblClickArmed = false; return false }
+                                collapsedButtonsRow.children().each(function(i) {
+                                    pinnedLinks[i] = {
+                                        el:$(this),
+                                        text: $(this).text(),
+                                        left: $(this).position().left,
+                                        width: $(this).width(),
+                                        menu: $(this).hasClass("red-ui-tab-link-button-menu")
+                                    };
+                                    if ($(this).is(pinnedLink)) {
+                                        pinnedLinkIndex = i;
+                                        startPinnedIndex = i;
+                                    }
+                                });
+                                collapsedButtonsRow.children().each(function(i) {
+                                    if (i!==pinnedLinkIndex) {
+                                        $(this).css({
+                                            position: 'absolute',
+                                            left: pinnedLinks[i].left+"px",
+                                            width: pinnedLinks[i].width+2,
+                                            transition: "left 0.3s"
+                                        });
+                                    }
+                                })
+                                if (!pinnedLink.hasClass('active')) {
+                                    pinnedLink.css({'zIndex':1});
+                                }
+                            },
+                            drag: function(event,ui) {
+                                ui.position.left += pinnedLinks[pinnedLinkIndex].left;
+                                var tabCenter = ui.position.left + pinnedLinks[pinnedLinkIndex].width/2;
+                                for (var i=0;i<pinnedLinks.length;i++) {
+                                    if (i === pinnedLinkIndex || pinnedLinks[i].menu || pinnedLinks[i].el.is(":not(:visible)")) {
+                                        continue;
+                                    }
+                                    if (tabCenter > pinnedLinks[i].left && tabCenter < pinnedLinks[i].left+pinnedLinks[i].width) {
+                                        if (i < pinnedLinkIndex) {
+                                            pinnedLinks[i].left += pinnedLinks[pinnedLinkIndex].width+8;
+                                            pinnedLinks[pinnedLinkIndex].el.detach().insertBefore(pinnedLinks[i].el);
+                                        } else {
+                                            pinnedLinks[i].left -= pinnedLinks[pinnedLinkIndex].width+8;
+                                            pinnedLinks[pinnedLinkIndex].el.detach().insertAfter(pinnedLinks[i].el);
+                                        }
+                                        pinnedLinks[i].el.css({left:pinnedLinks[i].left+"px"});
+
+                                        pinnedLinks.splice(i, 0, pinnedLinks.splice(pinnedLinkIndex, 1)[0]);
+
+                                        pinnedLinkIndex = i;
+                                        break;
+                                    }
+                                }
+                            },
+                            stop: function(event,ui) {
+                                dragActive = false;
+                                collapsedButtonsRow.children().css({position:"relative",left:"",transition:""});
+                                $(".red-ui-tab-link-buttons").width('auto');
+                                pinnedLink.css({zIndex:""});
+                                updateTabWidths();
+                                if (startPinnedIndex !== pinnedLinkIndex) {
+                                    if (collapsibleMenu) {
+                                        collapsibleMenu.remove();
+                                        collapsibleMenu = null;
+                                    }
+                                    var newOrder = $.makeArray(collapsedButtonsRow.children().map(function() { return $(this).data('tabId');}));
+                                    tabAPI.order(newOrder);
+                                    options.onreorder(newOrder);
+                                }
+                            }
+                        });
+                    }
 
                 }
                 link.on("mouseup",onTabClick);
@@ -9803,7 +11307,7 @@ RED.tabs = (function() {
                 if (ul.find("li.red-ui-tab").length == 1) {
                     activateTab(link);
                 }
-                if (options.onreorder) {
+                if (options.onreorder && !options.collapsible) {
                     var originalTabOrder;
                     var tabDragIndex;
                     var tabElements = [];
@@ -9890,6 +11394,9 @@ RED.tabs = (function() {
                     collapsibleMenu.remove();
                     collapsibleMenu = null;
                 }
+                if (preferredOrder) {
+                    tabAPI.order(preferredOrder);
+                }
             },
             removeTab: removeTab,
             activateTab: activateTab,
@@ -9911,10 +11418,8 @@ RED.tabs = (function() {
             },
             selection: getSelection,
             order: function(order) {
+                preferredOrder = order;
                 var existingTabOrder = $.makeArray(ul.children().map(function() { return $(this).data('tabId');}));
-                if (existingTabOrder.length !== order.length) {
-                    return
-                }
                 var i;
                 var match = true;
                 for (i=0;i<order.length;i++) {
@@ -9930,12 +11435,41 @@ RED.tabs = (function() {
                 var existingTabs = ul.children().detach().each(function() {
                     existingTabMap[$(this).data("tabId")] = $(this);
                 });
+                var pinnedButtons = {};
+                if (options.collapsible) {
+                    collapsedButtonsRow.children().detach().each(function() {
+                        var id = $(this).data("tabId");
+                        if (!id) {
+                            id = "__menu__"
+                        }
+                        pinnedButtons[id] = $(this);
+                    });
+                }
                 for (i=0;i<order.length;i++) {
-                    existingTabMap[order[i]].appendTo(ul);
+                    if (existingTabMap[order[i]]) {
+                        existingTabMap[order[i]].appendTo(ul);
+                        if (options.collapsible) {
+                            pinnedButtons[order[i]].appendTo(collapsedButtonsRow);
+                        }
+                        delete existingTabMap[order[i]];
+                    }
+                }
+                // Add any tabs that aren't known in the order
+                for (i in existingTabMap) {
+                    if (existingTabMap.hasOwnProperty(i)) {
+                        existingTabMap[i].appendTo(ul);
+                        if (options.collapsible) {
+                            pinnedButtons[i].appendTo(collapsedButtonsRow);
+                        }
+                    }
+                }
+                if (options.collapsible) {
+                    pinnedButtons["__menu__"].appendTo(collapsedButtonsRow);
+                    updateTabWidths();
                 }
             }
-
         }
+        return tabAPI;
     }
 
     return {
@@ -10177,7 +11711,8 @@ RED.stack = (function() {
         },
         str: {value:"str",label:"string",icon:"red/images/typedInput/az.svg"},
         num: {value:"num",label:"number",icon:"red/images/typedInput/09.svg",validate:/^[+-]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?$/},
-        bool: {value:"bool",label:"bool",icon:"red/images/typedInput/bool.svg",options:["true","false"]},
+        //bool: {value:"bool",label:"boolean",icon:"red/images/typedInput/bool.svg",options:["true","false"]}, //Removed by Homegear GmbH
+        bool: {value:"bool",label:"bool",icon:"red/images/typedInput/bool.svg",options:["true","false"]}, //Added by Homegear GmbH
         json: {
             value:"json",
             label:"JSON",
@@ -10360,8 +11895,90 @@ RED.stack = (function() {
             value: "bin",
             label: "buffer",
             icon: "red/images/typedInput/bin.svg"
-         }
+        },
         //}}}
+        cred:{
+            value:"cred",
+            label:"credential",
+            icon:"fa fa-lock",
+            inputType: "password",
+            valueLabel: function(container,value) {
+                var that = this;
+                container.css("pointer-events","none");
+                container.css("flex-grow",0);
+                this.elementDiv.hide();
+                var buttons = $('<div>').css({
+                    position: "absolute",
+                    right:"6px",
+                    top: "6px",
+                    "pointer-events":"all"
+                }).appendTo(container);
+                var eyeButton = $('<button type="button" class="red-ui-button red-ui-button-small"></button>').css({
+                    width:"20px"
+                }).appendTo(buttons).on("click", function(evt) {
+                    evt.preventDefault();
+                    var cursorPosition = that.input[0].selectionStart;
+                    var currentType = that.input.attr("type");
+                    if (currentType === "text") {
+                        that.input.attr("type","password");
+                        eyeCon.removeClass("fa-eye-slash").addClass("fa-eye");
+                        setTimeout(function() {
+                            that.input.focus();
+                            that.input[0].setSelectionRange(cursorPosition, cursorPosition);
+                        },50);
+                    } else {
+                        that.input.attr("type","text");
+                        eyeCon.removeClass("fa-eye").addClass("fa-eye-slash");
+                        setTimeout(function() {
+                            that.input.focus();
+                            that.input[0].setSelectionRange(cursorPosition, cursorPosition);
+                        },50);
+                    }
+                }).hide();
+                var eyeCon = $('<i class="fa fa-eye"></i>').css("margin-left","-2px").appendTo(eyeButton);
+
+                if (value === "__PWRD__") {
+                    var innerContainer = $('<div><i class="fa fa-asterisk"></i><i class="fa fa-asterisk"></i><i class="fa fa-asterisk"></i><i class="fa fa-asterisk"></i><i class="fa fa-asterisk"></i></div>').css({
+                        padding:"6px 6px",
+                        borderRadius:"4px"
+                    }).addClass("red-ui-typedInput-value-label-inactive").appendTo(container);
+                    var editButton = $('<button type="button" class="red-ui-button red-ui-button-small"><i class="fa fa-pencil"></i></button>').appendTo(buttons).on("click", function(evt) {
+                        evt.preventDefault();
+                        innerContainer.hide();
+                        container.css("background","none");
+                        container.css("pointer-events","none");
+                        that.input.val("");
+                        that.element.val("");
+                        that.elementDiv.show();
+                        editButton.hide();
+                        cancelButton.show();
+                        eyeButton.show();
+                        setTimeout(function() {
+                            that.input.focus();
+                        },50);
+                    });
+                    var cancelButton = $('<button type="button" class="red-ui-button red-ui-button-small"><i class="fa fa-times"></i></button>').css("margin-left","3px").appendTo(buttons).on("click", function(evt) {
+                        evt.preventDefault();
+                        innerContainer.show();
+                        container.css("background","");
+                        that.input.val("__PWRD__");
+                        that.element.val("__PWRD__");
+                        that.elementDiv.hide();
+                        editButton.show();
+                        cancelButton.hide();
+                        eyeButton.hide();
+                        that.input.attr("type","password");
+                        eyeCon.removeClass("fa-eye-slash").addClass("fa-eye");
+
+                    }).hide();
+                } else {
+                    container.css("background","none");
+                    container.css("pointer-events","none");
+                    this.elementDiv.show();
+                    eyeButton.show();
+                }
+            }
+        }
     };
     var nlsd = false;
 
@@ -10403,7 +12020,7 @@ RED.stack = (function() {
                 this.input.css('width','100%');
                 this.uiSelect.width(m[1]);
                 this.uiWidth = null;
-            } else {
+            } else if (this.uiWidth !== 0){
                 this.uiSelect.width(this.uiWidth);
             }
             ["Right","Left"].forEach(function(d) {
@@ -10417,11 +12034,17 @@ RED.stack = (function() {
                 that.input.attr(d,m);
             });
 
+            this.defaultInputType = this.input.attr('type');
+
             this.uiSelect.addClass("red-ui-typedInput-container");
 
             this.element.attr('type','hidden');
 
-            this.options.types = this.options.types||Object.keys(allOptions);
+            if (!this.options.types && this.options.type) {
+                this.options.types = [this.options.type]
+            } else {
+                this.options.types = this.options.types||Object.keys(allOptions);
+            }
 
             this.selectTrigger = $('<button class="red-ui-typedInput-type-select" tabindex="0"></button>').prependTo(this.uiSelect);
             $('<i class="red-ui-typedInput-icon fa fa-caret-down"></i>').toggle(this.options.types.length > 1).appendTo(this.selectTrigger);
@@ -10565,6 +12188,9 @@ RED.stack = (function() {
                 var op = $('<a href="#"></a>').attr("value",opt.value).appendTo(menu);
                 if (opt.label) {
                     op.text(opt.label);
+                }
+                if (opt.title) {
+                    op.prop('title', opt.title)
                 }
                 if (opt.icon) {
                     if (opt.icon.indexOf("<") === 0) {
@@ -10832,7 +12458,7 @@ RED.stack = (function() {
                             $('<img>',{src:mapDeprecatedIcon(opt.icon),style:"margin-right: 4px;height: 18px;"}).prependTo(this.selectLabel);
                         }
                         else {
-                            $('<i>',{class:"red-ui-typedInput-icon "+opt.icon}).prependTo(this.selectLabel);
+                            $('<i>',{class:"red-ui-typedInput-icon "+opt.icon,style:"min-width: 13px; margin-right: 4px;"}).prependTo(this.selectLabel);
                         }
                     }
                     if (opt.hasValue === false || (opt.showLabel !== false && !opt.icon)) {
@@ -10975,16 +12601,24 @@ RED.stack = (function() {
                         if (this.optionSelectTrigger) {
                             this.optionSelectTrigger.hide();
                         }
+                        if (opt.inputType) {
+                            this.input.attr('type',opt.inputType)
+                        } else {
+                            this.input.attr('type',this.defaultInputType)
+                        }
                         if (opt.hasValue === false) {
                             this.oldValue = this.input.val();
                             this.input.val("");
                             this.elementDiv.hide();
                             this.valueLabelContainer.hide();
                         } else if (opt.valueLabel) {
+                            // Reset any CSS the custom label may have set
+                            this.valueLabelContainer.css("pointer-events","");
+                            this.valueLabelContainer.css("flex-grow",1);
                             this.valueLabelContainer.show();
                             this.valueLabelContainer.empty();
-                            opt.valueLabel.call(this,this.valueLabelContainer,this.input.val());
                             this.elementDiv.hide();
+                            opt.valueLabel.call(this,this.valueLabelContainer,this.input.val());
                         } else {
                             if (this.oldValue !== undefined) {
                                 this.input.val(this.oldValue);
@@ -11022,7 +12656,7 @@ RED.stack = (function() {
                                         panel.show({
                                             target:that.optionExpandButton,
                                             onclose:content.onclose,
-                                            align: "right"
+                                            align: "left"
                                         });
                                     }
                                 })
@@ -11063,6 +12697,18 @@ RED.stack = (function() {
         },
         hide: function() {
             this.uiSelect.hide();
+        },
+        disable: function(val) {
+            if(val === true) {
+                this.uiSelect.attr("disabled", "disabled");
+            } else if (val === false) {
+                this.uiSelect.attr("disabled", null); //remove attr
+            } else {
+                this.uiSelect.attr("disabled", val); //user value
+            }
+        },
+        disabled: function() {
+            return this.uiSelect.attr("disabled");
         }
     });
 })(jQuery);
@@ -11105,8 +12751,8 @@ RED.stack = (function() {
                 invertState = this.options.invertState;
             }
             var baseClass = this.options.baseClass || "red-ui-button";
-            var enabledIcon = this.options.enabledIcon || "fa-check-square-o";
-            var disabledIcon = this.options.disabledIcon || "fa-square-o";
+            var enabledIcon = this.options.hasOwnProperty('enabledIcon')?this.options.enabledIcon : "fa-check-square-o";
+            var disabledIcon = this.options.hasOwnProperty('disabledIcon')?this.options.disabledIcon : "fa-square-o";
             var enabledLabel = this.options.hasOwnProperty('enabledLabel') ? this.options.enabledLabel : RED._("editor:workspace.enabled");
             var disabledLabel = this.options.hasOwnProperty('disabledLabel') ? this.options.disabledLabel : RED._("editor:workspace.disabled");
 
@@ -11114,25 +12760,41 @@ RED.stack = (function() {
             this.element.on("focus", function() {
                 that.button.focus();
             });
-            this.button = $('<button type="button" class="red-ui-toggleButton '+baseClass+' toggle single"><i class="fa"></i> <span></span></button>');
+            this.button = $('<button type="button" class="red-ui-toggleButton '+baseClass+' toggle single"></button>');
+            if (enabledLabel || disabledLabel) {
+                this.buttonLabel = $("<span>").appendTo(this.button);
+            }
+
             if (this.options.class) {
                 this.button.addClass(this.options.class)
             }
             this.element.after(this.button);
-            this.buttonIcon = this.button.find("i");
-            this.buttonLabel = this.button.find("span");
+
+            if (enabledIcon && disabledIcon) {
+                this.buttonIcon = $('<i class="fa"></i>').prependTo(this.button);
+            }
 
             // Quick hack to find the maximum width of the button
             this.button.addClass("selected");
-            this.buttonIcon.addClass(enabledIcon);
-            this.buttonLabel.text(enabledLabel);
+            if (this.buttonIcon) {
+                this.buttonIcon.addClass(enabledIcon);
+            }
+            if (this.buttonLabel) {
+                this.buttonLabel.text(enabledLabel);
+            }
             var width = this.button.width();
             this.button.removeClass("selected");
-            this.buttonIcon.removeClass(enabledIcon);
-            that.buttonIcon.addClass(disabledIcon);
-            that.buttonLabel.text(disabledLabel);
+            if (this.buttonIcon) {
+                this.buttonIcon.removeClass(enabledIcon);
+                that.buttonIcon.addClass(disabledIcon);
+            }
+            if (this.buttonLabel) {
+                that.buttonLabel.text(disabledLabel);
+            }
             width = Math.max(width,this.button.width());
-            this.buttonIcon.removeClass(disabledIcon);
+            if (this.buttonIcon) {
+                this.buttonIcon.removeClass(disabledIcon);
+            }
 
             // Fix the width of the button so it doesn't jump around when toggled
             if (width > 0) {
@@ -11141,7 +12803,7 @@ RED.stack = (function() {
 
             this.button.on("click",function(e) {
                 e.stopPropagation();
-                if (that.buttonIcon.hasClass(disabledIcon)) {
+                if (!that.state) {
                     that.element.prop("checked",!invertState);
                 } else {
                     that.element.prop("checked",invertState);
@@ -11152,20 +12814,239 @@ RED.stack = (function() {
             this.element.on("change", function(e) {
                 if ($(this).prop("checked") !== invertState) {
                     that.button.addClass("selected");
-                    that.buttonIcon.addClass(enabledIcon);
-                    that.buttonIcon.removeClass(disabledIcon);
-                    that.buttonLabel.text(enabledLabel);
+                    that.state = true;
+                    if (that.buttonIcon) {
+                        that.buttonIcon.addClass(enabledIcon);
+                        that.buttonIcon.removeClass(disabledIcon);
+                    }
+                    if (that.buttonLabel) {
+                        that.buttonLabel.text(enabledLabel);
+                    }
                 } else {
                     that.button.removeClass("selected");
-                    that.buttonIcon.addClass(disabledIcon);
-                    that.buttonIcon.removeClass(enabledIcon);
-                    that.buttonLabel.text(disabledLabel);
+                    that.state = false;
+                    if (that.buttonIcon) {
+                        that.buttonIcon.addClass(disabledIcon);
+                        that.buttonIcon.removeClass(enabledIcon);
+                    }
+                    if (that.buttonLabel) {
+                        that.buttonLabel.text(disabledLabel);
+                    }
                 }
             })
             this.element.trigger("change");
         }
     });
 })(jQuery);
+;RED.colorPicker = (function() {
+
+    function create(options) {
+        var color = options.value;
+        var id = options.id;
+        var colorPalette = options.palette || [];
+        var width = options.cellWidth || 30;
+        var height = options.cellHeight || 30;
+        var margin = options.cellMargin || 2;
+        var perRow = options.cellPerRow || 6;
+
+        var container = $("<div>",{style:"display:inline-block"});
+        var colorHiddenInput = $("<input/>", { id: id, type: "hidden", value: color }).appendTo(container);
+        var opacityHiddenInput = $("<input/>", { id: id+"-opacity", type: "hidden", value: options.hasOwnProperty('opacity')?options.opacity:"1" }).appendTo(container);
+
+        var colorButton = $('<button type="button" class="red-ui-button red-ui-editor-node-appearance-button">').appendTo(container);
+        $('<i class="fa fa-caret-down"></i>').appendTo(colorButton);
+
+        var colorDispContainer = $('<div>',{class:"red-ui-search-result-node"}).appendTo(colorButton);
+        $('<div>',{class:"red-ui-color-picker-cell-none"}).appendTo(colorDispContainer);
+        var colorDisp = $('<div>',{class:"red-ui-color-picker-swatch"}).appendTo(colorDispContainer);
+
+
+        var refreshDisplay = function(color) {
+            if (color === "none") {
+                colorDisp.addClass('red-ui-color-picker-cell-none').css({
+                    "background-color": "",
+                    opacity: 1
+                });
+                colorDispContainer.css({
+                    "border-color":""
+                })
+            } else {
+                var opacity = parseFloat(opacityHiddenInput.val())
+                colorDisp.removeClass('red-ui-color-picker-cell-none').css({
+                    "background-color": color,
+                    "opacity": opacity
+                });
+                var border = RED.utils.getDarkerColor(color);
+                if (border[0] === '#') {
+                    border += Math.round(255*Math.floor(opacity*100)/100).toString(16);
+                } else {
+                    border = "";
+                }
+
+                colorDispContainer.css({
+                    "border-color": border
+                })
+            }
+            if (options.hasOwnProperty('opacity')) {
+                $(".red-ui-color-picker-opacity-slider-overlay").css({
+                    "background-image": "linear-gradient(90deg, transparent 0%, "+color+" 100%)"
+                })
+            }
+
+
+        }
+
+        colorButton.on("click", function (e) {
+            var numColors = colorPalette.length;
+
+            var picker = $("<div/>", {
+                class: "red-ui-color-picker"
+            }).css({
+                width: ((width+margin+margin)*perRow)+"px",
+                height: Math.ceil(numColors/perRow)*(height+margin+margin)+"+px"
+            });
+            var count = 0;
+            var row = null;
+            row = $("<div/>").appendTo(picker);
+
+            var colorInput = $('<input>',{
+                type:"text",
+                value:colorHiddenInput.val()
+            }).appendTo(row);
+            var focusTarget = colorInput;
+            colorInput.on("change", function (e) {
+                var color = colorInput.val();
+                colorHiddenInput.val(color).trigger('change');
+                refreshDisplay(color);
+            });
+            // if (options.hasOwnProperty('opacity')) {
+            //     var sliderContainer = $("<div>",{class:"red-ui-color-picker-opacity-slider"
+            // }
+
+            if (options.none) {
+                row = $("<div/>").appendTo(picker);
+                var button = $("<button/>", {
+                    class:"red-ui-color-picker-cell red-ui-color-picker-cell-none"
+                }).css({
+                    width: width+"px",
+                    height: height+"px",
+                    margin: margin+"px"
+                }).appendTo(row);
+                button.on("click",  function (e) {
+                    e.preventDefault();
+                    colorInput.val("none");
+                    colorInput.trigger("change");
+                });
+            }
+
+
+            colorPalette.forEach(function (col) {
+                if ((count % perRow) == 0) {
+                    row = $("<div/>").appendTo(picker);
+                }
+                var button = $("<button/>", {
+                    class:"red-ui-color-picker-cell"
+                }).css({
+                    width: width+"px",
+                    height: height+"px",
+                    margin: margin+"px",
+                    backgroundColor: col,
+                    "border-color": RED.utils.getDarkerColor(col)
+                }).appendTo(row);
+                button.on("click",  function (e) {
+                    e.preventDefault();
+                    // colorPanel.hide();
+                    colorInput.val(col);
+                    colorInput.trigger("change");
+                });
+                count++;
+            });
+            if (options.none || options.hasOwnProperty('opacity')) {
+                row = $("<div/>").appendTo(picker);
+                // if (options.none) {
+                //     var button = $("<button/>", {
+                //         class:"red-ui-color-picker-cell red-ui-color-picker-cell-none"
+                //     }).css({
+                //         width: width+"px",
+                //         height: height+"px",
+                //         margin: margin+"px"
+                //     }).appendTo(row);
+                //     button.on("click",  function (e) {
+                //         e.preventDefault();
+                //         colorPanel.hide();
+                //         selector.val("none");
+                //         selector.trigger("change");
+                //     });
+                // }
+                if (options.hasOwnProperty('opacity')) {
+                    var sliderContainer = $("<div>",{class:"red-ui-color-picker-opacity-slider"}).appendTo(row);
+                    sliderContainer.on("mousedown", function(evt) {
+                        if (evt.target === sliderHandle[0]) {
+                            return;
+                        }
+                        var v = evt.offsetX/sliderContainer.width();
+                        sliderHandle.css({
+                            left: ( v*(sliderContainer.width() - sliderHandle.outerWidth()))+"px"
+                        });
+                        v = Math.floor(100*v)
+                        opacityHiddenInput.val(v/100)
+                        opacityLabel.text(v+"%");
+                        refreshDisplay(colorHiddenInput.val());
+                    })
+                     $("<div>",{class:"red-ui-color-picker-opacity-slider-overlay"}).appendTo(sliderContainer);
+                    var sliderHandle = $("<div>",{class:"red-ui-color-picker-opacity-slider-handle red-ui-button red-ui-button-small"}).appendTo(sliderContainer).draggable({
+                        containment: "parent",
+                        axis: "x",
+                        drag: function( event, ui ) {
+                            var v = Math.max(0,ui.position.left/($(this).parent().width()-$(this).outerWidth()));
+                            // Odd bug that if it is loaded with a non-0 value, the first time
+                            // it is dragged it ranges -1 to 99. But every other time, its 0 to 100.
+                            // The Math.max above makes the -1 disappear. The follow hack ensures
+                            // it always maxes out at a 100, at the cost of not allowing 99% exactly.
+                            v = Math.floor(100*v)
+                            if ( v === 99 ) {
+                                v = 100;
+                            }
+                            // console.log("uip",ui.position.left);
+                            opacityHiddenInput.val(v/100)
+                            opacityLabel.text(v+"%");
+                            refreshDisplay(colorHiddenInput.val());
+                        }
+                    });
+                    var opacityLabel = $('<small></small>').appendTo(row);
+                    setTimeout(function() {
+                        sliderHandle.css({
+                            left: (parseFloat(opacityHiddenInput.val())*(sliderContainer.width() - sliderHandle.outerWidth()))+"px"
+                        })
+                        opacityLabel.text(Math.floor(opacityHiddenInput.val()*100)+"%");
+                    },50);
+                }
+            }
+
+            var colorPanel = RED.popover.panel(picker);
+            setTimeout(function() {
+                refreshDisplay(colorHiddenInput.val())
+            },50);
+            colorPanel.show({
+                target: colorButton,
+                onclose: function() {
+                    colorButton.focus();
+                }
+            })
+            if (focusTarget) {
+                focusTarget.focus();
+            }
+        });
+        setTimeout(function() {
+            refreshDisplay(colorHiddenInput.val())
+        },50);
+        return container;
+    }
+
+    return {
+        create: create
+    }
+})();
 ;RED.actions = (function() {
     var actions = {
 
@@ -11189,7 +13070,18 @@ RED.stack = (function() {
         var result = [];
         Object.keys(actions).forEach(function(action) {
             var shortcut = RED.keyboard.getShortcut(action);
-            result.push({id:action,scope:shortcut?shortcut.scope:undefined,key:shortcut?shortcut.key:undefined,user:shortcut?shortcut.user:undefined})
+            var isUser = false;
+            if (shortcut) {
+                isUser = shortcut.user;
+            } else {
+                isUser = !!RED.keyboard.getUserShortcut(action);
+            }
+            result.push({
+                id:action,
+                scope:shortcut?shortcut.scope:undefined,
+                key:shortcut?shortcut.key:undefined,
+                user:isUser
+            })
         })
         return result;
     }
@@ -11208,7 +13100,7 @@ RED.stack = (function() {
  * - Removed deploy options
  *
  * Todo after update:
- **/
+ */
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -11272,7 +13164,8 @@ RED.deploy = (function() {
                 '<span class="red-ui-deploy-button-spinner hide">'+
                  '<img src="red/images/spin.svg"/>'+
                 '</span>'+
-              '</a>').prependTo(".red-ui-header-toolbar");
+              '</a>').prependTo(".red-ui-header-toolbar"); //Changed by Homegear GmbH
+              //Commented by Homegear GmbH
               /*'<a id="red-ui-header-button-deploy-options" class="red-ui-deploy-button" href="#"><i class="fa fa-caret-down"></i></a>'+
               '</span></li>').prependTo(".red-ui-header-toolbar");
               RED.menu.init({id:"red-ui-header-button-deploy-options",
@@ -11320,7 +13213,7 @@ RED.deploy = (function() {
 
 
 
-        RED.events.on('nodes:change',function(state) {
+        RED.events.on('workspace:dirty',function(state) {
             if (state.dirty) {
                 window.onbeforeunload = function() {
                     return RED._("deploy.confirm.undeployedChanges");
@@ -13139,7 +15032,7 @@ RED.deploy = (function() {
         // Restore the original flow so subsequent merge resolutions can properly
         // identify new-vs-old
         RED.nodes.originalFlow(originalFlow);
-        imported[0].forEach(function(n) {
+        imported.nodes.forEach(function(n) {
             if (nodeChangedStates[n.id] || localChangedStates[n.id]) {
                 n.changed = true;
             }
@@ -13969,6 +15862,8 @@ RED.keyboard = (function() {
 
     var isMac = /Mac/i.test(window.navigator.platform);
 
+    var handlersActive = true;
+
     var handlers = {};
     var partialState;
 
@@ -14019,6 +15914,11 @@ RED.keyboard = (function() {
                 RED.settings.set('editor',currentEditorSettings);
             }
         }
+    }
+    function getUserKey(action) {
+        var currentEditorSettings = RED.settings.get('editor') || {};
+        var userKeymap = currentEditorSettings.keymap || {};
+        return userKeymap[action];
     }
     function init() {
         // Migrate from pre-0.18
@@ -14177,6 +16077,9 @@ RED.keyboard = (function() {
         }
     }
     d3.select(window).on("keydown",function() {
+        if (!handlersActive) {
+            return;
+        }
         if (metaKeyCodes[d3.event.keyCode]) {
             return;
         }
@@ -14202,6 +16105,19 @@ RED.keyboard = (function() {
         var i=0;
         if (typeof key === 'string') {
             if (typeof cbdown === 'string') {
+                if (!ondown && !defaultKeyMap.hasOwnProperty(cbdown)) {
+                    defaultKeyMap[cbdown] = {
+                        scope:scope,
+                        key:key,
+                        user:false
+                    }
+                }
+                if (!ondown) {
+                    var userAction = getUserKey(cbdown);
+                    if (userAction) {
+                        return;
+                    }
+                }
                 actionToKeyMap[cbdown] = {scope:scope,key:key};
                 if (typeof ondown === 'boolean') {
                     actionToKeyMap[cbdown].user = ondown;
@@ -14364,11 +16280,9 @@ RED.keyboard = (function() {
             });
             revertButton.on("click", function(e) {
                 e.stopPropagation();
-                RED.keyboard.revertToDefault(object.id);
                 container.empty();
                 container.removeClass('keyboard-shortcut-entry-expanded');
-                var shortcut = RED.keyboard.getShortcut(object.id);
-                var userKeymap = RED.settings.get('keymap') || {};
+                // var userKeymap = RED.settings.get('keymap') || {};
 
                 var currentEditorSettings = RED.settings.get('editor') || {};
                 var userKeymap = currentEditorSettings.keymap || {};
@@ -14376,6 +16290,9 @@ RED.keyboard = (function() {
                 currentEditorSettings.keymap = userKeymap;
                 RED.settings.set('editor',currentEditorSettings);
 
+                RED.keyboard.revertToDefault(object.id);
+
+                var shortcut = RED.keyboard.getShortcut(object.id);
                 var obj = {
                     id:object.id,
                     scope:shortcut?shortcut.scope:undefined,
@@ -14522,6 +16439,13 @@ RED.keyboard = (function() {
         return pane;
     }
 
+    function enable() {
+        handlersActive = true;
+    }
+    function disable() {
+        handlersActive = false;
+    }
+
     return {
         init: init,
         add: addHandler,
@@ -14529,9 +16453,12 @@ RED.keyboard = (function() {
         getShortcut: function(actionName) {
             return actionToKeyMap[actionName];
         },
+        getUserShortcut: getUserKey,
         revertToDefault: revertToDefault,
         formatKey: formatKey,
-        validateKey: validateKey
+        validateKey: validateKey,
+        disable: disable,
+        enable: enable
     }
 
 })();
@@ -14542,7 +16469,7 @@ RED.keyboard = (function() {
  * - Send "enableEvents" to Homegear on tab change to only enable events for that tab.
  *
  * Todo after update:
- **/
+ */
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -14674,10 +16601,6 @@ RED.workspaces = (function() {
                             RED.history.push(historyEvent);
                             RED.nodes.dirty(true);
                             RED.sidebar.config.refresh();
-                            var selection = RED.view.selection();
-                            if (!selection.nodes && !selection.links) {
-                                RED.sidebar.info.refresh(workspace);
-                            }
                             if (changes.hasOwnProperty('disabled')) {
                                 RED.nodes.eachNode(function(n) {
                                     if (n.z === workspace.id) {
@@ -14686,6 +16609,7 @@ RED.workspaces = (function() {
                                 });
                                 RED.view.redraw();
                             }
+                            RED.events.emit("flows:change",workspace);
                         }
                         RED.tray.close();
                     }
@@ -14765,7 +16689,10 @@ RED.workspaces = (function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
                     RED.view.state(RED.state.DEFAULT);
                 }
-                RED.sidebar.info.refresh(workspace);
+                var selection = RED.view.selection();
+                if (!selection.nodes && !selection.links && workspace.id === activeWorkspace) {
+                    RED.sidebar.info.refresh(workspace);
+                }
                 tabflowEditor.destroy();
             }
         }
@@ -14779,7 +16706,7 @@ RED.workspaces = (function() {
         workspace_tabs = RED.tabs.create({
             id: "red-ui-workspace-tabs",
             onchange: function(tab) {
-                RED.comms.homegear().invoke('setNodeVariable', null, tab.id, "enableEvents", true);
+                RED.comms.homegear().invoke('setNodeVariable', null, tab.id, "enableEvents", true); //Added by Homegear GmbH
                 var event = {
                     old: activeWorkspace
                 }
@@ -14918,7 +16845,9 @@ RED.workspaces = (function() {
             var changes = { disabled: workspace.disabled };
             workspace.disabled = disabled;
             $("#red-ui-tab-"+(workspace.id.replace(".","-"))).toggleClass('red-ui-workspace-disabled',!!workspace.disabled);
-            $("#red-ui-workspace").toggleClass("red-ui-workspace-disabled",!!workspace.disabled);
+            if (id === activeWorkspace) {
+                $("#red-ui-workspace").toggleClass("red-ui-workspace-disabled",!!workspace.disabled);
+            }
             var historyEvent = {
                 t: "edit",
                 changes:changes,
@@ -14927,10 +16856,11 @@ RED.workspaces = (function() {
             }
             workspace.changed = true;
             RED.history.push(historyEvent);
+            RED.events.emit("flows:change",workspace);
             RED.nodes.dirty(true);
             RED.sidebar.config.refresh();
             var selection = RED.view.selection();
-            if (!selection.nodes && !selection.links) {
+            if (!selection.nodes && !selection.links && workspace.id === activeWorkspace) {
                 RED.sidebar.info.refresh(workspace);
             }
             if (changes.hasOwnProperty('disabled')) {
@@ -14959,9 +16889,14 @@ RED.workspaces = (function() {
     }
 
     function setWorkspaceOrder(order) {
-        RED.nodes.setWorkspaceOrder(order.filter(function(id) {
+        var newOrder = order.filter(function(id) {
             return RED.nodes.workspace(id) !== undefined;
-        }));
+        })
+        var currentOrder = RED.nodes.getWorkspaceOrder();
+        if (JSON.stringify(newOrder) !== JSON.stringify(currentOrder)) {
+            RED.nodes.setWorkspaceOrder(newOrder);
+            RED.events.emit("flows:reorder",newOrder);
+        }
         workspace_tabs.order(order);
     }
 
@@ -15069,15 +17004,12 @@ RED.statusBar = (function() {
  * Changes:
  * - Added support for multiple inputs.
  * - Changed grid size to 10
- * - Replaced "link " (with space) with "link-"
- * - Added namespace
- * - Removed "getPortLabel()"
- * - Added statusTop and statusBottom
+ * - Added statusTop
  *
  * Todo after update:
- * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
- * - Search for "link " and replace with "link-"
+ * - Search for "inputs", "outputs" and "target" and replace make the necessary changes. Add necessary code for input ports.
  * - Search for "13" in height information and replace with "18"
+ * - Search for "15" in height information and replace with "20"
  **/
 
 /**
@@ -15103,9 +17035,11 @@ RED.statusBar = (function() {
   *           \- <g>.red-ui-workspace-chart-event-layer "eventLayer"
   *                |- <rect>.red-ui-workspace-chart-background
   *                |- <g>.red-ui-workspace-chart-grid "gridLayer"
+  *                |- <g> "groupLayer"
+  *                |- <g> "groupSelectLayer"
   *                |- <g> "linkLayer"
   *                |- <g> "dragGroupLayer"
-  *                \- <g> "nodeLayer"
+  *                |- <g> "nodeLayer"
   */
 
 RED.view = (function() {
@@ -15114,7 +17048,8 @@ RED.view = (function() {
         lineCurveScale = 0.75,
         scaleFactor = 1,
         node_width = 100,
-        node_height = 30;
+        node_height = 30,
+        dblClickInterval = 650;
 
     var touchLongPressTimeout = 1000,
         startTouchDistance = 0,
@@ -15124,40 +17059,47 @@ RED.view = (function() {
 
     var workspaceScrollPositions = {};
 
-    var gridSize = 10;
+    var gridSize = 10; //Modified by Homegear GmbH
     var snapGrid = false;
 
     var activeSpliceLink;
     var spliceActive = false;
     var spliceTimer;
+    var groupHoverTimer;
 
     var activeSubflow = null;
     var activeNodes = [];
     var activeLinks = [];
     var activeFlowLinks = [];
     var activeLinkNodes = {};
+    var activeGroup = null;
+    var activeHoverGroup = null;
+    var activeGroups = [];
+    var dirtyGroups = {};
 
-    var selected_link = null,
-        mousedown_link = null,
-        mousedown_node = null,
-        mousedown_port_type = null,
-        mousedown_port_index = 0,
-        mouseup_node = null,
-        mouse_offset = [0,0],
-        mouse_position = null,
-        mouse_mode = 0,
-        moving_set = [],
-        lasso = null,
-        ghostNode = null,
-        showStatus = false,
-        lastClickNode = null,
-        dblClickPrimed = null,
-        clickTime = 0,
-        clickElapsed = 0,
-        scroll_position = [],
-        quickAddActive = false,
-        quickAddLink = null,
-        showAllLinkPorts = -1;
+    var selected_link = null;
+    var mousedown_link = null;
+    var mousedown_node = null;
+    var mousedown_group = null;
+    var mousedown_port_type = null;
+    var mousedown_port_index = 0;
+    var mouseup_node = null;
+    var mouse_offset = [0,0];
+    var mouse_position = null;
+    var mouse_mode = 0;
+    var mousedown_group_handle = null;
+    var lasso = null;
+    var ghostNode = null;
+    var showStatus = false;
+    var lastClickNode = null;
+    var dblClickPrimed = null;
+    var clickTime = 0;
+    var clickElapsed = 0;
+    var scroll_position = [];
+    var quickAddActive = false;
+    var quickAddLink = null;
+    var showAllLinkPorts = -1;
+    var groupNodeSelectPrimed = false;
 
     var selectNodesOptions;
 
@@ -15170,7 +17112,8 @@ RED.view = (function() {
         "green":  "#5a8",
         "yellow": "#F9DF31",
         "blue":   "#53A3F3",
-        "grey":   "#d3d3d3"
+        "grey":   "#d3d3d3",
+        "gray":   "#d3d3d3"
     }
 
     var PORT_TYPE_INPUT = 1;
@@ -15182,8 +17125,53 @@ RED.view = (function() {
     var gridLayer;
     var linkLayer;
     var dragGroupLayer;
+    var groupSelectLayer;
     var nodeLayer;
+    var groupLayer;
     var drag_lines;
+
+    var movingSet = (function() {
+        var setIds = new Set();
+        var set = [];
+        var api = {
+            add: function(node) {
+                if (Array.isArray(node)) {
+                    for (var i=0;i<node.length;i++) {
+                        api.add(node[i]);
+                    }
+                } else {
+                    if (!setIds.has(node.id)) {
+                        set.push({n:node});
+                        setIds.add(node.id);
+                    }
+                }
+            },
+            remove: function(node, index) {
+                if (setIds.has(node.id)) {
+                    setIds.delete(node.id);
+                    if (index !== undefined && set[index].n === node) {
+                        set.splice(index,1);
+                    } else {
+                        for (var i=0;i<set.length;i++) {
+                            if (set[i].n === node) {
+                                set.splice(i,1)
+                                break;
+                            }
+                        }
+                    }
+                }
+            },
+            clear: function() {
+                setIds.clear();
+                set = [];
+            },
+            length: function() { return set.length},
+            get: function(i) { return set[i] },
+            forEach: function(func) { set.forEach(func) },
+            nodes: function() { return set.map(function(n) { return n.n })}
+        }
+        return api;
+    })();
 
     function init() {
 
@@ -15195,6 +17183,7 @@ RED.view = (function() {
             .attr("height", space_height)
             .attr("pointer-events", "all")
             .style("cursor","crosshair")
+            .style("touch-action","none")
             .on("mousedown", function() {
                 focusView();
             })
@@ -15221,6 +17210,7 @@ RED.view = (function() {
                 }
             })
             .on("touchend", function() {
+                d3.event.preventDefault();
                 clearTimeout(touchStartTime);
                 touchStartTime = null;
                 if  (RED.touch.radialMenu.active()) {
@@ -15228,8 +17218,13 @@ RED.view = (function() {
                 }
                 canvasMouseUp.call(this);
             })
-            .on("touchcancel", canvasMouseUp)
+            .on("touchcancel", function() {
+                if (RED.view.DEBUG) { console.warn("eventLayer.touchcancel", mouse_mode); }
+                d3.event.preventDefault();
+                canvasMouseUp.call(this);
+            })
             .on("touchstart", function() {
+                if (RED.view.DEBUG) { console.warn("eventLayer.touchstart", mouse_mode); }
                 var touch0;
                 if (d3.event.touches.length>1) {
                     clearTimeout(touchStartTime);
@@ -15273,12 +17268,14 @@ RED.view = (function() {
                         //    .attr("class","nr-ui-view-lasso");
                     },touchLongPressTimeout);
                 }
+                d3.event.preventDefault();
             })
             .on("touchmove", function(){
                     if  (RED.touch.radialMenu.active()) {
                         d3.event.preventDefault();
                         return;
                     }
+                    if (RED.view.DEBUG) { console.warn("eventLayer.touchmove", mouse_mode, mousedown_node); }
                     var touch0;
                     if (d3.event.touches.length<2) {
                         if (touchStartTime) {
@@ -15289,6 +17286,12 @@ RED.view = (function() {
                             if (d > 64) {
                                 clearTimeout(touchStartTime);
                                 touchStartTime = null;
+                                if (!mousedown_node && !mousedown_group) {
+                                    mouse_mode = RED.state.PANNING;
+                                    mouse_position = [touch0.pageX,touch0.pageY]
+                                    scroll_position = [chart.scrollLeft(),chart.scrollTop()];
+                                }
+
                             }
                         } else if (lasso) {
                             d3.event.preventDefault();
@@ -15324,6 +17327,7 @@ RED.view = (function() {
                             redraw();
                         }
                     }
+                    d3.event.preventDefault();
             });
 
         // Workspace Background
@@ -15335,9 +17339,12 @@ RED.view = (function() {
         gridLayer = eventLayer.append("g").attr("class","red-ui-workspace-chart-grid");
         updateGrid();
 
+        groupLayer = eventLayer.append("g");
+        groupSelectLayer = eventLayer.append("g");
         linkLayer = eventLayer.append("g");
         dragGroupLayer = eventLayer.append("g");
         nodeLayer = eventLayer.append("g");
+
         drag_lines = [];
 
         RED.events.on("workspace:change",function(event) {
@@ -15420,7 +17427,7 @@ RED.view = (function() {
                 var nn = result.node;
 
                 var showLabel = RED.utils.getMessageProperty(RED.settings.get('editor'),"view.view-node-show-label");
-                if (showLabel !== undefined && !/^link-(in|out)$/.test(nn._def.type) && !nn._def.defaults.hasOwnProperty("l")) {
+                if (showLabel !== undefined && !/^link (in|out)$/.test(nn._def.type) && !nn._def.defaults.hasOwnProperty("l")) {
                     nn.l = showLabel;
                 }
 
@@ -15447,13 +17454,13 @@ RED.view = (function() {
                         source:spliceLink.source,
                         sourcePort:spliceLink.sourcePort,
                         target: nn,
-                        targetPort: 0
+                        targetPort: 0 //Added by Homegear GmbH to support multiple inputs
                     };
                     var link2 = {
                         source:nn,
                         sourcePort:0,
                         target: spliceLink.target,
-                        targetPort: spliceLink.targetPort
+                        targetPort: spliceLink.targetPort //Added by Homegear GmbH to support multiple inputs
                     };
                     RED.nodes.addLink(link1);
                     RED.nodes.addLink(link2);
@@ -15461,14 +17468,36 @@ RED.view = (function() {
                     historyEvent.removedLinks = [spliceLink];
                 }
 
-                RED.history.push(historyEvent);
                 RED.nodes.add(nn);
+
+                var group = $(ui.helper).data("group");
+                if (group) {
+                    RED.group.addToGroup(group, nn);
+                    historyEvent = {
+                        t: 'multi',
+                        events: [historyEvent],
+
+                    }
+                    historyEvent.events.push({
+                        t: "addToGroup",
+                        group: group,
+                        nodes: nn
+                    })
+                }
+
+                RED.history.push(historyEvent);
                 RED.editor.validateNode(nn);
                 RED.nodes.dirty(true);
                 // auto select dropped node - so info shows (if visible)
+                exitActiveGroup();
                 clearSelection();
                 nn.selected = true;
-                moving_set.push({n:nn});
+                movingSet.add(nn);
+                if (group) {
+                    selectGroup(group,false);
+                    enterActiveGroup(group);
+                    activeGroup = group;
+                }
                 updateActiveNodes();
                 updateSelection();
                 redraw();
@@ -15487,7 +17516,7 @@ RED.view = (function() {
 
         RED.actions.add("core:copy-selection-to-internal-clipboard",copySelection);
         RED.actions.add("core:cut-selection-to-internal-clipboard",function(){copySelection();deleteSelection();});
-        RED.actions.add("core:paste-from-internal-clipboard",function(){importNodes(clipboard);});
+        RED.actions.add("core:paste-from-internal-clipboard",function(){importNodes(clipboard,{generateIds: true});});
         RED.actions.add("core:delete-selection",deleteSelection);
         RED.actions.add("core:edit-selected-node",editSelection);
         RED.actions.add("core:undo",RED.history.pop);
@@ -15559,8 +17588,8 @@ RED.view = (function() {
         for (var i=0;i<nodes.length;i++) {
             var node = nodes[i];
             node.el = dragGroupLayer.append("svg:path").attr("class", "red-ui-flow-drag-line");
-            if ((node.node.type === "link-out" && node.portType === PORT_TYPE_OUTPUT) ||
-                (node.node.type === "link-in" && node.portType === PORT_TYPE_INPUT)) {
+            if ((node.node.type === "link out" && node.portType === PORT_TYPE_OUTPUT) ||
+                (node.node.type === "link in" && node.portType === PORT_TYPE_INPUT)) {
                 node.el.attr("class","red-ui-flow-link-link red-ui-flow-drag-line");
                 node.virtualLink = true;
                 showAllLinkPorts = (node.portType === PORT_TYPE_OUTPUT)?PORT_TYPE_INPUT:PORT_TYPE_OUTPUT;
@@ -15569,7 +17598,7 @@ RED.view = (function() {
         }
         if (showAllLinkPorts !== -1) {
             activeNodes.forEach(function(n) {
-                if (n.type === "link-in" || n.type === "link-out") {
+                if (n.type === "link in" || n.type === "link out") {
                     n.dirty = true;
                 }
             })
@@ -15578,7 +17607,7 @@ RED.view = (function() {
     function hideDragLines() {
         if (showAllLinkPorts !== -1) {
             activeNodes.forEach(function(n) {
-                if (n.type === "link-in" || n.type === "link-out") {
+                if (n.type === "link in" || n.type === "link out") {
                     n.dirty = true;
                 }
             })
@@ -15601,6 +17630,53 @@ RED.view = (function() {
             source:{z:activeWorkspace},
             target:{z:activeWorkspace}
         });
+
+        activeGroups = RED.nodes.groups(activeWorkspace)||[];
+        activeGroups.forEach(function(g) {
+            if (g.g) {
+                g._root = g.g;
+                g._depth = 1;
+            } else {
+                g._root = g.id;
+                g._depth = 0;
+            }
+        });
+        var changed = false;
+        do {
+            changed = false;
+            activeGroups.forEach(function(g) {
+                if (g.g) {
+                    var parentGroup = RED.nodes.group(g.g);
+                    if (parentGroup) {
+                        var parentDepth = parentGroup._depth;
+                        if (g._depth !== parentDepth + 1) {
+                            g._depth = parentDepth + 1;
+                            changed = true;
+                        }
+                        if (g._root !== parentGroup._root) {
+                            g._root = parentGroup._root;
+                            changed = true;
+                        }
+                    }
+                }
+            });
+        } while (changed)
+        activeGroups.sort(function(a,b) {
+            if (a._root === b._root) {
+                return a._depth - b._depth;
+            } else {
+                return a._root.localeCompare(b._root);
+            }
+        });
+
+        var group = groupLayer.selectAll(".red-ui-flow-group").data(activeGroups,function(d) { return d.id });
+        group.sort(function(a,b) {
+            if (a._root === b._root) {
+                return a._depth - b._depth;
+            } else {
+                return a._root.localeCompare(b._root);
+            }
+        })
     }
 
     function generateLinkPath(origX,origY, destX, destY, sc) {
@@ -15698,7 +17774,7 @@ RED.view = (function() {
 
         nn.type = type;
         nn._def = RED.nodes.getType(nn.type);
-        nn.namespace = nn._def.namespace ? nn._def.namespace : nn.type;
+        //nn.namespace = nn._def.namespace ? nn._def.namespace : nn.type; //Added by Homegear GmbH. Uncomment to reenable deprecated namespace.
 
         if (!m) {
             nn.inputs = nn._def.inputs || 0;
@@ -15730,7 +17806,8 @@ RED.view = (function() {
         nn.moved = true;
 
         nn.w = node_width;
-        nn.h = Math.max(Math.max(node_height,(nn.outputs||0) * 20),(nn.inputs||0) * 20);
+        //nn.h = Math.max(node_height,(nn.outputs||0) * 15); //Removed by Homegear GmbH
+        nn.h = Math.max(Math.max(node_height,(nn.outputs||0) * 20),(nn.inputs||0) * 20); //Added by Homegear GmbH to support multiple inputs
         nn.resize = true;
 
         var historyEvent = {
@@ -15756,6 +17833,7 @@ RED.view = (function() {
     }
 
     function canvasMouseDown() {
+        if (RED.view.DEBUG) { console.warn("canvasMouseDown", mouse_mode); }
         var point;
         if (mouse_mode === RED.state.SELECTING_NODE) {
             d3.event.stopPropagation();
@@ -15769,7 +17847,7 @@ RED.view = (function() {
             scroll_position = [chart.scrollLeft(),chart.scrollTop()];
             return;
         }
-        if (!mousedown_node && !mousedown_link) {
+        if (!mousedown_node && !mousedown_link && !mousedown_group) {
             selected_link = null;
             updateSelection();
         }
@@ -15782,7 +17860,13 @@ RED.view = (function() {
         if (mouse_mode === 0 || mouse_mode === RED.state.QUICK_JOINING) {
             if (d3.event.metaKey || d3.event.ctrlKey) {
                 d3.event.stopPropagation();
-                showQuickAddDialog(d3.mouse(this));
+                clearSelection();
+                point = d3.mouse(this);
+                var clickedGroup = getGroupAt(point[0],point[1]);
+                if (drag_lines.length > 0) {
+                    clickedGroup = clickedGroup || RED.nodes.group(drag_lines[0].node.g)
+                }
+                showQuickAddDialog(point, null, clickedGroup);
             }
         }
         if (mouse_mode === 0 && !(d3.event.metaKey || d3.event.ctrlKey)) {
@@ -15803,7 +17887,13 @@ RED.view = (function() {
         }
     }
 
-    function showQuickAddDialog(point,spliceLink) {
+    function showQuickAddDialog(point, spliceLink, targetGroup, touchTrigger) {
+        if (targetGroup && !targetGroup.active) {
+            selectGroup(targetGroup,false);
+            enterActiveGroup(targetGroup);
+            RED.view.redraw();
+        }
+
         var ox = point[0];
         var oy = point[1];
 
@@ -15841,7 +17931,7 @@ RED.view = (function() {
         var filter;
         if (drag_lines.length > 0) {
             if (drag_lines[0].virtualLink) {
-                filter = {type:drag_lines[0].node.type === 'link-in'?'link-out':'link-in'}
+                filter = {type:drag_lines[0].node.type === 'link in'?'link out':'link in'}
             } else if (drag_lines[0].portType === PORT_TYPE_OUTPUT) {
                 filter = {input:true}
             } else {
@@ -15871,7 +17961,8 @@ RED.view = (function() {
             }
             var numOutputs = (quickAddLink.portType === PORT_TYPE_OUTPUT)?(quickAddLink.node.outputs || 1):1;
             var sourcePort = quickAddLink.port;
-            var portY = -((numOutputs-1)/2)*18 +18*sourcePort;
+            //var portY = -((numOutputs-1)/2)*13 +13*sourcePort; //Removed by Homegear GmbH
+            var portY = -((numOutputs-1)/2)*18 +18*sourcePort; //Added by Homegear GmbH
             var sc = (quickAddLink.portType === PORT_TYPE_OUTPUT)?1:-1;
             quickAddLink.el.attr("d",generateLinkPath(quickAddLink.node.x+sc*quickAddLink.node.w/2,quickAddLink.node.y+portY,point[0]-sc*node_width/2,point[1],sc));
         }
@@ -15886,6 +17977,7 @@ RED.view = (function() {
         RED.typeSearch.show({
             x:d3.event.clientX-mainPos.left-node_width/2 - (ox-point[0]),
             y:d3.event.clientY-mainPos.top+ node_height/2 + 5 - (oy-point[1]),
+            disableFocus: touchTrigger,
             filter: filter,
             move: function(dx,dy) {
                 if (ghostNode) {
@@ -15913,6 +18005,10 @@ RED.view = (function() {
                 redraw();
             },
             add: function(type,keepAdding) {
+                if (touchTrigger) {
+                    keepAdding = false;
+                    resetMouseVars();
+                }
                 var result = addNode(type);
                 if (!result) {
                     return;
@@ -15926,20 +18022,22 @@ RED.view = (function() {
                 nn.x = point[0];
                 nn.y = point[1];
                 var showLabel = RED.utils.getMessageProperty(RED.settings.get('editor'),"view.view-node-show-label");
-                if (showLabel !== undefined && !/^link-(in|out)$/.test(nn._def.type) && !nn._def.defaults.hasOwnProperty("l")) {
+                if (showLabel !== undefined && !/^link (in|out)$/.test(nn._def.type) && !nn._def.defaults.hasOwnProperty("l")) {
                     nn.l = showLabel;
                 }
                 if (quickAddLink) {
                     var drag_line = quickAddLink;
-                    var src = null,dst,src_port;
+                    var src,dst,src_port,dst_port; //Modified by Homegear GmbH - original code seemed to be wrong
                     if (drag_line.portType === PORT_TYPE_OUTPUT && (nn.inputs > 0 || drag_line.virtualLink) ) {
                         src = drag_line.node;
                         src_port = drag_line.port;
                         dst = nn;
+                        dst_port = 0; //Added by Homegear GmbH to support multiple inputs
                     } else if (drag_line.portType === PORT_TYPE_INPUT && (nn.outputs > 0 || drag_line.virtualLink)) {
                         src = nn;
                         dst = drag_line.node;
                         src_port = 0;
+                        dst_port = drag_line.port; //Added by Homegear GmbH to support multiple inputs
                     }
 
                     if (src !== null) {
@@ -15978,7 +18076,7 @@ RED.view = (function() {
                             src.changed = true;
                             dst.changed = true;
                         } else {
-                            var link = {source: src, sourcePort:src_port, target: dst};
+                            var link = {source: src, sourcePort: src_port, target: dst, targetPort: dst_port};
                             RED.nodes.addLink(link);
                             historyEvent.links = [link];
                         }
@@ -16031,6 +18129,26 @@ RED.view = (function() {
                         }
                     }
                 }
+
+                RED.nodes.add(nn);
+                RED.editor.validateNode(nn);
+
+                if (targetGroup) {
+                    RED.group.addToGroup(targetGroup, nn);
+                    if (historyEvent.t !== "multi") {
+                        historyEvent = {
+                            t:'multi',
+                            events: [historyEvent]
+                        }
+                    }
+                    historyEvent.events.push({
+                        t: "addToGroup",
+                        group: targetGroup,
+                        nodes: nn
+                    })
+
+                }
+
                 if (spliceLink) {
                     resetMouseVars();
                     // TODO: DRY - droppable/nodeMouseDown/canvasMouseUp/showQuickAddDialog
@@ -16038,12 +18156,14 @@ RED.view = (function() {
                     var link1 = {
                         source:spliceLink.source,
                         sourcePort:spliceLink.sourcePort,
-                        target: nn
+                        target: nn,
+                        targetPort: 0 //Added by Homegear GmbH to support multiple inputs
                     };
                     var link2 = {
                         source:nn,
                         sourcePort:0,
-                        target: spliceLink.target
+                        target: spliceLink.target,
+                        targetPort: spliceLink.targetPort //Added by Homegear GmbH to support multiple inputs
                     };
                     RED.nodes.addLink(link1);
                     RED.nodes.addLink(link2);
@@ -16051,13 +18171,15 @@ RED.view = (function() {
                     historyEvent.removedLinks = [spliceLink];
                 }
                 RED.history.push(historyEvent);
-                RED.nodes.add(nn);
-                RED.editor.validateNode(nn);
                 RED.nodes.dirty(true);
                 // auto select dropped node - so info shows (if visible)
                 clearSelection();
                 nn.selected = true;
-                moving_set.push({n:nn});
+                if (targetGroup) {
+                    selectGroup(targetGroup,false);
+                    enterActiveGroup(targetGroup);
+                }
+                movingSet.add(nn);
                 updateActiveNodes();
                 updateSelection();
                 redraw();
@@ -16114,8 +18236,11 @@ RED.view = (function() {
         //console.log(d3.mouse(this),container.offsetWidth,container.offsetHeight,container.scrollLeft,container.scrollTop);
 
         if (mouse_mode === RED.state.PANNING) {
-
             var pos = [d3.event.pageX,d3.event.pageY];
+            if (d3.event.touches) {
+                var touch0 = d3.event.touches.item(0);
+                pos = [touch0.pageX, touch0.pageY];
+            }
             var deltaPos = [
                 mouse_position[0]-pos[0],
                 mouse_position[1]-pos[1]
@@ -16161,11 +18286,23 @@ RED.view = (function() {
             return;
         }
 
-        if (mouse_mode != RED.state.QUICK_JOINING && mouse_mode != RED.state.IMPORT_DRAGGING && !mousedown_node && selected_link == null) {
+        if (mouse_mode != RED.state.QUICK_JOINING && mouse_mode != RED.state.IMPORT_DRAGGING && !mousedown_node && !mousedown_group && selected_link == null) {
             return;
         }
 
         var mousePos;
+        // if (mouse_mode === RED.state.GROUP_RESIZE) {
+        //     mousePos = mouse_position;
+        //     var nx = mousePos[0] + mousedown_group.dx;
+        //     var ny = mousePos[1] + mousedown_group.dy;
+        //     switch(mousedown_group.activeHandle) {
+        //         case 0: mousedown_group.pos.x0 = nx; mousedown_group.pos.y0 = ny; break;
+        //         case 1: mousedown_group.pos.x1 = nx; mousedown_group.pos.y0 = ny; break;
+        //         case 2: mousedown_group.pos.x1 = nx; mousedown_group.pos.y1 = ny; break;
+        //         case 3: mousedown_group.pos.x0 = nx; mousedown_group.pos.y1 = ny; break;
+        //     }
+        //     mousedown_group.dirty = true;
+        // }
         if (mouse_mode == RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
             // update drag line
             if (drag_lines.length === 0 && mousedown_port_type !== null) {
@@ -16180,7 +18317,7 @@ RED.view = (function() {
                         ) ||
                         (mousedown_port_type === PORT_TYPE_INPUT &&
                             selected_link.target === mousedown_node &&
-                            selected_link.targetPort === mousedown_port_index
+                            selected_link.targetPort === mousedown_port_index //Added by Homegear GmbH to support multiple inputs
                         ))
                     ) {
                         existingLinks = [selected_link];
@@ -16194,7 +18331,7 @@ RED.view = (function() {
                         } else {
                             filter = {
                                 target: mousedown_node,
-                                targetPort: mousedown_port_index
+                                targetPort: mousedown_port_index //Added by Homegear GmbH to support multiple inputs
                             }
                         }
                         existingLinks = RED.nodes.filterLinks(filter);
@@ -16205,7 +18342,8 @@ RED.view = (function() {
                         links.push({
                             link:link,
                             node: (mousedown_port_type===PORT_TYPE_OUTPUT)?link.target:link.source,
-                            port: (mousedown_port_type===PORT_TYPE_OUTPUT)?link.targetPort:link.sourcePort,
+                            //port: (mousedown_port_type===PORT_TYPE_OUTPUT)?0:link.sourcePort, //Removed by Homegear GmbH
+                            port: (mousedown_port_type===PORT_TYPE_OUTPUT)?link.targetPort:link.sourcePort, //Added by Homegear GmbH to support multiple inputs
                             portType: (mousedown_port_type===PORT_TYPE_OUTPUT)?PORT_TYPE_INPUT:PORT_TYPE_OUTPUT
                         })
                     }
@@ -16227,13 +18365,15 @@ RED.view = (function() {
             mousePos = mouse_position;
             for (i=0;i<drag_lines.length;i++) {
                 var drag_line = drag_lines[i];
-                var numOutputs = (drag_line.portType === PORT_TYPE_OUTPUT)?(drag_line.node.outputs || 1):(drag_line.node.inputs || 1);
+                //var numOutputs = (drag_line.portType === PORT_TYPE_OUTPUT)?(drag_line.node.outputs || 1):1; //Removed by Homegear GmbH
+                var numOutputs = (drag_line.portType === PORT_TYPE_OUTPUT)?(drag_line.node.outputs || 1):(drag_line.node.inputs || 1); //Added by Homegear GmbH to support multiple inputs
                 var sourcePort = drag_line.port;
-                if(drag_line.node.type == "subflow") {
+                if(drag_line.node.type == "subflow") { //Block added by Homegear GmbH to support multiple inputs
                     numOutputs = 1;
                     sourcePort = 0;
                 } 
-                var portY = -((numOutputs-1)/2)*18 +18*sourcePort;
+                //var portY = -((numOutputs-1)/2)*13 +13*sourcePort; //Removed by Homegear GmbH
+                var portY = -((numOutputs-1)/2)*18 +18*sourcePort; //Added by Homegear GmbH
 
                 var sc = (drag_line.portType === PORT_TYPE_OUTPUT)?1:-1;
                 drag_line.el.attr("d",generateLinkPath(drag_line.node.x+sc*drag_line.node.w/2,drag_line.node.y+portY,mousePos[0],mousePos[1],sc));
@@ -16245,12 +18385,12 @@ RED.view = (function() {
                 mousePos = d3.touches(document.body)[0];
             }
             var d = (mouse_offset[0]-mousePos[0])*(mouse_offset[0]-mousePos[0]) + (mouse_offset[1]-mousePos[1])*(mouse_offset[1]-mousePos[1]);
-            if (d > 3) {
+            if ((d > 3 && !dblClickPrimed) || (dblClickPrimed && d > 10)) {
                 mouse_mode = RED.state.MOVING_ACTIVE;
                 clickElapsed = 0;
                 spliceActive = false;
-                if (moving_set.length === 1) {
-                    node = moving_set[0];
+                if (movingSet.length() === 1) {
+                    node = movingSet.get(0);
                     spliceActive = node.n.hasOwnProperty("_def") &&
                                    ((node.n.hasOwnProperty("inputs") && node.n.inputs > 0) || (!node.n.hasOwnProperty("inputs") && node.n._def.inputs > 0)) &&
                                    ((node.n.hasOwnProperty("outputs") && node.n.outputs > 0) || (!node.n.hasOwnProperty("outputs") && node.n._def.outputs > 0)) &&
@@ -16264,8 +18404,8 @@ RED.view = (function() {
             var minY = 0;
             var maxX = space_width;
             var maxY = space_height;
-            for (var n = 0; n<moving_set.length; n++) {
-                node = moving_set[n];
+            for (var n = 0; n<movingSet.length(); n++) {
+                node = movingSet.get(n);
                 if (d3.event.shiftKey) {
                     node.n.ox = node.n.x;
                     node.n.oy = node.n.y;
@@ -16273,33 +18413,61 @@ RED.view = (function() {
                 node.n.x = mousePos[0]+node.dx;
                 node.n.y = mousePos[1]+node.dy;
                 node.n.dirty = true;
-                minX = Math.min(node.n.x-node.n.w/2-5,minX);
-                minY = Math.min(node.n.y-node.n.h/2-5,minY);
-                maxX = Math.max(node.n.x+node.n.w/2+5,maxX);
-                maxY = Math.max(node.n.y+node.n.h/2+5,maxY);
+                if (node.n.type === "group") {
+                    if (node.n.groupMoved !== false) {
+                        node.n.groupMoved = true;
+                    }
+                    RED.group.markDirty(node.n);
+                    minX = Math.min(node.n.x-5,minX);
+                    minY = Math.min(node.n.y-5,minY);
+                    maxX = Math.max(node.n.x+node.n.w+5,maxX);
+                    maxY = Math.max(node.n.y+node.n.h+5,maxY);
+                } else {
+                    minX = Math.min(node.n.x-node.n.w/2-5,minX);
+                    minY = Math.min(node.n.y-node.n.h/2-5,minY);
+                    maxX = Math.max(node.n.x+node.n.w/2+5,maxX);
+                    maxY = Math.max(node.n.y+node.n.h/2+5,maxY);
+                }
             }
             if (minX !== 0 || minY !== 0) {
-                for (i = 0; i<moving_set.length; i++) {
-                    node = moving_set[i];
+                for (i = 0; i<movingSet.length(); i++) {
+                    node = movingSet.get(i);
                     node.n.x -= minX;
                     node.n.y -= minY;
                 }
             }
             if (maxX !== space_width || maxY !== space_height) {
-                for (i = 0; i<moving_set.length; i++) {
-                    node = moving_set[i];
+                for (i = 0; i<movingSet.length(); i++) {
+                    node = movingSet.get(i);
                     node.n.x -= (maxX - space_width);
                     node.n.y -= (maxY - space_height);
                 }
             }
-            if (snapGrid != d3.event.shiftKey && moving_set.length > 0) {
-                var gridOffset = [0,0];
-                node = moving_set[0];
-                gridOffset[0] = node.n.x-(gridSize*Math.floor((node.n.x-node.n.w/2)/gridSize)+node.n.w/2);
-                gridOffset[1] = node.n.y-(gridSize*Math.floor(node.n.y/gridSize));
+            // if (mousedown_group) {
+            //     mousedown_group.x = mousePos[0] + mousedown_group.dx;
+            //     mousedown_group.y = mousePos[1] + mousedown_group.dy;
+            //     mousedown_group.dirty = true;
+            // }
+            var gridOffset = [0,0];
+            if (snapGrid != d3.event.shiftKey && movingSet.length() > 0) {
+                var i = 0;
+
+                // Prefer to snap nodes to the grid if there is one in the selection
+                do {
+                    node = movingSet.get(i++);
+                } while(i<movingSet.length() && node.n.type === "group")
+
+                if (node.n.type === "group") {
+                    // TODO: Group snap to grid
+                    gridOffset[0] = node.n.x-(gridSize*Math.floor(node.n.x/gridSize))-gridSize/2;
+                    gridOffset[1] = node.n.y-(gridSize*Math.floor(node.n.y/gridSize))-gridSize/2;
+                } else {
+                    gridOffset[0] = node.n.x-(gridSize*Math.floor((node.n.x-node.n.w/2)/gridSize)+node.n.w/2);
+                    gridOffset[1] = node.n.y-(gridSize*Math.floor(node.n.y/gridSize));
+                }
                 if (gridOffset[0] !== 0 || gridOffset[1] !== 0) {
-                    for (i = 0; i<moving_set.length; i++) {
-                        node = moving_set[i];
+                    for (i = 0; i<movingSet.length(); i++) {
+                        node = movingSet.get(i);
                         node.n.x -= gridOffset[0];
                         node.n.y -= gridOffset[1];
                         if (node.n.x == node.n.ox && node.n.y == node.n.oy) {
@@ -16308,8 +18476,10 @@ RED.view = (function() {
                     }
                 }
             }
-            if ((mouse_mode == RED.state.MOVING_ACTIVE || mouse_mode == RED.state.IMPORT_DRAGGING) && moving_set.length === 1) {
-                node = moving_set[0];
+
+            // Check link splice or group-add
+            if (movingSet.length() === 1 && movingSet.get(0).n.type !== "group") {
+                node = movingSet.get(0);
                 if (spliceActive) {
                     if (!spliceTimer) {
                         spliceTimer = setTimeout(function() {
@@ -16356,6 +18526,24 @@ RED.view = (function() {
                         },100);
                     }
                 }
+                if (node.n.type !== 'subflow' && !node.n.g && activeGroups) {
+                    if (!groupHoverTimer) {
+                        groupHoverTimer = setTimeout(function() {
+                            activeHoverGroup = getGroupAt(node.n.x,node.n.y);
+                            for (var i=0;i<activeGroups.length;i++) {
+                                var g = activeGroups[i];
+                                if (g === activeHoverGroup) {
+                                    g.hovered = true;
+                                    g.dirty = true;
+                                } else if (g.hovered) {
+                                    g.hovered = false;
+                                    g.dirty = true;
+                                }
+                            }
+                            groupHoverTimer = null;
+                        },50);
+                    }
+                }
             }
 
 
@@ -16366,6 +18554,7 @@ RED.view = (function() {
     }
 
     function canvasMouseUp() {
+        if (RED.view.DEBUG) { console.warn("canvasMouseUp", mouse_mode); }
         var i;
         var historyEvent;
         if (mouse_mode === RED.state.PANNING) {
@@ -16402,38 +18591,89 @@ RED.view = (function() {
             var y = parseInt(lasso.attr("y"));
             var x2 = x+parseInt(lasso.attr("width"));
             var y2 = y+parseInt(lasso.attr("height"));
-            if (!d3.event.ctrlKey) {
+            var ag = activeGroup;
+            if (!d3.event.shiftKey) {
                 clearSelection();
+                if (ag) {
+                    if (x < ag.x+ag.w && x2 > ag.x && y < ag.y+ag.h && y2 > ag.y) {
+                        // There was an active group and the lasso intersects with it,
+                        // so reenter the group
+                        enterActiveGroup(ag);
+                        activeGroup.selected = true;
+                    }
+                }
             }
-            RED.nodes.eachNode(function(n) {
-                if (n.z == RED.workspaces.active() && !n.selected) {
-                    n.selected = (n.x > x && n.x < x2 && n.y > y && n.y < y2);
-                    if (n.selected) {
-                        n.dirty = true;
-                        moving_set.push({n:n});
+            activeGroups.forEach(function(g) {
+                if (!g.selected) {
+                    if (g.x > x && g.x+g.w < x2 && g.y > y && g.y+g.h < y2) {
+                        if (!activeGroup || RED.group.contains(activeGroup,g)) {
+                            while (g.g && (!activeGroup || g.g !== activeGroup.id)) {
+                                g = RED.nodes.group(g.g);
+                            }
+                            if (!g.selected) {
+                                selectGroup(g,true);
+                            }
+                        }
+                    }
+                }
+            })
+
+            activeNodes.forEach(function(n) {
+                if (!n.selected) {
+                    if (n.x > x && n.x < x2 && n.y > y && n.y < y2) {
+                        if (!activeGroup || RED.group.contains(activeGroup,n)) {
+                            if (n.g && (!activeGroup || n.g !== activeGroup.id)) {
+                                console.log("HERE")
+                                var group = RED.nodes.group(n.g);
+                                while (group.g && (!activeGroup || group.g !== activeGroup.id)) {
+                                    group = RED.nodes.group(group.g);
+                                }
+                                if (!group.selected) {
+                                    selectGroup(group,true);
+                                }
+                            } else {
+                                n.selected = true;
+                                n.dirty = true;
+                                movingSet.add(n);
+                            }
+                        }
                     }
                 }
             });
+
+
+
+            // var selectionChanged = false;
+            // do {
+            //     selectionChanged = false;
+            //     selectedGroups.forEach(function(g) {
+            //         if (g.g && g.selected && RED.nodes.group(g.g).selected) {
+            //             g.selected = false;
+            //             selectionChanged = true;
+            //         }
+            //     })
+            // } while(selectionChanged);
+
             if (activeSubflow) {
                 activeSubflow.in.forEach(function(n) {
                     n.selected = (n.x > x && n.x < x2 && n.y > y && n.y < y2);
                     if (n.selected) {
                         n.dirty = true;
-                        moving_set.push({n:n});
+                        movingSet.add(n);
                     }
                 });
                 activeSubflow.out.forEach(function(n) {
                     n.selected = (n.x > x && n.x < x2 && n.y > y && n.y < y2);
                     if (n.selected) {
                         n.dirty = true;
-                        moving_set.push({n:n});
+                        movingSet.add(n);
                     }
                 });
                 if (activeSubflow.status) {
                     activeSubflow.status.selected = (activeSubflow.status.x > x && activeSubflow.status.x < x2 && activeSubflow.status.y > y && activeSubflow.status.y < y2);
                     if (activeSubflow.status.selected) {
                         activeSubflow.status.dirty = true;
-                        moving_set.push({n:activeSubflow.status});
+                        movingSet.add(activeSubflow.status);
                     }
                 }
             }
@@ -16445,17 +18685,33 @@ RED.view = (function() {
             updateSelection();
         }
         if (mouse_mode == RED.state.MOVING_ACTIVE) {
-            if (moving_set.length > 0) {
+            if (movingSet.length() > 0) {
+                var addedToGroup = null;
+                if (activeHoverGroup) {
+                    for (var j=0;j<movingSet.length();j++) {
+                        var n = movingSet.get(j);
+                        RED.group.addToGroup(activeHoverGroup,n.n);
+                    }
+                    addedToGroup = activeHoverGroup;
+
+                    activeHoverGroup.hovered = false;
+                    enterActiveGroup(activeHoverGroup)
+                    // TODO: check back whether this should add to moving_set
+                    activeGroup.selected = true;
+                    activeHoverGroup = null;
+                }
+
                 var ns = [];
-                for (var j=0;j<moving_set.length;j++) {
-                    var n = moving_set[j];
+                for (var j=0;j<movingSet.length();j++) {
+                    var n = movingSet.get(j);
                     if (n.ox !== n.n.x || n.oy !== n.n.y) {
                         ns.push({n:n.n,ox:n.ox,oy:n.oy,moved:n.n.moved});
                         n.n.dirty = true;
                         n.n.moved = true;
                     }
                 }
-                if (ns.length > 0) {
+
+                if (ns.length > 0 && mouse_mode == RED.state.MOVING_ACTIVE) {
                     historyEvent = {t:"move",nodes:ns,dirty:RED.nodes.dirty()};
                     if (activeSpliceLink) {
                         // TODO: DRY - droppable/nodeMouseDown/canvasMouseUp
@@ -16464,14 +18720,14 @@ RED.view = (function() {
                         var link1 = {
                             source:spliceLink.source,
                             sourcePort:spliceLink.sourcePort,
-                            target: moving_set[0].n,
-                            targetPort: 0
+                            target: movingSet.get(0).n,
+                            targetPort: 0 //Added by Homegear GmbH to support multiple inputs
                         };
                         var link2 = {
-                            source:moving_set[0].n,
+                            source:movingSet.get(0).n,
                             sourcePort:0,
                             target: spliceLink.target,
-                            targetPort: spliceLink.targetPort
+                            targetPort: spliceLink.targetPort //Added by Homegear GmbH to support multiple inputs
                         };
                         RED.nodes.addLink(link1);
                         RED.nodes.addLink(link2);
@@ -16479,15 +18735,35 @@ RED.view = (function() {
                         historyEvent.removedLinks = [spliceLink];
                         updateActiveNodes();
                     }
+                    if (addedToGroup) {
+                        historyEvent.addToGroup = addedToGroup;
+                    }
                     RED.nodes.dirty(true);
                     RED.history.push(historyEvent);
                 }
             }
         }
+        // if (mouse_mode === RED.state.MOVING && mousedown_node && mousedown_node.g) {
+        //     if (mousedown_node.gSelected) {
+        //         delete mousedown_node.gSelected
+        //     } else {
+        //         if (!d3.event.ctrlKey && !d3.event.metaKey) {
+        //             clearSelection();
+        //         }
+        //         RED.nodes.group(mousedown_node.g).selected = true;
+        //         mousedown_node.selected = true;
+        //         mousedown_node.dirty = true;
+        //         movingSet.add(mousedown_node);
+        //     }
+        // }
         if (mouse_mode == RED.state.MOVING || mouse_mode == RED.state.MOVING_ACTIVE) {
-            for (i=0;i<moving_set.length;i++) {
-                delete moving_set[i].ox;
-                delete moving_set[i].oy;
+            // if (mousedown_node) {
+            //     delete mousedown_node.gSelected;
+            // }
+            for (i=0;i<movingSet.length();i++) {
+                var node = movingSet.get(i);
+                delete node.ox;
+                delete node.oy;
             }
         }
         if (mouse_mode == RED.state.IMPORT_DRAGGING) {
@@ -16530,44 +18806,77 @@ RED.view = (function() {
         if (mouse_mode === RED.state.SELECTING_NODE && selectNodesOptions.single) {
             return;
         }
-        RED.nodes.eachNode(function(n) {
-            if (n.z == RED.workspaces.active()) {
+
+        if (activeGroup) {
+            var ag = activeGroup;
+            clearSelection();
+            enterActiveGroup(ag);
+
+            var groupNodes = RED.group.getNodes(ag,false);
+            groupNodes.forEach(function(n) {
+                if (n.type === 'group') {
+                    selectGroup(n,true,true);
+                } else {
+                    movingSet.add(n)
+                    n.selected = true;
+                    n.dirty = true;
+                }
+            })
+            activeGroup.selected = true;
+        } else {
+
+            clearSelection();
+            exitActiveGroup();
+            activeGroups.forEach(function(g) {
+                if (!g.g) {
+                    selectGroup(g, true);
+                    if (!g.selected) {
+                        g.selected = true;
+                        g.dirty = true;
+                    }
+                } else {
+                    g.selected = false;
+                    g.dirty = true;
+                }
+            })
+
+            activeNodes.forEach(function(n) {
                 if (mouse_mode === RED.state.SELECTING_NODE) {
                     if (selectNodesOptions.filter && !selectNodesOptions.filter(n)) {
                         return;
                     }
                 }
-                if (!n.selected) {
+                if (!n.g && !n.selected) {
                     n.selected = true;
                     n.dirty = true;
-                    moving_set.push({n:n});
-                }
-            }
-        });
-        if (mouse_mode !== RED.state.SELECTING_NODE && activeSubflow) {
-            activeSubflow.in.forEach(function(n) {
-                if (!n.selected) {
-                    n.selected = true;
-                    n.dirty = true;
-                    moving_set.push({n:n});
+                    movingSet.add(n);
                 }
             });
-            activeSubflow.out.forEach(function(n) {
-                if (!n.selected) {
-                    n.selected = true;
-                    n.dirty = true;
-                    moving_set.push({n:n});
-                }
-            });
-            if (activeSubflow.status) {
-                if (!activeSubflow.status.selected) {
-                    activeSubflow.status.selected = true;
-                    activeSubflow.status.dirty = true;
-                    moving_set.push({n:activeSubflow.status});
+
+            if (mouse_mode !== RED.state.SELECTING_NODE && activeSubflow) {
+                activeSubflow.in.forEach(function(n) {
+                    if (!n.selected) {
+                        n.selected = true;
+                        n.dirty = true;
+                        movingSet.add(n);
+                    }
+                });
+                activeSubflow.out.forEach(function(n) {
+                    if (!n.selected) {
+                        n.selected = true;
+                        n.dirty = true;
+                        movingSet.add(n);
+                    }
+                });
+                if (activeSubflow.status) {
+                    if (!activeSubflow.status.selected) {
+                        activeSubflow.status.selected = true;
+                        activeSubflow.status.dirty = true;
+                        movingSet.add(activeSubflow.status);
+                    }
                 }
             }
         }
-
         selected_link = null;
         if (mouse_mode !== RED.state.SELECTING_NODE) {
             updateSelection();
@@ -16576,13 +18885,23 @@ RED.view = (function() {
     }
 
     function clearSelection() {
-        for (var i=0;i<moving_set.length;i++) {
-            var n = moving_set[i];
+        if (RED.view.DEBUG) { console.warn("clearSelection", mouse_mode,"movingSet.length():",movingSet.length()); }
+        for (var i=0;i<movingSet.length();i++) {
+            var n = movingSet.get(i);
             n.n.dirty = true;
             n.n.selected = false;
         }
-        moving_set = [];
+        movingSet.clear();
         selected_link = null;
+        if (activeGroup) {
+            activeGroup.active = false
+            activeGroup.dirty = true;
+            activeGroup = null;
+        }
+        activeGroups.forEach(function(g) {
+            g.selected = false;
+            g.dirty = true;
+        })
     }
 
     var lastSelection = null;
@@ -16592,12 +18911,7 @@ RED.view = (function() {
 
         var workspaceSelection = RED.workspaces.selection();
         if (workspaceSelection.length === 0) {
-            if (moving_set.length > 0) {
-                selection.nodes = moving_set.map(function(n) { return n.n;});
-            }
-            if (selected_link != null) {
-                selection.link = selected_link;
-            }
+            selection = getSelection();
             activeLinks = RED.nodes.filterLinks({
                 source:{z:activeWorkspace},
                 target:{z:activeWorkspace}
@@ -16611,21 +18925,24 @@ RED.view = (function() {
                 activeLinkNodes[n].dirty = true;
             })
             activeLinkNodes = {};
-            for (var i=0;i<moving_set.length;i++) {
-                if (moving_set[i].n.type === "link-out" || moving_set[i].n.type === "link-in") {
-                    var linkNode = moving_set[i].n;
+            for (var i=0;i<movingSet.length();i++) {
+                var msn = movingSet.get(i);
+                if ((msn.n.type === "link out" || msn.n.type === "link in") &&
+                    (msn.n.z === activeWorkspace)) {
+                    var linkNode = msn.n;
                     activeLinkNodes[linkNode.id] = linkNode;
                     var offFlowLinks = {};
                     linkNode.links.forEach(function(id) {
                         var target = RED.nodes.node(id);
                         if (target) {
-                            if (linkNode.type === "link-out") {
+                            if (linkNode.type === "link out") {
                                 if (target.z === linkNode.z) {
                                     if (!addedLinkLinks[linkNode.id+":"+target.id]) {
                                         activeLinks.push({
                                             source:linkNode,
                                             sourcePort:0,
                                             target: target,
+                                            targetPort: 0, //Added by Homegear GmbH to support multiple inputs
                                             link: true
                                         });
                                         addedLinkLinks[linkNode.id+":"+target.id] = true;
@@ -16644,6 +18961,7 @@ RED.view = (function() {
                                             source:target,
                                             sourcePort:0,
                                             target: linkNode,
+                                            targetPort: 0, //Added by Homegear GmbH to support multiple inputs
                                             link: true
                                         });
                                         addedLinkLinks[target.id+":"+linkNode.id] = true;
@@ -16684,7 +19002,8 @@ RED.view = (function() {
             if (key === 'nodes' || key === 'flows') {
                 return value.map(function(n) { return n.id })
             } else if (key === 'link') {
-                return value.source.id+":"+value.sourcePort+":"+value.target.id;
+                //return value.source.id+":"+value.sourcePort+":"+value.target.id; //Removed by Homegear GmbH
+                return value.source.id+":"+value.sourcePort+":"+value.target.id+":"+value.target.targetPort; //Added by Homegear GmbH to support multiple inputs
             }
             return value;
         });
@@ -16695,10 +19014,12 @@ RED.view = (function() {
     }
 
     function editSelection() {
-        if (moving_set.length > 0) {
-            var node = moving_set[0].n;
+        if (movingSet.length() > 0) {
+            var node = movingSet.get(0).n;
             if (node.type === "subflow") {
                 RED.editor.editSubflow(activeSubflow);
+            } else if (node.type === "group") {
+                RED.editor.editGroup(node);
             } else {
                 RED.editor.edit(node);
             }
@@ -16725,6 +19046,7 @@ RED.view = (function() {
                 dirty: RED.nodes.dirty(),
                 nodes: [],
                 links: [],
+                groups: [],
                 workspaces: [],
                 subflows: []
             }
@@ -16744,16 +19066,19 @@ RED.view = (function() {
                 }
                 historyEvent.nodes = historyEvent.nodes.concat(subEvent.nodes);
                 historyEvent.links = historyEvent.links.concat(subEvent.links);
+                historyEvent.groups = historyEvent.groups.concat(subEvent.groups);
             }
             RED.history.push(historyEvent);
             RED.nodes.dirty(true);
             updateActiveNodes();
             updateSelection();
             redraw();
-        } else if (moving_set.length > 0 || selected_link != null) {
+        } else if (movingSet.length() > 0 || selected_link != null) {
             var result;
+            var node;
             var removedNodes = [];
             var removedLinks = [];
+            var removedGroups = [];
             var removedSubflowOutputs = [];
             var removedSubflowInputs = [];
             var removedSubflowStatus;
@@ -16761,11 +19086,27 @@ RED.view = (function() {
 
             var startDirty = RED.nodes.dirty();
             var startChanged = false;
-            if (moving_set.length > 0) {
-                for (var i=0;i<moving_set.length;i++) {
-                    var node = moving_set[i].n;
+            var selectedGroups = [];
+            if (movingSet.length() > 0) {
+
+                for (var i=0;i<movingSet.length();i++) {
+                    node = movingSet.get(i).n;
+                    if (node.type === "group") {
+                        selectedGroups.push(node);
+                    }
+                }
+                // Make sure we have identified all groups about to be deleted
+                for (i=0;i<selectedGroups.length;i++) {
+                    selectedGroups[i].nodes.forEach(function(n) {
+                        if (n.type === "group" && selectedGroups.indexOf(n) === -1) {
+                            selectedGroups.push(n);
+                        }
+                    })
+                }
+                for (var i=0;i<movingSet.length();i++) {
+                    node = movingSet.get(i).n;
                     node.selected = false;
-                    if (node.type != "subflow") {
+                    if (node.type !== "group" && node.type !== "subflow") {
                         if (node.x < 0) {
                             node.x = 25
                         }
@@ -16773,6 +19114,16 @@ RED.view = (function() {
                         removedNodes.push(node);
                         removedNodes = removedNodes.concat(removedEntities.nodes);
                         removedLinks = removedLinks.concat(removedEntities.links);
+                        if (node.g) {
+                            var group = RED.nodes.group(node.g);
+                            if (selectedGroups.indexOf(group) === -1) {
+                                // Don't use RED.group.removeFromGroup as that emits
+                                // a change event on the node - but we're deleting it
+                                var index = group.nodes.indexOf(node);
+                                group.nodes.splice(index,1);
+                                RED.group.markDirty(group);
+                            }
+                        }
                     } else {
                         if (node.direction === "out") {
                             removedSubflowOutputs.push(node);
@@ -16783,6 +19134,14 @@ RED.view = (function() {
                         }
                         node.dirty = true;
                     }
+                }
+
+                // Groups must be removed in the right order - from inner-most
+                // to outermost.
+                for (i = selectedGroups.length-1; i>=0; i--) {
+                    var g = selectedGroups[i];
+                    removedGroups.push(g);
+                    RED.nodes.removeGroup(g);
                 }
                 if (removedSubflowOutputs.length > 0) {
                     result = RED.subflow.removeOutput(removedSubflowOutputs);
@@ -16808,8 +19167,8 @@ RED.view = (function() {
                 if (instances) {
                     subflowInstances = instances.instances;
                 }
-                moving_set = [];
-                if (removedNodes.length > 0 || removedSubflowOutputs.length > 0 || removedSubflowInputs.length > 0 || removedSubflowStatus) {
+                movingSet.clear();
+                if (removedNodes.length > 0 || removedSubflowOutputs.length > 0 || removedSubflowInputs.length > 0 || removedSubflowStatus || removedGroups.length > 0) {
                     RED.nodes.dirty(true);
                 }
             }
@@ -16862,6 +19221,7 @@ RED.view = (function() {
                     t:"delete",
                     nodes:removedNodes,
                     links:removedLinks,
+                    groups: removedGroups,
                     subflowOutputs:removedSubflowOutputs,
                     subflowInputs:removedSubflowInputs,
                     subflow: {
@@ -16894,20 +19254,41 @@ RED.view = (function() {
             selection.forEach(function(n) {
                 if (n.type === 'tab') {
                     nodes.push(n);
+                    nodes = nodes.concat(RED.nodes.groups(n.id));
                     nodes = nodes.concat(RED.nodes.filterNodes({z:n.id}));
                 }
             });
-        } else if (moving_set.length > 0) {
-            nodes = moving_set.map(function(n) { return n.n });
+        } else {
+            selection = RED.view.selection();
+            if (selection.nodes) {
+                selection.nodes.forEach(function(n) {
+                    nodes.push(n);
+                    if (n.type === 'group') {
+                        nodes = nodes.concat(RED.group.getNodes(n,true));
+                    }
+                })
+            }
         }
 
         if (nodes.length > 0) {
             var nns = [];
+            var nodeCount = 0;
+            var groupCount = 0;
+            var handled = {};
             for (var n=0;n<nodes.length;n++) {
                 var node = nodes[n];
+                if (handled[node.id]) {
+                    continue;
+                }
+                handled[node.id] = true;
                 // The only time a node.type == subflow can be selected is the
                 // input/output "proxy" nodes. They cannot be copied.
                 if (node.type != "subflow") {
+                    if (node.type === "group") {
+                        groupCount++;
+                    } else {
+                        nodeCount++;
+                    }
                     for (var d in node._def.defaults) {
                         if (node._def.defaults.hasOwnProperty(d)) {
                             if (node._def.defaults[d].type) {
@@ -16923,41 +19304,107 @@ RED.view = (function() {
                 }
             }
             clipboard = JSON.stringify(nns);
-            RED.notify(RED._("clipboard.nodeCopied",{count:nns.length}),{id:"clipboard"});
+            if (nodeCount > 0) {
+                RED.notify(RED._("clipboard.nodeCopied",{count:nodeCount}),{id:"clipboard"});
+            } else if (groupCount > 0) {
+                RED.notify(RED._("clipboard.groupCopied",{count:groupCount}),{id:"clipboard"});
+            }
         }
     }
 
-    function calculateTextWidth(str, className, offset) {
-        return calculateTextDimensions(str,className,offset,0)[0];
+    function calculateTextWidth(str, className) {
+        var result=convertLineBreakCharacter(str);
+        var width = 0;
+        for (var i=0;i<result.length;i++) {
+            var calculateTextW=calculateTextDimensions(result[i],className)[0];
+            if (width<calculateTextW) {
+                width=calculateTextW;
+            }
+        }
+        return width;
+    }
+    function getLabelParts(str, className) {
+        var lines = convertLineBreakCharacter(str);
+        var width = 0;
+        for (var i=0;i<lines.length;i++) {
+            var calculateTextW = calculateTextDimensions(lines[i],className)[0];
+            if (width<calculateTextW) {
+                width=calculateTextW;
+            }
+        }
+        return {
+            lines:lines,
+            width: width
+        }
     }
 
     var textDimensionPlaceholder = {};
-    function calculateTextDimensions(str,className,offsetW,offsetH) {
+    var textDimensionCache = {};
+    function calculateTextDimensions(str,className) {
         if (!textDimensionPlaceholder[className]) {
             textDimensionPlaceholder[className] = document.createElement("span");
             textDimensionPlaceholder[className].className = className;
             textDimensionPlaceholder[className].style.position = "absolute";
             textDimensionPlaceholder[className].style.top = "-1000px";
             document.getElementById("red-ui-editor").appendChild(textDimensionPlaceholder[className]);
+            textDimensionCache[className] = {};
+        } else {
+            if (textDimensionCache[className][str]) {
+                return textDimensionCache[className][str]
+            }
         }
         textDimensionPlaceholder[className].textContent = (str||"");
         var w = textDimensionPlaceholder[className].offsetWidth;
         var h = textDimensionPlaceholder[className].offsetHeight;
-        return [offsetW+w,offsetH+h];
+        textDimensionCache[className][str] = [w,h];
+        return textDimensionCache[className][str];
+    }
+
+    function convertLineBreakCharacter(str) {
+        var result = [];
+        var lines = str.split(/\\n /);
+        if (lines.length > 1) {
+            var i=0;
+            for (i=0;i<lines.length - 1;i++) {
+                if (/\\$/.test(lines[i])) {
+                    result.push(lines[i]+"\\n "+lines[i+1])
+                    i++;
+                } else {
+                    result.push(lines[i])
+                }
+            }
+            if ( i === lines.length - 1) {
+                result.push(lines[lines.length-1]);
+            }
+        } else {
+            result = lines;
+        }
+        result = result.map(function(l) { return l.replace(/\\\\n /g,"\\n ").trim() })
+        return result;
     }
 
     function resetMouseVars() {
         mousedown_node = null;
+        mousedown_group = null;
+        mousedown_group_handle = null;
         mouseup_node = null;
         mousedown_link = null;
         mouse_mode = 0;
         mousedown_port_type = null;
         activeSpliceLink = null;
         spliceActive = false;
+        if (activeHoverGroup) {
+            activeHoverGroup.hovered = false;
+            activeHoverGroup = null;
+        }
         d3.select(".red-ui-flow-link-splice").classed("red-ui-flow-link-splice",false);
         if (spliceTimer) {
             clearTimeout(spliceTimer);
             spliceTimer = null;
+        }
+        if (groupHoverTimer) {
+            clearTimeout(groupHoverTimer);
+            groupHoverTimer = null;
         }
     }
 
@@ -16971,15 +19418,14 @@ RED.view = (function() {
         }
     }
 
-    function portMouseDown(d,portType,portIndex) {
-        //console.log(d,portType,portIndex);
-        // disable zoom
-        //eventLayer.call(d3.behavior.zoom().on("zoom"), null);
-        if (d3.event.button === 1) {
+    function portMouseDown(d,portType,portIndex, evt) {
+        if (RED.view.DEBUG) { console.warn("portMouseDown", mouse_mode,d,portType,portIndex); }
+        evt = evt || d3.event;
+        if (evt === 1) {
             return;
         }
         if (mouse_mode === RED.state.SELECTING_NODE) {
-            d3.event.stopPropagation();
+            evt.stopPropagation();
             return;
         }
         mousedown_node = d;
@@ -16988,19 +19434,21 @@ RED.view = (function() {
         if (mouse_mode !== RED.state.QUICK_JOINING) {
             mouse_mode = RED.state.JOINING;
             document.body.style.cursor = "crosshair";
-            if (d3.event.ctrlKey || d3.event.metaKey) {
+            if (evt.ctrlKey || evt.metaKey) {
                 mouse_mode = RED.state.QUICK_JOINING;
                 showDragLines([{node:mousedown_node,port:mousedown_port_index,portType:mousedown_port_type}]);
                 $(window).on('keyup',disableQuickJoinEventHandler);
             }
         }
-        d3.event.stopPropagation();
-        d3.event.preventDefault();
+        evt.stopPropagation();
+        evt.preventDefault();
     }
 
-    function portMouseUp(d,portType,portIndex) {
+    function portMouseUp(d,portType,portIndex,evt) {
+        if (RED.view.DEBUG) { console.warn("portMouseUp", mouse_mode,d,portType,portIndex); }
+        evt = evt || d3.event;
         if (mouse_mode === RED.state.SELECTING_NODE) {
-            d3.event.stopPropagation();
+            evt.stopPropagation();
             return;
         }
         var i;
@@ -17011,8 +19459,8 @@ RED.view = (function() {
             }
             if (drag_lines[0].virtualLink &&
                 (
-                    (drag_lines[0].node.type === 'link-in' && d.type !== 'link-out') ||
-                    (drag_lines[0].node.type === 'link-out' && d.type !== 'link-in')
+                    (drag_lines[0].node.type === 'link in' && d.type !== 'link out') ||
+                    (drag_lines[0].node.type === 'link out' && d.type !== 'link in')
                 )
             ) {
                 return
@@ -17020,19 +19468,46 @@ RED.view = (function() {
         }
         document.body.style.cursor = "";
         if (mouse_mode == RED.state.JOINING || mouse_mode == RED.state.QUICK_JOINING) {
-            if (typeof TouchEvent != "undefined" && d3.event instanceof TouchEvent) {
+            if (typeof TouchEvent != "undefined" && evt instanceof TouchEvent) {
+                var found = false;
                 RED.nodes.eachNode(function(n) {
                     if (n.z == RED.workspaces.active()) {
                         var hw = n.w/2;
                         var hh = n.h/2;
                         if (n.x-hw<mouse_position[0] && n.x+hw> mouse_position[0] &&
                             n.y-hh<mouse_position[1] && n.y+hh>mouse_position[1]) {
+                                found = true;
                                 mouseup_node = n;
                                 portType = mouseup_node.inputs>0?PORT_TYPE_INPUT:PORT_TYPE_OUTPUT;
                                 portIndex = 0;
                         }
                     }
                 });
+                if (!found && activeSubflow) {
+                    var subflowPorts = [];
+                    if (activeSubflow.status) {
+                        subflowPorts.push(activeSubflow.status)
+                    }
+                    if (activeSubflow.in) {
+                        subflowPorts = subflowPorts.concat(activeSubflow.in)
+                    }
+                    if (activeSubflow.out) {
+                        subflowPorts = subflowPorts.concat(activeSubflow.out)
+                    }
+                    for (var i=0;i<subflowPorts.length;i++) {
+                        var n = subflowPorts[i];
+                        var hw = n.w/2;
+                        var hh = n.h/2;
+                        if (n.x-hw<mouse_position[0] && n.x+hw> mouse_position[0] &&
+                            n.y-hh<mouse_position[1] && n.y+hh>mouse_position[1]) {
+                                found = true;
+                                mouseup_node = n;
+                                portType = mouseup_node.direction === "in"?PORT_TYPE_OUTPUT:PORT_TYPE_INPUT;
+                                portIndex = 0;
+                            break;
+                        }
+                    }
+                }
             } else {
                 mouseup_node = d;
             }
@@ -17052,21 +19527,22 @@ RED.view = (function() {
             for (i=0;i<drag_lines.length;i++) {
                 if (portType != drag_lines[i].portType && mouseup_node !== drag_lines[i].node) {
                     var drag_line = drag_lines[i];
-                    var src,dst,src_port;
+                    var src,dst,src_port,dst_port; //Modified by Homegear GmbH - added dst_port
                     if (drag_line.portType === PORT_TYPE_OUTPUT) {
                         src = drag_line.node;
                         src_port = drag_line.port;
                         dst = mouseup_node;
-                        dst_port = portIndex;
+                        dst_port = portIndex; //Added by Homegear GmbH to support multiple inputs
                     } else if (drag_line.portType === PORT_TYPE_INPUT) {
                         src = mouseup_node;
                         src_port = portIndex;
                         dst = drag_line.node;
-                        dst_port = drag_line.port;
+                        dst_port = drag_line.port; //Added by Homegear GmbH to support multiple inputs
                     }
-                    var link = {source: src, sourcePort: src_port, target: dst, targetPort: dst_port};
+                    //var link = {source: src, sourcePort:src_port, target: dst}; //Removed by Homegear GmbH
+                    var link = {source: src, sourcePort: src_port, target: dst, targetPort: dst_port}; //Added by Homegear GmbH to support multiple inputs
                     if (drag_line.virtualLink) {
-                        if (/^link-(in|out)$/.test(src.type) && /^link-(in|out)$/.test(dst.type) && src.type !== dst.type) {
+                        if (/^link (in|out)$/.test(src.type) && /^link (in|out)$/.test(dst.type) && src.type !== dst.type) {
                             if (src.links.indexOf(dst.id) === -1 && dst.links.indexOf(src.id) === -1) {
                                 var oldSrcLinks = $.extend(true,{},{v:src.links}).v
                                 var oldDstLinks = $.extend(true,{},{v:dst.links}).v
@@ -17109,11 +19585,19 @@ RED.view = (function() {
                         // This is not a virtualLink - which means it started
                         // on a regular node port. Need to ensure the this isn't
                         // connecting to a link node virual port.
+                        //
+                        // PORT_TYPE_OUTPUT=0
+                        // PORT_TYPE_INPUT=1
                         if (!(
-                            (d.type === "link-out" && portType === PORT_TYPE_OUTPUT) ||
-                            (d.type === "link-in" && portType === PORT_TYPE_INPUT)
+                            (d.type === "link out" && portType === PORT_TYPE_OUTPUT) ||
+                            (d.type === "link in" && portType === PORT_TYPE_INPUT) ||
+                            (portType === PORT_TYPE_OUTPUT && mouseup_node.type !== "subflow" && mouseup_node.outputs === 0) ||
+                            (portType === PORT_TYPE_INPUT && mouseup_node.type !== "subflow" && mouseup_node.inputs === 0) ||
+                            (drag_line.portType === PORT_TYPE_INPUT && mouseup_node.type === "subflow" && (mouseup_node.direction === "status" || mouseup_node.direction === "out")) ||
+                            (drag_line.portType === PORT_TYPE_OUTPUT && mouseup_node.type === "subflow" && mouseup_node.direction === "in")
                         )) {
-                            var existingLink = RED.nodes.filterLinks({source:src,target:dst,sourcePort:src_port,targetPort:dst_port}).length !== 0;
+                            //var existingLink = RED.nodes.filterLinks({source:src,target:dst,sourcePort: src_port}).length !== 0; //Removed by Homegear GmbH
+                            var existingLink = RED.nodes.filterLinks({source:src,target:dst,sourcePort:src_port,targetPort:dst_port}).length !== 0; //Added by Homegear GmbH to support multiple inputs
                             if (!existingLink) {
                                 RED.nodes.addLink(link);
                                 addedLinks.push(link);
@@ -17211,7 +19695,8 @@ RED.view = (function() {
     }
 
     function getPortLabel(node,portType,portIndex) {
-        /*var result;
+        if (node.type == "link in" || node.type == "link out") return null;
+        var result;
         var nodePortLabels = (portType === PORT_TYPE_INPUT)?node.inputLabels:node.outputLabels;
         if (nodePortLabels && nodePortLabels[portIndex]) {
             return nodePortLabels[portIndex];
@@ -17228,13 +19713,37 @@ RED.view = (function() {
             }
         } else if ($.isArray(portLabels)) {
             result = portLabels[portIndex];
+        } 
+        //{{{ Added by Homegear GmbH
+        else {
+            var portInfo = (portType === PORT_TYPE_INPUT)?node._def.inputInfo:node._def.outputInfo;
+            if (typeof portInfo === 'function') {
+                try {
+                    result = portInfo.call(node, portIndex);
+                    if (result.hasOwnProperty('label')) result = result.label;
+                } catch(err) {
+                    console.log("Definition error: "+node.type+"."+((portType === PORT_TYPE_INPUT)?"inputInfo":"outputInfo"),err);
+                    result = null;
+                }
+            } else if ($.isArray(portInfo) && portIndex < portInfo.length && portInfo[portIndex].hasOwnProperty("label")) {
+                result = portInfo[portIndex].label;
+            } else if (node.outputs > 1) {
+                result = portIndex;
+            }
         }
-        return result;*/
+        //}}}
+        return result;
     }
     function showTooltip(x,y,content,direction) {
         var tooltip = eventLayer.append("g")
             .attr("transform","translate("+x+","+y+")")
             .attr("class","red-ui-flow-port-tooltip");
+
+        // First check for a user-provided newline - "\\n "
+        var newlineIndex = content.indexOf("\\n ");
+        if (newlineIndex > -1 && content[newlineIndex-1] !== '\\') {
+            content = content.substring(0,newlineIndex)+"...";
+        }
 
         var lines = content.split("\n");
         var labelWidth = 6;
@@ -17242,8 +19751,8 @@ RED.view = (function() {
         var labelHeights = [];
         var lineHeight = 0;
         lines.forEach(function(l,i) {
-            var labelDimensions = calculateTextDimensions(l||"&nbsp;", "red-ui-flow-port-tooltip-label", 8,0);
-            labelWidth = Math.max(labelWidth,labelDimensions[0] + 6);
+            var labelDimensions = calculateTextDimensions(l||"&nbsp;", "red-ui-flow-port-tooltip-label");
+            labelWidth = Math.max(labelWidth,labelDimensions[0] + 14);
             labelHeights.push(labelDimensions[1]);
             if (i === 0) {
                 lineHeight = labelDimensions[1];
@@ -17287,24 +19796,23 @@ RED.view = (function() {
     }
 
     function portMouseOver(port,d,portType,portIndex) {
-        var active = (mouse_mode!=RED.state.JOINING || (drag_lines.length > 0 && drag_lines[0].portType !== portType));
-        /*if (mouse_mode === RED.state.SELECTING_NODE) {
+        if (mouse_mode === RED.state.SELECTING_NODE) {
             d3.event.stopPropagation();
             return;
         }
-        clearTimeout(portLabelHoverTimeout);
+        //clearTimeout(portLabelHoverTimeout); //Removed by Homegear GmbH
         var active = (mouse_mode!=RED.state.JOINING && mouse_mode != RED.state.QUICK_JOINING) || // Not currently joining - all ports active
                      (
                          drag_lines.length > 0 && // Currently joining
                          drag_lines[0].portType !== portType && // INPUT->OUTPUT OUTPUT->INPUT
                          (
                              !drag_lines[0].virtualLink || // Not a link wire
-                             (drag_lines[0].node.type === 'link-in' && d.type === 'link-out') ||
-                             (drag_lines[0].node.type === 'link-out' && d.type === 'link-in')
+                             (drag_lines[0].node.type === 'link in' && d.type === 'link out') ||
+                             (drag_lines[0].node.type === 'link out' && d.type === 'link in')
                          )
                      )
-
-        if (active && ((portType === PORT_TYPE_INPUT && ((d._def && d._def.inputLabels)||d.inputLabels)) || (portType === PORT_TYPE_OUTPUT && ((d._def && d._def.outputLabels)||d.outputLabels)))) {
+        //Removed by Homegear GmbH
+        /*if (active && ((portType === PORT_TYPE_INPUT && ((d._def && d._def.inputLabels)||d.inputLabels)) || (portType === PORT_TYPE_OUTPUT && ((d._def && d._def.outputLabels)||d.outputLabels)))) {
             portLabelHoverTimeout = setTimeout(function() {
                 var tooltip = getPortLabel(d,portType,portIndex);
                 if (!tooltip) {
@@ -17327,6 +19835,7 @@ RED.view = (function() {
             d3.event.stopPropagation();
             return;
         }
+        //Removed by Homegear GmbH
         /*clearTimeout(portLabelHoverTimeout);
         if (portLabelHover) {
             portLabelHover.remove();
@@ -17335,12 +19844,30 @@ RED.view = (function() {
         port.classed("red-ui-flow-port-hovered",false);
     }
 
+    function prepareDrag(mouse) {
+        mouse_mode = RED.state.MOVING;
+        // Called when movingSet should be prepared to be dragged
+        for (i=0;i<movingSet.length();i++) {
+            var msn = movingSet.get(i);
+            msn.ox = msn.n.x;
+            msn.oy = msn.n.y;
+            msn.dx = msn.n.x-mouse[0];
+            msn.dy = msn.n.y-mouse[1];
+        }
+
+        mouse_offset = d3.mouse(document.body);
+        if (isNaN(mouse_offset[0])) {
+            mouse_offset = d3.touches(document.body)[0];
+        }
+    }
+
     function nodeMouseUp(d) {
+        if (RED.view.DEBUG) { console.warn("nodeMouseUp", mouse_mode,d); }
         if (mouse_mode === RED.state.SELECTING_NODE) {
             d3.event.stopPropagation();
             return;
         }
-        if (dblClickPrimed && mousedown_node == d && clickElapsed > 0 && clickElapsed < 750) {
+        if (dblClickPrimed && mousedown_node == d && clickElapsed > 0 && clickElapsed < dblClickInterval) {
             mouse_mode = RED.state.DEFAULT;
             if (d.type != "subflow") {
                 RED.editor.edit(d);
@@ -17351,28 +19878,55 @@ RED.view = (function() {
             d3.event.stopPropagation();
             return;
         }
+        if (mouse_mode === RED.state.MOVING) {
+            // Moving primed, but not active.
+            if (!groupNodeSelectPrimed && !d.selected && d.g && RED.nodes.group(d.g).selected) {
+                clearSelection();
+
+                selectGroup(RED.nodes.group(d.g), false);
+                enterActiveGroup(RED.nodes.group(d.g))
+
+                mousedown_node.selected = true;
+                movingSet.add(mousedown_node);
+                var mouse = d3.touches(this)[0]||d3.mouse(this);
+                mouse[0] += d.x-d.w/2;
+                mouse[1] += d.y-d.h/2;
+                prepareDrag(mouse);
+                updateSelection();
+                return;
+            }
+        }
+
+        groupNodeSelectPrimed = false;
+
         var direction = d._def? (d.inputs > 0 ? 1: 0) : (d.direction == "in" ? 0: 1)
         var wasJoining = false;
         if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
             wasJoining = true;
             if (drag_lines.length > 0) {
                 if (drag_lines[0].virtualLink) {
-                    if (d.type === 'link-in') {
+                    if (d.type === 'link in') {
                         direction = 1;
-                    } else if (d.type === 'link-out') {
+                    } else if (d.type === 'link out') {
                         direction = 0;
+                    }
+                } else {
+                    if (drag_lines[0].portType === 1) {
+                        direction = PORT_TYPE_OUTPUT;
+                    } else {
+                        direction = PORT_TYPE_INPUT;
                     }
                 }
             }
         }
 
-        //portMouseUp(d, direction, 0);
+        //portMouseUp(d, direction, 0); //Removed by Homegear GmbH to not connect wire to first input when mouse button is released on node
         if (wasJoining) {
             d3.selectAll(".red-ui-flow-port-hovered").classed("red-ui-flow-port-hovered",false);
         }
     }
-
     function nodeMouseDown(d) {
+        if (RED.view.DEBUG) { console.warn("nodeMouseDown", mouse_mode,d); }
         focusView();
         if (d3.event.button === 1) {
             return;
@@ -17382,7 +19936,7 @@ RED.view = (function() {
         //RED.touch.radialMenu.show(d3.select(this),pos);
         if (mouse_mode == RED.state.IMPORT_DRAGGING) {
             RED.keyboard.remove("escape");
-
+            var historyEvent = RED.history.peek();
             if (activeSpliceLink) {
                 // TODO: DRY - droppable/nodeMouseDown/canvasMouseUp
                 var spliceLink = d3.select(activeSpliceLink).data()[0];
@@ -17390,22 +19944,37 @@ RED.view = (function() {
                 var link1 = {
                     source:spliceLink.source,
                     sourcePort:spliceLink.sourcePort,
-                    target: moving_set[0].n,
-                    targetPort: 0
+                    target: movingSet.get(0).n,
+                    targetPort: 0 //Added by Homegear GmbH to support multiple inputs
                 };
                 var link2 = {
-                    source:moving_set[0].n,
+                    source:movingSet.get(0).n,
                     sourcePort:0,
                     target: spliceLink.target,
-                    targetPort: 0
+                    targetPort: spliceLink.targetPort //Added by Homegear GmbH to support multiple inputs
                 };
                 RED.nodes.addLink(link1);
                 RED.nodes.addLink(link2);
-                var historyEvent = RED.history.peek();
+
                 historyEvent.links = [link1,link2];
                 historyEvent.removedLinks = [spliceLink];
                 updateActiveNodes();
             }
+
+            if (activeHoverGroup) {
+                for (var j=0;j<movingSet.length();j++) {
+                    var n = movingSet.get(j);
+                    RED.group.addToGroup(activeHoverGroup,n.n);
+                }
+                historyEvent.addedToGroup = activeHoverGroup;
+
+                activeHoverGroup.hovered = false;
+                enterActiveGroup(activeHoverGroup)
+                // TODO: check back whether this should add to moving_set
+                activeGroup.selected = true;
+                activeHoverGroup = null;
+            }
+
 
             updateSelection();
             RED.nodes.dirty(true);
@@ -17424,16 +19993,11 @@ RED.view = (function() {
             }
             if (d.selected) {
                 d.selected = false;
-                for (i=0;i<moving_set.length;i+=1) {
-                    if (moving_set[i].n === d) {
-                        moving_set.splice(i,1);
-                        break;
-                    }
-                }
+                movingSet.remove(d);
             } else {
                 if (!selectNodesOptions.filter || selectNodesOptions.filter(d)) {
                     d.selected = true;
-                    moving_set.push({n:d});
+                    movingSet.add(d);
                 }
             }
             d.dirty = true;
@@ -17443,41 +20007,156 @@ RED.view = (function() {
             // }
             return;
         }
+
         mousedown_node = d;
+
         var now = Date.now();
         clickElapsed = now-clickTime;
         clickTime = now;
-
         dblClickPrimed = (lastClickNode == mousedown_node &&
-            d3.event.button === 0 &&
-            !d3.event.shiftKey && !d3.event.metaKey && !d3.event.altKey && !d3.event.ctrlKey);
-        lastClickNode = mousedown_node;
+            (d3.event.touches || d3.event.button === 0) &&
+            !d3.event.shiftKey && !d3.event.metaKey && !d3.event.altKey && !d3.event.ctrlKey &&
+            clickElapsed < dblClickInterval
+            )
+            lastClickNode = mousedown_node;
 
         var i;
 
-        if (d.selected && (d3.event.ctrlKey||d3.event.metaKey)) {
-            mousedown_node.selected = false;
-            for (i=0;i<moving_set.length;i+=1) {
-                if (moving_set[i].n === mousedown_node) {
-                    moving_set.splice(i,1);
-                    break;
+        if (!d.selected && d.g /*&& !RED.nodes.group(d.g).selected*/) {
+            var nodeGroup = RED.nodes.group(d.g);
+
+            if (nodeGroup !== activeGroup && (d3.event.ctrlKey || d3.event.metaKey)) {
+                if (activeGroup && nodeGroup.g === activeGroup.id) {
+                    // Clicked on a node in a non-active group, inside the activeGroup, with ctrl pressed
+                    // - add/remove the group from the current selection
+                    groupNodeSelectPrimed = true;
+                     if (nodeGroup.selected) {
+                         deselectGroup(nodeGroup);
+                     } else {
+                         selectGroup(nodeGroup,true);
+                     }
+                } else {
+                    // Clicked on a node in a non-active group with ctrl pressed
+                    //  - exit active group
+                    //  - toggle the select state of the group
+                    exitActiveGroup();
+                    groupNodeSelectPrimed = true;
+                    if (nodeGroup.selected) {
+                        deselectGroup(nodeGroup);
+                    } else {
+                        selectGroup(nodeGroup,true);
+                    }
+                }
+            } else if (nodeGroup === activeGroup ) {
+                if (d3.event.shiftKey) {
+                    if (!d3.event.ctrlKey && !d3.event.metaKey) {
+                        var ag = activeGroup;
+                        clearSelection();
+                        enterActiveGroup(ag);
+                        activeGroup.selected = true;
+                    }
+                    var cnodes = RED.nodes.getAllFlowNodes(mousedown_node);
+                    for (var n=0;n<cnodes.length;n++) {
+                        if (!cnodes[n].selected) {
+                            cnodes[n].selected = true;
+                            cnodes[n].dirty = true;
+                            movingSet.add(cnodes[n]);
+                        }
+                    }
+                } else {
+                    // Clicked on a node in the active group
+                    if (!d3.event.ctrlKey && !d3.event.metaKey) {
+                        // Ctrl not pressed so clear selection
+                        var ag = activeGroup;
+                        clearSelection();
+                        deselectGroup(nodeGroup);
+                        selectGroup(nodeGroup,false,false);
+                        if (ag) {
+                            enterActiveGroup(ag);
+                            activeGroup.selected = true;
+                        }
+                    }
+
+                    // Select this node
+                    mousedown_node.selected = true;
+                    movingSet.add(mousedown_node);
+                }
+            } else {
+                // Clicked on a node in a group
+                //  - if this group is not selected, clear current selection
+                //    and select this group
+                //  - if this group is not the active group, exit the active group
+                //    and select the group
+                //  - if this group is the active group, keep it active and
+                //    change node selection
+
+                // Set groupNodeSelectPrimed to true as this is a (de)select of the
+                // group and NOT meant to trigger going into the group - see nodeMouseUp
+                groupNodeSelectPrimed = !nodeGroup.selected;
+                var ag = activeGroup;
+                if (!nodeGroup.selected) {
+                    clearSelection();
+                }
+                if (ag) {
+                    if (ag !== nodeGroup && ag.id !== nodeGroup.g) {
+                        ag.active = false;
+                        ag.dirty = true;
+                    } else {
+                        activeGroup = ag;
+                        activeGroup.active = true;
+                    }
+                } else {
+                    dblClickPrimed = false;
+                }
+                selectGroup(nodeGroup, !(activeGroup && activeGroup === nodeGroup), !!groupNodeSelectPrimed);
+                if (activeGroup && activeGroup === nodeGroup) {
+                    mousedown_node.selected = true;
+                    movingSet.add(mousedown_node);
                 }
             }
+
+
+            if (d3.event.button != 2) {
+                var mouse = d3.touches(this)[0]||d3.mouse(this);
+                mouse[0] += d.x-d.w/2;
+                mouse[1] += d.y-d.h/2;
+                prepareDrag(mouse);
+            }
+        } else if (d.selected && (d3.event.ctrlKey||d3.event.metaKey)) {
+            mousedown_node.selected = false;
+            movingSet.remove(mousedown_node);
         } else {
+
+            // if (d.g && !RED.nodes.group(d.g).selected) {
+            //     selectGroup(RED.nodes.group(d.g), false);
+            // }
+
+
+            // if (!d.selected && d.g) {
+            //     if (!RED.nodes.group(d.g).selected) {// && !RED.nodes.group(d.g).selected) {
+            //         clearSelection();
+            //         selectGroup(RED.nodes.group(d.g));
+            //         d.selected = true;
+            //         console.log(d.id,"Setting selected")
+            //         d.gSelected = true;
+            //     }
+            // } else
             if (d3.event.shiftKey) {
                 clearSelection();
                 var cnodes = RED.nodes.getAllFlowNodes(mousedown_node);
                 for (var n=0;n<cnodes.length;n++) {
                     cnodes[n].selected = true;
                     cnodes[n].dirty = true;
-                    moving_set.push({n:cnodes[n]});
+                    movingSet.add(cnodes[n]);
                 }
             } else if (!d.selected) {
                 if (!d3.event.ctrlKey && !d3.event.metaKey) {
                     clearSelection();
+                } else {
+                    exitActiveGroup();
                 }
                 mousedown_node.selected = true;
-                moving_set.push({n:mousedown_node});
+                movingSet.add(mousedown_node);
             }
             selected_link = null;
             if (d3.event.button != 2) {
@@ -17485,22 +20164,325 @@ RED.view = (function() {
                 var mouse = d3.touches(this)[0]||d3.mouse(this);
                 mouse[0] += d.x-d.w/2;
                 mouse[1] += d.y-d.h/2;
-                for (i=0;i<moving_set.length;i++) {
-                    moving_set[i].ox = moving_set[i].n.x;
-                    moving_set[i].oy = moving_set[i].n.y;
-                    moving_set[i].dx = moving_set[i].n.x-mouse[0];
-                    moving_set[i].dy = moving_set[i].n.y-mouse[1];
-                }
-                mouse_offset = d3.mouse(document.body);
-                if (isNaN(mouse_offset[0])) {
-                    mouse_offset = d3.touches(document.body)[0];
-                }
+                prepareDrag(mouse);
             }
         }
         d.dirty = true;
         updateSelection();
         redraw();
         d3.event.stopPropagation();
+    }
+    function nodeTouchStart(d) {
+        if (RED.view.DEBUG) { console.warn("nodeTouchStart", mouse_mode,d); }
+        var obj = d3.select(this);
+        var touch0 = d3.event.touches.item(0);
+        var pos = [touch0.pageX,touch0.pageY];
+        startTouchCenter = [touch0.pageX,touch0.pageY];
+        startTouchDistance = 0;
+        touchStartTime = setTimeout(function() {
+            showTouchMenu(obj,pos);
+        },touchLongPressTimeout);
+        nodeMouseDown.call(this,d)
+        d3.event.preventDefault();
+    }
+    function nodeTouchEnd(d) {
+        if (RED.view.DEBUG) { console.warn("nodeTouchEnd", mouse_mode,d); }
+        d3.event.preventDefault();
+        clearTimeout(touchStartTime);
+        touchStartTime = null;
+        if  (RED.touch.radialMenu.active()) {
+            d3.event.stopPropagation();
+            return;
+        }
+        nodeMouseUp.call(this,d);
+    }
+
+    function nodeMouseOver(d) {
+        if (RED.view.DEBUG) { console.warn("nodeMouseOver", mouse_mode,d); }
+        if (mouse_mode === 0 || mouse_mode === RED.state.SELECTING_NODE) {
+            if (mouse_mode === RED.state.SELECTING_NODE && selectNodesOptions && selectNodesOptions.filter) {
+                if (selectNodesOptions.filter(d)) {
+                    this.parentNode.classList.add("red-ui-flow-node-hovered");
+                }
+            } else {
+                this.parentNode.classList.add("red-ui-flow-node-hovered");
+            }
+            clearTimeout(portLabelHoverTimeout);
+            if (d.hasOwnProperty('l')?!d.l : (d.type === "link in" || d.type === "link out")) {
+                var parentNode = this.parentNode;
+                portLabelHoverTimeout = setTimeout(function() {
+                    var tooltip;
+                    if (d._def.label) {
+                        tooltip = d._def.label;
+                        try {
+                            tooltip = (typeof tooltip === "function" ? tooltip.call(d) : tooltip)||"";
+                        } catch(err) {
+                            console.log("Definition error: "+d.type+".label",err);
+                            tooltip = d.type;
+                        }
+                    }
+                    if (tooltip !== "") {
+                        var pos = getElementPosition(parentNode);
+                        portLabelHoverTimeout = null;
+                        portLabelHover = showTooltip(
+                            (pos[0] + d.w/2),
+                            (pos[1]-1),
+                            tooltip,
+                            "top"
+                        );
+                    }
+                },500);
+            }
+        } else if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
+            if (drag_lines.length > 0) {
+                var selectClass;
+                var portType;
+                if ((drag_lines[0].virtualLink && drag_lines[0].portType === PORT_TYPE_INPUT) || drag_lines[0].portType === PORT_TYPE_OUTPUT) {
+                    selectClass = ".red-ui-flow-port-input .red-ui-flow-port";
+                    portType = PORT_TYPE_INPUT;
+                } else {
+                    selectClass = ".red-ui-flow-port-output .red-ui-flow-port";
+                    portType = PORT_TYPE_OUTPUT;
+                }
+                portMouseOver(d3.select(this.parentNode).selectAll(selectClass),d,portType,0);
+            }
+        }
+    }
+    function nodeMouseOut(d) {
+        if (RED.view.DEBUG) { console.warn("nodeMouseOut", mouse_mode,d); }
+        this.parentNode.classList.remove("red-ui-flow-node-hovered");
+        clearTimeout(portLabelHoverTimeout);
+        if (portLabelHover) {
+            portLabelHover.remove();
+            portLabelHover = null;
+        }
+        if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
+            if (drag_lines.length > 0) {
+                var selectClass;
+                var portType;
+                if ((drag_lines[0].virtualLink && drag_lines[0].portType === PORT_TYPE_INPUT) || drag_lines[0].portType === PORT_TYPE_OUTPUT) {
+                    selectClass = ".red-ui-flow-port-input .red-ui-flow-port";
+                    portType = PORT_TYPE_INPUT;
+                } else {
+                    selectClass = ".red-ui-flow-port-output .red-ui-flow-port";
+                    portType = PORT_TYPE_OUTPUT;
+                }
+                portMouseOut(d3.select(this.parentNode).selectAll(selectClass),d,portType,0);
+            }
+        }
+    }
+
+    function portMouseDownProxy(e) {  portMouseDown(this.__data__,this.__portType__,this.__portIndex__, e); }
+    function portTouchStartProxy(e) { portMouseDown(this.__data__,this.__portType__,this.__portIndex__, e); e.preventDefault() }
+    function portMouseUpProxy(e) { portMouseUp(this.__data__,this.__portType__,this.__portIndex__, e); }
+    function portTouchEndProxy(e) { portMouseUp(this.__data__,this.__portType__,this.__portIndex__, e); e.preventDefault() }
+    function portMouseOverProxy(e) { portMouseOver(d3.select(this), this.__data__,this.__portType__,this.__portIndex__, e); }
+    function portMouseOutProxy(e) { portMouseOut(d3.select(this), this.__data__,this.__portType__,this.__portIndex__, e); }
+
+    function linkMouseDown(d) {
+        if (mouse_mode === RED.state.SELECTING_NODE) {
+            d3.event.stopPropagation();
+            return;
+        }
+         mousedown_link = d;
+         clearSelection();
+         selected_link = mousedown_link;
+         updateSelection();
+         redraw();
+         focusView();
+         d3.event.stopPropagation();
+         if (d3.event.metaKey || d3.event.ctrlKey) {
+             d3.select(this).classed("red-ui-flow-link-splice",true);
+             var point = d3.mouse(this);
+             var clickedGroup = getGroupAt(point[0],point[1]);
+             showQuickAddDialog(point, selected_link, clickedGroup);
+         }
+    }
+    function linkTouchStart(d) {
+        if (mouse_mode === RED.state.SELECTING_NODE) {
+            d3.event.stopPropagation();
+            return;
+        }
+        mousedown_link = d;
+        clearSelection();
+        selected_link = mousedown_link;
+        updateSelection();
+        redraw();
+        focusView();
+        d3.event.stopPropagation();
+
+        var obj = d3.select(document.body);
+        var touch0 = d3.event.touches.item(0);
+        var pos = [touch0.pageX,touch0.pageY];
+        touchStartTime = setTimeout(function() {
+            touchStartTime = null;
+            showTouchMenu(obj,pos);
+        },touchLongPressTimeout);
+        d3.event.preventDefault();
+    }
+
+    function groupMouseUp(g) {
+        if (dblClickPrimed && mousedown_group == g && clickElapsed > 0 && clickElapsed < dblClickInterval) {
+            mouse_mode = RED.state.DEFAULT;
+            RED.editor.editGroup(g);
+            d3.event.stopPropagation();
+            return;
+        }
+
+    }
+
+    function groupMouseDown(g) {
+        var mouse = d3.touches(this.parentNode)[0]||d3.mouse(this.parentNode);
+        // if (! (mouse[0] < g.x+10 || mouse[0] > g.x+g.w-10 || mouse[1] < g.y+10 || mouse[1] > g.y+g.h-10) ) {
+        //     return
+        // }
+
+        focusView();
+        if (d3.event.button === 1) {
+            return;
+        }
+        if (mouse_mode == RED.state.IMPORT_DRAGGING) {
+            RED.keyboard.remove("escape");
+        } else if (mouse_mode == RED.state.QUICK_JOINING) {
+            d3.event.stopPropagation();
+            return;
+        } else if (mouse_mode === RED.state.SELECTING_NODE) {
+            d3.event.stopPropagation();
+            return;
+        }
+
+        mousedown_group = g;
+
+        var now = Date.now();
+        clickElapsed = now-clickTime;
+        clickTime = now;
+
+        dblClickPrimed = (
+            lastClickNode == g &&
+            (d3.event.touches || d3.event.button === 0) &&
+            !d3.event.shiftKey && !d3.event.metaKey && !d3.event.altKey && !d3.event.ctrlKey &&
+            clickElapsed < dblClickInterval
+        );
+        lastClickNode = g;
+
+        if (g.selected && (d3.event.ctrlKey||d3.event.metaKey)) {
+            if (g === activeGroup) {
+                exitActiveGroup();
+            }
+            deselectGroup(g);
+            d3.event.stopPropagation();
+        } else {
+            if (!g.selected) {
+                if (!d3.event.ctrlKey && !d3.event.metaKey) {
+                    var ag = activeGroup;
+                    clearSelection();
+                    if (ag && g.g === ag.id) {
+                        enterActiveGroup(ag);
+                        activeGroup.selected = true;
+                    }
+                }
+                if (activeGroup) {
+                    if (!RED.group.contains(activeGroup,g)) {
+                        // Clicked on a group that is outside the activeGroup
+                        exitActiveGroup();
+                    } else {
+                    }
+                }
+                selectGroup(g,true);//!wasSelected);
+            } else if (activeGroup && g.g !== activeGroup.id){
+                exitActiveGroup();
+            }
+
+
+            if (d3.event.button != 2) {
+                var d = g.nodes[0];
+                prepareDrag(mouse);
+                mousedown_group.dx = mousedown_group.x - mouse[0];
+                mousedown_group.dy = mousedown_group.y - mouse[1];
+            }
+        }
+
+        updateSelection();
+        redraw();
+        d3.event.stopPropagation();
+    }
+
+    function selectGroup(g, includeNodes, addToMovingSet) {
+        if (!g.selected) {
+            g.selected = true;
+            g.dirty = true;
+        }
+        if (addToMovingSet !== false) {
+            movingSet.add(g);
+        }
+        if (includeNodes) {
+            var currentSet = new Set(movingSet.nodes());
+            var allNodes = RED.group.getNodes(g,true);
+            allNodes.forEach(function(n) {
+                if (!currentSet.has(n)) {
+                    movingSet.add(n)
+                    // n.selected = true;
+                }
+                n.dirty = true;
+            })
+        }
+    }
+    function enterActiveGroup(group) {
+        if (activeGroup) {
+            exitActiveGroup();
+        }
+        group.active = true;
+        group.dirty = true;
+        activeGroup = group;
+        movingSet.remove(group);
+    }
+    function exitActiveGroup() {
+        if (activeGroup) {
+            activeGroup.active = false;
+            activeGroup.dirty = true;
+            deselectGroup(activeGroup);
+            selectGroup(activeGroup,true);
+            activeGroup = null;
+        }
+    }
+    function deselectGroup(g) {
+        if (g.selected) {
+            g.selected = false;
+            g.dirty = true;
+        }
+        var nodeSet = new Set(g.nodes);
+        nodeSet.add(g);
+        for (var i = movingSet.length()-1; i >= 0; i -= 1) {
+            var msn = movingSet.get(i);
+            if (nodeSet.has(msn.n) || msn.n === g) {
+                msn.n.selected = false;
+                msn.n.dirty = true;
+                movingSet.remove(msn.n,i)
+            }
+        }
+    }
+    function getGroupAt(x,y) {
+        var candidateGroups = {};
+        for (var i=0;i<activeGroups.length;i++) {
+            var g = activeGroups[i];
+            if (x >= g.x && x <= g.x + g.w && y >= g.y && y <= g.y + g.h) {
+                candidateGroups[g.id] = g;
+            }
+        }
+        var ids = Object.keys(candidateGroups);
+        if (ids.length > 1) {
+            ids.forEach(function(id) {
+                if (candidateGroups[id] && candidateGroups[id].g) {
+                    delete candidateGroups[candidateGroups[id].g]
+                }
+            })
+            ids = Object.keys(candidateGroups);
+        }
+        if (ids.length === 0) {
+            return null;
+        } else {
+            return candidateGroups[ids[ids.length-1]]
+        }
     }
 
     function isButtonEnabled(d) {
@@ -17522,7 +20504,9 @@ RED.view = (function() {
 
     function nodeButtonClicked(d) {
         if (mouse_mode === RED.state.SELECTING_NODE) {
-            d3.event.stopPropagation();
+            if (d3.event) {
+                d3.event.stopPropagation();
+            }
             return;
         }
         var activeWorkspace = RED.workspaces.active();
@@ -17549,19 +20533,25 @@ RED.view = (function() {
                 RED.notify(RED._("notification.warning", {message:RED._("notification.warnings.nodeActionDisabled")}),"warning");
             }
         }
-        d3.event.preventDefault();
+        if (d3.event) {
+            d3.event.preventDefault();
+        }
     }
 
     function showTouchMenu(obj,pos) {
         var mdn = mousedown_node;
         var options = [];
-        options.push({name:"delete",disabled:(moving_set.length===0 && selected_link === null),onselect:function() {deleteSelection();}});
-        options.push({name:"cut",disabled:(moving_set.length===0),onselect:function() {copySelection();deleteSelection();}});
-        options.push({name:"copy",disabled:(moving_set.length===0),onselect:function() {copySelection();}});
-        options.push({name:"paste",disabled:(clipboard.length===0),onselect:function() {importNodes(clipboard,false,true);}});
-        options.push({name:"edit",disabled:(moving_set.length != 1),onselect:function() { RED.editor.edit(mdn);}});
+        options.push({name:"delete",disabled:(movingSet.length()===0 && selected_link === null),onselect:function() {deleteSelection();}});
+        options.push({name:"cut",disabled:(movingSet.length()===0),onselect:function() {copySelection();deleteSelection();}});
+        options.push({name:"copy",disabled:(movingSet.length()===0),onselect:function() {copySelection();}});
+        options.push({name:"paste",disabled:(clipboard.length===0),onselect:function() {importNodes(clipboard, {generateIds: true, touchImport: true});}});
+        options.push({name:"edit",disabled:(movingSet.length() != 1),onselect:function() { RED.editor.edit(mdn);}});
         options.push({name:"select",onselect:function() {selectAll();}});
         options.push({name:"undo",disabled:(RED.history.depth() === 0),onselect:function() {RED.history.pop();}});
+        options.push({name:"add",onselect:function() {
+            chartPos = chart.offset();
+            showQuickAddDialog([pos[0]-chartPos.left+chart.scrollLeft(),pos[1]-chartPos.top+chart.scrollTop()],undefined,undefined,true)
+        }});
 
         RED.touch.radialMenu.show(obj,pos,options);
         resetMouseVars();
@@ -17587,12 +20577,12 @@ RED.view = (function() {
                 .text(fontAwesomeUnicode);
         } else {
             var icon = icon_group.append("image")
+                .style("display","none")
                 .attr("xlink:href",iconUrl)
                 .attr("class","red-ui-flow-node-icon")
                 .attr("x",0)
                 .attr("width","30")
-                .attr("height","30")
-                .style("display","none");
+                .attr("height","30");
 
             var img = new Image();
             img.src = iconUrl;
@@ -17620,7 +20610,89 @@ RED.view = (function() {
         }
     }
 
+    function errorBadgeMouseEnter(e) {
+        var d = this.__data__;
+        if (d.validationErrors && d.validationErrors.length > 0) {
+            clearTimeout(portLabelHoverTimeout);
+            var node = this;
+            portLabelHoverTimeout = setTimeout(function() {
+                var pos = getElementPosition(node);
+                portLabelHoverTimeout = null;
+                portLabelHover = showTooltip(
+                    (pos[0]),
+                    (pos[1]),
+                    RED._("editor.errors.invalidProperties")+"\n  - "+d.validationErrors.join("\n    - "),
+                    "top"
+                );
+            },500);
+        }
+    }
+    function errorBadgeMouseLeave() {
+        clearTimeout(portLabelHoverTimeout);
+        if (portLabelHover) {
+            portLabelHover.remove();
+            portLabelHover = null;
+        }
+    }
+
+    function redrawStatus(d,nodeEl) {
+        if (d.z !== RED.workspaces.active()) {
+            return;
+        }
+        if (!nodeEl) {
+            nodeEl = document.getElementById(d.id);
+        }
+        if (nodeEl) {
+            if (!showStatus || !d.status) {
+                nodeEl.__statusGroup__.style.display = "none";
+            } else {
+                nodeEl.__statusGroup__.style.display = "inline";
+                var fill = status_colours[d.status.fill]; // Only allow our colours for now
+                if (d.status.shape == null && fill == null) {
+                    nodeEl.__statusShape__.style.display = "none";
+                    nodeEl.__statusGroup__.setAttribute("transform","translate(-14,"+(d.h+3)+")");
+                } else {
+                    nodeEl.__statusGroup__.setAttribute("transform","translate(3,"+(d.h+3)+")");
+                    var statusClass = "red-ui-flow-node-status-"+(d.status.shape||"dot")+"-"+d.status.fill;
+                    nodeEl.__statusShape__.style.display = "inline";
+                    nodeEl.__statusShape__.setAttribute("class","red-ui-flow-node-status "+statusClass);
+                }
+                if (d.status.hasOwnProperty('text')) {
+                    nodeEl.__statusLabel__.textContent = d.status.text;
+                } else {
+                    nodeEl.__statusLabel__.textContent = "";
+                }
+            }
+            //{{{ Added by Homegear GmbH to add status top support
+            if (!showStatus || !d.statusTop) {
+                nodeEl.__statusTop__.style.display = "none";
+            } else {
+                nodeEl.__statusTop__.style.display = "inline";
+                if (d.statusTop.hasOwnProperty('text')) {
+                    nodeEl.__statusTop__.textContent = d.statusTop.text;
+                } else {
+                    nodeEl.__statusTop__.textContent = "";
+                }
+            }
+            //}}}
+            delete d.dirtyStatus;
+        }
+    }
+
+    var pendingRedraw;
+
     function redraw() {
+        if (RED.view.DEBUG_SYNC_REDRAW) {
+            _redraw();
+        } else {
+            if (pendingRedraw) {
+                cancelAnimationFrame(pendingRedraw);
+            }
+            pendingRedraw = requestAnimationFrame(_redraw);
+        }
+    }
+
+    function _redraw() {
         eventLayer.attr("transform","scale("+scaleFactor+")");
         outer.attr("width", space_width*scaleFactor).attr("height", space_height*scaleFactor);
 
@@ -17641,32 +20713,21 @@ RED.view = (function() {
                     // TODO: This is exactly the same set of handlers used for regular nodes - DRY
                     .on("mouseup",nodeMouseUp)
                     .on("mousedown",nodeMouseDown)
-                    .on("touchstart",function(d) {
-                            var obj = d3.select(this);
-                            var touch0 = d3.event.touches.item(0);
-                            var pos = [touch0.pageX,touch0.pageY];
-                            startTouchCenter = [touch0.pageX,touch0.pageY];
-                            startTouchDistance = 0;
-                            touchStartTime = setTimeout(function() {
-                                    showTouchMenu(obj,pos);
-                            },touchLongPressTimeout);
-                            nodeMouseDown.call(this,d)
-                    })
-                    .on("touchend", function(d) {
-                            clearTimeout(touchStartTime);
-                            touchStartTime = null;
-                            if  (RED.touch.radialMenu.active()) {
-                                d3.event.stopPropagation();
-                                return;
-                            }
-                            nodeMouseUp.call(this,d);
-                    });
+                    .on("touchstart",nodeTouchStart)
+                    .on("touchend",nodeTouchEnd)
 
                 outGroup.append("g").attr('transform','translate(-5,15)').append("rect").attr("class","red-ui-flow-port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
-                    .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,i);} )
-                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,i);} )
+                    //Removed by Homegear GmbH
+                    /*.on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);} )
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);d3.event.preventDefault();} )
+                    .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);})
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);d3.event.preventDefault();} )
+                    .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_INPUT,0);})
+                    .on("mouseout",function(d){portMouseOut(d3.select(this),d,PORT_TYPE_INPUT,0);});*/
+                    .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,i);} ) //Added by Homegear GmbH to support multiple inputs - added "i"
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,i);d3.event.preventDefault();} )
                     .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_INPUT,i);})
-                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,i);} )
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,i);d3.event.preventDefault();} )
                     .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_INPUT,i);})
                     .on("mouseout",function(d){portMouseOut(d3.select(this),d,PORT_TYPE_INPUT,i);});
 
@@ -17684,37 +20745,23 @@ RED.view = (function() {
                     // TODO: This is exactly the same set of handlers used for regular nodes - DRY
                     .on("mouseup",nodeMouseUp)
                     .on("mousedown",nodeMouseDown)
-                    .on("touchstart",function(d) {
-                            var obj = d3.select(this);
-                            var touch0 = d3.event.touches.item(0);
-                            var pos = [touch0.pageX,touch0.pageY];
-                            startTouchCenter = [touch0.pageX,touch0.pageY];
-                            startTouchDistance = 0;
-                            touchStartTime = setTimeout(function() {
-                                    showTouchMenu(obj,pos);
-                            },touchLongPressTimeout);
-                            nodeMouseDown.call(this,d)
-                    })
-                    .on("touchend", function(d) {
-                            clearTimeout(touchStartTime);
-                            touchStartTime = null;
-                            if  (RED.touch.radialMenu.active()) {
-                                d3.event.stopPropagation();
-                                return;
-                            }
-                            nodeMouseUp.call(this,d);
-                    });
+                    .on("touchstart",nodeTouchStart)
+                    .on("touchend", nodeTouchEnd);
 
                 inGroup.append("g").attr('transform','translate(35,15)').append("rect").attr("class","red-ui-flow-port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
                     .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_OUTPUT,i);} )
-                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_OUTPUT,i);} )
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_OUTPUT,i);d3.event.preventDefault();} )
                     .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);})
-                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);} )
-                    .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_OUTPUT,i);})
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_OUTPUT,i);d3.event.preventDefault();} )
+                    //Removed by Homegear GmbH
+                    /*.on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_OUTPUT,0);})
+                    .on("mouseout",function(d) {portMouseOut(d3.select(this),d,PORT_TYPE_OUTPUT,0);});*/
+                    .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_OUTPUT,i);}) //Added by Homegear GmbH to support multiple inputs - added "i"
                     .on("mouseout",function(d) {portMouseOut(d3.select(this),d,PORT_TYPE_OUTPUT,i);});
 
-                inGroup.append("svg:text").attr("class","red-ui-flow-port-label").attr("x",20).attr("y",8).style("font-size","10px").text("input");
-                inGroup.append("svg:text").attr("class","red-ui-flow-port-label red-ui-flow-port-index").attr("x",20).attr("y",24).text(function(d,i){ return i+1});
+                //inGroup.append("svg:text").attr("class","red-ui-flow-port-label").attr("x",18).attr("y",20).style("font-size","10px").text("input"); //Removed by Homegear GmbH
+                inGroup.append("svg:text").attr("class","red-ui-flow-port-label").attr("x",20).attr("y",8).style("font-size","10px").text("input"); //Added by Homegear GmbH
+                inGroup.append("svg:text").attr("class","red-ui-flow-port-label red-ui-flow-port-index").attr("x",20).attr("y",24).text(function(d,i){ return i+1}); //Added by Homegear GmbH
 
                 var subflowStatus = nodeLayer.selectAll(".red-ui-flow-subflow-port-status").data(activeSubflow.status?[activeSubflow.status]:[],function(d,i){ return d.id;});
                 subflowStatus.exit().remove();
@@ -17728,32 +20775,14 @@ RED.view = (function() {
                     // TODO: This is exactly the same set of handlers used for regular nodes - DRY
                     .on("mouseup",nodeMouseUp)
                     .on("mousedown",nodeMouseDown)
-                    .on("touchstart",function(d) {
-                            var obj = d3.select(this);
-                            var touch0 = d3.event.touches.item(0);
-                            var pos = [touch0.pageX,touch0.pageY];
-                            startTouchCenter = [touch0.pageX,touch0.pageY];
-                            startTouchDistance = 0;
-                            touchStartTime = setTimeout(function() {
-                                    showTouchMenu(obj,pos);
-                            },touchLongPressTimeout);
-                            nodeMouseDown.call(this,d)
-                    })
-                    .on("touchend", function(d) {
-                            clearTimeout(touchStartTime);
-                            touchStartTime = null;
-                            if  (RED.touch.radialMenu.active()) {
-                                d3.event.stopPropagation();
-                                return;
-                            }
-                            nodeMouseUp.call(this,d);
-                    });
+                    .on("touchstart",nodeTouchStart)
+                    .on("touchend", nodeTouchEnd);
 
                 statusGroup.append("g").attr('transform','translate(-5,15)').append("rect").attr("class","red-ui-flow-port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
                     .on("mousedown", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);} )
-                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);} )
+                    .on("touchstart", function(d,i){portMouseDown(d,PORT_TYPE_INPUT,0);d3.event.preventDefault();} )
                     .on("mouseup", function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);})
-                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);} )
+                    .on("touchend",function(d,i){portMouseUp(d,PORT_TYPE_INPUT,0);d3.event.preventDefault();} )
                     .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_INPUT,0);})
                     .on("mouseout",function(d){portMouseOut(d3.select(this),d,PORT_TYPE_INPUT,0);});
 
@@ -17763,7 +20792,7 @@ RED.view = (function() {
                     if (d.dirty) {
                         var output = d3.select(this);
                         output.classed("red-ui-flow-node-selected",function(d) { return d.selected; })
-                        output.classed("red-ui-flow-node-working",function(d) { return d.working; }) //Working => Node or link is highlighted blue
+                        output.classed("red-ui-flow-node-working",function(d) { return d.working; }) //Added by Homegear GmbH. Working => Node or link is highlighted blue
                         output.selectAll(".red-ui-flow-port-index").text(function(d){ return d.i+1});
                         output.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
                         dirtyNodes[d.id] = d;
@@ -17774,7 +20803,7 @@ RED.view = (function() {
                     if (d.dirty) {
                         var input = d3.select(this);
                         input.classed("red-ui-flow-node-selected",function(d) { return d.selected; })
-                        input.classed("red-ui-flow-node-working",function(d) { return d.working; }) //Working => Node or link is highlighted blue
+                        input.classed("red-ui-flow-node-working",function(d) { return d.working; }) //Added by Homegear GmbH. Working => Node or link is highlighted blue
                         input.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
                         dirtyNodes[d.id] = d;
                         d.dirty = false;
@@ -17784,7 +20813,7 @@ RED.view = (function() {
                     if (d.dirty) {
                         var output = d3.select(this);
                         output.classed("red-ui-flow-node-selected",function(d) { return d.selected; })
-                        output.classed("red-ui-flow-node-working",function(d) { return d.working; }) //Working => Node or link is highlighted blue
+                        output.classed("red-ui-flow-node-working",function(d) { return d.working; }) //Added by Homegear GmbH. Working => Node or link is highlighted blue
                         output.selectAll(".red-ui-flow-port-index").text(function(d){ return d.i+1});
                         output.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
                         dirtyNodes[d.id] = d;
@@ -17804,955 +20833,872 @@ RED.view = (function() {
 
             var nodeEnter = node.enter().insert("svg:g")
                 .attr("class", "red-ui-flow-node red-ui-flow-node-group")
-                .classed("red-ui-flow-subflow",function(d) { return activeSubflow != null; });
+                .classed("red-ui-flow-subflow", activeSubflow != null);
+
 
             nodeEnter.each(function(d,i) {
-                    var node = d3.select(this);
-                    var isLink = (d.type === "link-in" || d.type === "link-out")
+                this.__outputs__ = [];
+                this.__inputs__ = [];
+                var node = d3.select(this);
+                var nodeContents = document.createDocumentFragment();
+                var isLink = (d.type === "link in" || d.type === "link out")
+                var hideLabel = d.hasOwnProperty('l')?!d.l : isLink;
+                node.attr("id",d.id);
+                d.h = node_height;
+                d.resize = true;
+
+                if (d._def.button) {
+                    var buttonGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
+                    buttonGroup.__data__ = d;
+                    buttonGroup.setAttribute("transform", "translate("+((d._def.align == "right") ? 94 : -25)+",2)");
+                    buttonGroup.setAttribute("class","red-ui-flow-node-button");
+                    node[0][0].__buttonGroup__ = buttonGroup;
+
+                    var bgBackground = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                    bgBackground.__data__ = d;
+                    bgBackground.setAttribute("class","red-ui-flow-node-button-background");
+                    bgBackground.setAttribute("rx",5);
+                    bgBackground.setAttribute("ry",5);
+                    bgBackground.setAttribute("width",32);
+                    bgBackground.setAttribute("height",node_height-4);
+                    buttonGroup.appendChild(bgBackground);
+                    node[0][0].__buttonGroupBackground__ = bgBackground;
+
+                    var bgButton = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                    bgButton.__data__ = d;
+                    bgButton.setAttribute("class","red-ui-flow-node-button-button");
+                    bgButton.setAttribute("x", d._def.align == "right"? 11:5);
+                    bgButton.setAttribute("y",4);
+                    bgButton.setAttribute("rx",4);
+                    bgButton.setAttribute("ry",4);
+                    bgButton.setAttribute("width",16);
+                    bgButton.setAttribute("height",node_height-12);
+                    bgButton.setAttribute("fill", RED.utils.getNodeColor(d.type,d._def));
+                    d3.select(bgButton)
+                        .on("mousedown",function(d) {if (!lasso && isButtonEnabled(d)) {focusView();d3.select(this).attr("fill-opacity",0.2);d3.event.preventDefault(); d3.event.stopPropagation();}})
+                        .on("mouseup",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);d3.event.preventDefault();d3.event.stopPropagation();}})
+                        .on("mouseover",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);}})
+                        .on("mouseout",function(d) {if (!lasso && isButtonEnabled(d)) {
+                            var op = 1;
+                            if (d._def.button.toggle) {
+                                op = d[d._def.button.toggle]?1:0.2;
+                            }
+                            d3.select(this).attr("fill-opacity",op);
+                        }})
+                        .on("click",nodeButtonClicked)
+                        .on("touchstart",function(d) { nodeButtonClicked.call(this,d); d3.event.preventDefault();})
+                    buttonGroup.appendChild(bgButton);
+                    node[0][0].__buttonGroupButton__ = bgButton;
+
+                    nodeContents.appendChild(buttonGroup);
+
+                }
+
+                var mainRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                mainRect.__data__ = d;
+                mainRect.setAttribute("class", "red-ui-flow-node "+(d.type == "unknown"?"red-ui-flow-node-unknown":""));
+                mainRect.setAttribute("rx", 5);
+                mainRect.setAttribute("ry", 5);
+                mainRect.setAttribute("fill", RED.utils.getNodeColor(d.type,d._def));
+                node[0][0].__mainRect__ = mainRect;
+                d3.select(mainRect)
+                    .on("mouseup",nodeMouseUp)
+                    .on("mousedown",nodeMouseDown)
+                    .on("touchstart",nodeTouchStart)
+                    .on("touchend",nodeTouchEnd)
+                    .on("mouseover",nodeMouseOver)
+                    .on("mouseout",nodeMouseOut);
+                nodeContents.appendChild(mainRect);
+                //node.append("rect").attr("class", "node-gradient-top").attr("rx", 6).attr("ry", 6).attr("height",30).attr("stroke","none").attr("fill","url(#gradient-top)").style("pointer-events","none");
+                //node.append("rect").attr("class", "node-gradient-bottom").attr("rx", 6).attr("ry", 6).attr("height",30).attr("stroke","none").attr("fill","url(#gradient-bottom)").style("pointer-events","none");
+
+                if (d._def.icon) {
+                    var icon_url = RED.utils.getNodeIcon(d._def,d);
+                    var icon_groupEl = document.createElementNS("http://www.w3.org/2000/svg","g");
+                    icon_groupEl.__data__ = d;
+                    icon_groupEl.setAttribute("class","red-ui-flow-node-icon-group"+("right" == d._def.align?" red-ui-flow-node-icon-group-right":""));
+                    icon_groupEl.setAttribute("x",0);
+                    icon_groupEl.setAttribute("y",0);
+                    icon_groupEl.style["pointer-events"] = "none";
+                    node[0][0].__iconGroup__ = icon_groupEl;
+                    var icon_shade = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                    icon_shade.setAttribute("x",0);
+                    icon_shade.setAttribute("y",0);
+                    icon_shade.setAttribute("class","red-ui-flow-node-icon-shade")
+                    icon_shade.setAttribute("width",30);
+                    icon_shade.setAttribute("height",Math.min(50,d.h-4));
+                    icon_groupEl.appendChild(icon_shade);
+                    node[0][0].__iconShade__ = icon_shade;
+
+                    var icon_group = d3.select(icon_groupEl)
+                    createIconAttributes(icon_url, icon_group, d);
+
+                    var icon_shade_border = document.createElementNS("http://www.w3.org/2000/svg","path");
+                    icon_shade_border.setAttribute("d","right" != d._def.align ? "M 30 1 l 0 "+(d.h-2) : "M 0 1 l 0 "+(d.h-2)  )
+                    icon_shade_border.setAttribute("class", "red-ui-flow-node-icon-shade-border")
+                    icon_groupEl.appendChild(icon_shade_border);
+                    node[0][0].__iconShadeBorder__ = icon_shade_border;
+
+                    nodeContents.appendChild(icon_groupEl);
+                }
+                var text = document.createElementNS("http://www.w3.org/2000/svg","g");
+                text.setAttribute("class","red-ui-flow-node-label"+(hideLabel?" hide":"")+(d._def.align?" red-ui-flow-node-label-"+d._def.align:""));
+                text.setAttribute("transform","translate(38,0)");
+                // text.setAttribute("dy", ".3px");
+                // text.setAttribute("text-anchor",d._def.align !== "right" ? "start":"end");
+                nodeContents.appendChild(text);
+                node[0][0].__textGroup__ = text;
+
+                var statusEl = document.createElementNS("http://www.w3.org/2000/svg","g");
+                // statusEl.__data__ = d;
+                statusEl.setAttribute("class","red-ui-flow-node-status-group");
+                statusEl.style.display = "none";
+                node[0][0].__statusGroup__ = statusEl;
+
+                var statusRect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                statusRect.setAttribute("class","red-ui-flow-node-status");
+                statusRect.setAttribute("x",6);
+                statusRect.setAttribute("y",1);
+                statusRect.setAttribute("width",9);
+                statusRect.setAttribute("height",9);
+                statusRect.setAttribute("rx",2);
+                statusRect.setAttribute("ry",2);
+                statusRect.setAttribute("stroke-width","3");
+                statusEl.appendChild(statusRect);
+                node[0][0].__statusShape__ = statusRect;
+
+                var statusLabel = document.createElementNS("http://www.w3.org/2000/svg","text");
+                statusLabel.setAttribute("class","red-ui-flow-node-status-label");
+                statusLabel.setAttribute("x",20);
+                statusLabel.setAttribute("y",9); //Changed from 10 to 9 by Homegear GmbH
+                statusEl.appendChild(statusLabel);
+                node[0][0].__statusLabel__ = statusLabel;
+
+                nodeContents.appendChild(statusEl);
+
+                //{{{ Added by Homegear GmbH to support status top
+                var statusTop = document.createElementNS("http://www.w3.org/2000/svg","text");
+                statusTop.setAttribute("class","red-ui-flow-node-status-label-top");
+                statusTop.setAttribute("x",7);
+                statusTop.setAttribute("y",-3);
+                node[0][0].__statusTop__ = statusTop;
+                nodeContents.appendChild(statusTop);
+                //}}}
+
+                var changeBadgeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+                changeBadgeG.setAttribute("class","red-ui-flow-node-changed hide");
+                changeBadgeG.setAttribute("transform","translate(33, -2)"); //Changed 20 to 33 by Homegear GmbH
+                node[0][0].__changeBadge__ = changeBadgeG;
+                var changeBadge = document.createElementNS("http://www.w3.org/2000/svg","circle");
+                changeBadge.setAttribute("r",5);
+                changeBadgeG.appendChild(changeBadge);
+                nodeContents.appendChild(changeBadgeG);
+
+
+                var errorBadgeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+                errorBadgeG.setAttribute("class","red-ui-flow-node-error hide");
+                errorBadgeG.setAttribute("transform","translate(13, -2)"); //Changed 0 to 13 by Homegear GmbH
+                node[0][0].__errorBadge__ = errorBadgeG;
+                var errorBadge = document.createElementNS("http://www.w3.org/2000/svg","path");
+                errorBadge.setAttribute("d","M -5,4 l 10,0 -5,-8 z");
+                errorBadgeG.appendChild(errorBadge);
+                errorBadge.__data__ = d;
+                errorBadge.addEventListener("mouseenter", errorBadgeMouseEnter);
+                errorBadge.addEventListener("mouseleave", errorBadgeMouseLeave);
+                nodeContents.appendChild(errorBadgeG);
+
+                //{{{ Added by Homegear GmbH
+                var fixedInputBadgeG = document.createElementNS("http://www.w3.org/2000/svg","g");
+                fixedInputBadgeG.setAttribute("class","red-ui-flow-node-fixed-input hide");
+                fixedInputBadgeG.setAttribute("transform","translate(0, -2)");
+                node[0][0].__fixedInputBadge__ = fixedInputBadgeG;
+                var fixedInputBadge = document.createElementNS("http://www.w3.org/2000/svg","circle");
+                fixedInputBadge.setAttribute("r",5);
+                fixedInputBadgeG.appendChild(fixedInputBadge);
+                nodeContents.appendChild(fixedInputBadgeG);
+                //}}}
+
+                node[0][0].appendChild(nodeContents);
+            });
+            node.each(function(d,i) {
+                if (d.dirty) {
+                    var thisNode = d3.select(this);
+
+                    var isLink = (d.type === "link in" || d.type === "link out")
                     var hideLabel = d.hasOwnProperty('l')?!d.l : isLink;
-                    node.attr("id",d.id);
-                    var l = RED.utils.getNodeLabel(d);
-                    if (d.resize || d.w === undefined) {
+                    dirtyNodes[d.id] = d;
+                    //if (d.x < -50) deleteSelection();  // Delete nodes if dragged back to palette
+
+                    var label = RED.utils.getNodeLabel(d, d.type);
+                    var labelParts;
+                    if (d.resize || this.__hideLabel__ !== hideLabel || this.__label__ !== label || this.__outputs__.length !== d.outputs) {
+                        labelParts = getLabelParts(label, "red-ui-flow-node-label");
+                        this.__label__ = label;
+                        if (labelParts.lines.length !== this.__labelLineCount__) {
+                            d.resize = true;
+                        }
+                        this.__labelLineCount__ = labelParts.lines.length;
+
+                        if (hideLabel) {
+                            d.h = Math.max(node_height, (d.outputs || 0) * 20, (d.inputs || 0) * 20); //Modified by Homegear GmbH - added inputs
+                        } else {
+                            d.h = Math.max(node_height, 6+24*labelParts.lines.length, (d.outputs || 0) * 20, (d.inputs || 0) * 20); //Modified by Homegear GmbH - added inputs
+                        }
+                        this.__hideLabel__ = hideLabel;
+                    }
+
+                    if (d.resize) {
+                        var ow = d.w;
                         if (hideLabel) {
                             d.w = node_height;
                         } else {
-                            d.w = Math.max(node_width,gridSize*(Math.ceil((calculateTextWidth(l, "red-ui-flow-node-label", 50)+(d._def.inputs>0?7:0))/gridSize)) );
+                            //d.w = Math.max(node_width,20*(Math.ceil((labelParts.width+50+(d._def.inputs>0?7:0))/20)) ); //Removed by Homegear GmbH
+                            d.w = Math.max(node_width,gridSize*(Math.ceil((labelParts.width+50+(d._def.inputs>0?7:0))/gridSize)) ); //Added by Homegear GmbH
                         }
-                    }
-                    d.h = Math.max(Math.max(node_height,(d.outputs||0) * 20),(d.inputs||0) * 20);
-
-                    // if (d._def.badge) {
-                    //     var badge = node.append("svg:g").attr("class","node_badge_group");
-                    //     var badgeRect = badge.append("rect").attr("class","node_badge").attr("rx",5).attr("ry",5).attr("width",40).attr("height",15);
-                    //     badge.append("svg:text").attr("class","node_badge_label").attr("x",35).attr("y",11).attr("text-anchor","end").text(d._def.badge());
-                    //     if (d._def.onbadgeclick) {
-                    //         badgeRect.attr("cursor","pointer")
-                    //             .on("click",function(d) { d._def.onbadgeclick.call(d);d3.event.preventDefault();});
-                    //     }
-                    // }
-
-                    if (d._def.button) {
-                        var nodeButtonGroup = node.append("svg:g")
-                            .attr("transform",function(d) { return "translate("+((d._def.align == "right") ? 94 : -25)+",2)"; })
-                            .attr("class","red-ui-flow-node-button");
-                        nodeButtonGroup.append("rect")
-                            .attr("class","red-ui-flow-node-button-background")
-                            .attr("rx",5)
-                            .attr("ry",5)
-                            .attr("width",32)
-                            .attr("height",node_height-4);
-                        nodeButtonGroup.append("rect")
-                            .attr("class","red-ui-flow-node-button-button")
-                            .attr("x",function(d) { return d._def.align == "right"? 11:5})
-                            .attr("y",4)
-                            .attr("rx",4)
-                            .attr("ry",4)
-                            .attr("width",16)
-                            .attr("height",node_height-12)
-                            .attr("fill",function(d) { return RED.utils.getNodeColor(d.type,d._def); /*d._def.color;*/})
-                            .attr("cursor","pointer")
-                            .on("mousedown",function(d) {if (!lasso && isButtonEnabled(d)) {focusView();d3.select(this).attr("fill-opacity",0.2);d3.event.preventDefault(); d3.event.stopPropagation();}})
-                            .on("mouseup",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);d3.event.preventDefault();d3.event.stopPropagation();}})
-                            .on("mouseover",function(d) {if (!lasso && isButtonEnabled(d)) { d3.select(this).attr("fill-opacity",0.4);}})
-                            .on("mouseout",function(d) {if (!lasso && isButtonEnabled(d)) {
-                                var op = 1;
-                                if (d._def.button.toggle) {
-                                    op = d[d._def.button.toggle]?1:0.2;
-                                }
-                                d3.select(this).attr("fill-opacity",op);
-                            }})
-                            .on("click",nodeButtonClicked)
-                            .on("touchstart",nodeButtonClicked)
-                    }
-
-                    var mainRect = node.append("rect")
-                        .attr("class", "red-ui-flow-node")
-                        .classed("red-ui-flow-node-unknown",function(d) { return d.type == "unknown"; })
-                        .attr("rx", 5)
-                        .attr("ry", 5)
-                        .attr("fill",function(d) { return RED.utils.getNodeColor(d.type,d._def); /*d._def.color;*/})
-                        .on("mouseup",nodeMouseUp)
-                        .on("mousedown",nodeMouseDown)
-                        .on("touchstart",function(d) {
-                            var obj = d3.select(this);
-                            var touch0 = d3.event.touches.item(0);
-                            var pos = [touch0.pageX,touch0.pageY];
-                            startTouchCenter = [touch0.pageX,touch0.pageY];
-                            startTouchDistance = 0;
-                            touchStartTime = setTimeout(function() {
-                                showTouchMenu(obj,pos);
-                            },touchLongPressTimeout);
-                            nodeMouseDown.call(this,d)
-                        })
-                        .on("touchend", function(d) {
-                            clearTimeout(touchStartTime);
-                            touchStartTime = null;
-                            if  (RED.touch.radialMenu.active()) {
-                                d3.event.stopPropagation();
-                                return;
-                            }
-                            nodeMouseUp.call(this,d);
-                        })
-                        .on("mouseover",function(d) {
-                            if (mouse_mode === 0 || mouse_mode === RED.state.SELECTING_NODE) {
-                                if (mouse_mode === RED.state.SELECTING_NODE && selectNodesOptions && selectNodesOptions.filter) {
-                                    if (selectNodesOptions.filter(d)) {
-                                        node.classed("red-ui-flow-node-hovered",true);
-                                    }
-                                } else {
-                                    node.classed("red-ui-flow-node-hovered",true);
-                                }
-                                clearTimeout(portLabelHoverTimeout);
-                                if (d.hasOwnProperty('l')?!d.l : (d.type === "link-in" || d.type === "link-out")) {
-                                    portLabelHoverTimeout = setTimeout(function() {
-                                        var tooltip;
-                                        if (d._def.label) {
-                                            tooltip = d._def.label;
-                                            try {
-                                                tooltip = (typeof tooltip === "function" ? tooltip.call(d) : tooltip)||"";
-                                            } catch(err) {
-                                                console.log("Definition error: "+d.type+".label",err);
-                                                tooltip = d.type;
-                                            }
-                                        }
-                                        if (tooltip !== "") {
-                                            var pos = getElementPosition(node.node());
-                                            portLabelHoverTimeout = null;
-                                            portLabelHover = showTooltip(
-                                                (pos[0] + d.w/2),
-                                                (pos[1]-1),
-                                                tooltip,
-                                                "top"
-                                            );
-                                        }
-                                    },500);
-                                }
-                            } else if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
-                                if (drag_lines.length > 0) {
-                                    var selectClass;
-                                    var portType;
-                                    if ((drag_lines[0].virtualLink && drag_lines[0].portType === PORT_TYPE_INPUT) || drag_lines[0].portType === PORT_TYPE_OUTPUT) {
-                                        selectClass = ".red-ui-flow-port-input .red-ui-flow-port";
-                                        portType = PORT_TYPE_INPUT;
-                                    } else {
-                                        selectClass = ".red-ui-flow-port-output .red-ui-flow-port";
-                                        portType = PORT_TYPE_OUTPUT;
-                                    }
-                                    portMouseOver(d3.select(this.parentNode).selectAll(selectClass),d,portType,0);
-                                }
-                            }
-                        })
-                        .on("mouseout",function(d) {
-                            node.classed("red-ui-flow-node-hovered",false);
-                            clearTimeout(portLabelHoverTimeout);
-                            if (portLabelHover) {
-                                portLabelHover.remove();
-                                portLabelHover = null;
-                            }
-                            if (mouse_mode === RED.state.JOINING || mouse_mode === RED.state.QUICK_JOINING) {
-                                if (drag_lines.length > 0) {
-                                    var selectClass;
-                                    var portType;
-                                    if ((drag_lines[0].virtualLink && drag_lines[0].portType === PORT_TYPE_INPUT) || drag_lines[0].portType === PORT_TYPE_OUTPUT) {
-                                        selectClass = ".red-ui-flow-port-input .red-ui-flow-port";
-                                        portType = PORT_TYPE_INPUT;
-                                    } else {
-                                        selectClass = ".red-ui-flow-port-output .red-ui-flow-port";
-                                        portType = PORT_TYPE_OUTPUT;
-                                    }
-                                    portMouseOut(d3.select(this.parentNode).selectAll(selectClass),d,portType,0);
-                                }
-                            }
-                        });
-
-                   //node.append("rect").attr("class", "node-gradient-top").attr("rx", 6).attr("ry", 6).attr("height",30).attr("stroke","none").attr("fill","url(#gradient-top)").style("pointer-events","none");
-                   //node.append("rect").attr("class", "node-gradient-bottom").attr("rx", 6).attr("ry", 6).attr("height",30).attr("stroke","none").attr("fill","url(#gradient-bottom)").style("pointer-events","none");
-
-                    if (d._def.icon) {
-                        var icon_url = RED.utils.getNodeIcon(d._def,d);
-                        var icon_group = node.append("g")
-                            .attr("class","red-ui-flow-node-icon-group")
-                            .attr("x",0).attr("y",0);
-
-                        var icon_shade = icon_group.append("rect")
-                            .attr("x",0).attr("y",0)
-                            .attr("class","red-ui-flow-node-icon-shade")
-                            .attr("width","30")
-                            .attr("height",function(d){return Math.min(50,d.h-4);});
-
-                        createIconAttributes(icon_url, icon_group, d);
-
-                        var icon_shade_border = icon_group.append("path")
-                            .attr("d",function(d) { return "M 30 1 l 0 "+(d.h-2)})
-                            .attr("class","red-ui-flow-node-icon-shade-border");
-
-                        if ("right" == d._def.align) {
-                            icon_group.attr("class","red-ui-flow-node-icon-group red-ui-flow-node-icon-group-"+d._def.align);
-                            icon_shade_border.attr("d",function(d) { return "M 0 1 l 0 "+(d.h-2)})
-                            //icon.attr("class","red-ui-flow-node-icon red-ui-flow-node-icon-"+d._def.align);
-                            //icon.attr("class","red-ui-flow-node-icon-shade red-ui-flow-node-icon-shade-"+d._def.align);
-                            //icon.attr("class","red-ui-flow-node-icon-shade-border red-ui-flow-node-icon-shade-border-"+d._def.align);
-                        }
-
-                        //if (d.inputs > 0 && d._def.align == null) {
-                        //    icon_shade.attr("width",35);
-                        //    icon.attr("transform","translate(5,0)");
-                        //    icon_shade_border.attr("transform","translate(5,0)");
-                        //}
-                        //if (d._def.outputs > 0 && "right" == d._def.align) {
-                        //    icon_shade.attr("width",35); //icon.attr("x",5);
-                        //}
-
-                        //icon.style("pointer-events","none");
-                        icon_group.style("pointer-events","none");
-                    }
-                    var text = node.append("svg:text")
-                                  .attr("class","red-ui-flow-node-label")
-                                  .attr("x", 38)
-                                  .attr("dy", ".40em")
-                                  .attr("text-anchor","start")
-                                  .classed("hide",hideLabel);
-
-                    if (d._def.align) {
-                        text.attr("class","red-ui-flow-node-label red-ui-flow-node-label-"+d._def.align);
-                        if (d._def.align === "right") {
-                            text.attr("text-anchor","end");
-                        }
-                    }
-
-                    var statusTop = node.append("svg:text").attr("class","red-ui-flow-node-status-label-top").attr("x",7).attr("y",-3);
-                    
-                    var statusBottom = node.append("svg:g").attr("class","red-ui-flow-node-status-group-bottom").style("display","none");
-
-                    var statusBottomRect = statusBottom.append("rect").attr("class","red-ui-flow-node-status-bottom")
-                        .attr("x",6).attr("y",1).attr("width",9).attr("height",9)
-                        .attr("rx",2).attr("ry",2).attr("stroke-width","3");
-
-                    var statusBottomLabel = statusBottom.append("svg:text")
-                        .attr("class","red-ui-flow-node-status-label-bottom")
-                        .attr("x",20).attr("y",9);
-
-                    node.append("g").attr("class","red-ui-flow-node-changed hide").attr("transform","translate(33, -2)").append("circle").attr("r",5);
-                    var nodeErrorButton = node.append("g").attr("class","red-ui-flow-node-error hide").attr("transform","translate(13, -2)").append("path").attr("d","M -5,4 l 10,0 -5,-8 z");
-                    nodeErrorButton.on("mouseenter", function() {
-                        if (d.validationErrors && d.validationErrors.length > 0) {
-                            clearTimeout(portLabelHoverTimeout);
-                            portLabelHoverTimeout = setTimeout(function() {
-                                var pos = getElementPosition(nodeErrorButton.node());
-                                portLabelHoverTimeout = null;
-                                portLabelHover = showTooltip(
-                                    (pos[0]),
-                                    (pos[1]),
-                                    RED._("editor.errors.invalidProperties")+"\n  - "+d.validationErrors.join("\n    - "),
-                                    "top"
-                                );
-                            },500);
-                        }
-                    }).on("mouseleave", function() {
-                        clearTimeout(portLabelHoverTimeout);
-                        if (portLabelHover) {
-                            portLabelHover.remove();
-                            portLabelHover = null;
-                        }
-                    });
-                    node.append("g").attr("class","red-ui-flow-node-fixed-input hide").attr("transform","translate(0, -2)").append("circle").attr("r",5);
-            });
-
-            node.each(function(d,i) {
-                    if (d.dirty) {
-                        var isLink = (d.type === "link-in" || d.type === "link-out")
-                        var hideLabel = d.hasOwnProperty('l')?!d.l : isLink;
-                        dirtyNodes[d.id] = d;
-                        //if (d.x < -50) deleteSelection();  // Delete nodes if dragged back to palette
-                        if (d.resize) {
-                            var l = RED.utils.getNodeLabel(d);
-                            var ow = d.w;
-                            if (hideLabel) {
-                                d.w = node_height;
-                            } else {
-                                d.w = Math.max(node_width,gridSize*(Math.ceil((calculateTextWidth(l, "red-ui-flow-node-label", 50)+(d._def.inputs>0?7:0))/gridSize)) );
-                            }
-                            // d.w = Math.max(node_width,20*(Math.ceil((calculateTextWidth(l, "red-ui-flow-node-label", 50)+(d._def.inputs>0?7:0))/20)) );
-                            d.h = Math.max(Math.max(node_height,(d.outputs||0) * 20),(d.inputs||0) * 20);
+                        if (ow !== undefined) {
                             d.x += (d.w-ow)/2;
-                            d.resize = false;
                         }
-                        var thisNode = d3.select(this);
-                        thisNode.classed("red-ui-flow-node-disabled", function(d) { return d.d === true});
-                        thisNode.classed("red-ui-flow-subflow",function(d) { return activeSubflow != null; })
+                        d.resize = false;
+                    }
+                    if (d._colorChanged) {
+                        var newColor = RED.utils.getNodeColor(d.type,d._def);
+                        this.__mainRect__.setAttribute("fill",newColor);
+                        if (this.__buttonGroupButton__) {
+                            this.__buttonGroupButton__.settAttribute("fill",newColor);
+                        }
+                        delete d._colorChanged;
+                    }
+                    //thisNode.selectAll(".centerDot").attr({"cx":function(d) { return d.w/2;},"cy":function(d){return d.h/2}});
+                    this.setAttribute("transform", "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")");
+                    // This might be the first redraw after a node has been click-dragged to start a move.
+                    // So its selected state might have changed since the last redraw.
+                    this.classList.toggle("red-ui-flow-node-selected", !!d.selected )
+                    this.classList.toggle("red-ui-flow-node-working", !!d.working ) //Added by Homegear GmbH. Working => Node or link is highlighted blue
+                    if (mouse_mode != RED.state.MOVING_ACTIVE) {
+                        if(!d.hasOwnProperty("fixedInputs")) d.fixedInputs = 0; //Added by Homegear GmbH
 
-                        //thisNode.selectAll(".centerDot").attr({"cx":function(d) { return d.w/2;},"cy":function(d){return d.h/2}});
-                        thisNode.attr("transform", function(d) { return "translate(" + (d.x-d.w/2) + "," + (d.y-d.h/2) + ")"; });
-                        if (mouse_mode != RED.state.MOVING_ACTIVE) {
-                            if(!d.hasOwnProperty("fixedInputs")) d.fixedInputs = 0;
+                        this.classList.toggle("red-ui-flow-node-disabled", d.d === true);
+                        this.__mainRect__.setAttribute("width", d.w)
+                        this.__mainRect__.setAttribute("height", d.h)
+                        this.__mainRect__.classList.toggle("red-ui-flow-node-highlighted",!!d.highlighted );
 
-                            thisNode.classed("red-ui-flow-node-selected",function(d) { return d.selected })
-                            thisNode.classed("red-ui-flow-node-working",function(d) { return d.working }) //Working => Node or link is highlighted blue
-                            thisNode.selectAll(".red-ui-flow-node")
-                                .attr("width",function(d){return d.w})
-                                .attr("height",function(d){return d.h})
-                                .classed("red-ui-flow-node-highlighted",function(d) { return d.highlighted; })
-                            ;
-                            if ((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) {
-                                thisNode.selectAll(".red-ui-flow-node-icon-group").classed("red-ui-flow-node-icon-group-right", true);
-                                thisNode.selectAll(".red-ui-flow-node-label").classed("red-ui-flow-node-label-right", true).attr("text-anchor", "end");
-                            } else {
-                                thisNode.selectAll(".red-ui-flow-node-icon-group").classed("red-ui-flow-node-icon-group-right", false);
-                                thisNode.selectAll(".red-ui-flow-node-label").classed("red-ui-flow-node-label-right", false).attr("text-anchor", "start");
+                        if (labelParts) {
+                            // The label has changed
+                            var sa = labelParts.lines;
+                            var sn = labelParts.lines.length;
+                            var textLines = this.__textGroup__.childNodes;
+                            while(textLines.length > sn) {
+                                textLines[textLines.length-1].remove();
                             }
-                            thisNode.selectAll(".red-ui-flow-node-icon-group").attr("transform", function (d) { return "translate(0, 0)"; });
-                            thisNode.selectAll(".red-ui-flow-node-label").attr("x", function (d) { return 38; });
-                            thisNode.selectAll(".red-ui-flow-node-icon-group-right").attr("transform", function(d){return "translate("+(d.w-30)+",0)"});
-                            thisNode.selectAll(".red-ui-flow-node-label-right").attr("x", function(d){return d.w-38});
-                            //thisNode.selectAll(".red-ui-flow-node-icon-right").attr("x",function(d){return d.w-d3.select(this).attr("width")-1-(d.outputs>0?5:0);});
-                            //thisNode.selectAll(".red-ui-flow-node-icon-shade-right").attr("x",function(d){return d.w-30;});
-                            //thisNode.selectAll(".red-ui-flow-node-icon-shade-border-right").attr("d",function(d){return "M "+(d.w-30)+" 1 l 0 "+(d.h-2)});
-                            var numInputs = d.inputs;
-                            var y = (d.h/2)-((numInputs-1)/2)*18;
-                            d.inputPorts = d.inputPorts || d3.range(numInputs);
-                            d._inputPorts = thisNode.selectAll(".red-ui-flow-port-input").data(d.inputPorts);
-                            var input_group = d._inputPorts.enter().append("g").attr("class","red-ui-flow-port-input");
-                            var input_group_ports;
+                            for (var i=0; i<sn; i++) {
+                                if (i===textLines.length) {
+                                    var line = document.createElementNS("http://www.w3.org/2000/svg","text");
+                                    line.setAttribute("class","red-ui-flow-node-label-text");
+                                    line.setAttribute("x",0);
+                                    line.setAttribute("y",i*24);
+                                    this.__textGroup__.appendChild(line);
+                                }
+                                textLines[i].textContent = sa[i];
+                            }
+                        }
 
-                            if (d.type === "link-in") {
-                                input_group_ports = input_group.append("circle")
+                        var textClass = "";
+                        if (d._def.labelStyle) {
+                            textClass = d._def.labelStyle;
+                            try {
+                                textClass = (typeof textClass === "function" ? textClass.call(d) : textClass)||"";
+                            } catch(err) {
+                                console.log("Definition error: "+d.type+".labelStyle",err);
+                                textClass = "";
+                            }
+                            textClass = " "+textClass;
+                        }
+                        textClass = "red-ui-flow-node-label"+(d._def.align?" red-ui-flow-node-label-"+d._def.align:"")+textClass+(hideLabel?" hide":"");
+                        this.__textGroup__.setAttribute("class", textClass);
+
+                        var yp = d.h / 2 - (this.__labelLineCount__ / 2) * 24 + 13; //Keep 13 here for middle vertical alignment of label in node
+
+                        if ((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) {
+                            if (this.__iconGroup__) {
+                                this.__iconGroup__.classList.add("red-ui-flow-node-icon-group-right");
+                                this.__iconGroup__.setAttribute("transform", "translate("+(d.w-30)+",0)");
+                            }
+                            this.__textGroup__.classList.add("red-ui-flow-node-label-right");
+                            this.__textGroup__.setAttribute("transform", "translate("+(d.w-38)+","+yp+")");
+                        } else {
+                            if (this.__iconGroup__) {// is null for uknown nodes
+                                this.__iconGroup__.classList.remove("red-ui-flow-node-icon-group-right");
+                                this.__iconGroup__.setAttribute("transform", "");
+                            }
+                            this.__textGroup__.classList.remove("red-ui-flow-node-label-right");
+                            this.__textGroup__.setAttribute("transform", "translate(38,"+yp+")");
+                        }
+
+                        //Removed by Homegear GmbH
+                        /*var inputPorts = thisNode.selectAll(".red-ui-flow-port-input");
+                        if ((!isLink || (showAllLinkPorts === -1 && !activeLinkNodes[d.id])) && d.inputs === 0 && !inputPorts.empty()) {
+                            inputPorts.remove();
+                        } else if (((isLink && (showAllLinkPorts===PORT_TYPE_INPUT||activeLinkNodes[d.id]))|| d.inputs === 1) && inputPorts.empty()) {
+                            var inputGroup = thisNode.append("g").attr("class","red-ui-flow-port-input");
+                            var inputGroupPorts;
+
+                            if (d.type === "link in") {
+                                inputGroupPorts = inputGroup.append("circle")
                                     .attr("cx",-1).attr("cy",5)
                                     .attr("r",5)
                                     .attr("class","red-ui-flow-port red-ui-flow-link-port")
                             } else {
-                                input_group_ports = input_group.append("rect")
-                                    .attr("class","red-ui-flow-port")
-                                    .attr("rx",3).attr("ry",3)
-                                    .attr("width",10)
-                                    .attr("height",10)
+                                inputGroupPorts = inputGroup.append("rect").attr("class","red-ui-flow-port").attr("rx",3).attr("ry",3).attr("width",10).attr("height",10)
+                            }
+                            inputGroupPorts.on("mousedown",function(d){portMouseDown(d,PORT_TYPE_INPUT,0);})
+                                .on("touchstart",function(d){portMouseDown(d,PORT_TYPE_INPUT,0);d3.event.preventDefault();})
+                                .on("mouseup",function(d){portMouseUp(d,PORT_TYPE_INPUT,0);} )
+                                .on("touchend",function(d){portMouseUp(d,PORT_TYPE_INPUT,0);d3.event.preventDefault();} )
+                                .on("mouseover",function(d){portMouseOver(d3.select(this),d,PORT_TYPE_INPUT,0);})
+                                .on("mouseout",function(d) {portMouseOut(d3.select(this),d,PORT_TYPE_INPUT,0);});
+                        }*/
+                        //{{{ Added by Homegear GmbH - the base code is copied from the output part below
+                        var numInputs = d.inputs;
+                        var y = (d.h/2)-((numInputs-1)/2)*18; //Added by Homegear GmbH
+
+                        // Remove extra ports
+                        while (this.__inputs__.length > numInputs) {
+                            var port = this.__inputs__.pop();
+                            port.remove();
+                        }
+                        for(var portIndex = 0; portIndex < numInputs; portIndex++ ) {
+                            var portGroup;
+                            if (portIndex === this.__inputs__.length) {
+                                portGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
+                                portGroup.setAttribute("class","red-ui-flow-port-input");
+                                var portPort;
+                                if (d.type === "link in") {
+                                    portPort = document.createElementNS("http://www.w3.org/2000/svg","circle");
+                                    portPort.setAttribute("cx",-1);
+                                    portPort.setAttribute("cy",5);
+                                    portPort.setAttribute("r",5);
+                                    portPort.setAttribute("class","red-ui-flow-port red-ui-flow-link-port");
+                                } else {
+                                    portPort = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                                    portPort.setAttribute("rx",3);
+                                    portPort.setAttribute("ry",3);
+                                    portPort.setAttribute("width",10);
+                                    portPort.setAttribute("height",10);
+                                    portPort.setAttribute("class","red-ui-flow-port");
+                                }
+                                portGroup.appendChild(portPort);
+                                portPort.__data__ = this.__data__;
+                                portPort.__portType__ = PORT_TYPE_INPUT;
+                                portPort.__portIndex__ = portIndex;
+                                portPort.addEventListener("mousedown", portMouseDownProxy);
+                                portPort.addEventListener("touchstart", portTouchStartProxy);
+                                portPort.addEventListener("mouseup", portMouseUpProxy);
+                                portPort.addEventListener("touchend", portTouchEndProxy);
+                                portPort.addEventListener("mouseover", portMouseOverProxy);
+                                portPort.addEventListener("mouseout", portMouseOutProxy);
+
+                                //{{{ Added by Homegear GmbH - added Homegear-styled label
+                                portLabel = document.createElementNS("http://www.w3.org/2000/svg","text");
+                                portLabel.setAttribute("class","red-ui-flow-node-port-input-label");
+                                portLabel.setAttribute("rx",0);
+                                portLabel.setAttribute("ry",0);
+                                portLabel.setAttribute("width",50);
+                                portLabel.setAttribute("height",10);
+                                portLabel.textContent = getPortLabel(d, portPort.__portType__, portIndex);
+                                portGroup.appendChild(portLabel);
+                                //}}}
+
+                                this.appendChild(portGroup);
+                                this.__inputs__.push(portGroup);
+                            } else {
+                                portGroup = this.__inputs__[portIndex];
+                            }
+                            var x = -5;
+                            var y = (d.h/2)-((numInputs-1)/2)*18; //Added by Homegear GmbH
+                            portGroup.setAttribute("transform","translate("+x+","+((y+18*portIndex)-5)+")") //Added by Homegear GmbH
+
+                            let label = "";
+                            let types = "";
+                            let content = "";
+                            if(d._def && d._def.inputInfo) {
+                                let inputInfo;
+                                let infoBody = "";
+                                if(typeof d._def.inputInfo === "function") {
+                                    inputInfo = d._def.inputInfo.call(d, portIndex);
+                                    infoBody = inputInfo.description;
+                                }
+                                else if(portIndex < d._def.inputInfo.length) {
+                                    inputInfo = d._def.inputInfo[portIndex];
+                                    infoBody = RED._(d._def.set.id + ":" + d.type + ".input" + (portIndex + 1) + "Description");
+                                }                                    
+                                if(inputInfo && inputInfo.hasOwnProperty("types")) {
+                                    label = '';
+                                    if(inputInfo.label) label = "<p><b>" + inputInfo.label + "</b></p>";
+                                    types = "<p><b>Types:</b> <i>";
+                                    for(var i = 0; i < inputInfo.types.length; i++) {
+                                        if(i != 0) types += ", ";
+                                        types += inputInfo.types[i];
+                                    }
+                                    types += "</i></p>";
+                                    content = infoBody;
+                                }
                             }
 
-                            input_group_ports.on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_INPUT,i);}})() )
-                                .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_INPUT,i);}})() )
-                                .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_INPUT,i);}})() )
-                                .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_INPUT,i);}})() )
-                                .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_INPUT,i);}})())
-                                .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_INPUT,i);}})());
+                            let nodeId = d.id;
+                            let valueVariableName = "inputValue" + portIndex;
+                            let historyVariableName = "inputHistory" + portIndex;
+                            let fixedInputVariableName = "fixedInput" + portIndex;
 
-                            input_group.each(function(i){
-                                var label = "";
-                                var types = "";
-                                var content = "";
-                                if(d._def && d._def.inputInfo) {
-                                    var inputInfo;
-                                    var infoBody;
-                                    if(typeof d._def.inputInfo === "function") {
-                                        inputInfo = d._def.inputInfo.call(d, i);
-                                        infoBody = inputInfo.description;
-                                    }
-                                    else if(i >= d._def.inputInfo.length) return;
-                                    else {
-                                        inputInfo = d._def.inputInfo[i];
-                                        var infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".input" + (i + 1) + "Description");
-                                    }                                    
-                                    if(inputInfo.types) {
-                                        label = '';
-                                        if(inputInfo.label) label = "<p><b>" + inputInfo.label + "</b></p>";
-                                        types = "<p><b>Types:</b> <i>";
-                                        for(var j = 0; j < inputInfo.types.length; j++) {
-                                            if(j != 0) types += ", ";
-                                            types += inputInfo.types[j];
-                                        }
-                                        types += "</i></p>";
-                                        content = infoBody;
-                                    }
-                                }
+                            dynamicContent = function() {
+                                RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
+                                return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">" + RED._("history.title") + "</a>&nbsp;&nbsp;<a class=\"popover-dialog2\" href=\"#\">" + RED._("fixedInputs.set") + "</a></div>" + label + types + "<p><b>" + RED._("history.lastValue") + "</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
+                            };
 
-                                var nodeId = d.id;
-                                var valueVariableName = "inputValue" + i;
-                                var historyVariableName = "inputHistory" + i;
-                                var fixedInputVariableName = "fixedInput" + i;
+                            var intervalCallback = function() {
+                                RED.comms.homegear().invoke("getNodeVariable", function(response) { $(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, nodeId, valueVariableName);
+                            }
 
-                                dynamicContent = function() {
-                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { setTimeout(function() {$(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, 100); }, nodeId, valueVariableName);
-                                    return $("<div style=\"float: right\"><a class=\"popover-dialog1\" href=\"#\">" + RED._("history.title") + "</a>&nbsp;&nbsp;<a class=\"popover-dialog2\" href=\"#\">" + RED._("fixedInputs.set") + "</a></div>" + label + types + "<p><b>" + RED._("history.lastValue") + "</b> <span class=\"last_value\">-</span></p><div style=\"clear: both\">" + content + "</div>");
-                                };
-
-                                var intervalCallback = function() {
-                                    RED.comms.homegear().invoke("getNodeVariable", function(response) { $(".red-ui-popover .last_value").text(JSON.stringify(response.result)); }, nodeId, valueVariableName);
-                                }
-
-                                openDialog1 = function() {
-                                    var historyDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="history-values"></div></div>')
-                                        .appendTo("body")
-                                        .dialog({
-                                            modal: true,
-                                            autoOpen: false,
-                                            width: 500,
-                                            height: 450,
-                                            resizable: false,
-                                            buttons: [
-                                                {
-                                                    id: "popover-dialog-close",
-                                                    class: "primary",
-                                                    text: RED._("common.label.close"),
-                                                    click: function() {
-                                                        $( this ).dialog( "close" );
-                                                    }
+                            openDialog1 = function() {
+                                let historyDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="history-values"></div></div>')
+                                    .appendTo("body")
+                                    .dialog({
+                                        modal: true,
+                                        autoOpen: false,
+                                        width: 500,
+                                        height: 450,
+                                        resizable: false,
+                                        buttons: [
+                                            {
+                                                id: "popover-dialog-close",
+                                                class: "primary",
+                                                text: RED._("common.label.close"),
+                                                click: function() {
+                                                    $( this ).dialog( "close" );
                                                 }
-                                            ],
-                                            open: function(e) {
-                                                $(this).parent().find(".ui-dialog-titlebar-close").hide();
-                                                
+                                            }
+                                        ],
+                                        open: function(e) {
+                                            $(this).parent().find(".ui-dialog-titlebar-close").hide();
+                                            
+                                            RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                if(!response.result) return;
+                                                let html = "";
+                                                $.each(response.result, function(key, value) {
+                                                    let date = new Date(value[0]);
+                                                    html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
+                                                });
+                                                $("#popover-dialog .history-values").html(html); 
+                                            }, nodeId, historyVariableName);
+
+                                            let interval = setInterval(function() {
                                                 RED.comms.homegear().invoke("getNodeVariable", function(response) {
                                                     if(!response.result) return;
-                                                    var html = "";
+                                                    let html = "";
                                                     $.each(response.result, function(key, value) {
-                                                        var date = new Date(value[0]);
+                                                        let date = new Date(value[0]);
                                                         html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
                                                     });
                                                     $("#popover-dialog .history-values").html(html); 
                                                 }, nodeId, historyVariableName);
+                                            }, 1000);
 
-                                                var interval = setInterval(function() {
-                                                    RED.comms.homegear().invoke("getNodeVariable", function(response) {
-                                                        if(!response.result) return;
-                                                        var html = "";
-                                                        $.each(response.result, function(key, value) {
-                                                            var date = new Date(value[0]);
-                                                            html += "<p><span class=\"value-history-date\">" + date.toLocaleDateString(undefined, { "year": "numeric", "day": "2-digit", "month": "2-digit" }) + " " + date.toLocaleTimeString(undefined, { "hour12": false }) + "." + ("000" + (value[0] % 1000)).slice(-3) + ": </span><span>" + value[1] + "</span></p>";
-                                                        });
-                                                        $("#popover-dialog .history-values").html(html); 
-                                                    }, nodeId, historyVariableName);
-                                                }, 1000);
+                                            $(this).dialog("option", "interval", interval);
+                                        },
+                                        close: function(e) {
+                                            let interval = $(this).dialog("option", "interval");
+                                            if(interval) clearInterval(interval);
+                                            $(this).remove();
+                                        }
+                                    });
+                                historyDialog.dialog("option", "title", RED._("history.title")).dialog("open");
+                            };
 
-                                                $(this).dialog("option", "interval", interval);
-                                            },
-                                            close: function(e) {
-                                                var interval = $(this).dialog("option", "interval");
-                                                if(interval) clearInterval(interval);
-                                                $(this).remove();
-                                            }
-                                        });
-                                    historyDialog.dialog("option", "title", RED._("history.title")).dialog("open");
-                                };
-
-                                openDialog2 = function() {
-                                    var fixedInputDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="fixed-input"><p>' + RED._("fixedInputs.description") + '</p><form><input type="text" id="fixed-input-payload" style="width:100%"/><input type="hidden" id="fixed-input-payloadType"/></form></div></div>')
-                                        .appendTo("body")
-                                        .dialog({
-                                            modal: true,
-                                            autoOpen: false,
-                                            width: 400,
-                                            resizable: false,
-                                            buttons: [
-                                                {
-                                                    id: "popover-dialog-cancel",
-                                                    class: "primary",
-                                                    text: RED._("common.label.cancel"),
-                                                    click: function() {
-                                                        $( this ).dialog( "close" );
-                                                    }
-                                                },
-                                                {
-                                                    id: "popover-dialog-clear",
-                                                    class: "primary",
-                                                    text: RED._("fixedInputs.clear"),
-                                                    click: function() {
-                                                        RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
-                                                        if(d.fixedInputs > 0) d.fixedInputs -= 1;
-                                                        d.dirty = true;
-                                                        $( this ).dialog( "close" );
-                                                        redraw();
-                                                    }
-                                                },
-                                                {
-                                                    id: "popover-dialog-set",
-                                                    class: "primary",
-                                                    text: RED._("fixedInputs.set"),
-                                                    click: function() {
-                                                        var element = $("#fixed-input-payload");
-                                                        RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, [element.typedInput('type'), element.typedInput('value')]);
-
-                                                        if(!$("#fixed-input-payload").data('oldPayload')) d.fixedInputs += 1;
-                                                        d.dirty = true;
-                                                        $( this ).dialog( "close" );
-                                                        redraw();
-                                                    }
+                            openDialog2 = function() {
+                                let fixedInputDialog = $('<div id="popover-dialog" class="hide node-red-dialog"><div class="fixed-input"><p>' + RED._("fixedInputs.description") + '</p><form><input type="text" id="fixed-input-payload" style="width:100%"/><input type="hidden" id="fixed-input-payloadType"/></form></div></div>')
+                                    .appendTo("body")
+                                    .dialog({
+                                        modal: true,
+                                        autoOpen: false,
+                                        width: 400,
+                                        resizable: false,
+                                        buttons: [
+                                            {
+                                                id: "popover-dialog-cancel",
+                                                class: "primary",
+                                                text: RED._("common.label.cancel"),
+                                                click: function() {
+                                                    $( this ).dialog( "close" );
                                                 }
-                                            ],
-                                            open: function(e) {
-                                                $(this).parent().find(".ui-dialog-titlebar-close").hide();
-
-                                                RED.comms.homegear().invoke("getNodeVariable", function(response) {
-                                                    var payloadType = response.result ? response.result[0] : 'int';
-                                                    var payload = response.result ? response.result[1] : '';
-                                                    oldPayload = response.result ? true : false;
-
-                                                    $("#fixed-input-payloadType").val(payloadType);
-
-                                                    $("#fixed-input-payload").typedInput({
-                                                        default: 'int',
-                                                        typeField: $("#fixed-input-payloadType"),
-                                                        types:['bool','int','float','string','arraySimple','structSimple','binSimple']
-                                                    });
-
-                                                    $("#fixed-input-payload").typedInput('type', payloadType);
-
-                                                    $("#fixed-input-payload").typedInput('value', payload);
-
-                                                    $("#fixed-input-payload").data('oldPayload', oldPayload);
-                                                }, nodeId, fixedInputVariableName);
                                             },
-                                            close: function(e) {
-                                                $(this).remove();
+                                            {
+                                                id: "popover-dialog-clear",
+                                                class: "primary",
+                                                text: RED._("fixedInputs.clear"),
+                                                click: function() {
+                                                    RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, false);
+                                                    if(d.fixedInputs > 0) d.fixedInputs -= 1;
+                                                    d.dirty = true;
+                                                    $( this ).dialog( "close" );
+                                                    redraw();
+                                                }
+                                            },
+                                            {
+                                                id: "popover-dialog-set",
+                                                class: "primary",
+                                                text: RED._("fixedInputs.set"),
+                                                click: function() {
+                                                    let element = $("#fixed-input-payload");
+                                                    RED.comms.homegear().invoke("setNodeVariable", null, nodeId, fixedInputVariableName, [element.typedInput('type'), element.typedInput('value')]);
+
+                                                    if(!$("#fixed-input-payload").data('oldPayload')) d.fixedInputs += 1;
+                                                    d.dirty = true;
+                                                    $( this ).dialog( "close" );
+                                                    redraw();
+                                                }
                                             }
-                                        });
-                                    fixedInputDialog.dialog("option", "title", RED._("fixedInputs.title")).dialog("open");
-                                };
+                                        ],
+                                        open: function(e) {
+                                            $(this).parent().find(".ui-dialog-titlebar-close").hide();
 
-                                var popover = RED.popover.create({
-                                    target:$(this),
-                                    trigger: "hover",
-                                    width: "250px",
-                                    content: dynamicContent,
-                                    direction: "left",
-                                    offsetX: -13,
-                                    offsetY: 4,
-                                    delay: { show: 750, hide: 300 },
-                                    dialog1: openDialog1,
-                                    dialog2: openDialog2,
-                                    intervalCallback: intervalCallback
-                                });
-                                $(this).data('popover',popover);
+                                            RED.comms.homegear().invoke("getNodeVariable", function(response) {
+                                                let payloadType = response.result ? response.result[0] : 'int';
+                                                let payload = response.result ? response.result[1] : '';
+                                                oldPayload = response.result ? true : false;
+
+                                                $("#fixed-input-payloadType").val(payloadType);
+
+                                                $("#fixed-input-payload").typedInput({
+                                                    default: 'int',
+                                                    typeField: $("#fixed-input-payloadType"),
+                                                    types:['bool','int','float','string','arraySimple','structSimple','binSimple']
+                                                });
+
+                                                $("#fixed-input-payload").typedInput('type', payloadType);
+
+                                                $("#fixed-input-payload").typedInput('value', payload);
+
+                                                $("#fixed-input-payload").data('oldPayload', oldPayload);
+                                            }, nodeId, fixedInputVariableName);
+                                        },
+                                        close: function(e) {
+                                            $(this).remove();
+                                        }
+                                    });
+                                fixedInputDialog.dialog("option", "title", RED._("fixedInputs.title")).dialog("open");
+                            };
+
+                            let popover = RED.popover.create({
+                                target: $(portPort),
+                                trigger: "hover",
+                                width: "250px",
+                                content: dynamicContent,
+                                direction: "left",
+                                offsetX: -10,
+                                offsetY: 0,
+                                delay: { show: 750, hide: 300 },
+                                dialog1: openDialog1,
+                                dialog2: openDialog2,
+                                intervalCallback: intervalCallback
                             });
+                            $(portPort).data('popover',popover);
+                        }
+                        //}}}
 
-                            d._inputPorts.exit().remove();
-                            if (d._inputPorts) {
-                                numInputs = d.inputs || 1;
-                                y = (d.h/2)-((numInputs-1)/2)*18;
-                                var x = -5;
-                                d._inputPorts.each(function(d,i) {
-                                        var port = d3.select(this);
-                                        port.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                });
-                            }
-
-                            numInputs = d.inputs;
-                            y = (d.h/2)-((numInputs-1)/2)*18;
-                            if(d.inputPortLabels && d.inputPortLabels.length != numInputs) d.inputPortLabels = null;
-                            d.inputPortLabels = d.inputPortLabels || d3.range(numInputs);
-                            d._inputPortLabels = thisNode.selectAll(".red-ui-flow-node-port-input-label").data(d.inputPortLabels);
-                            var input_labels_group = d._inputPortLabels.enter().append("g").attr("class","red-ui-flow-node-port-input-label");
-
-                            input_labels_group.append("svg:text").attr("class","red-ui-flow-node-input-label").attr("rx",0).attr("ry",0).attr("width",50).attr("height",10);
-
-                            d._inputPortLabels.exit().remove();
-                            if (d._inputPortLabels) {
-                                numInputs = d.inputs || 1;
-                                y = (d.h/2)-((numInputs-1)/2)*18;
-                                var x = -5;
-                                var node = d;
-                                d._inputPortLabels.each(function(d,i) {
-                                        var label = d3.select(this);
-                                        label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def && node._def.inputInfo && typeof node._def.inputInfo === "function") {
-                                            var inputInfo = node._def.inputInfo.call(node, i);
-                                            if(inputInfo.label) label.selectAll(".red-ui-flow-node-input-label").text(inputInfo.label);
-                                        }
-                                        else if(node._def && node._def.inputInfo && i < node._def.inputInfo.length && node._def.inputInfo[i].label) {
-                                            label.selectAll(".red-ui-flow-node-input-label").text(node._def.inputInfo[i].label);
-                                        }
-                                        else if(numInputs > 1) label.selectAll(".red-ui-flow-node-input-label").text(i);
-                                        else label.selectAll(".red-ui-flow-node-input-label").text("");
-                                });
-                            }
-
-                            var numOutputs = d.outputs;
-                            if (isLink && d.type === "link-out") {
-                                if (showAllLinkPorts===PORT_TYPE_OUTPUT || activeLinkNodes[d.id]) {
-                                    d.outputPorts = [0];
-                                    numOutputs = 1;
-                                } else {
-                                    d.outputPorts = [];
-                                    numOutputs = 0;
-                                }
-                            }
-                            y = (d.h/2)-((numOutputs-1)/2)*18;
-                            d.outputPorts = d.outputPorts || d3.range(numOutputs);
-                            d._outputPorts = thisNode.selectAll(".red-ui-flow-port-output").data(d.outputPorts);
-                            var output_group = d._outputPorts.enter().append("g").attr("class","red-ui-flow-port-output");
-                            var output_group_ports;
-
-                            if (d.type === "link-out") {
-                                output_group_ports = output_group.append("circle")
-                                    .attr("cx",11).attr("cy",5)
-                                    .attr("r",5)
-                                    .attr("class","red-ui-flow-port red-ui-flow-link-port")
+                        var numOutputs = d.outputs;
+                        if (isLink && d.type === "link out") {
+                            if (showAllLinkPorts===PORT_TYPE_OUTPUT || activeLinkNodes[d.id]) {
+                                numOutputs = 1;
                             } else {
-                                output_group_ports = output_group.append("rect")
-                                    .attr("class","red-ui-flow-port")
-                                    .attr("rx",3).attr("ry",3)
-                                    .attr("width",10)
-                                    .attr("height",10)
+                                numOutputs = 0;
                             }
+                        }
+                        //var y = (d.h/2)-((numOutputs-1)/2)*13; //Removed by Homegear GmbH
+                        var y = (d.h/2)-((numOutputs-1)/2)*18; //Added by Homegear GmbH
 
-                            output_group_ports.on("mousedown",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
-                                .on("touchstart",(function(){var node = d; return function(d,i){portMouseDown(node,PORT_TYPE_OUTPUT,i);}})() )
-                                .on("mouseup",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
-                                .on("touchend",(function(){var node = d; return function(d,i){portMouseUp(node,PORT_TYPE_OUTPUT,i);}})() )
-                                .on("mouseover",(function(){var node = d; return function(d,i){portMouseOver(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})())
-                                .on("mouseout",(function(){var node = d; return function(d,i) {portMouseOut(d3.select(this),node,PORT_TYPE_OUTPUT,i);}})());
-
-                            output_group_ports.each(function(i){
-                                if(d._def && d._def.outputInfo) {
-                                    var outputInfo;
-                                    var infoBody;
-                                    if(typeof d._def.outputInfo === "function") {
-                                        outputInfo = d._def.outputInfo.call(d, i);
-                                        infoBody = outputInfo.description;
-                                    }
-                                    else if(i >= d._def.outputInfo.length) return;
-                                    else {
-                                        outputInfo = d._def.outputInfo[i];
-                                        infoBody = i18n.t(d.namespace + "/" + d.type + ".hni:" + d.type + ".output" + (i + 1) + "Description");
-                                    }
-                                    if(outputInfo.types) {
-                                        label = '';
-                                        if(outputInfo.label) label = "<p><b>" + outputInfo.label + "</b></p>";
-                                        var content = label;
-                                        content += "<p><i>";
-                                        for(var i = 0; i < outputInfo.types.length; i++) {
-                                            if(i != 0) content += ", ";
-                                            content += outputInfo.types[i];
-                                        }
-                                        content += "</i></p>" + infoBody;
-
-                                        var popover = RED.popover.create({
-                                            target:$(this),
-                                            trigger: "hover",
-                                            width: "250px",
-                                            content: content,
-                                            offsetX: 10,
-                                            offsetY: 4,
-                                            delay: { show: 750, hide: 50 }
-                                        });
-                                        $(this).data('popover',popover);
-                                    }
-                                }
-                            });
-
-                            d._outputPorts.exit().remove();
-                            if (d._outputPorts) {
-                                numOutputs = d.outputs || 1;
-                                y = (d.h/2)-((numOutputs-1)/2)*18;
-                                var x = d.w - 5;
-                                d._outputPorts.each(function(d,i) {
-                                        var port = d3.select(this);
-                                        port.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                });
-                            }
-
-                            numOutputs = d.outputs;
-                            y = (d.h/2)-((numOutputs-1)/2)*18;
-                            if(d.outputPortLabels && d.outputPortLabels.length != numOutputs) d.outputPortLabels = null;
-                            d.outputPortLabels = d.outputPortLabels || d3.range(numOutputs);
-                            d._outputPortLabels = thisNode.selectAll(".red-ui-flow-node-port-output-label").data(d.outputPortLabels);
-                            var output_labels_group = d._outputPortLabels.enter().append("g").attr("class","red-ui-flow-node-port-output-label");
-
-                            output_labels_group.append("svg:text").attr("class","red-ui-flow-node-output-label").attr("rx",0).attr("ry",0).attr("width",50).attr("height",10);
-
-                            d._outputPortLabels.exit().remove();
-                            if (d._outputPortLabels) {
-                                numOutputs = d.outputs || 1;
-                                y = (d.h/2)-((numOutputs-1)/2)*18;
-                                var x = d.w + 5;
-                                var node = d;
-                                d._outputPortLabels.each(function(d,i) {
-                                        var label = d3.select(this);
-                                        label.attr("transform", function(d) { return "translate("+x+","+((y+18*i)-5)+")";});
-                                        if(node._def && node._def.outputInfo && typeof node._def.outputInfo === "function") {
-                                            var outputInfo = node._def.outputInfo.call(node, i);
-                                            if(outputInfo.label) label.selectAll(".red-ui-flow-node-output-label").text(outputInfo.label);
-                                        }
-                                        else if(node._def && node._def.outputInfo && i < node._def.outputInfo.length && node._def.outputInfo[i].label) {
-                                            label.selectAll(".red-ui-flow-node-output-label").text(node._def.outputInfo[i].label);
-                                        }
-                                        else if(numOutputs > 1) label.selectAll(".red-ui-flow-node-output-label").text(i);
-                                        else label.selectAll(".red-ui-flow-node-output-label").text("");
-                                });
-                            }
-
-                            thisNode.selectAll("text.red-ui-flow-node-label").text(function(d,i){
-                                    var l = "";
-                                    if (d._def.label) {
-                                        l = d._def.label;
-                                        try {
-                                            l = (typeof l === "function" ? l.call(d) : l)||"";
-                                            l = RED.text.bidi.enforceTextDirectionWithUCC(l);
-                                        } catch(err) {
-                                            console.log("Definition error: "+d.type+".label",err);
-                                            l = d.type;
-                                        }
-                                    }
-                                    return l;
-                                })
-                                .attr("y", function(d){return (d.h/2)-1;})
-                                .attr("class",function(d){
-                                    var s = "";
-                                    if (d._def.labelStyle) {
-                                        s = d._def.labelStyle;
-                                        try {
-                                            s = (typeof s === "function" ? s.call(d) : s)||"";
-                                        } catch(err) {
-                                            console.log("Definition error: "+d.type+".labelStyle",err);
-                                            s = "";
-                                        }
-                                        s = " "+s;
-                                    }
-                                    return "red-ui-flow-node-label"+(d._def.align?" red-ui-flow-node-label-"+d._def.align:"")+s;
-                            }).classed("hide",hideLabel);
-                            if (d._def.icon) {
-                                var icon = thisNode.select(".red-ui-flow-node-icon");
-                                var faIcon = thisNode.select(".fa-lg");
-                                var current_url;
-                                if (!icon.empty()) {
-                                    current_url = icon.attr("xlink:href");
+                        // Remove extra ports
+                        while (this.__outputs__.length > numOutputs) {
+                            var port = this.__outputs__.pop();
+                            port.remove();
+                        }
+                        for(var portIndex = 0; portIndex < numOutputs; portIndex++ ) {
+                            var portGroup;
+                            if (portIndex === this.__outputs__.length) {
+                                portGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
+                                portGroup.setAttribute("class","red-ui-flow-port-output");
+                                var portPort;
+                                if (d.type === "link out") {
+                                    portPort = document.createElementNS("http://www.w3.org/2000/svg","circle");
+                                    portPort.setAttribute("cx",11);
+                                    portPort.setAttribute("cy",5);
+                                    portPort.setAttribute("r",5);
+                                    portPort.setAttribute("class","red-ui-flow-port red-ui-flow-link-port");
                                 } else {
-                                    current_url = faIcon.attr("xlink:href");
+                                    portPort = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                                    portPort.setAttribute("rx",3);
+                                    portPort.setAttribute("ry",3);
+                                    portPort.setAttribute("width",10);
+                                    portPort.setAttribute("height",10);
+                                    portPort.setAttribute("class","red-ui-flow-port");
                                 }
-                                var new_url = RED.utils.getNodeIcon(d._def,d);
-                                if (new_url !== current_url) {
-                                    if (!icon.empty()) {
-                                        icon.remove();
-                                    } else {
-                                        faIcon.remove();
+                                portGroup.appendChild(portPort);
+                                portPort.__data__ = this.__data__;
+                                portPort.__portType__ = PORT_TYPE_OUTPUT;
+                                portPort.__portIndex__ = portIndex;
+                                portPort.addEventListener("mousedown", portMouseDownProxy);
+                                portPort.addEventListener("touchstart", portTouchStartProxy);
+                                portPort.addEventListener("mouseup", portMouseUpProxy);
+                                portPort.addEventListener("touchend", portTouchEndProxy);
+                                portPort.addEventListener("mouseover", portMouseOverProxy);
+                                portPort.addEventListener("mouseout", portMouseOutProxy);
+
+                                //{{{ Added by Homegear GmbH - added Homegear-styled label
+                                portLabel = document.createElementNS("http://www.w3.org/2000/svg","text");
+                                portLabel.setAttribute("class","red-ui-flow-node-port-output-label");
+                                portLabel.setAttribute("rx",0);
+                                portLabel.setAttribute("ry",0);
+                                portLabel.setAttribute("width",50);
+                                portLabel.setAttribute("height",10);
+                                portLabel.setAttribute("transform","translate(10,0)");
+                                portLabel.textContent = getPortLabel(d, portPort.__portType__, portIndex);
+                                portGroup.appendChild(portLabel);
+                                //}}}
+
+                                this.appendChild(portGroup);
+                                this.__outputs__.push(portGroup);
+                            } else {
+                                portGroup = this.__outputs__[portIndex];
+                            }
+                            var x = d.w - 5;
+                            //var y = (d.h/2)-((numOutputs-1)/2)*13; //Removed by Homegear GmbH
+                            var y = (d.h/2)-((numOutputs-1)/2)*18; //Added by Homegear GmbH
+                            //portGroup.setAttribute("transform","translate("+x+","+((y+13*portIndex)-5)+")") //Removed by Homegear GmbH
+                            portGroup.setAttribute("transform","translate("+x+","+((y+18*portIndex)-5)+")") //Added by Homegear GmbH
+
+                            //{{{ Added by Homegear GmbH - adds a tooltip
+                            if(d._def && d._def.outputInfo) {
+                                let outputInfo;
+                                let infoBody = "";
+                                if(typeof d._def.outputInfo === "function") {
+                                    outputInfo = d._def.outputInfo.call(d, portIndex);
+                                    infoBody = outputInfo.description;
+                                }
+                                else if(portIndex < d._def.outputInfo.length) {
+                                    outputInfo = d._def.outputInfo[portIndex];
+                                    infoBody = RED._(d._def.set.id + ":" + d.type + ".output" + (portIndex + 1) + "Description");
+                                }
+                                if(outputInfo && outputInfo.hasOwnProperty("types")) {
+                                    label = '';
+                                    if(outputInfo.label) label = "<p><b>" + outputInfo.label + "</b></p>";
+                                    let content = label;
+                                    content += "<p><i>";
+                                    for(var i = 0; i < outputInfo.types.length; i++) {
+                                        if(i != 0) content += ", ";
+                                        content += outputInfo.types[i];
                                     }
-                                    var iconGroup = thisNode.select(".red-ui-flow-node-icon-group");
-                                    createIconAttributes(new_url, iconGroup, d);
+                                    content += "</i></p>" + infoBody;
+
+                                    let popover = RED.popover.create({
+                                        target: $(portPort),
+                                        trigger: "hover",
+                                        width: "250px",
+                                        content: content,
+                                        offsetX: 0,
+                                        offsetY: 0,
+                                        delay: { show: 750, hide: 50 }
+                                    });
+                                    $(portPort).data('popover',popover);
                                 }
                             }
-
-                            thisNode.selectAll(".red-ui-flow-node-changed")
-                                .attr("transform",function(d){return "translate("+(d.w-10)+", -2)"})
-                                .classed("hide",function(d) { return !(d.changed||d.moved); });
-
-                            thisNode.selectAll(".red-ui-flow-node-error")
-                                .attr("transform",function(d){ return "translate("+(d.w-10-((d.changed||d.moved)?14:0))+", -2)"})
-                                .classed("hide",function(d) { return d.valid; });
-
-                            thisNode.selectAll(".red-ui-flow-node-fixed-input")
-                                .attr("transform",function(d){ return "translate("+(d.w-10-((d.changed||d.moved)?14:0)-((!d.valid)?14:0))+", -2)"})
-                                .classed("hide",function(d) { return d.fixedInputs == 0; });
-
-                            /*thisNode.selectAll(".red-ui-flow-port-input").each(function(d,i) {
-                                var port = d3.select(this);
-                                port.attr("transform",function(d){return "translate(-5,"+((d.h/2)-5)+")";})
-                            });*/
-
-                            thisNode.selectAll(".red-ui-flow-node-icon").attr("y",function(d){return (d.h-d3.select(this).attr("height"))/2;});
-                            thisNode.selectAll(".red-ui-flow-node-icon-shade").attr("height",function(d){return d.h;});
-                            thisNode.selectAll(".red-ui-flow-node-icon-shade-border").attr("d", function (d) {
-                                return "M " + (((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) ? 0 : 30) + " 1 l 0 " + (d.h - 2);
-                            });
-                            thisNode.selectAll(".fa-lg").attr("y",function(d){return (d.h+18)/2;});
-
-                            thisNode.selectAll(".red-ui-flow-node-button").attr("opacity",function(d) {
-                                return (!isButtonEnabled(d))?0.4:1
-                            });
-                            thisNode.selectAll(".red-ui-flow-node-button-button").attr("cursor",function(d) {
-                                return (!isButtonEnabled(d))?"":"pointer";
-                            });
-                            thisNode.selectAll(".red-ui-flow-node-button").attr("transform",function(d){
-                                var x = d._def.align == "right"?d.w-6:-25;
-                                if (d._def.button.toggle && !d[d._def.button.toggle]) {
-                                    x = x - (d._def.align == "right"?8:-8);
+                            //}}}
+                        }
+                        if (d._def.icon) {
+                            var icon = thisNode.select(".red-ui-flow-node-icon");
+                            var faIcon = thisNode.select(".fa-lg");
+                            var current_url;
+                            if (!icon.empty()) {
+                                current_url = icon.attr("xlink:href");
+                            } else {
+                                current_url = faIcon.attr("xlink:href");
+                            }
+                            var new_url = RED.utils.getNodeIcon(d._def,d);
+                            if (new_url !== current_url) {
+                                if (!icon.empty()) {
+                                    icon.remove();
+                                } else {
+                                    faIcon.remove();
                                 }
-                                return "translate("+x+",2)";
-                            });
-                            thisNode.selectAll(".red-ui-flow-node-button rect").attr("fill-opacity",function(d){
-                                if (d._def.button.toggle) {
-                                    return d[d._def.button.toggle]?1:0.2;
-                                }
-                                return 1;
-                            });
+                                var iconGroup = thisNode.select(".red-ui-flow-node-icon-group");
+                                createIconAttributes(new_url, iconGroup, d);
+                                icon = thisNode.select(".red-ui-flow-node-icon");
+                                faIcon = thisNode.select(".fa-lg");
+                            }
 
-                            if (d._def.button && (typeof d._def.button.visible === "function")) { // is defined and a function...
+                            icon.attr("y",function(){return (d.h-d3.select(this).attr("height"))/2;});
+                            this.__iconShade__.setAttribute("height", d.h );
+                            this.__iconShadeBorder__.setAttribute("d",
+                                                                  "M " + (((!d._def.align && d.inputs !== 0 && d.outputs === 0) || "right" === d._def.align) ? 0 : 30) + " 1 l 0 " + (d.h - 2)
+                                                                 );
+                            //faIcon.attr("y",(d.h+13)/2); //Removed by Homegear GmbH
+                            faIcon.attr("y",(d.h+18)/2); //Added by Homegear GmbH
+                        }
+                        this.__changeBadge__.setAttribute("transform", "translate("+(d.w-10)+", -2)");
+                        this.__changeBadge__.classList.toggle("hide", !(d.changed||d.moved));
+                        this.__errorBadge__.setAttribute("transform", "translate("+(d.w-10-((d.changed||d.moved)?14:0))+", -2)");
+                        this.__errorBadge__.classList.toggle("hide", d.valid);
+                        this.__fixedInputBadge__.setAttribute("transform", "translate("+(d.w-10-((d.changed||d.moved)?14:0)-((!d.valid)?14:0))+", -2)"); //Added by Homegear GmbH
+                        this.__fixedInputBadge__.classList.toggle("hide", !d.fixedInputs); //Added by Homegear GmbH
+
+                        //Removed by Homegear GmbH - centers single input vertically. This is not wanted with multiple inputs
+                        /*thisNode.selectAll(".red-ui-flow-port-input").each(function(d,i) {
+                            var port = d3.select(this);
+                            port.attr("transform",function(d){return "translate(-5,"+((d.h/2)-5)+")";})
+                        });*/
+
+                        if (d._def.button) {
+                            var buttonEnabled = isButtonEnabled(d);
+                            this.__buttonGroup__.classList.toggle("red-ui-flow-node-button-disabled", !buttonEnabled);
+
+                            var x = d._def.align == "right"?d.w-6:-25;
+                            if (d._def.button.toggle && !d[d._def.button.toggle]) {
+                                x = x - (d._def.align == "right"?8:-8);
+                            }
+                            this.__buttonGroup__.setAttribute("transform", "translate("+x+",2)");
+
+                            if (d._def.button.toggle) {
+                                this.__buttonGroupButton__.setAttribute("fill-opacity",d[d._def.button.toggle]?1:0.2)
+                                this.__buttonGroupBackground__.setAttribute("fill-opacity",d[d._def.button.toggle]?1:0.2)
+                            }
+
+                            if (typeof d._def.button.visible === "function") { // is defined and a function...
                                 if (d._def.button.visible.call(d) === false) {
-                                    thisNode.selectAll(".red-ui-flow-node-button").style("display","none");
+                                    this.__buttonGroup__.style.display = "none";
                                 }
                                 else {
-                                    thisNode.selectAll(".red-ui-flow-node-button").style("display","inherit");
+                                    this.__buttonGroup__.style.display = "inherit";
                                 }
                             }
-
-                            // thisNode.selectAll(".node_badge_group").attr("transform",function(d){return "translate("+(d.w-40)+","+(d.h+3)+")";});
-                            // thisNode.selectAll("text.node_badge_label").text(function(d,i) {
-                            //     if (d._def.badge) {
-                            //         if (typeof d._def.badge == "function") {
-                            //             try {
-                            //                 return d._def.badge.call(d);
-                            //             } catch(err) {
-                            //                 console.log("Definition error: "+d.type+".badge",err);
-                            //                 return "";
-                            //             }
-                            //         } else {
-                            //             return d._def.badge;
-                            //         }
-                            //     }
-                            //     return "";
-                            // });
                         }
-
-                        if (d.dirtyStatus) {
-                            if (!showStatus || !d.statusTop) {
-                                thisNode.selectAll(".red-ui-flow-node-status-label-top").style("display","none");
-                            } else {
-                                if (d.statusTop.text) {
-                                    thisNode.selectAll(".red-ui-flow-node-status-label-top").style("display","inline").text(d.statusTop.text);
-                                }
-                            }
-
-                            if (!showStatus || !d.statusBottom) {
-                                thisNode.selectAll(".red-ui-flow-node-status-group-bottom").style("display","none");
-                            } else {
-                                thisNode.selectAll(".red-ui-flow-node-status-group-bottom").style("display","inline").attr("transform","translate(3,"+(d.h+3)+")");
-                                var fill = status_colours[d.statusBottom.fill]; // Only allow our colours for now
-                                if (d.statusBottom.shape == null && fill == null) {
-                                    thisNode.selectAll(".red-ui-flow-node-status-bottom").style("display","none");
-                                } else {
-                                    var style;
-                                    if (d.statusBottom.shape == null || d.statusBottom.shape == "dot") {
-                                        style = {
-                                            display: "inline",
-                                            fill: fill,
-                                            stroke: fill
-                                        };
-                                    } else if (d.statusBottom.shape == "ring" ){
-                                        style = {
-                                            display: "inline",
-                                            fill: "#fff",
-                                            stroke: fill
-                                        }
-                                    }
-                                    thisNode.selectAll(".red-ui-flow-node-status-bottom").style(style);
-                                }
-                                if (d.statusBottom.text) {
-                                    thisNode.selectAll(".red-ui-flow-node-status-label-bottom").text(d.statusBottom.text);
-                                    if(d.statusBottom.shape == null && fill == null) thisNode.selectAll(".red-ui-flow-node-status-label-bottom").attr("x",0);
-                                    else thisNode.selectAll(".red-ui-flow-node-status-label-bottom").attr("x",20);
-                                } else {
-                                    thisNode.selectAll(".red-ui-flow-node-status-label-bottom").text("");
-                                }
-                            }
-                            delete d.dirtyStatus;
-                        }
-
-                        d.dirty = false;
+                        // thisNode.selectAll(".node_badge_group").attr("transform",function(d){return "translate("+(d.w-40)+","+(d.h+3)+")";});
+                        // thisNode.selectAll("text.node_badge_label").text(function(d,i) {
+                        //     if (d._def.badge) {
+                        //         if (typeof d._def.badge == "function") {
+                        //             try {
+                        //                 return d._def.badge.call(d);
+                        //             } catch(err) {
+                        //                 console.log("Definition error: "+d.type+".badge",err);
+                        //                 return "";
+                        //             }
+                        //         } else {
+                        //             return d._def.badge;
+                        //         }
+                        //     }
+                        //     return "";
+                        // });
                     }
-            });
 
+                    if (d.dirtyStatus) {
+                        redrawStatus(d,this);
+                    }
+                    d.dirty = false;
+                    if (d.g) {
+                        if (!dirtyGroups[d.g]) {
+                            var gg = d.g;
+                            while (gg && !dirtyGroups[gg]) {
+                                dirtyGroups[gg] = RED.nodes.group(gg);
+                                gg = dirtyGroups[gg].g;
+                            }
+                        }
+                    }
+                }
+            });
             var link = linkLayer.selectAll(".red-ui-flow-link").data(
                 activeLinks,
                 function(d) {
-                    return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.targetPort+":"+d.target.i;
+                    //return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.target.i; //Removed by Homegear GmbH
+                    return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.targetPort+":"+d.target.i; //Added by Homegear GmbH to support multiple inputs
                 }
             );
             var linkEnter = link.enter().insert("g",".red-ui-flow-node").attr("class","red-ui-flow-link");
 
             linkEnter.each(function(d,i) {
                 var l = d3.select(this);
-                d.added = true;
-                l.append("svg:path").attr("class","red-ui-flow-link-background red-ui-flow-link-path")
-                   .classed("red-ui-flow-link-link", function(d) { return d.link })
-                   .on("mousedown",function(d) {
-                       if (mouse_mode === RED.state.SELECTING_NODE) {
-                           d3.event.stopPropagation();
-                           return;
-                       }
-                        mousedown_link = d;
-                        clearSelection();
-                        selected_link = mousedown_link;
-                        updateSelection();
-                        redraw();
-                        focusView();
-                        d3.event.stopPropagation();
-                        if (d3.event.metaKey || d3.event.ctrlKey) {
-                            l.classed("red-ui-flow-link-splice",true);
-                            showQuickAddDialog(d3.mouse(this), selected_link);
-                        }
-                    })
-                    .on("touchstart",function(d) {
-                        if (mouse_mode === RED.state.SELECTING_NODE) {
-                            d3.event.stopPropagation();
-                            return;
-                        }
-                        mousedown_link = d;
-                        clearSelection();
-                        selected_link = mousedown_link;
-                        updateSelection();
-                        redraw();
-                        focusView();
-                        d3.event.stopPropagation();
+                var pathContents = document.createDocumentFragment();
 
-                        var obj = d3.select(document.body);
-                        var touch0 = d3.event.touches.item(0);
-                        var pos = [touch0.pageX,touch0.pageY];
-                        touchStartTime = setTimeout(function() {
-                            touchStartTime = null;
-                            showTouchMenu(obj,pos);
-                        },touchLongPressTimeout);
-                    })
-                l.append("svg:path").attr("class","red-ui-flow-link-outline red-ui-flow-link-path");
-                l.append("svg:path").attr("class","red-ui-flow-link-line red-ui-flow-link-path")
-                    .classed("red-ui-flow-link-link", function(d) { return d.link })
-                    .classed("red-ui-flow-subflow-link", function(d) { return !d.link && activeSubflow });
+                d.added = true;
+                var pathBack = document.createElementNS("http://www.w3.org/2000/svg","path");
+                pathBack.__data__ = d;
+                pathBack.setAttribute("class","red-ui-flow-link-background red-ui-flow-link-path"+(d.link?" red-ui-flow-link-link":""));
+                this.__pathBack__ = pathBack;
+                pathContents.appendChild(pathBack);
+                d3.select(pathBack)
+                    .on("mousedown",linkMouseDown)
+                    .on("touchstart",linkTouchStart)
+
+                var pathOutline = document.createElementNS("http://www.w3.org/2000/svg","path");
+                pathOutline.__data__ = d;
+                pathOutline.setAttribute("class","red-ui-flow-link-outline red-ui-flow-link-path");
+                this.__pathOutline__ = pathOutline;
+                pathContents.appendChild(pathOutline);
+
+                var pathLine = document.createElementNS("http://www.w3.org/2000/svg","path");
+                pathLine.__data__ = d;
+                pathLine.setAttribute("class","red-ui-flow-link-line red-ui-flow-link-path"+
+                    (d.link?" red-ui-flow-link-link":(activeSubflow?" red-ui-flow-subflow-link":"")));
+                this.__pathLine__ = pathLine;
+                pathContents.appendChild(pathLine);
+
+                l[0][0].appendChild(pathContents);
             });
 
             link.exit().remove();
-            var links = linkLayer.selectAll(".red-ui-flow-link-path");
-            links.each(function(d) {
+            link.each(function(d) {
                 var link = d3.select(this);
                 if (d.added || d===selected_link || d.selected || dirtyNodes[d.source.id] || dirtyNodes[d.target.id]) {
-                    if (/red-ui-flow-link-line/.test(link.attr('class'))) {
-                        link.classed("red-ui-flow-subflow-link", function(d) { return !d.link && activeSubflow });
+                    var numOutputs = d.source.outputs || 1;
+                    var numInputs = d.target.inputs || 1; //Added by Homegear GmbH to support multiple inputs
+                    var sourcePort = d.sourcePort || 0;
+                    var targetPort = d.targetPort || 0; //Added by Homegear GmbH to support multiple inputs
+                    //{{{ Added by Homegear GmbH to support multiple inputs
+                    if(d.source.type == "subflow") {
+                        numOutputs = 1;
+                        sourcePort = 0;
                     }
-                    link.attr("d",function(d){
-                        var numOutputs = d.source.outputs || 1;
-                        var numInputs = d.target.inputs || 1;
-                        var sourcePort = d.sourcePort || 0;
-                        var targetPort = d.targetPort || 0;
-                        if(d.source.type == "subflow") {
-                            numOutputs = 1;
-                            sourcePort = 0;
-                        }
-                        if(d.target.type == "subflow") {
-                            numInputs = 1;
-                            targetPort = 0;
-                        }
-                        var y1 = -((numOutputs-1)/2)*18 +18*sourcePort;
-                        var y2 = -((numInputs-1)/2)*18 +18*targetPort;
+                    if(d.target.type == "subflow") {
+                        numInputs = 1;
+                        targetPort = 0;
+                    }
+                    //}}}
+                    //var y = -((numOutputs-1)/2)*13 +13*sourcePort; //Removed by Homegear GmbH
+                    var y1 = -((numOutputs-1)/2)*18 +18*sourcePort; //Added by Homegear GmbH to support multiple inputs
+                    var y2 = -((numInputs-1)/2)*18 +18*targetPort; //Added by Homegear GmbH to support multiple inputs
+                    d.x1 = d.source.x+d.source.w/2;
+                    //d.y1 = d.source.y+y; //Removed by Homegear GmbH
+                    d.y1 = d.source.y+y1; //Added by Homegear GmbH to support multiple inputs
+                    d.x2 = d.target.x-d.target.w/2;
+                    //d.y2 = d.target.y; //Removed by Homegear GmbH
+                    d.y2 = d.target.y+y2; //Added by Homegear GmbH to support multiple inputs
 
-                        d.x1 = d.source.x+d.source.w/2;
-                        d.y1 = d.source.y+y1;
-                        d.x2 = d.target.x-d.target.w/2;
-                        d.y2 = d.target.y+y2;
-
-                        // return "M "+d.x1+" "+d.y1+
-                        //     " C "+(d.x1+scale*node_width)+" "+(d.y1+scaleY*node_height)+" "+
-                        //     (d.x2-scale*node_width)+" "+(d.y2-scaleY*node_height)+" "+
-                        //     d.x2+" "+d.y2;
-                        var path = generateLinkPath(d.x1,d.y1,d.x2,d.y2,1);
-                        if (/NaN/.test(path)) {
-                            return ""
-                        }
-                        return path;
-                    });
-                    link.classed("red-ui-flow-node-disabled", function(d) { return d.source.d || d.target.d; });
+                    // return "M "+d.x1+" "+d.y1+
+                    //     " C "+(d.x1+scale*node_width)+" "+(d.y1+scaleY*node_height)+" "+
+                    //     (d.x2-scale*node_width)+" "+(d.y2-scaleY*node_height)+" "+
+                    //     d.x2+" "+d.y2;
+                    var path = generateLinkPath(d.x1,d.y1,d.x2,d.y2,1);
+                    if (/NaN/.test(path)) {
+                        path = ""
+                    }
+                    this.__pathBack__.setAttribute("d",path);
+                    this.__pathOutline__.setAttribute("d",path);
+                    this.__pathLine__.setAttribute("d",path);
+                    this.__pathLine__.classList.toggle("red-ui-flow-node-disabled",!!(d.source.d || d.target.d));
+                    this.__pathLine__.classList.toggle("red-ui-flow-subflow-link", !d.link && activeSubflow);
                 }
-            })
+                this.classList.toggle("red-ui-flow-link-selected", !!(d===selected_link||d.selected));
+                this.classList.toggle("red-ui-flow-link-working", !!(d.working)); //Added by Homegear GmbH. Working => Node or link is highlighted blue
 
-            link.classed("red-ui-flow-link-selected", function(d) { return d === selected_link || d.selected; });
-            link.classed("red-ui-flow-link-working", function(d) { return d.working; }); //Working => Node or link is highlighted blue
-            link.classed("red-ui-flow-link-unknown",function(d) {
+                var connectedToUnknown = !!(d.target.type == "unknown" || d.source.type == "unknown");
+                this.classList.toggle("red-ui-flow-link-unknown",!!(d.target.type == "unknown" || d.source.type == "unknown"))
                 delete d.added;
-                return d.target.type == "unknown" || d.source.type == "unknown"
-            });
+            })
             var offLinks = linkLayer.selectAll(".red-ui-flow-link-off-flow").data(
                 activeFlowLinks,
                 function(d) {
@@ -18765,7 +21711,7 @@ RED.view = (function() {
                 var g = d3.select(this);
                 var s = 1;
                 var labelAnchor = "start";
-                if (d.node.type === "link-in") {
+                if (d.node.type === "link in") {
                     s = -1;
                     labelAnchor = "end";
                 }
@@ -18783,24 +21729,24 @@ RED.view = (function() {
                 var y = -(flows.length-1)*h/2;
                 var linkGroups = g.selectAll(".red-ui-flow-link-group").data(flows);
                 var enterLinkGroups = linkGroups.enter().append("g").attr("class","red-ui-flow-link-group")
-                        .on('mouseover', function() { if (mouse_mode !== 0) { return } d3.select(this).classed('red-ui-flow-link-group-active',true)})
-                        .on('mouseout', function() {if (mouse_mode !== 0) { return } d3.select(this).classed('red-ui-flow-link-group-active',false)})
-                        .on('mousedown', function() { d3.event.preventDefault(); d3.event.stopPropagation(); })
-                        .on('mouseup', function(f) {
-                            if (mouse_mode !== 0) {
-                                return
-                            }
-                            d3.event.stopPropagation();
-                            var targets = d.links[f];
-                            RED.workspaces.show(f);
-                            targets.forEach(function(n) {
-                                n.selected = true;
-                                n.dirty = true;
-                                moving_set.push({n:n});
-                            });
-                            updateSelection();
-                            redraw();
+                    .on('mouseover', function() { if (mouse_mode !== 0) { return } d3.select(this).classed('red-ui-flow-link-group-active',true)})
+                    .on('mouseout', function() {if (mouse_mode !== 0) { return } d3.select(this).classed('red-ui-flow-link-group-active',false)})
+                    .on('mousedown', function() { d3.event.preventDefault(); d3.event.stopPropagation(); })
+                    .on('mouseup', function(f) {
+                        if (mouse_mode !== 0) {
+                            return
+                        }
+                        d3.event.stopPropagation();
+                        var targets = d.links[f];
+                        RED.workspaces.show(f);
+                        targets.forEach(function(n) {
+                            n.selected = true;
+                            n.dirty = true;
+                            movingSet.add(n);
                         });
+                        updateSelection();
+                        redraw();
+                    });
                 enterLinkGroups.each(function(f) {
                     var linkG = d3.select(this);
                     linkG.append("svg:path")
@@ -18864,7 +21810,7 @@ RED.view = (function() {
             offLinks = linkLayer.selectAll(".red-ui-flow-link-off-flow");
             offLinks.each(function(d) {
                 var s = 1;
-                if (d.node.type === "link-in") {
+                if (d.node.type === "link in") {
                     s = -1;
                 }
                 var link = d3.select(this);
@@ -18872,12 +21818,236 @@ RED.view = (function() {
 
             })
 
+            var group = groupLayer.selectAll(".red-ui-flow-group").data(activeGroups,function(d) { return d.id });
+            group.exit().each(function(d,i) {
+                document.getElementById("group_select_"+d.id).remove()
+            }).remove();
+            var groupEnter = group.enter().insert("svg:g").attr("class", "red-ui-flow-group")
+            var addedGroups = false;
+            groupEnter.each(function(d,i) {
+                addedGroups = true;
+                var g = d3.select(this);
+                g.attr("id",d.id);
+
+                var groupBorderRadius = 4;
+
+                var selectGroup = groupSelectLayer.append('g').attr("class", "red-ui-flow-group").attr("id","group_select_"+d.id);
+                selectGroup.append('rect').classed("red-ui-flow-group-outline-select",true)
+                    .classed("red-ui-flow-group-outline-select-background",true)
+                    .attr('rx',groupBorderRadius).attr('ry',groupBorderRadius)
+                    .attr("x",-4)
+                    .attr("y",-4);
+
+
+                selectGroup.append('rect').classed("red-ui-flow-group-outline-select",true)
+                    .attr('rx',groupBorderRadius).attr('ry',groupBorderRadius)
+                    .attr("x",-4)
+                    .attr("y",-4)
+                selectGroup.on("mousedown", function() {groupMouseDown.call(g[0][0],d)});
+                selectGroup.on("mouseup", function() {groupMouseUp.call(g[0][0],d)});
+                selectGroup.on("touchstart", function() {groupMouseDown.call(g[0][0],d); d3.event.preventDefault();});
+                selectGroup.on("touchend", function() {groupMouseUp.call(g[0][0],d); d3.event.preventDefault();});
+
+                g.append('rect').classed("red-ui-flow-group-outline",true).attr('rx',0.5).attr('ry',0.5);
+
+                g.append('rect').classed("red-ui-flow-group-body",true)
+                    .attr('rx',groupBorderRadius).attr('ry',groupBorderRadius).style({
+                        "fill":d.fill||"none",
+                        "stroke": d.stroke||"none",
+                    })
+                g.on("mousedown",groupMouseDown).on("mouseup",groupMouseUp)
+                g.on("touchstart", function() {groupMouseDown.call(g[0][0],d); d3.event.preventDefault();});
+                g.on("touchend", function() {groupMouseUp.call(g[0][0],d); d3.event.preventDefault();});
+
+                g.append('svg:text').attr("class","red-ui-flow-group-label");
+                d.dirty = true;
+            });
+            if (addedGroups) {
+                group.sort(function(a,b) {
+                    if (a._root === b._root) {
+                        return a._depth - b._depth;
+                    } else {
+                        return a._root.localeCompare(b._root);
+                    }
+                })
+            }
+            group[0].reverse();
+            var groupOpCount=0;
+            group.each(function(d,i) {
+                groupOpCount++
+                if (d.resize) {
+                    d.minWidth = 0;
+                    delete d.resize;
+                }
+                if (d.dirty || dirtyGroups[d.id]) {
+                    var g = d3.select(this);
+                    var recalculateLabelOffsets = false;
+                    if (d.nodes.length > 0) {
+                        // If the group was just moved, all of its contents was
+                        // also moved - so no need to recalculate its bounding box
+                        if (!d.groupMoved) {
+                            var minX = Number.POSITIVE_INFINITY;
+                            var minY = Number.POSITIVE_INFINITY;
+                            var maxX = 0;
+                            var maxY = 0;
+                            var margin = 26;
+                            d.nodes.forEach(function(n) {
+                                groupOpCount++
+                                if (n.type !== "group") {
+                                    minX = Math.min(minX,n.x-n.w/2-margin-((n._def.button && n._def.align!=="right")?20:0));
+                                    minY = Math.min(minY,n.y-n.h/2-margin);
+                                    maxX = Math.max(maxX,n.x+n.w/2+margin+((n._def.button && n._def.align=="right")?20:0));
+                                    maxY = Math.max(maxY,n.y+n.h/2+margin);
+                                } else {
+                                    minX = Math.min(minX,n.x-margin)
+                                    minY = Math.min(minY,n.y-margin)
+                                    maxX = Math.max(maxX,n.x+n.w+margin)
+                                    maxY = Math.max(maxY,n.y+n.h+margin)
+                                }
+                            });
+
+                            d.x = minX;
+                            d.y = minY;
+                            d.w = maxX - minX;
+                            d.h = maxY - minY;
+                            recalculateLabelOffsets = true;
+                            // if set explicitly to false, this group has just been
+                            // imported so needed this initial resize calculation.
+                            // Now that's done, delete the flag so the normal
+                            // logic kicks in.
+                            if (d.groupMoved === false) {
+                                delete d.groupMoved;
+                            }
+                        } else {
+                            delete d.groupMoved;
+                        }
+                    } else {
+                        d.w = 40;
+                        d.h = 40;
+                        recalculateLabelOffsets = true;
+                    }
+                    if (recalculateLabelOffsets) {
+                        if (!d.minWidth) {
+                            if (d.style.label && d.name) {
+                                var labelParts = getLabelParts(d.name||"","red-ui-flow-group-label");
+                                d.minWidth = labelParts.width + 8;
+                                d.labels = labelParts.lines;
+                            } else {
+                                d.minWidth = 40;
+                                d.labels = [];
+                            }
+                        }
+                        d.w = Math.max(d.minWidth,d.w);
+                        if (d.style.label && d.labels.length > 0) {
+                            var labelPos = d.style["label-position"] || "nw";
+                            var h = (d.labels.length-1) * 16;
+                            if (labelPos[0] === "s") {
+                                h += 8;
+                            }
+                            d.h += h;
+                            if (labelPos[0] === "n") {
+                                if (d.nodes.length > 0) {
+                                    d.y -= h;
+                                }
+                            }
+                        }
+                    }
+
+                    g.attr("transform","translate("+d.x+","+d.y+")")
+                    g.selectAll(".red-ui-flow-group-outline")
+                        .attr("width",d.w)
+                        .attr("height",d.h)
+
+
+                    var selectGroup = document.getElementById("group_select_"+d.id);
+                    selectGroup.setAttribute("transform","translate("+d.x+","+d.y+")");
+                    if (d.hovered) {
+                        selectGroup.classList.add("red-ui-flow-group-hovered")
+                    } else {
+                        selectGroup.classList.remove("red-ui-flow-group-hovered")
+                    }
+                    var selectGroupRect = selectGroup.children[0];
+                    selectGroupRect.setAttribute("width",d.w+8)
+                    selectGroupRect.setAttribute("height",d.h+8)
+                    selectGroupRect.style.strokeOpacity = (d.active || d.selected || d.highlighted)?0.8:0;
+                    selectGroupRect.style.strokeDasharray = (d.active)?"10 4":"";
+                    selectGroupRect = selectGroup.children[1];
+                    selectGroupRect.setAttribute("width",d.w+8)
+                    selectGroupRect.setAttribute("height",d.h+8)
+                    selectGroupRect.style.strokeOpacity = (d.active || d.selected || d.highlighted)?0.8:0;
+                    selectGroupRect.style.strokeDasharray = (d.active)?"10 4":"";
+
+                    if (d.highlighted) {
+                        selectGroup.classList.add("red-ui-flow-node-highlighted");
+                    } else {
+                        selectGroup.classList.remove("red-ui-flow-node-highlighted");
+                    }
+
+
+                    g.selectAll(".red-ui-flow-group-body")
+                        .attr("width",d.w)
+                        .attr("height",d.h)
+                        .style("stroke", d.style.stroke || "")
+                        .style("stroke-opacity", d.style.hasOwnProperty('stroke-opacity') ? d.style['stroke-opacity'] : "")
+                        .style("fill", d.style.fill || "")
+                        .style("fill-opacity", d.style.hasOwnProperty('fill-opacity') ? d.style['fill-opacity'] : "")
+
+                    var label = g.selectAll(".red-ui-flow-group-label");
+                    label.classed("hide",!!!d.style.label)
+                    if (d.style.label) {
+                        var labelPos = d.style["label-position"] || "nw";
+                        var labelX = 0;
+                        var labelY = 0;
+
+                        if (labelPos[0] === 'n') {
+                            labelY = 0+15; // Allow for font-height
+                        } else {
+                            labelY = d.h - 5 -(d.labels.length -1) * 16;
+                        }
+                        if (labelPos[1] === 'w') {
+                            labelX = 5;
+                            labelAnchor = "start"
+                        } else if (labelPos[1] === 'e') {
+                            labelX = d.w-5;
+                            labelAnchor = "end"
+                        } else {
+                            labelX = d.w/2;
+                            labelAnchor = "middle"
+                        }
+                        if (d.style.hasOwnProperty('color')) {
+                            label.style("fill",d.style.color)
+                        } else {
+                            label.style("fill",null)
+                        }
+                        label.attr("transform","translate("+labelX+","+labelY+")")
+                             .attr("text-anchor",labelAnchor);
+                        if (d.labels) {
+                            var ypos = 0;
+                            g.selectAll(".red-ui-flow-group-label-text").remove();
+                            d.labels.forEach(function (name) {
+                                label.append("tspan")
+                                    .classed("red-ui-flow-group-label-text", true)
+                                    .text(name)
+                                    .attr("x", 0)
+                                    .attr("y", ypos);
+                                ypos += 16;
+                            });
+                        } else {
+                            g.selectAll(".red-ui-flow-group-label-text").remove();
+                        }
+                    }
+
+                    delete dirtyGroups[d.id];
+                    delete d.dirty;
+                }
+            })
         } else {
             // JOINING - unselect any selected links
             linkLayer.selectAll(".red-ui-flow-link-selected").data(
                 activeLinks,
                 function(d) {
-                    return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.targetPort+":"+d.target.i;
+                    //return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.target.i; //Removed by Homegear GmbH
+                    return d.source.id+":"+d.sourcePort+":"+d.target.id+":"+d.targetPort+":"+d.target.i; //Added by Homegear GmbH to support multiple inputs
                 }
             ).classed("red-ui-flow-link-selected", false);
         }
@@ -18885,7 +22055,6 @@ RED.view = (function() {
         if (d3.event) {
             d3.event.preventDefault();
         }
-
     }
 
     function focusView() {
@@ -18904,63 +22073,123 @@ RED.view = (function() {
         }
     }
 
+
     /**
      * Imports a new collection of nodes from a JSON String.
+     *
      *  - all get new IDs assigned
      *  - all "selected"
      *  - attached to mouse for placing - "IMPORT_DRAGGING"
+     * @param  {String/Array} newNodesObj nodes to import
+     * @param  {Object} options options object
+     *
+     * Options:
+     *  - addFlow - whether to import nodes to a new tab
+     *  - touchImport - whether this is a touch import. If not, imported nodes are
+     *                  attachedto mouse for placing - "IMPORT_DRAGGING" state
      */
-    function importNodes(newNodesStr,addNewFlow,touchImport) {
+    function importNodes(newNodesObj,options) {
+        options = options || {
+            addFlow: false,
+            touchImport: false,
+            generateIds: false
+        }
+        var addNewFlow = options.addFlow
+        var touchImport = options.touchImport;
+
         if (mouse_mode === RED.state.SELECTING_NODE) {
             return;
         }
+
+        var nodesToImport;
+        if (typeof newNodesObj === "string") {
+            if (newNodesObj === "") {
+                return;
+            }
+            try {
+                nodesToImport = JSON.parse(newNodesObj);
+            } catch(err) {
+                var e = new Error(RED._("clipboard.invalidFlow",{message:err.message}));
+                e.code = "NODE_RED";
+                throw e;
+            }
+        } else {
+            nodesToImport = newNodesObj;
+        }
+
+        if (!$.isArray(nodesToImport)) {
+            nodesToImport = [nodesToImport];
+        }
+
+
         try {
             var activeSubflowChanged;
             if (activeSubflow) {
                 activeSubflowChanged = activeSubflow.changed;
             }
-            var result = RED.nodes.import(newNodesStr,true,addNewFlow);
+            var result = RED.nodes.import(nodesToImport,{generateIds:options.generateIds, addFlow: addNewFlow, importMap: options.importMap});
             if (result) {
-                var new_nodes = result[0];
-                var new_links = result[1];
-                var new_workspaces = result[2];
-                var new_subflows = result[3];
-                var new_default_workspace = result[4];
+                var new_nodes = result.nodes;
+                var new_links = result.links;
+                var new_groups = result.groups;
+                var new_workspaces = result.workspaces;
+                var new_subflows = result.subflows;
+                var removedNodes = result.removedNodes;
+                var new_default_workspace = result.missingWorkspace;
                 if (addNewFlow && new_default_workspace) {
                     RED.workspaces.show(new_default_workspace.id);
                 }
-                var new_ms = new_nodes.filter(function(n) { return n.hasOwnProperty("x") && n.hasOwnProperty("y") && n.z == RED.workspaces.active() }).map(function(n) { return {n:n};});
+                var new_ms = new_nodes.filter(function(n) { return n.hasOwnProperty("x") && n.hasOwnProperty("y") && n.z == RED.workspaces.active() });
+                new_ms = new_ms.concat(new_groups.filter(function(g) { return g.z === RED.workspaces.active()}))
                 var new_node_ids = new_nodes.map(function(n){ n.changed = true; return n.id; });
 
-                // TODO: pick a more sensible root node
-                if (new_ms.length > 0) {
-                    var root_node = new_ms[0].n;
-                    var dx = root_node.x;
-                    var dy = root_node.y;
+                clearSelection();
+                movingSet.clear();
+                movingSet.add(new_ms);
 
+
+                // TODO: pick a more sensible root node
+                if (movingSet.length() > 0) {
                     if (mouse_position == null) {
                         mouse_position = [0,0];
+                    }
+
+                    var dx = mouse_position[0];
+                    var dy = mouse_position[1];
+                    if (movingSet.length() > 0) {
+                        var root_node = movingSet.get(0).n;
+                        dx = root_node.x;
+                        dy = root_node.y;
                     }
 
                     var minX = 0;
                     var minY = 0;
                     var i;
-                    var node;
-
-                    for (i=0;i<new_ms.length;i++) {
-                        node = new_ms[i];
+                    var node,group;
+                    var l =movingSet.length();
+                    for (i=0;i<l;i++) {
+                        node = movingSet.get(i);
                         node.n.selected = true;
                         node.n.changed = true;
                         node.n.moved = true;
                         node.n.x -= dx - mouse_position[0];
                         node.n.y -= dy - mouse_position[1];
+                        node.n.w = node_width;
+                        node.n.h = node_height;
+                        node.n.resize = true;
                         node.dx = node.n.x - mouse_position[0];
                         node.dy = node.n.y - mouse_position[1];
-                        minX = Math.min(node.n.x-node_width/2-5,minX);
-                        minY = Math.min(node.n.y-node_height/2-5,minY);
+                        if (node.n.type === "group") {
+                            node.n.groupMoved = false;
+                            minX = Math.min(node.n.x-5,minX);
+                            minY = Math.min(node.n.y-5,minY);
+                        } else {
+                            minX = Math.min(node.n.x-node_width/2-5,minX);
+                            minY = Math.min(node.n.y-node_height/2-5,minY);
+                        }
                     }
-                    for (i=0;i<new_ms.length;i++) {
-                        node = new_ms[i];
+                    for (i=0;i<l;i++) {
+                        node = movingSet.get(i);
                         node.n.x -= minX;
                         node.n.y -= minY;
                         node.dx -= minX;
@@ -18977,8 +22206,8 @@ RED.view = (function() {
                     if (!touchImport) {
                         mouse_mode = RED.state.IMPORT_DRAGGING;
                         spliceActive = false;
-                        if (new_ms.length === 1) {
-                            node = new_ms[0];
+                        if (movingSet.length() === 1) {
+                            node = movingSet.get(0);
                             spliceActive = node.n.hasOwnProperty("_def") &&
                                            ((node.n.hasOwnProperty("inputs") && node.n.inputs > 0) || (!node.n.hasOwnProperty("inputs") && node.n._def.inputs > 0)) &&
                                            ((node.n.hasOwnProperty("outputs") && node.n.outputs > 0) || (!node.n.hasOwnProperty("outputs") && node.n._def.outputs > 0))
@@ -18992,19 +22221,18 @@ RED.view = (function() {
                             RED.history.pop();
                             mouse_mode = 0;
                     });
-                    clearSelection();
-                    moving_set = new_ms;
                 }
 
                 var historyEvent = {
                     t:"add",
                     nodes:new_node_ids,
                     links:new_links,
+                    groups:new_groups,
                     workspaces:new_workspaces,
                     subflows:new_subflows,
                     dirty:RED.nodes.dirty()
                 };
-                if (new_ms.length === 0) {
+                if (movingSet.length() === 0) {
                     RED.nodes.dirty(true);
                 }
                 if (activeSubflow) {
@@ -19017,6 +22245,20 @@ RED.view = (function() {
                         }
                     }
                 }
+                if (removedNodes) {
+                    var replaceEvent = {
+                        t: "replace",
+                        config: removedNodes
+                    }
+                    historyEvent = {
+                        t:"multi",
+                        events: [
+                            replaceEvent,
+                            historyEvent
+                        ]
+                    }
+                }
+
                 RED.history.push(historyEvent);
 
                 updateActiveNodes();
@@ -19032,17 +22274,24 @@ RED.view = (function() {
                         newConfigNodeCount++;
                     }
                 })
+                var newGroupCount = new_groups.length;
                 if (new_workspaces.length > 0) {
                     counts.push(RED._("clipboard.flow",{count:new_workspaces.length}));
                 }
                 if (newNodeCount > 0) {
                     counts.push(RED._("clipboard.node",{count:newNodeCount}));
                 }
+                if (newGroupCount > 0) {
+                    counts.push(RED._("clipboard.group",{count:newGroupCount}));
+                }
                 if (newConfigNodeCount > 0) {
                     counts.push(RED._("clipboard.configNode",{count:newNodeCount}));
                 }
                 if (new_subflows.length > 0) {
                     counts.push(RED._("clipboard.subflow",{count:new_subflows.length}));
+                }
+                if (removedNodes && removedNodes.length > 0) {
+                    counts.push(RED._("clipboard.replacedNodes",{count:removedNodes.length}));
                 }
                 if (counts.length > 0) {
                     var countList = "<ul><li>"+counts.join("</li><li>")+"</li></ul>";
@@ -19051,7 +22300,10 @@ RED.view = (function() {
 
             }
         } catch(error) {
-            if (error.code != "NODE_RED") {
+            if (error.code === "import_conflict") {
+                // Pass this up for the called to resolve
+                throw error;
+            } else if (error.code != "NODE_RED") {
                 console.log(error.stack);
                 RED.notify(RED._("notification.error",{message:error.toString()}),"error");
             } else {
@@ -19085,26 +22337,29 @@ RED.view = (function() {
         var changed = false;
         if (workspaceSelection.length > 0) {
             // TODO: toggle workspace state
-        } else if (moving_set.length > 0) {
+        } else if (movingSet.length() > 0) {
             var historyEvents = [];
-            for (var i=0;i<moving_set.length;i++) {
-                var node = moving_set[i].n;
-                if (isDisabled != node.d) {
-                    historyEvents.push({
-                        t: "edit",
-                        node: node,
-                        changed: node.changed,
-                        changes: {
-                            d: node.d
+            for (var i=0;i<movingSet.length();i++) {
+                var node = movingSet.get(i).n;
+                if (node.type !== "group" && node.type !== "subflow") {
+                    if (isDisabled != node.d) {
+                        historyEvents.push({
+                            t: "edit",
+                            node: node,
+                            changed: node.changed,
+                            changes: {
+                                d: node.d
+                            }
+                        });
+                        if (isDisabled) {
+                            node.d = true;
+                        } else {
+                            delete node.d;
                         }
-                    });
-                    if (isDisabled) {
-                        node.d = true;
-                    } else {
-                        delete node.d;
+                        node.dirty = true;
+                        node.changed = true;
+                        RED.events.emit("nodes:change",node);
                     }
-                    node.dirty = true;
-                    node.changed = true;
                 }
             }
             if (historyEvents.length > 0) {
@@ -19119,7 +22374,40 @@ RED.view = (function() {
         RED.view.redraw();
 
     }
+    function getSelection() {
+        var selection = {};
 
+        var allNodes = new Set();
+
+        if (movingSet.length() > 0) {
+            movingSet.forEach(function(n) {
+                if (n.n.type !== 'group') {
+                    allNodes.add(n.n);
+                }
+            });
+        }
+        var selectedGroups = activeGroups.filter(function(g) { return g.selected && !g.active });
+        if (selectedGroups.length > 0) {
+            if (selectedGroups.length === 1 && selectedGroups[0].active) {
+                // Let nodes be nodes
+            } else {
+                selectedGroups.forEach(function(g) {
+                    var groupNodes = RED.group.getNodes(g,true);
+                    groupNodes.forEach(function(n) {
+                        allNodes.delete(n);
+                    });
+                    allNodes.add(g);
+                });
+            }
+        }
+        if (allNodes.size > 0) {
+            selection.nodes = Array.from(allNodes);
+        }
+        if (selected_link != null) {
+            selection.link = selected_link;
+        }
+        return selection;
+    }
     return {
         init: init,
         state:function(state) {
@@ -19130,12 +22418,17 @@ RED.view = (function() {
             }
         },
 
-        redraw: function(updateActive) {
+        updateActive: updateActiveNodes,
+        redraw: function(updateActive, syncRedraw) {
             if (updateActive) {
                 updateActiveNodes();
                 updateSelection();
             }
-            redraw();
+            if (syncRedraw) {
+                _redraw();
+            } else {
+                redraw();
+            }
         },
         focus: focusView,
         importNodes: importNodes,
@@ -19148,23 +22441,34 @@ RED.view = (function() {
                     if (selectedNode) {
                         selectedNode.selected = true;
                         selectedNode.dirty = true;
-                        moving_set = [{n:selectedNode}];
+                        movingSet.clear();
+                        movingSet.add(selectedNode);
+                    }
+                } else if (selection) {
+                    if (selection.nodes) {
+                        updateActiveNodes();
+                        movingSet.clear();
+                        // TODO: this selection group span groups
+                        //  - if all in one group -> activate the group
+                        //  - if in multiple groups (or group/no-group)
+                        //      -> select the first 'set' of things in the same group/no-group
+                        selection.nodes.forEach(function(n) {
+                            if (n.type !== "group") {
+                                n.selected = true;
+                                n.dirty = true;
+                                movingSet.add(n);
+                            } else {
+                                selectGroup(n,true);
+                            }
+                        })
                     }
                 }
             }
             updateSelection();
-            redraw();
+            redraw(true);
         },
-        selection: function() {
-            var selection = {};
-            if (moving_set.length > 0) {
-                selection.nodes = moving_set.map(function(n) { return n.n;});
-            }
-            if (selected_link != null) {
-                selection.link = selected_link;
-            }
-            return selection;
-        },
+        selection: getSelection,
+
         scale: function() {
             return scaleFactor;
         },
@@ -19179,47 +22483,57 @@ RED.view = (function() {
             }
             return result;
         },
-        reveal: function(id) {
+        getGroupAtPoint: getGroupAt,
+        getActiveGroup: function() { return activeGroup },
+        reveal: function(id,triggerHighlight) {
             if (RED.nodes.workspace(id) || RED.nodes.subflow(id)) {
                 RED.workspaces.show(id);
             } else {
-                var node = RED.nodes.node(id);
-                if (node._def.category !== 'config' && node.z) {
-                    node.highlighted = true;
-                    node.dirty = true;
-                    RED.workspaces.show(node.z);
+                var node = RED.nodes.node(id) || RED.nodes.group(id);
+                if (node) {
+                    if (node.z && (node.type === "group" || node._def.category !== 'config')) {
+                        node.dirty = true;
+                        RED.workspaces.show(node.z);
 
-                    var screenSize = [chart.width()/scaleFactor,chart.height()/scaleFactor];
-                    var scrollPos = [chart.scrollLeft()/scaleFactor,chart.scrollTop()/scaleFactor];
-
-                    if (node.x < scrollPos[0] || node.y < scrollPos[1] || node.x > screenSize[0]+scrollPos[0] || node.y > screenSize[1]+scrollPos[1]) {
-                        var deltaX = '-='+(((scrollPos[0] - node.x) + screenSize[0]/2)*scaleFactor);
-                        var deltaY = '-='+(((scrollPos[1] - node.y) + screenSize[1]/2)*scaleFactor);
-                        chart.animate({
-                            scrollLeft: deltaX,
-                            scrollTop: deltaY
-                        },200);
-                    }
-
-                    if (!node._flashing) {
-                        node._flashing = true;
-                        var flash = 22;
-                        var flashFunc = function() {
-                            flash--;
-                            node.dirty = true;
-                            if (flash >= 0) {
-                                node.highlighted = !node.highlighted;
-                                setTimeout(flashFunc,100);
-                            } else {
-                                node.highlighted = false;
-                                delete node._flashing;
-                            }
-                            RED.view.redraw();
+                        var screenSize = [chart.width()/scaleFactor,chart.height()/scaleFactor];
+                        var scrollPos = [chart.scrollLeft()/scaleFactor,chart.scrollTop()/scaleFactor];
+                        var cx = node.x;
+                        var cy = node.y;
+                        if (node.type === "group") {
+                            cx += node.w/2;
+                            cy += node.h/2;
                         }
-                        flashFunc();
+                        if (cx < scrollPos[0] || cy < scrollPos[1] || cx > screenSize[0]+scrollPos[0] || cy > screenSize[1]+scrollPos[1]) {
+                            var deltaX = '-='+(((scrollPos[0] - cx) + screenSize[0]/2)*scaleFactor);
+                            var deltaY = '-='+(((scrollPos[1] - cy) + screenSize[1]/2)*scaleFactor);
+                            chart.animate({
+                                scrollLeft: deltaX,
+                                scrollTop: deltaY
+                            },200);
+                        }
+                        if (triggerHighlight !== false) {
+                            node.highlighted = true;
+                            if (!node._flashing) {
+                                node._flashing = true;
+                                var flash = 22;
+                                var flashFunc = function() {
+                                    flash--;
+                                    node.dirty = true;
+                                    if (flash >= 0) {
+                                        node.highlighted = !node.highlighted;
+                                        setTimeout(flashFunc,100);
+                                    } else {
+                                        node.highlighted = false;
+                                        delete node._flashing;
+                                    }
+                                    RED.view.redraw();
+                                }
+                                flashFunc();
+                            }
+                        }
+                    } else if (node._def.category === 'config') {
+                        RED.sidebar.config.show(id);
                     }
-                } else if (node._def.category === 'config') {
-                    RED.sidebar.config.show(id);
                 }
             }
         },
@@ -19244,13 +22558,12 @@ RED.view = (function() {
             mouse_mode = RED.state.SELECTING_NODE;
             clearSelection();
             if (options.selected) {
-                console.log(options.selected);
                 options.selected.forEach(function(id) {
                     var n = RED.nodes.node(id);
                     if (n) {
                         n.selected = true;
                         n.dirty = true;
-                        moving_set.push({n:n});
+                        movingSet.add(n);
                     }
                 })
             }
@@ -19286,7 +22599,7 @@ RED.view = (function() {
                     text: RED._("common.label.done"),
                     class: "primary",
                     click: function(e) {
-                        var selection = moving_set.map(function(n) { return n.n;});
+                        var selection = movingSet.nodes()
                         selectNodesOptions.done(selection);
                     }
                 });
@@ -19297,7 +22610,20 @@ RED.view = (function() {
                 type: "compact",
                 buttons: buttons
             })
-        }
+        },
+        scroll: function(x,y) {
+            chart.scrollLeft(chart.scrollLeft()+x);
+            chart.scrollTop(chart.scrollTop()+y)
+        },
+        clickNodeButton: function(n) {
+            if (n._def.button) {
+                nodeButtonClicked(n);
+            }
+        },
+        clipboard: function() {
+            return clipboard
+        },
+        redrawStatus: redrawStatus
     };
 })();
 ;/**
@@ -19527,9 +22853,16 @@ RED.view.tools = (function() {
 
     function moveSelection(dx,dy) {
         if (moving_set === null) {
+            moving_set = [];
             var selection = RED.view.selection();
             if (selection.nodes) {
-                moving_set = selection.nodes.map(function(n) { return {n:n}});
+                while (selection.nodes.length > 0) {
+                    var n = selection.nodes.shift();
+                    moving_set.push({n:n});
+                    if (n.type === "group") {
+                        selection.nodes = selection.nodes.concat(n.nodes);
+                    }
+                }
             }
         }
         if (moving_set && moving_set.length > 0) {
@@ -19553,10 +22886,15 @@ RED.view.tools = (function() {
                 node.n.x += dx;
                 node.n.y += dy;
                 node.n.dirty = true;
-                minX = Math.min(node.n.x-node.n.w/2-5,minX);
-                minY = Math.min(node.n.y-node.n.h/2-5,minY);
+                if (node.n.type === "group") {
+                    RED.group.markDirty(node.n);
+                    minX = Math.min(node.n.x - 5,minX);
+                    minY = Math.min(node.n.y - 5,minY);
+                } else {
+                    minX = Math.min(node.n.x-node.n.w/2-5,minX);
+                    minY = Math.min(node.n.y-node.n.h/2-5,minY);
+                }
             }
-
             if (minX !== 0 || minY !== 0) {
                 for (var n = 0; n<moving_set.length; n++) {
                     node = moving_set[n];
@@ -19565,12 +22903,85 @@ RED.view.tools = (function() {
                 }
             }
             RED.view.redraw();
+        } else {
+            RED.view.scroll(dx*10,dy*10);
         }
+    }
+
+    function setSelectedNodeLabelState(labelShown) {
+        var selection = RED.view.selection();
+        var historyEvents = [];
+        var nodes = [];
+        if (selection.nodes) {
+            selection.nodes.forEach(function(n) {
+                if (n.type !== 'subflow' && n.type !== 'group') {
+                    nodes.push(n);
+                } else if (n.type === 'group') {
+                    nodes = nodes.concat( RED.group.getNodes(n,true));
+                }
+            });
+        }
+        nodes.forEach(function(n) {
+            var modified = false;
+            var oldValue = n.l === undefined?true:n.l;
+            var isLink = /^link (in|out)$/.test(n._def.type);
+
+            if (labelShown) {
+                if (n.l === false || (isLink && !n.hasOwnProperty('l'))) {
+                    n.l = true;
+                    modified = true;
+                }
+            } else {
+                if ((!isLink && (!n.hasOwnProperty('l') || n.l === true)) || (isLink && n.l === true) ) {
+                    n.l = false;
+                    modified = true;
+                }
+            }
+            if (modified) {
+                historyEvents.push({
+                    t: "edit",
+                    node: n,
+                    changed: n.changed,
+                    changes: {
+                        l: oldValue
+                    }
+                })
+                n.changed = true;
+                n.dirty = true;
+                n.resize = true;
+            }
+        })
+
+        if (historyEvents.length > 0) {
+            RED.history.push({
+                t: "multi",
+                events: historyEvents,
+                dirty: RED.nodes.dirty()
+            })
+            RED.nodes.dirty(true);
+        }
+
+        RED.view.redraw();
+
+
     }
 
     return {
         init: function() {
+            RED.actions.add("core:show-selected-node-labels", function() { setSelectedNodeLabelState(true); })
+            RED.actions.add("core:hide-selected-node-labels", function() { setSelectedNodeLabelState(false); })
+
             RED.actions.add("core:align-selection-to-grid", alignToGrid);
+
+            RED.actions.add("core:scroll-view-up", function() { RED.view.scroll(0,-RED.view.gridSize());});
+            RED.actions.add("core:scroll-view-right", function() { RED.view.scroll(RED.view.gridSize(),0);});
+            RED.actions.add("core:scroll-view-down", function() { RED.view.scroll(0,RED.view.gridSize());});
+            RED.actions.add("core:scroll-view-left", function() { RED.view.scroll(-RED.view.gridSize(),0);});
+
+            RED.actions.add("core:step-view-up", function() { RED.view.scroll(0,-5*RED.view.gridSize());});
+            RED.actions.add("core:step-view-right", function() { RED.view.scroll(5*RED.view.gridSize(),0);});
+            RED.actions.add("core:step-view-down", function() { RED.view.scroll(0,5*RED.view.gridSize());});
+            RED.actions.add("core:step-view-left", function() { RED.view.scroll(-5*RED.view.gridSize(),0);});
 
             RED.actions.add("core:move-selection-up", function() { moveSelection(0,-1);});
             RED.actions.add("core:move-selection-right", function() { moveSelection(1,0);});
@@ -19829,7 +23240,11 @@ RED.sidebar = (function() {
                 }
             },
             // minimumActiveTabWidth: 70,
-            collapsible: true
+            collapsible: true,
+            onreorder: function(order) {
+                RED.settings.set("editor.sidebar.order",order);
+            },
+            order: RED.settings.get("editor.sidebar.order",["info", "help", "version-control", "debug"])
             // scrollable: true
         });
 
@@ -19847,6 +23262,7 @@ RED.sidebar = (function() {
         RED.popover.tooltip($("#red-ui-sidebar-separator").find(".red-ui-sidebar-control-right"),RED._("keyboard.toggleSidebar"),"core:toggle-sidebar");
         showSidebar();
         RED.sidebar.info.init();
+        RED.sidebar.help.init();
         RED.sidebar.config.init();
         RED.sidebar.context.init();
         // hide info bar at start if screen rather narrow...
@@ -19867,10 +23283,9 @@ RED.sidebar = (function() {
  * This file was modified by Homegear GmbH
  *
  * Changes:
- * - Added namespace to setLabel
+ * - Changed content of palette help
  *
  * Todo after update:
- * - Search for new occurences of setLabel() and add namespace
  **/
 
 /**
@@ -19961,7 +23376,8 @@ RED.palette = (function() {
         });
     }
 
-    function setLabel(type, el,label, info, namespace) {
+    //function setLabel(type, el,label, info) { //Removed by Homegear GmbH
+    function setLabel(i18nNamespace, type, el,label, info) { //Added by Homegear GmbH
         var nodeWidth = 82;
         var nodeHeight = 25;
         var lineHeight = 20;
@@ -19980,7 +23396,7 @@ RED.palette = (function() {
         for (var i=0;i<words.length;i++) {
             var word = words[i];
             var sep = (i == 0) ? "" : " ";
-            var newWidth = RED.view.calculateTextWidth(currentLine+sep+word, "red-ui-palette-label", 0);
+            var newWidth = RED.view.calculateTextWidth(currentLine+sep+word, "red-ui-palette-label");
             if (newWidth < nodeWidth) {
                 currentLine += sep +word;
             } else {
@@ -19988,12 +23404,12 @@ RED.palette = (function() {
                     displayLines.push(currentLine);
                 }
                 while (true) {
-                    var wordWidth = RED.view.calculateTextWidth(word, "red-ui-palette-label", 0);
+                    var wordWidth = RED.view.calculateTextWidth(word, "red-ui-palette-label");
                     if (wordWidth >= nodeWidth) {
                         // break word if too wide
                         for(var j = word.length; j > 0; j--) {
                             var s = word.substring(0, j);
-                            var width = RED.view.calculateTextWidth(s, "red-ui-palette-label", 0);
+                            var width = RED.view.calculateTextWidth(s, "red-ui-palette-label");
                             if (width < nodeWidth) {
                                 displayLines.push(s);
                                 word = word.substring(j);
@@ -20021,20 +23437,31 @@ RED.palette = (function() {
 
         var popOverContent;
         try {
+            if (!info) info = $("script[data-help-name='"+type+"']").html(); //Added by Homegear GmbH
+            if (!info && i18nNamespace) info = RED._(i18nNamespace + ":" + type + ".paletteHelp"); //Added by Homegear GmbH to support localized pallete help
             var l = "<p><b>"+RED.text.bidi.enforceTextDirectionWithUCC(label)+"</b></p>";
-            var helpContent = i18n.t(namespace + "/" + type + ".hni:" + type + ".paletteHelp");
-            popOverContent = $(l+(info?info:helpContent||"<p>"+RED._("palette.noInfo")+"</p>").trim());
+            //popOverContent = $('<div></div>').append($(l+(info?info:$("script[data-help-name='"+type+"']").html()||"<p>"+RED._("palette.noInfo")+"</p>").trim()) //Removed by Homegear GmbH
+            popOverContent = $('<div></div>').append($(l+(info||"<p>"+RED._("palette.noInfo")+"</p>").trim()) //Added by Homegear GmbH
+                                .filter(function(n) {
+                                    return (this.nodeType == 1 && this.nodeName == "P") || (this.nodeType == 3 && this.textContent.trim().length > 0)
+                                }).slice(0,2));
+            popOverContent.find("a").each(function(){
+                var linkText = $(this).text();
+                $(this).before(linkText);
+                $(this).remove();
+            });
 
             var typeInfo = RED.nodes.getType(type);
 
-            /*if (typeInfo) {
+            if (typeInfo) {
                 var metaData = "";
                 if (typeInfo && !/^subflow:/.test(type)) {
                     metaData = typeInfo.set.module+" : ";
                 }
                 metaData += type;
+                $('<button type="button" onclick="RED.sidebar.help.show(\''+type+'\'); return false;" class="red-ui-button red-ui-button-small" style="float: right"><i class="fa fa-book"></i></button>').appendTo(popOverContent)
                 $('<p>',{style:"font-size: 0.8em"}).text(metaData).appendTo(popOverContent);
-            }*/
+            }
         } catch(err) {
             // Malformed HTML may cause errors. TODO: need to understand what can break
             // NON-NLS: internal debug
@@ -20049,7 +23476,11 @@ RED.palette = (function() {
     function setIcon(element,sf) {
         var icon_url = RED.utils.getNodeIcon(sf._def);
         var iconContainer = element.find(".red-ui-palette-icon-container");
-        RED.utils.createIconElement(icon_url, iconContainer, true);
+        var currentIcon = iconContainer.attr("data-palette-icon");
+        if (currentIcon !== icon_url) {
+            iconContainer.attr("data-palette-icon", icon_url);
+            RED.utils.createIconElement(icon_url, iconContainer, true);
+        }
     }
 
     function getPaletteNode(type) {
@@ -20072,7 +23503,7 @@ RED.palette = (function() {
             var rootCategory = category.split("-")[0];
 
             var d = $('<div>',{class:"red-ui-palette-node"}).attr("data-palette-type",nt).data('category',rootCategory);
-            d.namespace = def.namespace ? def.namespace : nt;
+            //d.namespace = def.namespace ? def.namespace : nt; //Added by Homegear GmbH. Uncomment to readd deprecated namespace
 
             var label = nt;///^(.*?)([ -]in|[ -]out)?$/.exec(nt)[1];
             if (typeof def.paletteLabel !== "undefined") {
@@ -20093,6 +23524,7 @@ RED.palette = (function() {
                 var iconContainer = $('<div/>', {
                     class: "red-ui-palette-icon-container"+(((!def.align && def.inputs !== 0 && def.outputs === 0) || "right" === def.align) ? " red-ui-palette-icon-container-right" : "")
                 }).appendTo(d);
+                iconContainer.attr("data-palette-icon", icon_url);
                 RED.utils.createIconElement(icon_url, iconContainer, true);
             }
 
@@ -20119,6 +23551,7 @@ RED.palette = (function() {
             var popover = RED.popover.create({
                 target:d,
                 trigger: "hover",
+                interactive: true,
                 width: "300px",
                 content: "hi",
                 delay: { show: 750, hide: 50 }
@@ -20134,25 +23567,28 @@ RED.palette = (function() {
             //     html: true,
             //     container:'body'
             // });
-            d.on("click", function() {
-                RED.view.focus();
-                var helpText;
-                if (nt.indexOf("subflow:") === 0) {
-                    helpText = RED.utils.renderMarkdown(RED.nodes.subflow(nt.substring(8)).info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
-                } else {
-                    helpText = i18n.t((def.namespace ? def.namespace : nt) + "/" + nt + ".hni:" + nt + ".help")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
-                }
-                // Don't look too closely. RED.sidebar.info.set will set the 'Description'
-                // section of the sidebar. Pass in the title of the Help section so it looks
-                // right.
-                RED.sidebar.info.set(helpText,RED._("sidebar.info.nodeHelp"));
-            });
+            // d.on("click", function() {
+            //     RED.view.focus();
+            //     var helpText;
+            //     if (nt.indexOf("subflow:") === 0) {
+            //         helpText = RED.utils.renderMarkdown(RED.nodes.subflow(nt.substring(8)).info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
+            //     } else {
+            //         helpText = $("script[data-help-name='"+d.attr("data-palette-type")+"']").html()||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
+            //     }
+            //     // Don't look too closely. RED.sidebar.info.set will set the 'Description'
+            //     // section of the sidebar. Pass in the title of the Help section so it looks
+            //     // right.
+            //     RED.sidebar.type.show(helpText,RED._("sidebar.info.nodeHelp"));
+            // });
             var chart = $("#red-ui-workspace-chart");
             var chartSVG = $("#red-ui-workspace-chart>svg").get(0);
             var activeSpliceLink;
             var mouseX;
             var mouseY;
             var spliceTimer;
+            var groupTimer;
+            var activeGroup;
+            var hoverGroup;
             var paletteWidth;
             var paletteTop;
             $(d).draggable({
@@ -20164,16 +23600,53 @@ RED.palette = (function() {
                 start: function() {
                     paletteWidth = $("#red-ui-palette").width();
                     paletteTop = $("#red-ui-palette").parent().position().top + $("#red-ui-palette-container").position().top;
+                    hoverGroup = null;
+                    activeGroup = RED.view.getActiveGroup();
+                    if (activeGroup) {
+                        document.getElementById("group_select_"+activeGroup.id).classList.add("red-ui-flow-group-active-hovered");
+                    }
                     RED.view.focus();
                 },
-                stop: function() { d3.select('.red-ui-flow-link-splice').classed('red-ui-flow-link-splice',false); if (spliceTimer) { clearTimeout(spliceTimer); spliceTimer = null;}},
+                stop: function() {
+                    d3.select('.red-ui-flow-link-splice').classed('red-ui-flow-link-splice',false);
+                    if (hoverGroup) {
+                        document.getElementById("group_select_"+hoverGroup.id).classList.remove("red-ui-flow-group-hovered");
+                    }
+                    if (activeGroup) {
+                        document.getElementById("group_select_"+activeGroup.id).classList.remove("red-ui-flow-group-active-hovered");
+                    }
+                    if (spliceTimer) { clearTimeout(spliceTimer); spliceTimer = null; }
+                    if (groupTimer) { clearTimeout(groupTimer); groupTimer = null; }
+                },
                 drag: function(e,ui) {
                     var paletteNode = getPaletteNode(nt);
                     ui.originalPosition.left = paletteNode.offset().left;
+                    mouseX = ui.position.left - paletteWidth + (ui.helper.width()/2) + chart.scrollLeft();
+                    mouseY = ui.position.top - paletteTop + (ui.helper.height()/2) + chart.scrollTop();
+                    if (!groupTimer) {
+                        groupTimer = setTimeout(function() {
+                            mouseX /= RED.view.scale();
+                            mouseY /= RED.view.scale();
+                            var group = RED.view.getGroupAtPoint(mouseX,mouseY);
+                            if (group !== hoverGroup) {
+                                if (hoverGroup) {
+                                    document.getElementById("group_select_"+hoverGroup.id).classList.remove("red-ui-flow-group-hovered");
+                                }
+                                if (group) {
+                                    document.getElementById("group_select_"+group.id).classList.add("red-ui-flow-group-hovered");
+                                }
+                                hoverGroup = group;
+                                if (hoverGroup) {
+                                    $(ui.helper).data('group',hoverGroup);
+                                } else {
+                                    $(ui.helper).removeData('group');
+                                }
+                            }
+                            groupTimer = null;
 
+                        },200)
+                    }
                     if (def.inputs > 0 && def.outputs > 0) {
-                        mouseX = ui.position.left - paletteWidth + (ui.helper.width()/2) + chart.scrollLeft();
-                        mouseY = ui.position.top - paletteTop + (ui.helper.height()/2) + chart.scrollTop();
                         if (!spliceTimer) {
                             spliceTimer = setTimeout(function() {
                                 var nodes = [];
@@ -20241,11 +23714,12 @@ RED.palette = (function() {
                 });
                 nodeInfo = RED.utils.renderMarkdown(def.info||"");
             }
-            setLabel(nt,$(d),label,nodeInfo, def.namespace ? def.namespace : nt);
+            //setLabel(nt,d,label,nodeInfo); //Removed by Homegear GmbH
+            setLabel(def.set.id,nt,d,label,nodeInfo); //Added by Homegear GmbH
 
             var categoryNode = $("#red-ui-palette-container-"+rootCategory);
             if (categoryNode.find(".red-ui-palette-node").length === 1) {
-                categoryContainers[rootCategory].close();
+                categoryContainers[rootCategory].open();
             }
 
         }
@@ -20281,61 +23755,68 @@ RED.palette = (function() {
         categoryNode.show();
         paletteNode.show();
     }
-
     function refreshNodeTypes() {
-        RED.nodes.eachSubflow(function(sf) {
-            var paletteNode = getPaletteNode('subflow:'+sf.id);
-            var portInput = paletteNode.find(".red-ui-palette-port-input");
-            var portOutput = paletteNode.find(".red-ui-palette-port-output");
+        RED.nodes.eachSubflow(refreshSubflow)
+    }
+    function refreshSubflow(sf) {
+        var paletteNode = getPaletteNode('subflow:'+sf.id);
+        var portInput = paletteNode.find(".red-ui-palette-port-input");
+        var portOutput = paletteNode.find(".red-ui-palette-port-output");
 
-            var paletteLabel = paletteNode.find(".red-ui-palette-label");
-            paletteLabel.attr("class","red-ui-palette-label" + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-label-right" : ""));
+        var paletteLabel = paletteNode.find(".red-ui-palette-label");
+        paletteLabel.attr("class","red-ui-palette-label" + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-label-right" : ""));
 
-            var paletteIconContainer = paletteNode.find(".red-ui-palette-icon-container");
-            paletteIconContainer.attr("class","red-ui-palette-icon-container" + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-icon-container-right" : ""));
+        var paletteIconContainer = paletteNode.find(".red-ui-palette-icon-container");
+        paletteIconContainer.attr("class","red-ui-palette-icon-container" + (((!sf._def.align && sf.in.length !== 0 && sf.out.length === 0) || "right" === sf._def.align) ? " red-ui-palette-icon-container-right" : ""));
 
-            if (portInput.length === 0 && sf.in.length > 0) {
-                var portIn = document.createElement("div");
-                portIn.className = "red-ui-palette-port red-ui-palette-port-input";
-                paletteNode.append(portIn);
-            } else if (portInput.length !== 0 && sf.in.length === 0) {
-                portInput.remove();
+        if (portInput.length === 0 && sf.in.length > 0) {
+            var portIn = document.createElement("div");
+            portIn.className = "red-ui-palette-port red-ui-palette-port-input";
+            paletteNode.append(portIn);
+        } else if (portInput.length !== 0 && sf.in.length === 0) {
+            portInput.remove();
+        }
+
+        if (portOutput.length === 0 && sf.out.length > 0) {
+            var portOut = document.createElement("div");
+            portOut.className = "red-ui-palette-port red-ui-palette-port-output";
+            paletteNode.append(portOut);
+        } else if (portOutput.length !== 0 && sf.out.length === 0) {
+            portOutput.remove();
+        }
+        var currentLabel = paletteNode.attr("data-palette-label");
+        var currentInfo = paletteNode.attr("data-palette-info");
+
+        if (currentLabel !== sf.name || currentInfo !== sf.info) {
+            paletteNode.attr("data-palette-info",sf.info);
+            //setLabel(sf.type+":"+sf.id,paletteNode,sf.name,RED.utils.renderMarkdown(sf.info||"")); //Removed by Homegear GmbH
+            setLabel("",sf.type+":"+sf.id,paletteNode,sf.name,RED.utils.renderMarkdown(sf.info||"")); //Added by Homegear GmbH
+        }
+        setIcon(paletteNode,sf);
+
+        var currentCategory = paletteNode.data('category');
+        var newCategory = (sf.category||"subflows");
+        if (currentCategory !== newCategory) {
+            var category = escapeCategory(newCategory);
+            createCategory(newCategory,category,category,"node-red");
+
+            var currentCategoryNode = paletteNode.closest(".red-ui-palette-category");
+            var newCategoryNode = $("#red-ui-palette-"+category);
+            newCategoryNode.append(paletteNode);
+            if (newCategoryNode.find(".red-ui-palette-node").length === 1) {
+                categoryContainers[category].open();
             }
 
-            if (portOutput.length === 0 && sf.out.length > 0) {
-                var portOut = document.createElement("div");
-                portOut.className = "red-ui-palette-port red-ui-palette-port-output";
-                paletteNode.append(portOut);
-            } else if (portOutput.length !== 0 && sf.out.length === 0) {
-                portOutput.remove();
-            }
-            setLabel(sf.type+":"+sf.id,paletteNode,sf.name,RED.utils.renderMarkdown(sf.info||""),sf.type+":"+sf.id);
-            setIcon(paletteNode,sf);
-
-            var currentCategory = paletteNode.data('category');
-            var newCategory = (sf.category||"subflows");
-            if (currentCategory !== newCategory) {
-                var category = escapeCategory(newCategory);
-                createCategory(newCategory,category,category,"node-red");
-
-                var currentCategoryNode = paletteNode.closest(".red-ui-palette-category");
-                var newCategoryNode = $("#red-ui-palette-"+category);
-                newCategoryNode.append(paletteNode);
-                if (newCategoryNode.find(".red-ui-palette-node").length === 1) {
-                    categoryContainers[category].open();
+            paletteNode.data('category',newCategory);
+            if (currentCategoryNode.find(".red-ui-palette-node").length === 0) {
+                if (currentCategoryNode.find("i").hasClass("expanded")) {
+                    currentCategoryNode.find(".red-ui-palette-content").slideToggle();
+                    currentCategoryNode.find("i").toggleClass("expanded");
                 }
-
-                paletteNode.data('category',newCategory);
-                if (currentCategoryNode.find(".red-ui-palette-node").length === 0) {
-                    if (currentCategoryNode.find("i").hasClass("expanded")) {
-                        currentCategoryNode.find(".red-ui-palette-content").slideToggle();
-                        currentCategoryNode.find("i").toggleClass("expanded");
-                    }
-                }
             }
+        }
 
-            paletteNode.css("backgroundColor", sf.color);
-        });
+        paletteNode.css("backgroundColor", sf.color);
     }
 
     function filterChange(val) {
@@ -20372,6 +23853,8 @@ RED.palette = (function() {
         $('<div id="red-ui-palette-container" class="red-ui-palette-scroll hide"></div>').appendTo("#red-ui-palette");
         $('<div class="red-ui-component-footer"></div>').appendTo("#red-ui-palette");
         $('<div id="red-ui-palette-shade" class="hide"></div>').appendTo("#red-ui-palette");
+
+        $("#red-ui-palette > .red-ui-palette-spinner").show();
 
 
         RED.events.on('registry:node-type-added', function(nodeType) {
@@ -20414,7 +23897,8 @@ RED.palette = (function() {
             }
         });
 
-        $("#red-ui-palette > .red-ui-palette-spinner").show();
+        RED.events.on("subflows:change",refreshSubflow);
+
 
 
         $("#red-ui-palette-search input").searchBox({
@@ -20519,15 +24003,6 @@ RED.palette = (function() {
     };
 })();
 ;/**
- * This file was modified by Homegear GmbH
- *
- * Changes:
- * - Added translated help text.
- *
- * Todo after update:
- **/
-
-/**
  * Copyright JS Foundation and other contributors, http://js.foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20545,16 +24020,32 @@ RED.palette = (function() {
 RED.sidebar.info = (function() {
 
     var content;
-    var sections;
-    var propertiesSection;
+    var panels;
     var infoSection;
-    var helpSection;
+
+    var propertiesPanelContent;
+    var propertiesPanelHeader;
+    var propertiesPanelHeaderIcon;
+    var propertiesPanelHeaderLabel;
+    var propertiesPanelHeaderReveal;
+    var propertiesPanelHeaderHelp;
+
+    var selectedObject;
+
+    var tipContainer;
     var tipBox;
 
+    // TODO: remove this
     var expandedSections = {
         "property": false
     };
 
+    function resizeStack() {
+        if (panels) {
+            var h = $(content).parent().height() - tipContainer.outerHeight();
+            panels.resize(h)
+        }
+    }
     function init() {
 
         content = document.createElement("div");
@@ -20564,31 +24055,81 @@ RED.sidebar.info = (function() {
 
         var stackContainer = $("<div>",{class:"red-ui-sidebar-info-stack"}).appendTo(content);
 
-        sections = RED.stack.create({
-            container: stackContainer
-        }).hide();
+        var outlinerPanel = $("<div>").css({
+            "overflow": "hidden",
+            "height": "calc(70%)"
+        }).appendTo(stackContainer);
+        var propertiesPanel = $("<div>").css({
+            "overflow":"hidden",
+            "height":"100%",
+            "display": "flex",
+            "flex-direction": "column"
+        }).appendTo(stackContainer);
+        propertiesPanelHeader = $("<div>", {class:"red-ui-palette-header red-ui-info-header"}).css({
+            "flex":"0 0 auto"
+        }).appendTo(propertiesPanel);
 
-        propertiesSection = sections.add({
-            title: RED._("sidebar.info.info"),
-            collapsible: true
+        propertiesPanelHeaderIcon = $("<span>").appendTo(propertiesPanelHeader);
+        propertiesPanelHeaderLabel = $("<span>").appendTo(propertiesPanelHeader);
+        propertiesPanelHeaderHelp = $('<button class="red-ui-button red-ui-button-small"><i class="fa fa-book"></button>').css({
+            position: 'absolute',
+            top: '12px',
+            right: '32px'
+        }).on("click", function(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            if (selectedObject) {
+                RED.sidebar.help.show(selectedObject.type);
+            }
+        }).appendTo(propertiesPanelHeader);
+        RED.popover.tooltip(propertiesPanelHeaderHelp,RED._("sidebar.help.showHelp"));
+
+
+        propertiesPanelHeaderReveal = $('<button class="red-ui-button red-ui-button-small"><i class="fa fa-search"></button>').css({
+            position: 'absolute',
+            top: '12px',
+            right: '8px'
+        }).on("click", function(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            if (selectedObject) {
+                RED.sidebar.info.outliner.reveal(selectedObject);
+                RED.view.reveal(selectedObject.id);
+            }
+        }).appendTo(propertiesPanelHeader);
+        RED.popover.tooltip(propertiesPanelHeaderReveal,RED._("sidebar.help.showInOutline"));
+
+
+        propertiesPanelContent = $("<div>").css({
+            "flex":"1 1 auto",
+            "overflow-y":"scroll",
+        }).appendTo(propertiesPanel);
+
+
+        panels = RED.panels.create({container: stackContainer})
+        panels.ratio(0.6);
+        RED.sidebar.info.outliner.build().appendTo(outlinerPanel);
+
+
+        RED.sidebar.addTab({
+            id: "info",
+            label: RED._("sidebar.info.label"),
+            name: RED._("sidebar.info.name"),
+            iconClass: "fa fa-info",
+            action:"core:show-info-tab",
+            content: content,
+            pinned: true,
+            enableOnEdit: true
         });
-        propertiesSection.expand();
 
-        infoSection = sections.add({
-            title: RED._("sidebar.info.desc"),
-            collapsible: true
-        });
-        infoSection.expand();
-        infoSection.content.css("padding","6px");
+        RED.events.on("sidebar:resize", resizeStack);
 
-        helpSection = sections.add({
-            title: RED._("sidebar.info.nodeHelp"),
-            collapsible: true
-        });
-        helpSection.expand();
-        helpSection.content.css("padding","6px");
+        $(window).on("resize", resizeStack);
+        $(window).on("focus", resizeStack);
 
-        var tipContainer = $('<div class="red-ui-help-tips"></div>').appendTo(content);
+
+        // Tip Box
+        tipContainer = $('<div class="red-ui-help-tips"></div>').appendTo(content);
         tipBox = $('<div class="red-ui-help-tip"></div>').appendTo(tipContainer);
         var tipButtons = $('<div class="red-ui-help-tips-buttons"></div>').appendTo(tipContainer);
 
@@ -20603,17 +24144,6 @@ RED.sidebar.info = (function() {
             e.preventDefault();
             RED.actions.invoke("core:toggle-show-tips");
             RED.notify(RED._("sidebar.info.showTips"));
-        });
-
-        RED.sidebar.addTab({
-            id: "info",
-            label: RED._("sidebar.info.label"),
-            name: RED._("sidebar.info.name"),
-            iconClass: "fa fa-info",
-            action:"core:show-info-tab",
-            content: content,
-            pinned: true,
-            enableOnEdit: true
         });
         if (tips.enabled()) {
             tips.start();
@@ -20642,46 +24172,36 @@ RED.sidebar.info = (function() {
             refreshSelection();
             return;
         }
-        sections.show();
-        $(propertiesSection.content).empty();
-        $(infoSection.content).empty();
-        $(helpSection.content).empty();
-        infoSection.title.text(RED._("sidebar.info.desc"));
+        $(propertiesPanelContent).empty();
 
         var propRow;
 
-        var table = $('<table class="red-ui-info-table"></table>').appendTo(propertiesSection.content);
+        var table = $('<table class="red-ui-info-table"></table>').appendTo(propertiesPanelContent);
         var tableBody = $('<tbody>').appendTo(table);
 
         var subflowNode;
         var subflowUserCount;
 
-        var activeProject = RED.projects.getActiveProject();
-        if (activeProject) {
-            propRow = $('<tr class="red-ui-help-info-row"><td>'+ RED._("sidebar.project.name") + '</td><td></td></tr>').appendTo(tableBody);
-            $(propRow.children()[1]).text(activeProject.name||"");
-            $('<tr class="red-ui-help-property-expand blank"><td colspan="2"></td></tr>').appendTo(tableBody);
-            var editProjectButton = $('<button class="red-ui-button red-ui-button-small" style="position:absolute;right:2px;"><i class="fa fa-ellipsis-h"></i></button>')
-                .appendTo(propRow.children()[1])
-                .on("click", function(evt) {
-                    evt.preventDefault();
-                    RED.projects.editProject();
-                });
-            RED.popover.tooltip(editProjectButton,RED._('sidebar.project.showProjectSettings'));
-        }
-        propertiesSection.container.show();
-        infoSection.container.show();
-        helpSection.container.show();
         if (node === null) {
+            RED.sidebar.info.outliner.select(null);
             return;
         } else if (Array.isArray(node)) {
             // Multiple things selected
             // - hide help and info sections
+            RED.sidebar.info.outliner.select(node);
+
+            propertiesPanelHeaderIcon.empty();
+            RED.utils.createNodeIcon({type:"_selection_"}).appendTo(propertiesPanelHeaderIcon);
+            propertiesPanelHeaderLabel.text("Selection");
+            propertiesPanelHeaderReveal.hide();
+            propertiesPanelHeaderHelp.hide();
+            selectedObject = null;
 
             var types = {
                 nodes:0,
                 flows:0,
-                subflows:0
+                subflows:0,
+                groups: 0
             }
             node.forEach(function(n) {
                 if (n.type === 'tab') {
@@ -20689,12 +24209,13 @@ RED.sidebar.info = (function() {
                     types.nodes += RED.nodes.filterNodes({z:n.id}).length;
                 } else if (n.type === 'subflow') {
                     types.subflows++;
+                } else if (n.type === 'group') {
+                    types.groups++;
                 } else {
                     types.nodes++;
                 }
             });
-            helpSection.container.hide();
-            infoSection.container.hide();
+            // infoSection.container.hide();
             // - show the count of selected nodes
             propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info.selection")+"</td><td></td></tr>").appendTo(tableBody);
 
@@ -20708,53 +24229,96 @@ RED.sidebar.info = (function() {
             if (types.nodes > 0) {
                 $('<div>').text(RED._("clipboard.node",{count:types.nodes})).appendTo(counts);
             }
+            if (types.groups > 0) {
+                $('<div>').text(RED._("clipboard.group",{count:types.groups})).appendTo(counts);
+            }
         } else {
             // A single 'thing' selected.
 
+            RED.sidebar.info.outliner.select(node);
+
             // Check to see if this is a subflow or subflow instance
-            var m = /^subflow(:(.+))?$/.exec(node.type);
-            if (m) {
-                if (m[2]) {
-                    subflowNode = RED.nodes.subflow(m[2]);
+            var subflowRegex = /^subflow(:(.+))?$/.exec(node.type);
+            if (subflowRegex) {
+                if (subflowRegex[2]) {
+                    subflowNode = RED.nodes.subflow(subflowRegex[2]);
                 } else {
                     subflowNode = node;
                 }
 
-                subflowUserCount = 0;
                 var subflowType = "subflow:"+subflowNode.id;
-                RED.nodes.eachNode(function(n) {
-                    if (n.type === subflowType) {
-                        subflowUserCount++;
-                    }
-                });
+                subflowUserCount = subflowNode.instances.length;
             }
+
+            propertiesPanelHeaderIcon.empty();
+            RED.utils.createNodeIcon(node).appendTo(propertiesPanelHeaderIcon);
+            var objectLabel = RED.utils.getNodeLabel(node, node.type+": "+node.id)
+            var newlineIndex = objectLabel.indexOf("\\n");
+            if (newlineIndex > -1) {
+                objectLabel = objectLabel.substring(0,newlineIndex)+"...";
+            }
+            propertiesPanelHeaderLabel.text(objectLabel);
+            propertiesPanelHeaderReveal.show();
+            selectedObject = node;
+
+            propRow = $('<tr class="red-ui-help-info-row"><td></td><td></td></tr>').appendTo(tableBody);
+            var objectType = "node";
+            if (node.type === "subflow" || subflowRegex) {
+                objectType = "subflow";
+            } else if (node.type === "tab") {
+                objectType = "flow";
+            }else if (node.type === "group") {
+                objectType = "group";
+            }
+            $(propRow.children()[0]).text(RED._("sidebar.info."+objectType))
+            RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
+
             if (node.type === "tab" || node.type === "subflow") {
                 // If nothing is selected, but we're on a flow or subflow tab.
-                propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info."+(node.type==='tab'?'flow':'subflow'))+'</td><td></td></tr>').appendTo(tableBody);
-                RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
-                propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info.tabName")+"</td><td></td></tr>").appendTo(tableBody);
-                $(propRow.children()[1]).text(node.label||node.name||"");
-                if (node.type === "tab") {
-                    propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info.status")+'</td><td></td></tr>').appendTo(tableBody);
-                    $(propRow.children()[1]).text((!!!node.disabled)?RED._("sidebar.info.enabled"):RED._("sidebar.info.disabled"))
+                propertiesPanelHeaderHelp.hide();
+
+            } else if (node.type === "group") {
+                propertiesPanelHeaderHelp.hide();
+
+                propRow = $('<tr class="red-ui-help-info-row"><td>&nbsp;</td><td></td></tr>').appendTo(tableBody);
+
+                var typeCounts = {
+                    nodes:0,
+                    groups: 0
                 }
+                var allNodes = RED.group.getNodes(node,true);
+                allNodes.forEach(function(n) {
+                    if (n.type === "group") {
+                        typeCounts.groups++;
+                    } else {
+                        typeCounts.nodes++
+                    }
+                });
+                var counts = $('<div>').appendTo($(propRow.children()[1]));
+                if (typeCounts.nodes > 0) {
+                    $('<div>').text(RED._("clipboard.node",{count:typeCounts.nodes})).appendTo(counts);
+                }
+                if (typeCounts.groups > 0) {
+                    $('<div>').text(RED._("clipboard.group",{count:typeCounts.groups})).appendTo(counts);
+                }
+
+
             } else {
-                // An actual node is selected in the editor - build up its properties table
-                propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info.node")+"</td><td></td></tr>").appendTo(tableBody);
-                RED.utils.createObjectElement(node.id).appendTo(propRow.children()[1]);
-                if (node.type !== "subflow" && node.type !== "unknown" && node.name) {
-                    propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("common.label.name")+'</td><td></td></tr>').appendTo(tableBody);
-                    $('<span class="red-ui-text-bidi-aware" dir="'+RED.text.bidi.resolveBaseTextDir(node.name)+'"></span>').text(node.name).appendTo(propRow.children()[1]);
-                }
-                if (!m) {
-                    propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info.type")+"</td><td></td></tr>").appendTo(tableBody);
+                propertiesPanelHeaderHelp.show();
+
+                if (!subflowRegex) {
+                    propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("sidebar.info.type")+'</td><td></td></tr>').appendTo(tableBody);
                     $(propRow.children()[1]).text((node.type === "unknown")?node._orig.type:node.type);
                     if (node.type === "unknown") {
                         $('<span style="float: right; font-size: 0.8em"><i class="fa fa-warning"></i></span>').prependTo($(propRow.children()[1]))
                     }
                 }
+
                 var count = 0;
-                if (!m && node.type != "subflow") {
+                if (!subflowRegex && node.type != "subflow" && node.type != "group") {
+
+                    var blankRow = $('<tr class="red-ui-help-property-expand blank"><td colspan="2"></td></tr>').appendTo(tableBody);
+
                     var defaults;
                     if (node.type === 'unknown') {
                         defaults = {};
@@ -20769,7 +24333,6 @@ RED.sidebar.info = (function() {
                         $(propRow.children()[1]).text(RED.nodes.getType(node.type).set.module);
                         count++;
                     }
-                    $('<tr class="red-ui-help-property-expand red-ui-help-info-property-row blank'+(expandedSections.property?"":" hide")+'"><td colspan="2"></td></tr>').appendTo(tableBody);
 
                     if (defaults) {
                         for (var n in defaults) {
@@ -20777,7 +24340,8 @@ RED.sidebar.info = (function() {
                                 var val = node[n];
                                 var type = typeof val;
                                 count++;
-                                propRow = $('<tr class="red-ui-help-info-property-row'+(expandedSections.property?"":" hide")+'"><td>'+n+"</td><td></td></tr>").appendTo(tableBody);
+                                propRow = $('<tr class="red-ui-help-info-property-row'+(expandedSections.property?"":" hide")+'"><td></td><td></td></tr>').appendTo(tableBody);
+                                $(propRow.children()[0]).text(n);
                                 if (defaults[n].type) {
                                     var configNode = RED.nodes.node(val);
                                     if (!configNode) {
@@ -20807,37 +24371,35 @@ RED.sidebar.info = (function() {
                         }
                     }
                     if (count > 0) {
-                        $('<tr class="red-ui-help-property-expand blank"><td colspan="2"><a href="#" class="node-info-property-header'+(expandedSections.property?" expanded":"")+'"><span class="red-ui-help-property-more">'+RED._("sidebar.info.showMore")+'</span><span class="red-ui-help-property-less">'+RED._("sidebar.info.showLess")+'</span> <i class="fa fa-caret-down"></i></a></td></tr>').appendTo(tableBody);
+                        $('<a href="#" class="node-info-property-header'+(expandedSections.property?" expanded":"")+'"><span class="red-ui-help-property-more">'+RED._("sidebar.info.showMore")+'</span><span class="red-ui-help-property-less">'+RED._("sidebar.info.showLess")+'</span> <i class="fa fa-caret-down"></i></a>').appendTo(blankRow.children()[0]);
                     }
                 }
                 if (node.type !== 'tab') {
-                    if (m) {
+                    if (subflowRegex) {
                         $('<tr class="blank"><th colspan="2">'+RED._("sidebar.info.subflow")+'</th></tr>').appendTo(tableBody);
                         $('<tr class="node-info-subflow-row"><td>'+RED._("common.label.name")+'</td><td><span class="red-ui-text-bidi-aware" dir=\"'+RED.text.bidi.resolveBaseTextDir(subflowNode.name)+'">'+RED.utils.sanitize(subflowNode.name)+'</span></td></tr>').appendTo(tableBody);
                     }
                 }
             }
-            if (m) {
+            if (subflowRegex) {
                 propRow = $('<tr class="red-ui-help-info-row"><td>'+RED._("subflow.category")+'</td><td></td></tr>').appendTo(tableBody);
                 var category = subflowNode.category||"subflows";
                 $(propRow.children()[1]).text(RED._("palette.label."+category,{defaultValue:category}))
                 $('<tr class="node-info-subflow-row"><td>'+RED._("sidebar.info.instances")+"</td><td>"+subflowUserCount+'</td></tr>').appendTo(tableBody);
             }
 
-            var helpText = "";
-            if (node.type === "tab" || node.type === "subflow") {
-                $(helpSection.container).hide();
-            } else {
-                $(helpSection.container).show();
-                if (subflowNode && node.type !== "subflow") {
-                    // Selected a subflow instance node.
-                    // - The subflow template info goes into help
-                    helpText = (RED.utils.renderMarkdown(subflowNode.info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>'));
-                } else {
-                    helpText = i18n.t((node._def.namespace ? node._def.namespace : node.type) + "/" + node.type + ".hni:" + node.type + ".help")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
-                }
-                setInfoText(helpText, helpSection.content);
-            }
+            // var helpText = "";
+            // if (node.type === "tab" || node.type === "subflow") {
+            // } else {
+            //     if (subflowNode && node.type !== "subflow") {
+            //         // Selected a subflow instance node.
+            //         // - The subflow template info goes into help
+            //         helpText = (RED.utils.renderMarkdown(subflowNode.info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>'));
+            //     } else {
+            //         helpText = $("script[data-help-name='"+node.type+"']").html()||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
+            //     }
+            //     setInfoText(helpText, helpSection.content);
+            // }
 
             var infoText = "";
 
@@ -20849,7 +24411,26 @@ RED.sidebar.info = (function() {
             if (node.info) {
                 infoText = infoText + RED.utils.renderMarkdown(node.info || "")
             }
-            setInfoText(infoText, infoSection.content);
+            var infoSectionContainer = $("<div>").css("padding","0 6px 6px").appendTo(propertiesPanelContent)
+
+            // var editInfo = $('<button class="red-ui-button red-ui-button-small" style="float: right"><i class="fa fa-file-text-o"></button>').appendTo(infoSectionContainer).on("click", function(evt) {
+            //     //.text(RED._("sidebar.info.editDescription"))
+            //     evt.preventDefault();
+            //     evt.stopPropagation();
+            //     if (node.type === 'tab') {
+            //
+            //     } else if (node.type === 'subflow') {
+            //
+            //     } else if (node.type === 'group') {
+            //
+            //     } else if (node._def.category !== 'config') {
+            //         RED.editor.edit(node,"editor-tab-description");
+            //     } else {
+            //
+            //     }
+            // })
+
+            setInfoText(infoText, infoSectionContainer);
 
             $(".red-ui-sidebar-info-stack").scrollTop(0);
             $(".node-info-property-header").on("click", function(e) {
@@ -20865,7 +24446,7 @@ RED.sidebar.info = (function() {
         // propRow = $('<tr class="red-ui-help-info-row"><td>Actions</td><td></td></tr>').appendTo(tableBody);
         // var actionBar = $(propRow.children()[1]);
         //
-        // // var actionBar = $('<div>',{style:"background: #fefefe; padding: 3px;"}).appendTo(propertiesSection.content);
+        // // var actionBar = $('<div>',{style:"background: #fefefe; padding: 3px;"}).appendTo(propertiesPanel);
         // $('<button type="button" class="red-ui-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
         // $('<button type="button" class="red-ui-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
         // $('<button type="button" class="red-ui-button"><i class="fa fa-code"></i></button>').appendTo(actionBar);
@@ -20940,6 +24521,7 @@ RED.sidebar.info = (function() {
         }
         function startTips() {
             $(".red-ui-sidebar-info").addClass('show-tips');
+            resizeStack();
             if (enabled) {
                 if (!startTimeout && !refreshTimeout) {
                     if (tipCount === -1) {
@@ -20953,6 +24535,7 @@ RED.sidebar.info = (function() {
         }
         function stopTips() {
             $(".red-ui-sidebar-info").removeClass('show-tips');
+            resizeStack();
             clearInterval(refreshTimeout);
             clearTimeout(startTimeout);
             refreshTimeout = null;
@@ -20977,15 +24560,8 @@ RED.sidebar.info = (function() {
     }
 
     function set(html,title) {
-        // tips.stop();
-        // sections.show();
-        refresh(null);
-        propertiesSection.container.hide();
-        helpSection.container.hide();
-        infoSection.container.show();
-        infoSection.title.text(title||RED._("sidebar.info.desc"));
-        setInfoText(html,infoSection.content);
-        $(".red-ui-sidebar-info-stack").scrollTop(0);
+        console.warn("Deprecated use of RED.sidebar.info.set - use RED.sidebar.help.set instead")
+        RED.sidebar.help.set(html,title);
     }
 
     function refreshSelection(selection) {
@@ -21031,6 +24607,993 @@ RED.sidebar.info = (function() {
         show: show,
         refresh: refresh,
         clear: clear,
+        set: set
+    }
+})();
+;RED.sidebar.info.outliner = (function() {
+
+    var treeList;
+    var searchInput;
+    var activeSearch;
+    var projectInfo;
+    var projectInfoLabel;
+    var flowList;
+    var subflowList;
+    var globalConfigNodes;
+
+    var objects = {};
+    var missingParents = {};
+    var configNodeTypes;
+
+
+    function getFlowData() {
+        var flowData = [
+            {
+                label: RED._("menu.label.flows"),
+                expanded: true,
+                children: []
+            },
+            {
+                id: "__subflow__",
+                label: RED._("menu.label.subflows"),
+                children: [
+                    getEmptyItem("__subflow__")
+                ]
+            },
+            {
+                id: "__global__",
+                flow: "__global__",
+                label: RED._("sidebar.info.globalConfig"),
+                types: {},
+                children: [
+                    getEmptyItem("__global__")
+                ]
+            }
+        ]
+
+        flowList = flowData[0];
+        subflowList = flowData[1];
+        globalConfigNodes = flowData[2];
+        configNodeTypes = { __global__: globalConfigNodes};
+
+        return flowData;
+    }
+
+    function getProjectLabel(p) {
+        var div = $('<div>',{class:"red-ui-info-outline-item red-ui-info-outline-item-flow"});
+        div.css("width", "calc(100% - 40px)");
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description red-ui-info-outline-item-label"}).appendTo(div);
+        contentDiv.text(p.name);
+        var controls = $('<div>',{class:"red-ui-info-outline-item-controls"}).appendTo(div);
+        var editProjectButton = $('<button class="red-ui-button red-ui-button-small" style="position:absolute;right:5px;top: 3px;"><i class="fa fa-ellipsis-h"></i></button>')
+            .appendTo(controls)
+            .on("click", function(evt) {
+                evt.preventDefault();
+                RED.projects.editProject();
+            });
+        RED.popover.tooltip(editProjectButton,RED._('sidebar.project.showProjectSettings'));
+        return div;
+    }
+
+    var empties = {};
+    function getEmptyItem(id) {
+        var item = {
+            empty: true,
+            element: $('<div class="red-ui-info-outline-item red-ui-info-outline-item-empty">').text(RED._("sidebar.info.empty")),
+        }
+        empties[id] = item;
+        return item;
+    }
+
+    function getNodeLabelText(n) {
+        var label = n.name || n.type+": "+n.id;
+        if (n._def.label) {
+            try {
+                label = (typeof n._def.label === "function" ? n._def.label.call(n) : n._def.label)||"";
+            } catch(err) {
+                console.log("Definition error: "+n.type+".label",err);
+            }
+        }
+        var newlineIndex = label.indexOf("\\n");
+        if (newlineIndex > -1) {
+            label = label.substring(0,newlineIndex)+"...";
+        }
+        return label;
+    }
+
+    function getNodeLabel(n) {
+        var div = $('<div>',{class:"red-ui-info-outline-item"});
+        RED.utils.createNodeIcon(n).appendTo(div);
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description"}).appendTo(div);
+        var labelText = getNodeLabelText(n);
+        var label = $('<div>',{class:"red-ui-search-result-node-label red-ui-info-outline-item-label"}).appendTo(contentDiv);
+        if (labelText) {
+            label.text(labelText)
+        } else {
+            label.html("&nbsp;")
+        }
+
+        addControls(n, div);
+
+        return div;
+    }
+
+    function getFlowLabel(n) {
+        var div = $('<div>',{class:"red-ui-info-outline-item red-ui-info-outline-item-flow"});
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description red-ui-info-outline-item-label"}).appendTo(div);
+        var label = (typeof n === "string")? n : n.label;
+        var newlineIndex = label.indexOf("\\n");
+        if (newlineIndex > -1) {
+            label = label.substring(0,newlineIndex)+"...";
+        }
+        contentDiv.text(label);
+        addControls(n, div);
+        return div;
+    }
+
+    function getSubflowLabel(n) {
+
+        var div = $('<div>',{class:"red-ui-info-outline-item"});
+        RED.utils.createNodeIcon(n).appendTo(div);
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description"}).appendTo(div);
+        var labelText = getNodeLabelText(n);
+        var label = $('<div>',{class:"red-ui-search-result-node-label red-ui-info-outline-item-label"}).appendTo(contentDiv);
+        if (labelText) {
+            label.text(labelText)
+        } else {
+            label.html("&nbsp;")
+        }
+
+        addControls(n, div);
+
+        return div;
+
+
+        // var div = $('<div>',{class:"red-ui-info-outline-item red-ui-info-outline-item-flow"});
+        // var contentDiv = $('<div>',{class:"red-ui-search-result-description red-ui-info-outline-item-label"}).appendTo(div);
+        // contentDiv.text(n.name || n.id);
+        // addControls(n, div);
+        // return div;
+    }
+
+    function addControls(n,div) {
+        var controls = $('<div>',{class:"red-ui-info-outline-item-controls red-ui-info-outline-item-hover-controls"}).appendTo(div);
+
+        if (n._def.category === "config" && n.type !== "group") {
+            var userCountBadge = $('<button type="button" class="red-ui-info-outline-item-control-users red-ui-button red-ui-button-small"><i class="fa fa-toggle-right"></i></button>').text(n.users.length).appendTo(controls).on("click",function(evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                RED.search.show("uses:"+n.id);
+            })
+            RED.popover.tooltip(userCountBadge,function() { return RED._('editor.nodesUse',{count:n.users.length})});
+        }
+
+        if (n._def.button) {
+            var triggerButton = $('<button type="button" class="red-ui-info-outline-item-control-action red-ui-button red-ui-button-small"><i class="fa fa-toggle-right"></i></button>').appendTo(controls).on("click",function(evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                RED.view.clickNodeButton(n);
+            })
+            RED.popover.tooltip(triggerButton,RED._("sidebar.info.triggerAction"));
+        }
+        // $('<button type="button" class="red-ui-info-outline-item-control-reveal red-ui-button red-ui-button-small"><i class="fa fa-eye"></i></button>').appendTo(controls).on("click",function(evt) {
+        //     evt.preventDefault();
+        //     evt.stopPropagation();
+        //     RED.view.reveal(n.id);
+        // })
+        if (n.type !== 'group' && n.type !== 'subflow') {
+            var toggleButton = $('<button type="button" class="red-ui-info-outline-item-control-disable red-ui-button red-ui-button-small"><i class="fa fa-circle-thin"></i><i class="fa fa-ban"></i></button>').appendTo(controls).on("click",function(evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                if (n.type === 'tab') {
+                    if (n.disabled) {
+                        RED.workspaces.enable(n.id)
+                    } else {
+                        RED.workspaces.disable(n.id)
+                    }
+                } else {
+                    // TODO: this ought to be a utility function in RED.nodes
+                    var historyEvent = {
+                        t: "edit",
+                        node: n,
+                        changed: n.changed,
+                        changes: {
+                            d: n.d
+                        },
+                        dirty:RED.nodes.dirty()
+                    }
+                    if (n.d) {
+                        delete n.d;
+                    } else {
+                        n.d = true;
+                    }
+                    n.dirty = true;
+                    n.changed = true;
+                    RED.events.emit("nodes:change",n);
+                    RED.nodes.dirty(true)
+                    RED.view.redraw();
+                }
+            });
+            RED.popover.tooltip(toggleButton,function() {
+                return RED._("common.label."+(((n.type==='tab' && n.disabled) || (n.type!=='tab' && n.d))?"enable":"disable"));
+            });
+        } else {
+            $('<div class="red-ui-info-outline-item-control-spacer">').appendTo(controls)
+        }
+        controls.find("button").on("dblclick", function(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+        })
+    }
+
+    function onProjectLoad(activeProject) {
+        objects = {};
+        var newFlowData = getFlowData();
+        projectInfoLabel.empty();
+        getProjectLabel(activeProject).appendTo(projectInfoLabel);
+        projectInfo.show();
+        treeList.treeList('data',newFlowData);
+    }
+
+    function build() {
+        var container = $("<div>", {class:"red-ui-info-outline"}).css({'height': '100%'});
+        var toolbar = $("<div>", {class:"red-ui-sidebar-header red-ui-info-toolbar"}).appendTo(container);
+
+        searchInput = $('<input type="text" data-i18n="[placeholder]menu.label.search">').appendTo(toolbar).searchBox({
+            style: "compact",
+            delay: 500,
+            change: function() {
+                var val = $(this).val();
+                var searchResults = RED.search.search(val);
+                if (val) {
+                    activeSearch = val;
+                    var resultMap = {};
+                    for (var i=0,l=searchResults.length;i<l;i++) {
+                        resultMap[searchResults[i].node.id] = true;
+                    }
+                    var c = treeList.treeList('filter',function(item) {
+                        if (item.depth === 0) {
+                            return true;
+                        }
+                        return item.id &&  objects[item.id] && resultMap[item.id]
+                    },true)
+                } else {
+                    activeSearch = null;
+                    treeList.treeList('filter',null);
+                    var selected = treeList.treeList('selected');
+                    if (selected.id) {
+                        treeList.treeList('show',selected.id);
+                    }
+
+                }
+            },
+            options: [
+                {label:RED._("sidebar.info.search.configNodes"), value:"is:config"},
+                {label:RED._("sidebar.info.search.unusedConfigNodes"), value:"is:config is:unused"},
+                {label:RED._("sidebar.info.search.invalidNodes"), value: "is:invalid"},
+                {label:RED._("sidebar.info.search.uknownNodes"), value: "type:unknown"},
+                {label:RED._("sidebar.info.search.unusedSubflows"), value:"is:subflow is:unused"},
+            ]
+        });
+
+        projectInfo = $('<div class="red-ui-treeList-label red-ui-info-outline-project"><span class="red-ui-treeList-icon"><i class="fa fa-archive"></i></span></div>').hide().appendTo(container)
+        projectInfoLabel = $('<span>').appendTo(projectInfo);
+
+        // <div class="red-ui-info-outline-item red-ui-info-outline-item-flow" style=";"><div class="red-ui-search-result-description red-ui-info-outline-item-label">Space Monkey</div><div class="red-ui-info-outline-item-controls"><button class="red-ui-button red-ui-button-small" style="position:absolute;right:5px;"><i class="fa fa-ellipsis-h"></i></button></div></div></div>').appendTo(container)
+
+        treeList = $("<div>").css({width: "100%"}).appendTo(container).treeList({
+            data:getFlowData()
+        })
+        treeList.on('treelistselect', function(e,item) {
+            var node = RED.nodes.node(item.id) || RED.nodes.group(item.id);
+            if (node) {
+                if (node.type === 'group' || node._def.category !== "config") {
+                    RED.view.select({nodes:[node]})
+                } else {
+                    RED.view.select({nodes:[]})
+                }
+            }
+        })
+        treeList.on('treelistconfirm', function(e,item) {
+            var node = RED.nodes.node(item.id);
+            if (node) {
+                if (node._def.category === "config") {
+                    RED.editor.editConfig("", node.type, node.id);
+                } else {
+                    RED.editor.edit(node);
+                }
+            }
+        })
+
+        RED.events.on("projects:load", onProjectLoad)
+
+        RED.events.on("flows:add", onFlowAdd)
+        RED.events.on("flows:remove", onObjectRemove)
+        RED.events.on("flows:change", onFlowChange)
+        RED.events.on("flows:reorder", onFlowsReorder)
+
+        RED.events.on("subflows:add", onSubflowAdd)
+        RED.events.on("subflows:remove", onObjectRemove)
+        RED.events.on("subflows:change", onSubflowChange)
+
+        RED.events.on("nodes:add",onNodeAdd);
+        RED.events.on("nodes:remove",onObjectRemove);
+        RED.events.on("nodes:change",onNodeChange);
+
+        RED.events.on("groups:add",onNodeAdd);
+        RED.events.on("groups:remove",onObjectRemove);
+        RED.events.on("groups:change",onNodeChange);
+
+        RED.events.on("workspace:clear", onWorkspaceClear)
+
+        return container;
+    }
+    function onWorkspaceClear() {
+        treeList.treeList('data',getFlowData());
+    }
+    function onFlowAdd(ws) {
+        objects[ws.id] = {
+            id: ws.id,
+            element: getFlowLabel(ws),
+            children:[],
+            deferBuild: true,
+            icon: "red-ui-icons red-ui-icons-flow",
+            gutter: getGutter(ws)
+        }
+        if (missingParents[ws.id]) {
+            objects[ws.id].children = missingParents[ws.id];
+            delete missingParents[ws.id]
+        } else {
+            objects[ws.id].children.push(getEmptyItem(ws.id));
+        }
+        flowList.treeList.addChild(objects[ws.id])
+        objects[ws.id].element.toggleClass("red-ui-info-outline-item-disabled", !!ws.disabled)
+        objects[ws.id].treeList.container.toggleClass("red-ui-info-outline-item-disabled", !!ws.disabled)
+        updateSearch();
+
+    }
+    function onFlowChange(n) {
+        var existingObject = objects[n.id];
+
+        var label = n.label || n.id;
+        var newlineIndex = label.indexOf("\\n");
+        if (newlineIndex > -1) {
+            label = label.substring(0,newlineIndex)+"...";
+        }
+        existingObject.element.find(".red-ui-info-outline-item-label").text(label);
+        existingObject.element.toggleClass("red-ui-info-outline-item-disabled", !!n.disabled)
+        existingObject.treeList.container.toggleClass("red-ui-info-outline-item-disabled", !!n.disabled)
+        updateSearch();
+    }
+    function onFlowsReorder(order) {
+        var indexMap = {};
+        order.forEach(function(id,index) {
+            indexMap[id] = index;
+        })
+
+        flowList.treeList.sortChildren(function(A,B) {
+            if (A.id === "__global__") { return -1 }
+            if (B.id === "__global__") { return 1 }
+            return indexMap[A.id] - indexMap[B.id]
+        })
+    }
+    function onSubflowAdd(sf) {
+        objects[sf.id] = {
+            id: sf.id,
+            element: getNodeLabel(sf),
+            children:[],
+            deferBuild: true,
+            gutter: getGutter(sf)
+        }
+        if (missingParents[sf.id]) {
+            objects[sf.id].children = missingParents[sf.id];
+            delete missingParents[sf.id]
+        } else {
+            objects[sf.id].children.push(getEmptyItem(sf.id));
+        }
+        if (empties["__subflow__"]) {
+            empties["__subflow__"].treeList.remove();
+            delete empties["__subflow__"];
+        }
+        subflowList.treeList.addChild(objects[sf.id])
+        updateSearch();
+    }
+    function onSubflowChange(sf) {
+        var existingObject = objects[sf.id];
+        existingObject.treeList.replaceElement(getNodeLabel(sf));
+        // existingObject.element.find(".red-ui-info-outline-item-label").text(n.name || n.id);
+        RED.nodes.eachNode(function(n) {
+            if (n.type == "subflow:"+sf.id) {
+                var sfInstance = objects[n.id];
+                sfInstance.treeList.replaceElement(getNodeLabel(n));
+            }
+        });
+        updateSearch();
+    }
+
+    function onNodeChange(n) {
+        var existingObject = objects[n.id];
+        var parent = n.g||n.z||"__global__";
+
+        var nodeLabelText = getNodeLabelText(n);
+        if (nodeLabelText) {
+            existingObject.element.find(".red-ui-info-outline-item-label").text(nodeLabelText);
+        } else {
+            existingObject.element.find(".red-ui-info-outline-item-label").html("&nbsp;");
+        }
+        var existingParent = existingObject.parent.id;
+        if (!existingParent) {
+            existingParent = existingObject.parent.parent.flow
+        }
+        if (parent !== existingParent) {
+            var parentItem = existingObject.parent;
+            existingObject.treeList.remove(true);
+            if (parentItem.children.length === 0) {
+                if (parentItem.config) {
+                    // this is a config
+                    parentItem.treeList.remove();
+                    // console.log("Removing",n.type,"from",parentItem.parent.id||parentItem.parent.parent.id)
+
+                    delete configNodeTypes[parentItem.parent.id||parentItem.parent.parent.id].types[n.type];
+
+
+                    if (parentItem.parent.children.length === 0) {
+                        if (parentItem.parent.id === "__global__") {
+                            parentItem.parent.treeList.addChild(getEmptyItem(parentItem.parent.id));
+                        } else {
+                            delete configNodeTypes[parentItem.parent.parent.id];
+                            parentItem.parent.treeList.remove();
+                            if (parentItem.parent.parent.children.length === 0) {
+                                parentItem.parent.parent.treeList.addChild(getEmptyItem(parentItem.parent.parent.id));
+                            }
+
+                        }
+                    }
+                } else {
+                    parentItem.treeList.addChild(getEmptyItem(parentItem.id));
+                }
+            }
+            if (n._def.category === 'config' && n.type !== 'group') {
+                // This must be a config node that has been rescoped
+                createFlowConfigNode(parent,n.type);
+                configNodeTypes[parent].types[n.type].treeList.addChild(objects[n.id]);
+            } else {
+                // This is a node that has moved groups
+                if (empties[parent]) {
+                    empties[parent].treeList.remove();
+                    delete empties[parent];
+                }
+                objects[parent].treeList.addChild(existingObject)
+            }
+
+            // if (parent === "__global__") {
+            //     // Global always exists here
+            //     if (!configNodeTypes[parent][n.type]) {
+            //         configNodeTypes[parent][n.type] = {
+            //             config: true,
+            //             label: n.type,
+            //             children: []
+            //         }
+            //         globalConfigNodes.treeList.addChild(configNodeTypes[parent][n.type])
+            //     }
+            //     configNodeTypes[parent][n.type].treeList.addChild(existingObject);
+            // } else {
+            //     if (empties[parent]) {
+            //         empties[parent].treeList.remove();
+            //         delete empties[parent];
+            //     }
+            //     objects[parent].treeList.addChild(existingObject)
+            // }
+        }
+        existingObject.element.toggleClass("red-ui-info-outline-item-disabled", !!n.d)
+
+        if (n._def.category === "config" && n.type !== 'group') {
+            existingObject.element.find(".red-ui-info-outline-item-control-users").text(n.users.length);
+        }
+
+        updateSearch();
+    }
+    function onObjectRemove(n) {
+        var existingObject = objects[n.id];
+        existingObject.treeList.remove();
+        delete objects[n.id]
+
+        // If this is a group being removed, it may have an empty item
+        if (empties[n.id]) {
+            delete empties[n.id];
+        }
+        var parent = existingObject.parent;
+        if (parent.children.length === 0) {
+            if (parent.config) {
+                // this is a config
+                parent.treeList.remove();
+                delete configNodeTypes[parent.parent.id||n.z].types[n.type];
+                if (parent.parent.children.length === 0) {
+                    if (parent.parent.id === "__global__") {
+                        parent.parent.treeList.addChild(getEmptyItem(parent.parent.id));
+                    } else {
+                        delete configNodeTypes[n.z];
+                        parent.parent.treeList.remove();
+                        if (parent.parent.parent.children.length === 0) {
+                            parent.parent.parent.treeList.addChild(getEmptyItem(parent.parent.parent.id));
+                        }
+                    }
+                }
+            } else {
+                parent.treeList.addChild(getEmptyItem(parent.id));
+            }
+        }
+    }
+    function getGutter(n) {
+        var span = $("<span>",{class:"red-ui-info-outline-gutter"});
+        var revealButton = $('<button type="button" class="red-ui-info-outline-item-control-reveal red-ui-button red-ui-button-small"><i class="fa fa-search"></i></button>').appendTo(span).on("click",function(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+            RED.view.reveal(n.id);
+        })
+        RED.popover.tooltip(revealButton,RED._("sidebar.info.find"));
+        return span;
+    }
+
+    function createFlowConfigNode(parent,type) {
+        // console.log("createFlowConfig",parent,type,configNodeTypes[parent]);
+        if (empties[parent]) {
+            empties[parent].treeList.remove();
+            delete empties[parent];
+        }
+        if (!configNodeTypes[parent]) {
+            // There is no 'config nodes' item in the parent flow
+            configNodeTypes[parent] = {
+                config: true,
+                flow: parent,
+                types: {},
+                label: RED._("menu.label.displayConfig"),
+                children: []
+            }
+            objects[parent].treeList.insertChildAt(configNodeTypes[parent],0);
+            // console.log("CREATED", parent)
+        }
+        if (!configNodeTypes[parent].types[type]) {
+            configNodeTypes[parent].types[type] = {
+                config: true,
+                label: type,
+                children: []
+            }
+            configNodeTypes[parent].treeList.addChild(configNodeTypes[parent].types[type]);
+            // console.log("CREATED", parent,type)
+        }
+    }
+    function onNodeAdd(n) {
+        objects[n.id] = {
+            id: n.id,
+            element: getNodeLabel(n),
+            gutter: getGutter(n)
+        }
+        if (n.type === "group") {
+            objects[n.id].children = [];
+            objects[n.id].deferBuild = true;
+            if (missingParents[n.id]) {
+                objects[n.id].children = missingParents[n.id];
+                delete missingParents[n.id]
+            }
+        }
+        var parent = n.g||n.z||"__global__";
+
+        if (n._def.category !== "config" || n.type === 'group') {
+            if (objects[parent]) {
+                if (empties[parent]) {
+                    empties[parent].treeList.remove();
+                    delete empties[parent];
+                }
+                if (objects[parent].treeList) {
+                    objects[parent].treeList.addChild(objects[n.id]);
+                } else {
+                    objects[parent].children.push(objects[n.id])
+                }
+            } else {
+                missingParents[parent] = missingParents[parent]||[];
+                missingParents[parent].push(objects[n.id])
+            }
+        } else {
+            createFlowConfigNode(parent,n.type);
+            configNodeTypes[parent].types[n.type].treeList.addChild(objects[n.id]);
+        }
+        objects[n.id].element.toggleClass("red-ui-info-outline-item-disabled", !!n.d)
+        updateSearch();
+    }
+
+    var updateSearchTimer;
+    function updateSearch() {
+        if (updateSearchTimer) {
+            clearTimeout(updateSearchTimer)
+        }
+        if (activeSearch) {
+            updateSearchTimer = setTimeout(function() {
+                searchInput.searchBox("change");
+            },100);
+        }
+    }
+    function onSelectionChanged(selection) {
+        // treeList.treeList('clearSelection');
+    }
+
+    return {
+        build: build,
+        search: function(val) {
+            searchInput.searchBox('value',val)
+        },
+        select: function(node) {
+            if (node) {
+                if (Array.isArray(node)) {
+                    treeList.treeList('select', node.map(function(n) { return objects[n.id] }), false)
+                } else {
+                    treeList.treeList('select', objects[node.id], false)
+
+                }
+            } else {
+                treeList.treeList('clearSelection')
+            }
+        },
+        reveal: function(node) {
+            treeList.treeList('show', objects[node.id])
+        }
+    }
+})();
+;/**
+ * This file was modified by Homegear GmbH
+ *
+ * Changes:
+ * - Added translated help text.
+ *
+ * Todo after update:
+ **/
+/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+RED.sidebar.help = (function() {
+
+    var content;
+    var toolbar;
+    var helpSection;
+    var panels;
+    var panelRatio;
+    var helpTopics = [];
+    var treeList;
+    var tocPanel;
+    var helpIndex = {};
+
+
+    function resizeStack() {
+        var h = $(content).parent().height() - toolbar.outerHeight();
+        panels.resize(h)
+    }
+
+    function init() {
+
+        content = document.createElement("div");
+        content.className = "red-ui-sidebar-info"
+
+        toolbar = $("<div>", {class:"red-ui-sidebar-header red-ui-info-toolbar"}).appendTo(content);
+        $('<span class="button-group"><a id="red-ui-sidebar-help-show-toc" class="red-ui-button red-ui-button-small selected" href="#"><i class="fa fa-list-ul"></i></a></span>').appendTo(toolbar)
+        var showTOCButton = toolbar.find('#red-ui-sidebar-help-show-toc')
+        RED.popover.tooltip(showTOCButton,RED._("sidebar.help.showTopics"));
+        showTOCButton.on("click",function(e) {
+            e.preventDefault();
+            if ($(this).hasClass('selected')) {
+                hideTOC();
+            } else {
+                showTOC();
+            }
+        });
+
+        var stackContainer = $("<div>",{class:"red-ui-sidebar-help-stack"}).appendTo(content);
+
+        tocPanel = $("<div>", {class: "red-ui-sidebar-help-toc"}).appendTo(stackContainer);
+        var helpPanel = $("<div>").css({
+            "overflow-y": "scroll"
+        }).appendTo(stackContainer);
+
+        panels = RED.panels.create({
+            container: stackContainer
+        })
+        panels.ratio(0.3);
+
+        helpSearch = $('<input type="text" data-i18n="[placeholder]sidebar.help.search">').appendTo(toolbar).searchBox({
+            style: "compact",
+            delay: 100,
+            change: function() {
+                var val = $(this).val().toLowerCase();
+                if (val) {
+                    showTOC();
+                    var c = treeList.treeList('filter',function(item) {
+                        if (item.depth === 0) {
+                            return true;
+                        }
+                        return (item.nodeType &&  item.nodeType.indexOf(val) > -1) ||
+                               (item.subflowLabel && item.subflowLabel.indexOf(val) > -1)
+                    },true)
+                } else {
+                    treeList.treeList('filter',null);
+                    var selected = treeList.treeList('selected');
+                    if (selected.id) {
+                        treeList.treeList('show',selected.id);
+                    }
+
+                }
+            }
+        })
+
+        helpSection = $("<div>",{class:"red-ui-help"}).css({
+            "padding":"6px",
+        }).appendTo(helpPanel)
+
+        $('<span class="red-ui-help-info-none">'+RED._("sidebar.help.noHelp")+'</span>').appendTo(helpSection);
+
+        treeList = $("<div>").css({width: "100%"}).appendTo(tocPanel).treeList({data: []})
+        treeList.on('treelistselect', function(e,item) {
+            if (item.nodeType) {
+                showHelp(item.nodeType);
+            }
+        })
+
+        RED.sidebar.addTab({
+            id: "help",
+            label: RED._("sidebar.help.label"),
+            name: RED._("sidebar.help.name"),
+            iconClass: "fa fa-book",
+            action:"core:show-help-tab",
+            content: content,
+            pinned: true,
+            enableOnEdit: true,
+            onchange: function() {
+                resizeStack()
+            }
+        });
+
+        $(window).on("resize", resizeStack);
+        $(window).on("focus", resizeStack);
+
+        RED.events.on('registry:node-type-added', queueRefresh);
+        RED.events.on('registry:node-type-removed', queueRefresh);
+        RED.events.on('subflows:change', refreshSubflow);
+
+        RED.actions.add("core:show-help-tab",show);
+
+    }
+
+    var refreshTimer;
+    function queueRefresh() {
+        if (!refreshTimer) {
+            refreshTimer = setTimeout(function() {
+                refreshTimer = null;
+                refreshHelpIndex();
+            },500);
+        }
+    }
+
+    function refreshSubflow(sf) {
+        var item = treeList.treeList('get',"node-type:subflow:"+sf.id);
+        item.subflowLabel = sf._def.label().toLowerCase();
+        item.treeList.replaceElement(getNodeLabel({_def:sf._def,type:sf._def.label()}));
+    }
+
+    function hideTOC() {
+        var tocButton = $('#red-ui-sidebar-help-show-toc')
+        if (tocButton.hasClass('selected')) {
+            tocButton.removeClass('selected');
+            panelRatio = panels.ratio();
+            tocPanel.css({"transition":"height 0.2s"})
+            panels.ratio(0)
+            setTimeout(function() {
+                tocPanel.css({"transition":""})
+            },250);
+        }
+    }
+    function showTOC() {
+        var tocButton = $('#red-ui-sidebar-help-show-toc')
+        if (!tocButton.hasClass('selected')) {
+            tocButton.addClass('selected');
+            tocPanel.css({"transition":"height 0.2s"})
+            panels.ratio(Math.max(0.3,Math.min(panelRatio,0.7)));
+            setTimeout(function() {
+                tocPanel.css({"transition":""})
+                var selected = treeList.treeList('selected');
+                if (selected.id) {
+                    treeList.treeList('show',selected);
+                }
+            },250);
+        }
+    }
+
+    function refreshHelpIndex() {
+        helpTopics = [];
+        var modules = RED.nodes.registry.getModuleList();
+        var moduleNames = Object.keys(modules);
+        moduleNames.sort();
+
+        var helpData = [{
+            label: RED._("sidebar.help.nodeHelp"),
+            children: [],
+            expanded: true
+        }]
+
+        var subflows = RED.nodes.registry.getNodeTypes().filter(function(t) {return /subflow/.test(t)});
+        if (subflows.length > 0) {
+            helpData[0].children.push({
+                label: RED._("menu.label.subflows"),
+                children: []
+            })
+            subflows.forEach(function(nodeType) {
+                var sf = RED.nodes.getType(nodeType);
+                helpData[0].children[0].children.push({
+                    id:"node-type:"+nodeType,
+                    nodeType: nodeType,
+                    subflowLabel: sf.label().toLowerCase(),
+                    element: getNodeLabel({_def:sf,type:sf.label()})
+                })
+            })
+        }
+
+
+        moduleNames.forEach(function(moduleName) {
+            var module = modules[moduleName];
+            var nodeTypes = [];
+
+            var setNames = Object.keys(module.sets);
+            setNames.forEach(function(setName) {
+                module.sets[setName].types.forEach(function(nodeType) {
+                    //if ($("script[data-help-name='"+nodeType+"']").lengthh) { //Removed by Homegear GmbH
+                    //{{{ Added by Homegear GmbH
+                    var node = RED.nodes.getType(nodeType);
+                    var helpKey = node.set.id + ":" + nodeType + ".help";
+                    var helpText = RED._(helpKey);
+                    if (helpKey == helpText) helpText = "";
+                    if ($("script[data-help-name='"+nodeType+"']").length || helpText.length) {
+                    //}}}
+                        nodeTypes.push({
+                            id: "node-type:"+nodeType,
+                            nodeType: nodeType,
+                            element:getNodeLabel({_def:RED.nodes.getType(nodeType),type:nodeType})
+                        })
+                    }
+                })
+            })
+            if (nodeTypes.length > 0) {
+                nodeTypes.sort(function(A,B) {
+                    return A.nodeType.localeCompare(B.nodeType)
+                })
+                helpData[0].children.push({
+                    id: moduleName,
+                    icon: "fa fa-cube",
+                    label: moduleName,
+                    children: nodeTypes
+                })
+            }
+        });
+        treeList.treeList("data",helpData);
+    }
+
+    function getNodeLabel(n) {
+        var div = $('<div>',{class:"red-ui-info-outline-item"});
+        RED.utils.createNodeIcon(n).appendTo(div);
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description"}).appendTo(div);
+        $('<div>',{class:"red-ui-search-result-node-label red-ui-info-outline-item-label"}).text(n.name||n.type).appendTo(contentDiv);
+        return div;
+    }
+
+    function showHelp(nodeType) {
+        helpSection.empty();
+        var helpText;
+        var title;
+        var m = /^subflow(:(.+))?$/.exec(nodeType);
+        if (m && m[2]) {
+            var subflowNode = RED.nodes.subflow(m[2]);
+            helpText = (RED.utils.renderMarkdown(subflowNode.info||"")||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>'));
+            title = subflowNode.name || nodeType;
+        } else {
+            //helpText = $("script[data-help-name='"+nodeType+"']").html()||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>'); //Removed by Homegear GmbH
+            //{{{ Added by Homegear GmbH
+            var node = RED.nodes.getType(nodeType);
+            var helpKey = node.set.id + ":" + nodeType + ".help";
+            var helpText = RED._(helpKey);
+            if (helpKey == helpText) helpText = "";
+            helpText = $("script[data-help-name='"+nodeType+"']").html()||helpText||('<span class="red-ui-help-info-none">'+RED._("sidebar.info.none")+'</span>');
+            //}}}
+            title = nodeType;
+        }
+        setInfoText(title, helpText, helpSection);
+
+        var ratio = panels.ratio();
+        if (ratio > 0.7) {
+            panels.ratio(0.7)
+        }
+        treeList.treeList("show","node-type:"+nodeType)
+        treeList.treeList("select","node-type:"+nodeType, false);
+
+    }
+
+    function show(type, bringToFront) {
+        if (bringToFront !== false) {
+            RED.sidebar.show("help");
+        }
+        if (type) {
+            // hideTOC();
+            showHelp(type);
+        }
+        resizeStack();
+    }
+
+    // TODO: DRY - projects.js
+    function addTargetToExternalLinks(el) {
+        $(el).find("a").each(function(el) {
+            var href = $(this).attr('href');
+            if (/^https?:/.test(href)) {
+                $(this).attr('target','_blank');
+            }
+        });
+        return el;
+    }
+
+    function setInfoText(title, infoText,target) {
+        if (title) {
+            $("<h1>",{class:"red-ui-help-title"}).text(title).appendTo(target);
+        }
+        var info = addTargetToExternalLinks($('<div class="red-ui-help"><span class="red-ui-text-bidi-aware" dir=\"'+RED.text.bidi.resolveBaseTextDir(infoText)+'">'+infoText+'</span></div>')).appendTo(target);
+        info.find(".red-ui-text-bidi-aware").contents().filter(function() { return this.nodeType === 3 && this.textContent.trim() !== "" }).wrap( "<span></span>" );
+        var foldingHeader = "H3";
+        info.find(foldingHeader).wrapInner('<a class="red-ui-help-info-header expanded" href="#"></a>')
+            .find("a").prepend('<i class="fa fa-angle-right">').on("click", function(e) {
+                e.preventDefault();
+                var isExpanded = $(this).hasClass('expanded');
+                var el = $(this).parent().next();
+                while(el.length === 1 && el[0].nodeName !== foldingHeader) {
+                    el.toggle(!isExpanded);
+                    el = el.next();
+                }
+                $(this).toggleClass('expanded',!isExpanded);
+            })
+        target.parent().scrollTop(0);
+    }
+
+    function set(html,title) {
+        $(helpSection).empty();
+        setInfoText(title,html,helpSection);
+        hideTOC();
+        show();
+    }
+
+    function refreshSelection(selection) {
+        if (selection === undefined) {
+            selection = RED.view.selection();
+        }
+        if (selection.nodes) {
+            if (selection.nodes.length == 1) {
+                var node = selection.nodes[0];
+                if (node.type === "subflow" && node.direction) {
+                    // ignore subflow virtual ports
+                } else if (node.type !== 'group'){
+                    showHelp(node.type);
+                }
+            }
+        }
+    }
+    RED.events.on("view:selection-changed",refreshSelection);
+
+    return {
+        init: init,
+        show: show,
         set: set
     }
 })();
@@ -21774,7 +26337,6 @@ RED.sidebar.context = (function() {
  * - Get nodes from Homegear repository
  *
  * Todo after update:
- **/
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -21832,6 +26394,7 @@ RED.palette.editor = (function() {
         },delta);
     }
     function changeNodeState(id,state,shade,callback) {
+        //Removed by Homegear GmbH
         /*shade.show();
         var start = Date.now();
         $.ajax({
@@ -21853,7 +26416,7 @@ RED.palette.editor = (function() {
             });
         })*/
     }
-
+    //Function added by Homegear GmbH
     function checkNodeInstallStatus(callback, commandStatusId) {
         RED.comms.homegear().invoke("managementGetCommandStatus", function(response) {
             if(!response.result.finished)
@@ -21870,13 +26433,15 @@ RED.palette.editor = (function() {
             }
         }, commandStatusId);
     }
-
-    function installNodeModule(id,version,callback) {
+    function installNodeModule(id,version,url,callback) {
         var requestBody = {
             module: id
         };
         if (version) {
             requestBody.version = version;
+        }
+        if (url) {
+            requestBody.url = url;
         }
         $.ajax({
             url:"nodes",
@@ -21884,13 +26449,14 @@ RED.palette.editor = (function() {
             data: JSON.stringify(requestBody),
             contentType: "application/json; charset=utf-8"
         }).done(function(data,textStatus,xhr) {
-            if(data.result == "error") RED.notify(RED._('palette.editor.errors.installFailed',{module: id, message: data.error}),"error",false);
-            else setTimeout(checkNodeInstallStatus, 2000, callback, data.commandStatusId);
+            //callback(); //Removed by Homegear GmbH
+            if(data.result == "error") RED.notify(RED._('palette.editor.errors.installFailed',{module: id, message: data.error}),"error",false); //Added by Homegear GmbH
+            else setTimeout(checkNodeInstallStatus, 2000, callback, data.commandStatusId); //Added by Homegear GmbH
         }).fail(function(xhr,textStatus,err) {
             callback(xhr);
         });
     }
-
+    //Function added by Homegear GmbH
     function checkNodeRemoveStatus(callback, commandStatusId) {
         RED.comms.homegear().invoke("managementGetCommandStatus", function(response) {
             if(!response.result.finished)
@@ -21907,14 +26473,14 @@ RED.palette.editor = (function() {
             }
         }, commandStatusId);
     }
-
     function removeNodeModule(id,callback) {
         $.ajax({
             url:"nodes/"+id,
             type: "DELETE"
         }).done(function(data,textStatus,xhr) {
-            if(data.result == "error") RED.notify(RED._('palette.editor.errors.removeFailed',{module: id, message: data.error}),"error",false);
-            else setTimeout(checkNodeRemoveStatus, 2000, callback, data.commandStatusId);
+            //callback(); Removed by Homegear GmbH
+            if(data.result == "error") RED.notify(RED._('palette.editor.errors.removeFailed',{module: id, message: data.error}),"error",false); //Added by Homegear GmbH
+            else setTimeout(checkNodeRemoveStatus, 2000, callback, data.commandStatusId); //Added by Homegear GmbH
         }).fail(function(xhr,textStatus,err) {
             callback(xhr);
         })
@@ -22061,6 +26627,7 @@ RED.palette.editor = (function() {
                         nodeEntries[module].setUseCount[setName] = inUseCount;
                         nodeEntries[module].totalUseCount += inUseCount;
 
+                        //Removed by Homegear GmbH
                         /*if (inUseCount > 0) {
                             setElements.enableButton.text(RED._('palette.editor.inuse'));
                             setElements.enableButton.addClass('disabled');
@@ -22082,26 +26649,27 @@ RED.palette.editor = (function() {
                     nodeEntry.errorRow.show();
                 }
 
-                //var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount;
-                //nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount}));
+                //var nodeCount = (activeTypeCount === typeCount)?typeCount:activeTypeCount+" / "+typeCount; //Removed by Homegear GmbH
+                //nodeEntry.setCount.text(RED._('palette.editor.nodeCount',{count:typeCount,label:nodeCount})); //Removed by Homegear GmbH
 
                 if (nodeEntries[module].totalUseCount > 0) {
-                    //nodeEntry.enableButton.text(RED._('palette.editor.inuse'));
-                    //nodeEntry.enableButton.addClass('disabled');
+                    //nodeEntry.enableButton.text(RED._('palette.editor.inuse')); //Removed by Homegear GmbH
+                    //nodeEntry.enableButton.addClass('disabled'); //Removed by Homegear GmbH
                     nodeEntry.removeButton.hide();
                 } else {
-                    //nodeEntry.enableButton.removeClass('disabled');
+                    //nodeEntry.enableButton.removeClass('disabled'); //Removed by Homegear GmbH
                     if (moduleInfo.local) {
                         nodeEntry.removeButton.css('display', 'inline-block');
                     }
                     if (activeTypeCount === 0) {
-                        //nodeEntry.enableButton.text(RED._('palette.editor.enableall'));
+                        //nodeEntry.enableButton.text(RED._('palette.editor.enableall')); //Removed by Homegear GmbH
                     } else {
-                        //nodeEntry.enableButton.text(RED._('palette.editor.disableall'));
+                        //nodeEntry.enableButton.text(RED._('palette.editor.disableall')); //Removed by Homegear GmbH
                     }
                     nodeEntry.container.toggleClass("disabled",(activeTypeCount === 0));
                 }
             }
+            //Removed by Homegear GmbH
             /*if (moduleInfo.pending_version) {
                 nodeEntry.versionSpan.html(moduleInfo.version+' <i class="fa fa-long-arrow-right"></i> '+moduleInfo.pending_version).appendTo(nodeEntry.metaRow)
                 nodeEntry.updateButton.text(RED._('palette.editor.updated')).addClass('disabled').css('display', 'inline-block');
@@ -22115,7 +26683,6 @@ RED.palette.editor = (function() {
             } else {
                 nodeEntry.updateButton.hide();
             }*/
-            nodeEntry.updateButton.hide();
         }
 
     }
@@ -22182,6 +26749,36 @@ RED.palette.editor = (function() {
 
     function initInstallTab() {
         if (loadedList.length === 0) {
+            //Removed by Homegear GmbH
+            /*loadedList = [];
+            loadedIndex = {};
+            packageList.editableList('empty');
+
+            $(".red-ui-palette-module-shade-status").text(RED._('palette.editor.loading'));
+            var catalogues = RED.settings.theme('palette.catalogues')||['https://catalogue.nodered.org/catalogue.json'];
+            catalogueLoadStatus = [];
+            catalogueLoadErrors = false;
+            catalogueCount = catalogues.length;
+            if (catalogues.length > 1) {
+                $(".red-ui-palette-module-shade-status").html(RED._('palette.editor.loading')+"<br>0/"+catalogues.length);
+            }
+            $("#red-ui-palette-module-install-shade").show();
+            catalogueLoadStart = Date.now();
+            var handled = 0;
+            catalogues.forEach(function(catalog,index) {
+                $.getJSON(catalog, {_: new Date().getTime()},function(v) {
+                    handleCatalogResponse(null,catalog,index,v);
+                    refreshNodeModuleList();
+                }).fail(function(jqxhr, textStatus, error) {
+                    console.warn("Error loading catalog",catalog,":",error);
+                    handleCatalogResponse(jqxhr,catalog,index);
+                }).always(function() {
+                    handled++;
+                    if (handled === catalogueCount) {
+                        searchInput.searchBox('change');
+                    }
+                })
+            });*/
             RED.comms.homegear().invoke("managementGetSystemInfo", function(response) {
                 if(response.error)
                 {
@@ -22286,7 +26883,8 @@ RED.palette.editor = (function() {
         })
 
         RED.actions.add("core:manage-palette",function() {
-                RED.comms.homegear().invoke("managementGetNodePackages", function(message) {
+            //{{{ Added by Homegear GmbH
+            RED.comms.homegear().invoke("managementGetNodePackages", function(message) {
                 var nodesFromPackages = message.result;
                 for (var entry in nodeEntries) {
                     if (nodeEntries.hasOwnProperty(entry)) {
@@ -22301,6 +26899,7 @@ RED.palette.editor = (function() {
                 }
                 RED.userSettings.show('palette');
             });
+            //}}}
         });
 
         RED.events.on('registry:module-updated', function(ns) {
@@ -22382,8 +26981,6 @@ RED.palette.editor = (function() {
         return settingsPane;
     }
 
-
-
     function createSettingsPane() {
         settingsPane = $('<div id="red-ui-settings-tab-palette"></div>');
         var content = $('<div id="red-ui-palette-editor">'+
@@ -22414,7 +27011,11 @@ RED.palette.editor = (function() {
             minimumActiveTabWidth: 110
         });
 
+        createNodeTab(content);
+        createInstallTab(content);
+    }
 
+    function createNodeTab(content) {
         var modulesTab = $('<div>',{class:"red-ui-palette-editor-tab"}).appendTo(content);
 
         editorTabs.addTab({
@@ -22459,8 +27060,8 @@ RED.palette.editor = (function() {
                     var errorRow = $('<div class="red-ui-palette-module-meta red-ui-palette-module-errors"><i class="fa fa-warning"></i></div>').hide().appendTo(headerRow);
                     var errorList = $('<ul class="red-ui-palette-module-error-list"></ul>').appendTo(errorRow);
                     var buttonRow = $('<div>',{class:"red-ui-palette-module-meta"}).appendTo(headerRow);
-                    //var setButton = $('<a href="#" class="red-ui-button red-ui-button-small red-ui-palette-module-set-button"><i class="fa fa-angle-right red-ui-palette-module-node-chevron"></i> </a>').appendTo(buttonRow);
-                    //var setCount = $('<span>').appendTo(setButton);
+                    //var setButton = $('<a href="#" class="red-ui-button red-ui-button-small red-ui-palette-module-set-button"><i class="fa fa-angle-right red-ui-palette-module-node-chevron"></i> </a>').appendTo(buttonRow); //Removed by Homegear GmbH
+                    //var setCount = $('<span>').appendTo(setButton); //Removed by Homegear GmbH
                     var buttonGroup = $('<div>',{class:"red-ui-palette-module-button-group"}).appendTo(buttonRow);
 
                     var updateButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.update')).appendTo(buttonGroup);
@@ -22470,7 +27071,7 @@ RED.palette.editor = (function() {
                         if ($(this).hasClass('disabled')) {
                             return;
                         }
-                        update(entry,loadedIndex[entry.name].version,container,function(err){});
+                        update(entry,loadedIndex[entry.name].version,loadedIndex[entry.name].pkg_url,container,function(err){});
                     })
 
 
@@ -22478,6 +27079,8 @@ RED.palette.editor = (function() {
                     removeButton.attr('id','up_'+Math.floor(Math.random()*1000000000));
                     removeButton.on("click", function(evt) {
                         evt.preventDefault();
+                        //remove(entry,container,function(err){}); //Removed by Homegear GmbH
+                        //{{{ Added by Homegear GmbH
                         remove(entry,container,function(err){
                             for (var set in entry.sets) {
                                 if (entry.sets.hasOwnProperty(set)) {
@@ -22486,11 +27089,13 @@ RED.palette.editor = (function() {
                             }
                             refreshNodeModuleList();
                         });
+                        //}}}
                     })
-                    if (!entry.local || !entry.hasOwnProperty('package')) {
+                    //if (!entry.local) { //Removed by Homegear GmbH
+                    if (!entry.local || !entry.hasOwnProperty('package')) { //Added by Homegear GmbH
                         removeButton.hide();
                     }
-                    //var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.disableall')).appendTo(buttonGroup);
+                    //var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').text(RED._('palette.editor.disableall')).appendTo(buttonGroup); //Removed by Homegear GmbH
 
                     var contentRow = $('<div>',{class:"red-ui-palette-module-content"}).appendTo(container);
                     var shade = $('<div class="red-ui-palette-module-shade hide"><img src="red/images/spin.svg" class="red-ui-palette-spinner"/></div>').appendTo(container);
@@ -22498,15 +27103,16 @@ RED.palette.editor = (function() {
                     object.elements = {
                         updateButton: updateButton,
                         removeButton: removeButton,
-                        //enableButton: enableButton,
+                        //enableButton: enableButton, //Removed by Homegear GmbH
                         errorRow: errorRow,
                         errorList: errorList,
-                        //setCount: setCount,
+                        //setCount: setCount, //Removed by Homegear GmbH
                         container: container,
                         shade: shade,
                         versionSpan: versionSpan,
                         sets: {}
                     }
+                    //Removed by Homegear GmbH
                     /*setButton.on("click", function(evt) {
                         evt.preventDefault();
                         if (container.hasClass('expanded')) {
@@ -22532,6 +27138,7 @@ RED.palette.editor = (function() {
                             typeSwatches[t] = $('<span>',{class:"red-ui-palette-module-type-swatch"}).appendTo(typeDiv);
                             $('<span>',{class:"red-ui-palette-module-type-node"}).text(t).appendTo(typeDiv);
                         })
+                        //Removed by Homegear GmbH
                         /*var enableButton = $('<a href="#" class="red-ui-button red-ui-button-small"></a>').appendTo(buttonGroup);
                         enableButton.on("click", function(evt) {
                             evt.preventDefault();
@@ -22551,10 +27158,11 @@ RED.palette.editor = (function() {
 
                         object.elements.sets[set.name] = {
                             setRow: setRow,
-                            //enableButton: enableButton,
+                            //enableButton: enableButton, //Removed by Homegear GmbH
                             swatches: typeSwatches
                         };
                     });
+                    //Removed by Homegear GmbH
                     /*enableButton.on("click", function(evt) {
                         evt.preventDefault();
                         if (object.totalUseCount === 0) {
@@ -22573,9 +27181,9 @@ RED.palette.editor = (function() {
                 }
             }
         });
+    }
 
-
-
+    function createInstallTab(content) {
         var installTab = $('<div>',{class:"red-ui-palette-editor-tab hide"}).appendTo(content);
 
         editorTabs.addTab({
@@ -22607,7 +27215,6 @@ RED.palette.editor = (function() {
                     }
                 }
             });
-
 
         $('<span>').text(RED._("palette.editor.sort")+' ').appendTo(toolBar);
         var sortGroup = $('<span class="button-group"></span>').appendTo(toolBar);
@@ -22642,6 +27249,7 @@ RED.palette.editor = (function() {
             loadedIndex = {};
             initInstallTab();
         })
+        RED.popover.tooltip(refreshButton,RED._("palette.editor.refresh"));
 
         packageList = $('<ol>',{style:"position: absolute;top: 79px;bottom: 0;left: 0;right: 0px;"}).appendTo(installTab).editableList({
             addButton: false,
@@ -22698,6 +27306,8 @@ RED.palette.editor = (function() {
                     installButton.on("click", function(e) {
                         e.preventDefault();
                         if (!$(this).hasClass('disabled')) {
+                            //install(entry,container,function(xhr) {}); //Removed by Homegear GmbH
+                            //{{{ Added by Homegear GmbH
                             install(entry,container,function(xhr) {
                                 if(!xhr) {
                                     installButton.addClass('disabled');
@@ -22705,6 +27315,7 @@ RED.palette.editor = (function() {
                                     location.reload();
                                 }
                             });
+                            //}}}
                         }
                     })
                     if (nodeEntries.hasOwnProperty(entry.id)) {
@@ -22731,9 +27342,88 @@ RED.palette.editor = (function() {
             }
         });
 
+        if (RED.settings.theme('palette.upload') !== false) {
+            var uploadSpan = $('<span class="button-group">').prependTo(toolBar);
+            var uploadButton = $('<button type="button" class="red-ui-sidebar-header-button red-ui-palette-editor-upload-button"><label><i class="fa fa-upload"></i><form id="red-ui-palette-editor-upload-form" enctype="multipart/form-data"><input name="tarball" type="file" accept=".tgz"></label></button>').appendTo(uploadSpan);
+
+            var uploadInput = uploadButton.find('input[type="file"]');
+            uploadInput.on("change", function(evt) {
+                if (this.files.length > 0) {
+                    uploadFilenameLabel.text(this.files[0].name)
+                    uploadToolbar.slideDown(200);
+                }
+            })
+
+            var uploadToolbar = $('<div class="red-ui-palette-editor-upload"></div>').appendTo(installTab);
+            var uploadForm = $('<div>').appendTo(uploadToolbar);
+            var uploadFilename = $('<div class="placeholder-input"><i class="fa fa-upload"></i> </div>').appendTo(uploadForm);
+            var uploadFilenameLabel = $('<span></span>').appendTo(uploadFilename);
+            var uploadButtons = $('<div class="red-ui-palette-editor-upload-buttons"></div>').appendTo(uploadForm);
+            $('<button class="editor-button"></button>').text(RED._("common.label.cancel")).appendTo(uploadButtons).on("click", function(evt) {
+                evt.preventDefault();
+                uploadToolbar.slideUp(200);
+                uploadInput.val("");
+            });
+            $('<button class="editor-button primary"></button>').text(RED._("common.label.upload")).appendTo(uploadButtons).on("click", function(evt) {
+                evt.preventDefault();
+
+                var spinner = RED.utils.addSpinnerOverlay(uploadToolbar, true);
+                var buttonRow = $('<div style="position: relative;bottom: calc(50% + 17px); padding-right: 10px;text-align: right;"></div>').appendTo(spinner);
+                $('<button class="red-ui-button"></button>').text(RED._("eventLog.view")).appendTo(buttonRow).on("click", function(evt) {
+                    evt.preventDefault();
+                    RED.actions.invoke("core:show-event-log");
+                });
+                RED.eventLog.startEvent(RED._("palette.editor.confirm.button.install")+" : "+uploadInput[0].files[0].name);
+
+                var data = new FormData();
+                data.append("tarball",uploadInput[0].files[0]);
+                var filename = uploadInput[0].files[0].name;
+                $.ajax({
+                    url: 'nodes',
+                    data: data,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    method: 'POST',
+                }).always(function(data,textStatus,xhr) {
+                    spinner.remove();
+                    uploadInput.val("");
+                    uploadToolbar.slideUp(200);
+                }).fail(function(xhr,textStatus,err) {
+                    var message = textStatus;
+                    if (xhr.responseJSON) {
+                        message = xhr.responseJSON.message;
+                    }
+                    var notification = RED.notify(RED._('palette.editor.errors.installFailed',{module: filename,message:message}),{
+                        type: 'error',
+                        modal: true,
+                        fixed: true,
+                        buttons: [
+                            {
+                                text: RED._("common.label.close"),
+                                click: function() {
+                                    notification.close();
+                                }
+                            },{
+                                text: RED._("eventLog.view"),
+                                click: function() {
+                                    notification.close();
+                                    RED.actions.invoke("core:show-event-log");
+                                }
+                            }
+                        ]
+                    });
+                    uploadInput.val("");
+                    uploadToolbar.slideUp(200);
+                })
+            })
+            RED.popover.tooltip(uploadButton,RED._("palette.editor.upload"));
+        }
+
         $('<div id="red-ui-palette-module-install-shade" class="red-ui-palette-module-shade hide"><div class="red-ui-palette-module-shade-status"></div><img src="red/images/spin.svg" class="red-ui-palette-spinner"/></div>').appendTo(installTab);
     }
-    function update(entry,version,container,done) {
+
+    function update(entry,version,url,container,done) {
         if (RED.settings.theme('palette.editable') === false) {
             done(new Error('Palette not editable'));
             return;
@@ -22759,7 +27449,7 @@ RED.palette.editor = (function() {
                             RED.actions.invoke("core:show-event-log");
                         });
                         RED.eventLog.startEvent(RED._("palette.editor.confirm.button.install")+" : "+entry.name+" "+version);
-                        installNodeModule(entry.name,version,function(xhr) {
+                        installNodeModule(entry.name,version,url,function(xhr) {
                             spinner.remove();
                             if (xhr) {
                                 if (xhr.responseJSON) {
@@ -22818,7 +27508,8 @@ RED.palette.editor = (function() {
                             RED.actions.invoke("core:show-event-log");
                         });
                         RED.eventLog.startEvent(RED._("palette.editor.confirm.button.remove")+" : "+entry.name);
-                        removeNodeModule(entry.package, function(xhr) {
+                        //removeNodeModule(entry.name, function(xhr) { //Removed by Homegear GmbH
+                        removeNodeModule(entry.package, function(xhr) { //Added by Homegear GmbH
                             spinner.remove();
                             if (xhr) {
                                 if (xhr.responseJSON) {
@@ -22842,7 +27533,6 @@ RED.palette.editor = (function() {
                                         ]
                                     });                                }
                             }
-                            done(xhr);
                         })
                         notification.close();
                     }
@@ -22885,7 +27575,7 @@ RED.palette.editor = (function() {
                     RED.actions.invoke("core:show-event-log");
                 });
                 RED.eventLog.startEvent(RED._("palette.editor.confirm.button.install")+" : "+entry.id+" "+entry.version);
-                installNodeModule(entry.id,entry.version,function(xhr) {
+                installNodeModule(entry.id,entry.version,entry.pkg_url,function(xhr) {
                     spinner.remove();
                      if (xhr) {
                          if (xhr.responseJSON) {
@@ -22933,12 +27623,9 @@ RED.palette.editor = (function() {
  *
  * Changes:
  * - Added support for multiple inputs.
- * - Replaced "link " (with space) with "link-"
- * - Removed Node-RED labels
  *
  * Todo after update:
  * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
- * - Search for "link " and replace with "link-"
  **/
 
 /**
@@ -23147,49 +27834,49 @@ RED.editor = (function() {
         node.dirty = true;
         node.dirtyStatus = true;
         var removedLinks = [];
-        if (node.inputPorts) {
-            if (node.inputs < node.inputPorts.length) {
-                while (node.inputs < node.inputPorts.length) {
-                    node.inputPorts.pop();
-                }
-                RED.nodes.eachLink(function(l) {
-                    if (l.target === node && l.targetPort >= node.inputs && removedLinks.indexOf(l) === -1) {
-                        removedLinks.push(l);
-                    }
-                });
-            } else if (node.inputs > node.inputPorts.length) {
-                while (node.inputs > node.inputPorts.length) {
-                    node.inputPorts.push(node.inputPorts.length);
-                }
-            }
-        }
-        if (node.outputPorts) {
-            if (outputMap) {
-                RED.nodes.eachLink(function(l) {
-                    if (l.source === node && outputMap.hasOwnProperty(l.sourcePort)) {
+        if (outputMap) {
+            RED.nodes.eachLink(function(l) {
+                if (l.source === node) {
+                    if (outputMap.hasOwnProperty(l.sourcePort)) {
                         if (outputMap[l.sourcePort] === "-1") {
                             removedLinks.push(l);
                         } else {
                             l.sourcePort = outputMap[l.sourcePort];
                         }
                     }
+                }
+            });
+        }
+        //{{{ Added by Homegear GmbH
+        if (node.hasOwnProperty("__inputs")) {
+            if (node.inputs < node.__inputs) {
+                RED.nodes.eachLink(function(l) {
+                    if (l.target === node && l.targetPort >= node.inputs && removedLinks.indexOf(l) === -1) {
+                        removedLinks.push(l);
+                    }
                 });
             }
-            if (node.outputs < node.outputPorts.length) {
-                while (node.outputs < node.outputPorts.length) {
-                    node.outputPorts.pop();
-                }
+            delete node.__outputs;
+        }
+        //}}}
+        if (node.hasOwnProperty("__outputs")) {
+            if (node.outputs < node.__outputs) {
                 RED.nodes.eachLink(function(l) {
                     if (l.source === node && l.sourcePort >= node.outputs && removedLinks.indexOf(l) === -1) {
                         removedLinks.push(l);
                     }
                 });
-            } else if (node.outputs > node.outputPorts.length) {
-                while (node.outputs > node.outputPorts.length) {
-                    node.outputPorts.push(node.outputPorts.length);
-                }
             }
+            delete node.__outputs;
         }
+        //Removed by Homegear GmbH
+        /*node.inputs = Math.min(1,Math.max(0,parseInt(node.inputs)));
+        if (isNaN(node.inputs)) {
+            node.inputs = 0;
+        }
+        if (node.inputs === 0) {
+            removedLinks = removedLinks.concat(RED.nodes.filterLinks({target:node}));
+        }*/
         for (var l=0;l<removedLinks.length;l++) {
             RED.nodes.removeLink(removedLinks[l]);
         }
@@ -23442,8 +28129,8 @@ RED.editor = (function() {
                 done();
             }
         }
-
-        if (definition.credentials) {
+        //{{{ Removed by Homegear GmbH
+        /*if (definition.credentials || /^subflow:/.test(definition.type)) {
             if (node.credentials) {
                 populateCredentialsInputs(node, definition.credentials, node.credentials, prefix);
                 completePrepare();
@@ -23451,13 +28138,16 @@ RED.editor = (function() {
                 $.getJSON(getCredentialsURL(node.type, node.id), function (data) {
                     node.credentials = data;
                     node.credentials._ = $.extend(true,{},data);
-                    populateCredentialsInputs(node, definition.credentials, node.credentials, prefix);
+                    if (!/^subflow:/.test(definition.type)) {
+                        populateCredentialsInputs(node, definition.credentials, node.credentials, prefix);
+                    }
                     completePrepare();
                 });
             }
         } else {
+        }}}*/
             completePrepare();
-        }
+        //} //Removed by Homegear GmbH
     }
 
     function getEditStackTitle() {
@@ -23465,7 +28155,9 @@ RED.editor = (function() {
         for (var i=editStack.length-1;i<editStack.length;i++) {
             var node = editStack[i];
             label = node.type;
-            if (node.type === '_expression') {
+            if (node.type === 'group') {
+                label = RED._("group.editGroup",{name:RED.utils.sanitize(node.name||node.id)});
+            } else if (node.type === '_expression') {
                 label = RED._("expressionEditor.title");
             } else if (node.type === '_js') {
                 label = RED._("jsEditor.title");
@@ -23528,8 +28220,11 @@ RED.editor = (function() {
             $(this).attr("data-i18n",keys.join(";"));
         });
 
-        if (type === "subflow-template" || type === "subflow") {
-            RED.subflow.buildEditForm(dialogForm,type,node);
+        if (type === "subflow-template") {
+            // This is the 'edit properties' dialog for a subflow template
+            // TODO: this needs to happen later in the dialog open sequence
+            //       so that credentials can be loaded prior to building the form
+            RED.subflow.buildEditForm(type,node);
         }
 
         // Add dummy fields to prevent 'Enter' submitting the form in some
@@ -23538,6 +28233,7 @@ RED.editor = (function() {
         //  - the elements need to have id's that imply password/username
         $('<span style="position: absolute; top: -2000px;"><input id="red-ui-trap-password" type="password"/></span>').prependTo(dialogForm);
         $('<span style="position: absolute; top: -2000px;"><input id="red-ui-trap-username"  type="text"/></span>').prependTo(dialogForm);
+        $('<span style="position: absolute; top: -2000px;"><input id="red-ui-trap-user"  type="text"/></span>').prependTo(dialogForm);
         dialogForm.on("submit", function(e) { e.preventDefault();});
         dialogForm.find('input').attr("autocomplete","off");
         return dialogForm;
@@ -23736,6 +28432,11 @@ RED.editor = (function() {
                             nodeDiv.css({
                                 'backgroundColor': backgroundColor
                             });
+                            var borderColor = RED.utils.getDarkerColor(backgroundColor);
+                            if (borderColor !== backgroundColor) {
+                                nodeDiv.css('border-color',borderColor)
+                            }
+
                         }
                         var iconContainer = $('<div/>',{class:"red-ui-palette-icon-container"}).appendTo(nodeDiv);
                         RED.utils.createIconElement(icon_url, iconContainer, true);
@@ -23769,99 +28470,6 @@ RED.editor = (function() {
 
         picker.slideDown(100);
         searchInput.trigger("focus");
-    }
-
-    function createColorPicker(colorRow, color) {
-
-        var colorButton = $('<button type="button" class="red-ui-button red-ui-editor-node-appearance-button">').appendTo(colorRow);
-        $('<i class="fa fa-caret-down"></i>').appendTo(colorButton);
-
-        var colorDisp = $('<div>',{class:"red-ui-search-result-node"}).appendTo(colorButton);
-
-        var selector = $("<input/>", {
-            id: "red-ui-editor-node-color",
-            type: "text",
-            value: color
-        }).css({
-            marginLeft: "10px",
-            width: "150px",
-        }).appendTo(colorRow);
-
-        selector.on("change", function (e) {
-            var color = selector.val();
-            $(".red-ui-editor-node-appearance-button .red-ui-search-result-node").css({
-                "background-color": color
-            });
-        });
-        selector.trigger("change");
-        colorButton.on("click", function (e) {
-            var recommendedColors = [
-                "#DDAA99",
-                "#3FADB5", "#87A980", "#A6BBCF",
-                "#AAAA66", "#C0C0C0", "#C0DEED",
-                "#C7E9C0", "#D7D7A0", "#D8BFD8",
-                "#DAC4B4", "#DEB887", "#DEBD5C",
-                "#E2D96E", "#E6E0F8", "#E7E7AE",
-                "#E9967A", "#F3B567", "#FDD0A2",
-                "#FDF0C2", "#FFAAAA", "#FFCC66",
-                "#FFF0F0", "#FFFFFF"
-            ].map(function(c) {
-                var r = parseInt(c.substring(1, 3), 16) / 255;
-                var g = parseInt(c.substring(3, 5), 16) / 255;
-                var b = parseInt(c.substring(5, 7), 16) / 255;
-                return {
-                    hex: c,
-                    r: r,
-                    g: g,
-                    b: b,
-                    l: 0.3 * r + 0.59 * g + 0.11 * b
-                }
-            });
-            // Sort by luminosity.
-            recommendedColors.sort(function (a, b) {
-                return a.l - b.l;
-            });
-
-            var numColors = recommendedColors.length;
-            var width = 30;
-            var height = 30;
-            var margin = 2;
-            var perRow = 6;
-            var picker = $("<div/>", {
-                class: "red-ui-color-picker"
-            }).css({
-                width: ((width+margin+margin)*perRow)+"px",
-                height: Math.ceil(numColors/perRow)*(height+margin+margin)+"+px"
-            });
-            var count = 0;
-            var row = null;
-            recommendedColors.forEach(function (col) {
-                if ((count % perRow) == 0) {
-                    row = $("<div/>").appendTo(picker);
-                }
-                var button = $("<button/>", {
-                }).css({
-                    width: width+"px",
-                    height: height+"px",
-                    margin: margin+"px",
-                    backgroundColor: col.hex,
-                    "border-style": "solid",
-                    "border-width": "1px",
-                    "border-color": col.luma<0.92?col.hex:'#ccc'
-                }).appendTo(row);
-                button.on("click",  function (e) {
-                    e.preventDefault();
-                    colorPanel.hide();
-                    selector.val(col.hex);
-                    selector.trigger("change");
-                });
-                count++;
-            });
-            var colorPanel = RED.popover.panel(picker);
-            colorPanel.show({
-                target: colorButton
-            })
-        });
     }
 
     function buildAppearanceForm(container,node) {
@@ -23916,13 +28524,13 @@ RED.editor = (function() {
             var userCount = 0;
             var subflowType = "subflow:"+node.id;
 
-            RED.nodes.eachNode(function(n) {
-                if (n.type === subflowType) {
-                    userCount++;
-                }
-            });
+            // RED.nodes.eachNode(function(n) {
+            //     if (n.type === subflowType) {
+            //         userCount++;
+            //     }
+            // });
             $("#red-ui-editor-subflow-user-count")
-                .text(RED._("subflow.subflowInstances", {count:userCount})).show();
+                .text(RED._("subflow.subflowInstances", {count:node.instances.length})).show();
         }
 
         $('<div class="form-row">'+
@@ -23938,7 +28546,7 @@ RED.editor = (function() {
 
         if (!node.hasOwnProperty("l")) {
             // Show label if type not link
-            node.l = !/^link-(in|out)$/.test(node._def.type);
+            node.l = !/^link (in|out)$/.test(node._def.type);
         }
         $("#node-input-show-label").prop("checked",node.l).trigger("change");
 
@@ -23949,7 +28557,35 @@ RED.editor = (function() {
                 class: "form-row"
             }).appendTo(dialogForm);
             $("<label/>").text(RED._("editor.color")).appendTo(colorRow);
-            createColorPicker(colorRow, color);
+
+            var recommendedColors = [
+                "#DDAA99",
+                "#3FADB5", "#87A980", "#A6BBCF",
+                "#AAAA66", "#C0C0C0", "#C0DEED",
+                "#C7E9C0", "#D7D7A0", "#D8BFD8",
+                "#DAC4B4", "#DEB887", "#DEBD5C",
+                "#E2D96E", "#E6E0F8", "#E7E7AE",
+                "#E9967A", "#F3B567", "#FDD0A2",
+                "#FDF0C2", "#FFAAAA", "#FFCC66",
+                "#FFF0F0", "#FFFFFF"
+            ]
+
+            RED.colorPicker.create({
+                id: "red-ui-editor-node-color",
+                value: color,
+                palette: recommendedColors,
+                sortPalette: function (a, b) {return a.l - b.l;}
+            }).appendTo(colorRow);
+
+            $("#red-ui-editor-node-color").on('change', function(ev) {
+                // Horribly out of scope...
+                var colour = $(this).val();
+                nodeDiv.css('backgroundColor',colour);
+                var borderColor = RED.utils.getDarkerColor(colour);
+                if (borderColor !== colour) {
+                    nodeDiv.css('border-color',borderColor)
+                }
+            })
         }
 
 
@@ -23964,6 +28600,11 @@ RED.editor = (function() {
             var colour = RED.utils.getNodeColor(node.type, node._def);
             var icon_url = RED.utils.getNodeIcon(node._def,node);
             nodeDiv.css('backgroundColor',colour);
+            var borderColor = RED.utils.getDarkerColor(colour);
+            if (borderColor !== colour) {
+                nodeDiv.css('border-color',borderColor)
+            }
+
             var iconContainer = $('<div/>',{class:"red-ui-palette-icon-container"}).appendTo(nodeDiv);
             RED.utils.createIconElement(icon_url, iconContainer, true);
 
@@ -23994,7 +28635,7 @@ RED.editor = (function() {
         }
 
 
-        /*$('<div class="form-row"><span data-i18n="editor.portLabels"></span></div>').appendTo(dialogForm);
+        $('<div class="form-row"><span data-i18n="editor.portLabels"></span></div>').appendTo(dialogForm);
 
         var inputCount = node.inputs || node._def.inputs || 0;
         var outputCount = node.outputs || node._def.outputs || 0;
@@ -24026,7 +28667,7 @@ RED.editor = (function() {
             }
         } else {
             buildLabelRow().appendTo(outputsDiv);
-        }*/
+        }
     }
 
 
@@ -24084,15 +28725,17 @@ RED.editor = (function() {
         if (node.info) {
             nodeInfoEditor.getSession().setValue(node.info, -1);
         }
+        node.infoEditor = nodeInfoEditor;
         return nodeInfoEditor;
     }
 
-    function showEditDialog(node) {
+    function showEditDialog(node, defaultTab) {
         var editing_node = node;
         var isDefaultIcon;
         var defaultIcon;
         var nodeInfoEditor;
         var finishedBuilding = false;
+        var skipInfoRefreshOnClose = false;
 
         editStack.push(node);
         RED.view.state(RED.state.EDITING);
@@ -24234,6 +28877,7 @@ RED.editor = (function() {
                                         newValue = input.val();
                                     }
                                     if (newValue != null) {
+                                        //{{{ Block added by Homegear GmbH - copied "outputs" block from below and renamed "output" to "input"
                                         if (d === "inputs") {
                                             if  (newValue.trim() === "") {
                                                 continue;
@@ -24245,7 +28889,7 @@ RED.editor = (function() {
                                                 var keys = Object.keys(inputMap);
                                                 keys.forEach(function(p) {
                                                     if (isNaN(p)) {
-                                                        // New input;
+                                                        // New output;
                                                         inputCount ++;
                                                         delete inputMap[p];
                                                     } else {
@@ -24253,13 +28897,13 @@ RED.editor = (function() {
                                                         if (inputMap[p] !== "-1") {
                                                             inputCount++;
                                                             if (inputMap[p] !== p) {
-                                                                // Input moved
+                                                                // Output moved
                                                                 inputsChanged = true;
                                                             } else {
                                                                 delete inputMap[p];
                                                             }
                                                         } else {
-                                                            // Input removed
+                                                            // Output removed
                                                             inputsChanged = true;
                                                         }
                                                     }
@@ -24273,6 +28917,7 @@ RED.editor = (function() {
                                                 newValue = parseInt(newValue);
                                             }
                                         }
+                                        //}}}
                                         if (d === "outputs") {
                                             if  (newValue.trim() === "") {
                                                 continue;
@@ -24324,10 +28969,12 @@ RED.editor = (function() {
                                                 if (configNode) {
                                                     var users = configNode.users;
                                                     users.splice(users.indexOf(editing_node),1);
+                                                    RED.events.emit("nodes:change",configNode);
                                                 }
                                                 configNode = RED.nodes.node(newValue);
                                                 if (configNode) {
                                                     configNode.users.push(editing_node);
+                                                    RED.events.emit("nodes:change",configNode);
                                                 }
                                             }
                                             changes[d] = editing_node[d];
@@ -24384,7 +29031,7 @@ RED.editor = (function() {
 
                         if (!$("#node-input-show-label").prop('checked')) {
                             // Not checked - hide label
-                            if (!/^link-(in|out)$/.test(node.type)) {
+                            if (!/^link (in|out)$/.test(node.type)) {
                                 // Not a link node - default state is true
                                 if (node.l !== false) {
                                     changes.l = node.l
@@ -24401,7 +29048,7 @@ RED.editor = (function() {
                             }
                         } else {
                             // Checked - show label
-                            if (!/^link-(in|out)$/.test(node.type)) {
+                            if (!/^link (in|out)$/.test(node.type)) {
                                 // Not a link node - default state is true
                                 if (node.hasOwnProperty('l') && !node.l) {
                                     changes.l = node.l
@@ -24462,6 +29109,19 @@ RED.editor = (function() {
                         if (type === "subflow") {
                             var old_env = editing_node.env;
                             var new_env = RED.subflow.exportSubflowInstanceEnv(editing_node);
+                            if (new_env && new_env.length > 0) {
+                                new_env.forEach(function(prop) {
+                                    if (prop.type === "cred") {
+                                        editing_node.credentials = editing_node.credentials || {_:{}};
+                                        editing_node.credentials[prop.name] = prop.value;
+                                        editing_node.credentials['has_'+prop.name] = (prop.value !== "");
+                                        if (prop.value !== '__PWRD__') {
+                                            changed = true;
+                                        }
+                                        delete prop.value;
+                                    }
+                                });
+                            }
                             if (!isSameObj(old_env, new_env)) {
                                 editing_node.env = new_env;
                                 changes.env = editing_node.env;
@@ -24511,6 +29171,7 @@ RED.editor = (function() {
                         editing_node.dirty = true;
                         validateNode(editing_node);
                         RED.events.emit("editor:save",editing_node);
+                        RED.events.emit("nodes:change",editing_node);
                         RED.tray.close();
                     }
                 }
@@ -24528,6 +29189,14 @@ RED.editor = (function() {
                 }
             },
             open: function(tray, done) {
+                //Block added by Homegear GmbH
+                if (editing_node.hasOwnProperty('inputs')) {
+                    editing_node.__inputs = editing_node.inputs;
+                }
+                if (editing_node.hasOwnProperty('outputs')) {
+                    editing_node.__outputs = editing_node.outputs;
+                }
+
                 var trayFooter = tray.find(".red-ui-tray-footer");
                 var trayBody = tray.find('.red-ui-tray-body');
                 trayBody.parent().css('overflow','hidden');
@@ -24558,9 +29227,6 @@ RED.editor = (function() {
                     collapsible: true,
                     menu: false
                 });
-                if (editing_node) {
-                    RED.sidebar.info.refresh(editing_node);
-                }
                 var ns;
                 if (node._def.set.module === "node-red") {
                     ns = "node-red";
@@ -24590,12 +29256,13 @@ RED.editor = (function() {
                         id: "editor-subflow-envProperties",
                         label: RED._("editor-tab.envProperties"),
                         name: RED._("editor-tab.envProperties"),
-                        content: $('<div>', {class:"red-ui-tray-content"}).appendTo(editorContent).hide(),
+                        content: $('<div>', {id:"editor-subflow-envProperties-content",class:"red-ui-tray-content"}).appendTo(editorContent).hide(),
                         iconClass: "fa fa-list"
                     };
-
-                    RED.subflow.buildPropertiesForm(subflowPropertiesTab.content,node);
                     editorTabs.addTab(subflowPropertiesTab);
+                    // This tab is populated by the oneditprepare function of this
+                    // subflow. That ensures it is done *after* any credentials
+                    // have been loaded for the instance.
                 }
 
                 if (!node._def.defaults || !node._def.defaults.hasOwnProperty('info'))  {
@@ -24629,6 +29296,9 @@ RED.editor = (function() {
                 prepareEditDialog(node,node._def,"node-input", function() {
                     trayBody.i18n();
                     finishedBuilding = true;
+                    if (defaultTab) {
+                        editorTabs.activateTab(defaultTab);
+                    }
                     done();
                 });
             },
@@ -24636,7 +29306,7 @@ RED.editor = (function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
                     RED.view.state(RED.state.DEFAULT);
                 }
-                if (editing_node) {
+                if (editing_node && !skipInfoRefreshOnClose) {
                     RED.sidebar.info.refresh(editing_node);
                 }
                 RED.workspaces.refresh();
@@ -24650,6 +29320,7 @@ RED.editor = (function() {
             show: function() {
                 if (editing_node) {
                     RED.sidebar.info.refresh(editing_node);
+                    RED.sidebar.help.show(editing_node.type, false);
                 }
             }
         }
@@ -24664,6 +29335,7 @@ RED.editor = (function() {
                 text: RED._("subflow.edit"),
                 click: function() {
                     RED.workspaces.show(id);
+                    skipInfoRefreshOnClose = true;
                     $("#node-dialog-ok").trigger("click");
                 }
             });
@@ -24855,6 +29527,7 @@ RED.editor = (function() {
             show: function() {
                 if (editing_config_node) {
                     RED.sidebar.info.refresh(editing_config_node);
+                    RED.sidebar.help.show(type, false);
                 }
             }
         }
@@ -24932,10 +29605,12 @@ RED.editor = (function() {
                                     if (configNode) {
                                         var users = configNode.users;
                                         users.splice(users.indexOf(editing_config_node),1);
+                                        RED.events.emit("nodes:change",configNode);
                                     }
                                     configNode = RED.nodes.node(newValue);
                                     if (configNode) {
                                         configNode.users.push(editing_config_node);
+                                        RED.events.emit("nodes:change",configNode);
                                     }
                                 }
                                 editing_config_node[d] = newValue;
@@ -25030,6 +29705,7 @@ RED.editor = (function() {
                     RED.view.redraw(true);
                     if (!configAdding) {
                         RED.events.emit("editor:save",editing_config_node);
+                        RED.events.emit("nodes:change",editing_config_node);
                     }
                     RED.tray.close(function() {
                         updateConfigNodeSelect(configProperty,configType,editing_config_node.id,prefix);
@@ -25243,12 +29919,26 @@ RED.editor = (function() {
 
                         var old_env = editing_node.env;
                         var new_env = RED.subflow.exportSubflowTemplateEnv($("#node-input-env-container").editableList("items"));
+
+                        if (new_env && new_env.length > 0) {
+                            new_env.forEach(function(prop) {
+                                if (prop.type === "cred") {
+                                    editing_node.credentials = editing_node.credentials || {_:{}};
+                                    editing_node.credentials[prop.name] = prop.value;
+                                    editing_node.credentials['has_'+prop.name] = (prop.value !== "");
+                                    if (prop.value !== '__PWRD__') {
+                                        changed = true;
+                                    }
+                                    delete prop.value;
+                                }
+                            });
+                        }
+
                         if (!isSameObj(old_env, new_env)) {
                             editing_node.env = new_env;
                             changes.env = editing_node.env;
                             changed = true;
                         }
-                        RED.palette.refresh();
 
                         if (changed) {
                             var wasChanged = editing_node.changed;
@@ -25268,6 +29958,7 @@ RED.editor = (function() {
                                     validateNode(n);
                                 }
                             });
+                            RED.events.emit("subflows:change",editing_node);
                             RED.nodes.dirty(true);
                             var historyEvent = {
                                 t:'edit',
@@ -25302,7 +29993,7 @@ RED.editor = (function() {
                     $("#node-input-env-container").editableList('height',height-95);
                 }
             },
-            open: function(tray) {
+            open: function(tray, done) {
                 var trayFooter = tray.find(".red-ui-tray-footer");
                 var trayFooterLeft = $("<div/>", {
                     class: "red-ui-tray-footer-left"
@@ -25353,7 +30044,6 @@ RED.editor = (function() {
                     content: $('<div>', {class:"red-ui-tray-content"}).appendTo(editorContent).hide(),
                     iconClass: "fa fa-cog"
                 };
-                buildEditForm(nodePropertiesTab.content,"dialog-form","subflow-template", undefined, editing_node);
                 editorTabs.addTab(nodePropertiesTab);
 
                 var descriptionTab = {
@@ -25382,11 +30072,25 @@ RED.editor = (function() {
                 buildAppearanceForm(appearanceTab.content,editing_node);
                 editorTabs.addTab(appearanceTab);
 
-                $("#subflow-input-name").val(subflow.name);
-                RED.text.bidi.prepareInput($("#subflow-input-name"));
-
+                buildEditForm(nodePropertiesTab.content,"dialog-form","subflow-template", undefined, editing_node);
+                /*{{{ Removed by Homegear GmbH - Not in 1.2.6 code, only in master. Causes "edit properties" of subflows not to work.
                 trayBody.i18n();
-                finishedBuilding = true;
+
+                $.getJSON(getCredentialsURL("subflow", subflow.id), function (data) {
+                    subflow.credentials = data;
+                    subflow.credentials._ = $.extend(true,{},data);
+
+                    finishedBuilding = true;
+                    done();
+                });
+                }}}*/
+
+                $("#subflow-input-name").val(subflow.name); //Added by Homegear GmbH
+                RED.text.bidi.prepareInput($("#subflow-input-name")); //Added by Homegear GmbH
+
+                trayBody.i18n(); //Added by Homegear GmbH
+                finishedBuilding = true; //Added by Homegear GmbH
+                done();
             },
             close: function() {
                 if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
@@ -25401,6 +30105,253 @@ RED.editor = (function() {
             },
             show: function() {
             }
+        }
+        RED.tray.show(trayOptions);
+    }
+
+    function showEditGroupDialog(group) {
+        var editing_node = group;
+        editStack.push(group);
+        RED.view.state(RED.state.EDITING);
+        var nodeInfoEditor;
+        var finishedBuilding = false;
+        var trayOptions = {
+            title: getEditStackTitle(),
+            buttons: [
+                {
+                    id: "node-dialog-cancel",
+                    text: RED._("common.label.cancel"),
+                    click: function() {
+                        RED.tray.close();
+                    }
+                },
+                {
+                    id: "node-dialog-ok",
+                    class: "primary",
+                    text: RED._("common.label.done"),
+                    click: function() {
+                        var changes = {};
+                        var changed = false;
+                        var wasDirty = RED.nodes.dirty();
+                        var d;
+                        var outputMap;
+
+                        if (editing_node._def.oneditsave) {
+                            var oldValues = {};
+                            for (d in editing_node._def.defaults) {
+                                if (editing_node._def.defaults.hasOwnProperty(d)) {
+                                    if (typeof editing_node[d] === "string" || typeof editing_node[d] === "number") {
+                                        oldValues[d] = editing_node[d];
+                                    } else {
+                                        oldValues[d] = $.extend(true,{},{v:editing_node[d]}).v;
+                                    }
+                                }
+                            }
+                            try {
+                                var rc = editing_node._def.oneditsave.call(editing_node);
+                                if (rc === true) {
+                                    changed = true;
+                                }
+                            } catch(err) {
+                                console.log("oneditsave",editing_node.id,editing_node.type,err.toString());
+                            }
+
+                            for (d in editing_node._def.defaults) {
+                                if (editing_node._def.defaults.hasOwnProperty(d)) {
+                                    if (oldValues[d] === null || typeof oldValues[d] === "string" || typeof oldValues[d] === "number") {
+                                        if (oldValues[d] !== editing_node[d]) {
+                                            changes[d] = oldValues[d];
+                                            changed = true;
+                                        }
+                                    } else if (d !== "nodes") {
+                                        if (JSON.stringify(oldValues[d]) !== JSON.stringify(editing_node[d])) {
+                                            changes[d] = oldValues[d];
+                                            changed = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        var newValue;
+                        if (editing_node._def.defaults) {
+                            for (d in editing_node._def.defaults) {
+                                if (editing_node._def.defaults.hasOwnProperty(d)) {
+                                    var input = $("#node-input-"+d);
+                                    if (input.attr('type') === "checkbox") {
+                                        newValue = input.prop('checked');
+                                    } else if (input.prop("nodeName") === "select" && input.attr("multiple") === "multiple") {
+                                        // An empty select-multiple box returns null.
+                                        // Need to treat that as an empty array.
+                                        newValue = input.val();
+                                        if (newValue == null) {
+                                            newValue = [];
+                                        }
+                                    } else if ("format" in editing_node._def.defaults[d] && editing_node._def.defaults[d].format !== "" && input[0].nodeName === "DIV") {
+                                        newValue = input.text();
+                                    } else {
+                                        newValue = input.val();
+                                    }
+                                    if (newValue != null) {
+                                        if (editing_node._def.defaults[d].type) {
+                                            if (newValue == "_ADD_") {
+                                                newValue = "";
+                                            }
+                                        }
+                                        if (editing_node[d] != newValue) {
+                                            if (editing_node._def.defaults[d].type) {
+                                                // Change to a related config node
+                                                var configNode = RED.nodes.node(editing_node[d]);
+                                                if (configNode) {
+                                                    var users = configNode.users;
+                                                    users.splice(users.indexOf(editing_node),1);
+                                                    RED.events.emit("nodes:change",configNode);
+                                                }
+                                                configNode = RED.nodes.node(newValue);
+                                                if (configNode) {
+                                                    configNode.users.push(editing_node);
+                                                    RED.events.emit("nodes:change",configNode);
+                                                }
+                                            }
+                                            changes[d] = editing_node[d];
+                                            editing_node[d] = newValue;
+                                            changed = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        var oldInfo = editing_node.info;
+                        if (nodeInfoEditor) {
+                            var newInfo = nodeInfoEditor.getValue();
+                            if (!!oldInfo) {
+                                // Has existing info property
+                                if (newInfo.trim() === "") {
+                                    // New value is blank - remove the property
+                                    changed = true;
+                                    changes.info = oldInfo;
+                                    delete editing_node.info;
+                                } else if (newInfo !== oldInfo) {
+                                    // New value is different
+                                    changed = true;
+                                    changes.info = oldInfo;
+                                    editing_node.info = newInfo;
+                                }
+                            } else {
+                                // No existing info
+                                if (newInfo.trim() !== "") {
+                                    // New value is not blank
+                                    changed = true;
+                                    changes.info = undefined;
+                                    editing_node.info = newInfo;
+                                }
+                            }
+                        }
+                        if (changed) {
+                            var wasChanged = editing_node.changed;
+                            editing_node.changed = true;
+                            RED.nodes.dirty(true);
+                            var historyEvent = {
+                                t:'edit',
+                                node:editing_node,
+                                changes:changes,
+                                dirty:wasDirty,
+                                changed:wasChanged
+                            };
+                            RED.history.push(historyEvent);
+                            RED.events.emit("groups:change",editing_node);
+                        }
+                        editing_node.dirty = true;
+                        RED.tray.close();
+                        RED.view.redraw(true);
+                    }
+                }
+            ],
+            resize: function(size) {
+                editTrayWidthCache['group'] = size.width;
+                $(".red-ui-tray-content").height(size.height - 50);
+                // var form = $(".red-ui-tray-content form").height(dimensions.height - 50 - 40);
+                // if (editing_node && editing_node._def.oneditresize) {
+                //     try {
+                //         editing_node._def.oneditresize.call(editing_node,{width:form.width(),height:form.height()});
+                //     } catch(err) {
+                //         console.log("oneditresize",editing_node.id,editing_node.type,err.toString());
+                //     }
+                // }
+            },
+            open: function(tray, done) {
+                var trayFooter = tray.find(".red-ui-tray-footer");
+                var trayFooterLeft = $("<div/>", {
+                    class: "red-ui-tray-footer-left"
+                }).appendTo(trayFooter)
+                var trayBody = tray.find('.red-ui-tray-body');
+                trayBody.parent().css('overflow','hidden');
+
+                var editorTabEl = $('<ul></ul>').appendTo(trayBody);
+                var editorContent = $('<div></div>').appendTo(trayBody);
+
+                var editorTabs = RED.tabs.create({
+                    element:editorTabEl,
+                    onchange:function(tab) {
+                        editorContent.children().hide();
+                        if (tab.onchange) {
+                            tab.onchange.call(tab);
+                        }
+                        tab.content.show();
+                        if (finishedBuilding) {
+                            RED.tray.resize();
+                        }
+                    },
+                    collapsible: true,
+                    menu: false
+                });
+
+                var nodePropertiesTab = {
+                    id: "editor-tab-properties",
+                    label: RED._("editor-tab.properties"),
+                    name: RED._("editor-tab.properties"),
+                    content: $('<div>', {class:"red-ui-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-cog"
+                };
+                buildEditForm(nodePropertiesTab.content,"dialog-form","group","node-red",group);
+
+                editorTabs.addTab(nodePropertiesTab);
+
+                var descriptionTab = {
+                    id: "editor-tab-description",
+                    label: RED._("editor-tab.description"),
+                    name: RED._("editor-tab.description"),
+                    content: $('<div>', {class:"red-ui-tray-content"}).appendTo(editorContent).hide(),
+                    iconClass: "fa fa-file-text-o",
+                    onchange: function() {
+                        nodeInfoEditor.focus();
+                    }
+                };
+                editorTabs.addTab(descriptionTab);
+                nodeInfoEditor = buildDescriptionForm(descriptionTab.content,editing_node);
+                prepareEditDialog(group,group._def,"node-input", function() {
+                    trayBody.i18n();
+                    finishedBuilding = true;
+                    done();
+                });
+            },
+            close: function() {
+                if (RED.view.state() != RED.state.IMPORT_DRAGGING) {
+                    RED.view.state(RED.state.DEFAULT);
+                }
+                RED.sidebar.info.refresh(editing_node);
+                nodeInfoEditor.destroy();
+                nodeInfoEditor = null;
+                editStack.pop();
+                editing_node = null;
+            },
+            show: function() {
+            }
+        }
+
+        if (editTrayWidthCache.hasOwnProperty('group')) {
+            trayOptions.width = editTrayWidthCache['group'];
         }
         RED.tray.show(trayOptions);
     }
@@ -25469,7 +30420,7 @@ RED.editor = (function() {
         if (options.globals) {
             setTimeout(function() {
                 if (!!session.$worker) {
-                    session.$worker.send("setOptions", [{globals: options.globals, esversion:6, sub:true, asi:true, maxerr:1000}]);
+                    session.$worker.send("setOptions", [{globals: options.globals, maxerr:1000}]);
                 }
             },100);
         }
@@ -25528,11 +30479,18 @@ RED.editor = (function() {
         edit: showEditDialog,
         editConfig: showEditConfigNodeDialog,
         editSubflow: showEditSubflowDialog,
+        editGroup: showEditGroupDialog,
         editJavaScript: function(options) { showTypeEditor("_js",options) },
         editExpression: function(options) { showTypeEditor("_expression", options) },
         editJSON: function(options) { showTypeEditor("_json", options) },
         editMarkdown: function(options) { showTypeEditor("_markdown", options) },
-        editText: function(options) { showTypeEditor("_text", options) },
+        editText: function(options) {
+            if (options.mode == "markdown") {
+                showTypeEditor("_markdown", options)
+            } else {
+                showTypeEditor("_text", options)
+            }
+        },
         editBuffer: function(options) { showTypeEditor("_buffer", options) },
         buildEditForm: buildEditForm,
         validateNode: validateNode,
@@ -25586,7 +30544,7 @@ RED.editor = (function() {
  **/
 (function() {
 
-    var template = '<script type="text/x-red" data-template-name="_buffer"><div id="red-ui-editor-type-buffer-panels"><div id="red-ui-editor-type-buffer-panel-str" class="red-ui-panel"><div class="form-row" style="margin-bottom: 3px; text-align: right;"><button class="red-ui-editor-type-buffer-type red-ui-button red-ui-button-small"><i class="fa fa-exclamation-circle"></i> <span id="red-ui-editor-type-buffer-type-string" data-i18n="bufferEditor.modeString"></span><span id="red-ui-editor-type-buffer-type-array" data-i18n="bufferEditor.modeArray"></span></button></div><div class="form-row node-text-editor-row"><div class="node-text-editor" id="red-ui-editor-type-buffer-str"></div></div></div><div id="red-ui-editor-type-buffer-panel-bin" class="red-ui-panel"><div class="form-row node-text-editor-row" style="margin-top: 10px"><div class="node-text-editor" id="red-ui-editor-type-buffer-bin"></div></div></div></div></script>';
+    var template = '<script type="text/x-red" data-template-name="_buffer"><div id="red-ui-editor-type-buffer-panels"><div id="red-ui-editor-type-buffer-panel-str" class="red-ui-panel"><div class="form-row" style="margin-bottom: 3px; text-align: right;"><button class="red-ui-editor-type-buffer-type red-ui-button red-ui-button-small"><i class="fa fa-exclamation-circle"></i> <span id="red-ui-editor-type-buffer-type-string" data-i18n="bufferEditor.modeString"></span><span id="red-ui-editor-type-buffer-type-array" data-i18n="bufferEditor.modeArray"></span></button></div><div class="form-row node-text-editor-row"><div class="node-text-editor" id="red-ui-editor-type-buffer-str"></div></div></div><div id="red-ui-editor-type-buffer-panel-bin" class="red-ui-panel"><div class="form-row node-text-editor-row" style="margin-top: 10px; margin-bottom:0;"><div class="node-text-editor" id="red-ui-editor-type-buffer-bin"></div></div></div></div></script>';
 
     function stringToUTF8Array(str) {
         var data = [];
@@ -25758,8 +30716,7 @@ RED.editor = (function() {
 
                     $(".red-ui-editor-type-buffer-type").on("click", function(e) {
                         e.preventDefault();
-                        RED.sidebar.info.set(RED._("bufferEditor.modeDesc"));
-                        RED.sidebar.info.show();
+                        RED.sidebar.help.set(RED._("bufferEditor.modeDesc"));
                     })
 
 
@@ -26018,8 +30975,7 @@ RED.editor = (function() {
                     var changeTimer;
                     $(".red-ui-editor-type-expression-legacy").on("click", function(e) {
                         e.preventDefault();
-                        RED.sidebar.info.set(RED._("expressionEditor.compatModeDesc"));
-                        RED.sidebar.info.show();
+                        RED.sidebar.help.set(RED._("expressionEditor.compatModeDesc"));
                     })
                     var testExpression = function() {
                         var value = testDataEditor.getValue();
@@ -26099,9 +31055,9 @@ RED.editor = (function() {
                             var p2 = $("#red-ui-editor-type-expression-panel-info > .form-row > div:first-child");
                             p2Height -= p2.outerHeight(true) + 20;
                             $(".red-ui-editor-type-expression-tab-content").height(p2Height);
-                            $("#red-ui-editor-type-expression-test-data").css("height",(p2Height-5)+"px");
+                            $("#red-ui-editor-type-expression-test-data").css("height",(p2Height-25)+"px");
                             testDataEditor.resize();
-                            $("#red-ui-editor-type-expression-test-result").css("height",(p2Height-5)+"px");
+                            $("#red-ui-editor-type-expression-test-result").css("height",(p2Height-25)+"px");
                             testResultEditor.resize();
                         }
                     });
@@ -26222,6 +31178,9 @@ RED.editor = (function() {
                         expressionEditor.gotoLine(options.cursor.row+1,options.cursor.column,false);
                     }
                     dialogForm.i18n();
+                    setTimeout(function() {
+                        expressionEditor.focus();
+                    },300);
                 },
                 close: function() {
                     expressionEditor.destroy();
@@ -27622,6 +32581,8 @@ RED.clipboard = (function() {
     var libraryBrowser;
     var examplesBrowser;
 
+    var pendingImportConfig;
+
     function setupDialogs() {
         dialog = $('<div id="red-ui-clipboard-dialog" class="hide"><form class="dialog-form form-horizontal"></form></div>')
             .appendTo("#red-ui-editor")
@@ -27636,14 +32597,14 @@ RED.clipboard = (function() {
                     "ui-widget-overlay": "red-ui-editor-dialog"
                 },
                 buttons: [
-                    {
+                    { // red-ui-clipboard-dialog-cancel
                         id: "red-ui-clipboard-dialog-cancel",
                         text: RED._("common.label.cancel"),
                         click: function() {
                             $( this ).dialog( "close" );
                         }
                     },
-                    {
+                    { // red-ui-clipboard-dialog-download
                         id: "red-ui-clipboard-dialog-download",
                         class: "primary",
                         text: RED._("clipboard.download"),
@@ -27658,7 +32619,7 @@ RED.clipboard = (function() {
                             $( this ).dialog( "close" );
                         }
                     },
-                    {
+                    { // red-ui-clipboard-dialog-export
                         id: "red-ui-clipboard-dialog-export",
                         class: "primary",
                         text: RED._("clipboard.export.copy"),
@@ -27728,14 +32689,14 @@ RED.clipboard = (function() {
                             }
                         }
                     },
-                    {
+                    { // red-ui-clipboard-dialog-ok
                         id: "red-ui-clipboard-dialog-ok",
                         class: "primary",
                         text: RED._("common.label.import"),
                         click: function() {
                             var addNewFlow = ($("#red-ui-clipboard-dialog-import-opt > a.selected").attr('id') === 'red-ui-clipboard-dialog-import-opt-new');
                             if (activeTab === "red-ui-clipboard-dialog-import-tab-clipboard") {
-                                RED.view.importNodes($("#red-ui-clipboard-dialog-import-text").val(),addNewFlow);
+                                importNodes($("#red-ui-clipboard-dialog-import-text").val(),addNewFlow);
                             } else {
                                 var selectedPath;
                                 if (activeTab === "red-ui-clipboard-dialog-import-tab-library") {
@@ -27745,15 +32706,51 @@ RED.clipboard = (function() {
                                 }
                                 if (selectedPath.path) {
                                     $.get('library/'+selectedPath.library+'/'+selectedPath.type+'/'+selectedPath.path, function(data) {
-                                        RED.view.importNodes(data,addNewFlow);
+                                        importNodes(data,addNewFlow);
                                     });
                                 }
                             }
                             $( this ).dialog( "close" );
                         }
+                    },
+                    { // red-ui-clipboard-dialog-import-conflict
+                        id: "red-ui-clipboard-dialog-import-conflict",
+                        class: "primary",
+                        text: RED._("clipboard.import.importSelected"),
+                        click: function() {
+                            var importMap = {};
+                            $('#red-ui-clipboard-dialog-import-conflicts-list input[type="checkbox"]').each(function() {
+                                importMap[$(this).attr("data-node-id")] = this.checked?"import":"skip";
+                            })
+
+                            $('.red-ui-clipboard-dialog-import-conflicts-controls input[type="checkbox"]').each(function() {
+                                if (!$(this).attr("disabled")) {
+                                    importMap[$(this).attr("data-node-id")] = this.checked?"replace":"copy"
+                                }
+                            })
+                            // skip - don't import
+                            // import - import as-is
+                            // copy - import with new id
+                            // replace - import over the top of existing
+                            pendingImportConfig.importOptions.importMap = importMap;
+
+                            var newNodes = pendingImportConfig.importNodes.filter(function(n) {
+                                if (!importMap[n.id] || importMap[n.z]) {
+                                    importMap[n.id] = importMap[n.z];
+                                }
+                                return importMap[n.id] !== "skip"
+                            })
+                            // console.table(pendingImportConfig.importNodes.map(function(n) { return {id:n.id,type:n.type,result:importMap[n.id]}}))
+                            RED.view.importNodes(newNodes, pendingImportConfig.importOptions);
+                            $( this ).dialog( "close" );
+                        }
                     }
                 ],
+                open: function( event, ui ) {
+                    RED.keyboard.disable();
+                },
                 close: function(e) {
+                    RED.keyboard.enable();
                     if (popover) {
                         popover.close(true);
                         currentPopoverError = null;
@@ -27778,7 +32775,7 @@ RED.clipboard = (function() {
                 '</div>'+
                 '<div id="red-ui-clipboard-dialog-export-tabs-content" class="red-ui-clipboard-dialog-tabs-content">'+
                     '<div id="red-ui-clipboard-dialog-export-tab-clipboard" class="red-ui-clipboard-dialog-tab-clipboard">'+
-                        '<div class="form-row">'+
+                        '<div class="form-row" style="height:calc(100% - 30px)">'+
                             '<textarea readonly id="red-ui-clipboard-dialog-export-text"></textarea>'+
                         '</div>'+
                         '<div class="form-row" style="text-align: right;">'+
@@ -27810,7 +32807,7 @@ RED.clipboard = (function() {
                             ' <a class="red-ui-button" id="red-ui-clipboard-dialog-import-file-upload-btn"><i class="fa fa-upload"></i> <span data-i18n="clipboard.selectFile"></span></a>'+
                             '<input type="file" id="red-ui-clipboard-dialog-import-file-upload" accept=".json" style="display:none">'+
                         '</div>'+
-                        '<div class="form-row">'+
+                        '<div class="form-row" style="height:calc(100% - 47px)">'+
                             '<textarea id="red-ui-clipboard-dialog-import-text"></textarea>'+
                         '</div>'+
                     '</div>'+
@@ -27825,6 +32822,14 @@ RED.clipboard = (function() {
                     '<a id="red-ui-clipboard-dialog-import-opt-new" class="red-ui-button toggle" href="#" data-i18n="clipboard.import.newFlow"></a>'+
                 '</span>'+
             '</div>';
+
+            importConflictsDialog =
+                '<div class="form-row">'+
+                    '<div class="form-row"><p data-i18n="clipboard.import.conflictNotification1"></p><p data-i18n="clipboard.import.conflictNotification2"></p></div>'+
+                    '<div class="red-ui-clipboard-dialog-import-conflicts-list-container">'+
+                        '<div id="red-ui-clipboard-dialog-import-conflicts-list"></div>'+
+                    '</div>'+
+                '</div>';
 
     }
 
@@ -27949,7 +32954,7 @@ RED.clipboard = (function() {
         }
     }
 
-    function importNodes(mode) {
+    function showImportNodes(mode) {
         if (disabled) {
             return;
         }
@@ -28035,6 +33040,8 @@ RED.clipboard = (function() {
         $("#red-ui-clipboard-dialog-cancel").show();
         $("#red-ui-clipboard-dialog-export").hide();
         $("#red-ui-clipboard-dialog-download").hide();
+        $("#red-ui-clipboard-dialog-import-conflict").hide();
+
         $("#red-ui-clipboard-dialog-ok").button("disable");
         $("#red-ui-clipboard-dialog-import-text").on("keyup", validateImport);
         $("#red-ui-clipboard-dialog-import-text").on('paste',function() { setTimeout(validateImport,10)});
@@ -28068,8 +33075,16 @@ RED.clipboard = (function() {
             },100)
         }
 
+        var dialogHeight = 400;
+        var winHeight = $(window).height();
+        if (winHeight < 600) {
+            dialogHeight = 400 - (600 - winHeight);
+        }
+        $(".red-ui-clipboard-dialog-box").height(dialogHeight);
 
-        dialog.dialog("option","title",RED._("clipboard.importNodes")).dialog("open");
+        dialog.dialog("option","title",RED._("clipboard.importNodes"))
+              .dialog("option","width",700)
+              .dialog("open");
         popover = RED.popover.create({
             target: $("#red-ui-clipboard-dialog-import-text"),
             trigger: "manual",
@@ -28078,7 +33093,7 @@ RED.clipboard = (function() {
         });
     }
 
-    function exportNodes(mode) {
+    function showExportNodes(mode) {
         if (disabled) {
             return;
         }
@@ -28177,6 +33192,7 @@ RED.clipboard = (function() {
                     nodes = [];
                     selection.forEach(function(n) {
                         nodes.push(n);
+                        nodes = nodes.concat(RED.nodes.groups(n.id));
                         nodes = nodes.concat(RED.nodes.filterNodes({z:n.id}));
                     });
                 } else {
@@ -28186,7 +33202,8 @@ RED.clipboard = (function() {
                 nodes = RED.nodes.createExportableNodeSet(nodes.filter(function(n) { return n.type !== 'subflow'}));
             } else if (type === 'red-ui-clipboard-dialog-export-rng-flow') {
                 var activeWorkspace = RED.workspaces.active();
-                nodes = RED.nodes.filterNodes({z:activeWorkspace});
+                nodes = RED.nodes.groups(activeWorkspace);
+                nodes = nodes.concat(RED.nodes.filterNodes({z:activeWorkspace}));
                 var parentNode = RED.nodes.workspace(activeWorkspace)||RED.nodes.subflow(activeWorkspace);
                 nodes.unshift(parentNode);
                 nodes = RED.nodes.createExportableNodeSet(nodes);
@@ -28213,6 +33230,8 @@ RED.clipboard = (function() {
         $("#red-ui-clipboard-dialog-ok").hide();
         $("#red-ui-clipboard-dialog-cancel").hide();
         $("#red-ui-clipboard-dialog-export").hide();
+        $("#red-ui-clipboard-dialog-import-conflict").hide();
+
         var selection = RED.workspaces.selection();
         if (selection.length > 0) {
             $("#red-ui-clipboard-dialog-export-rng-selected").trigger("click");
@@ -28231,12 +33250,23 @@ RED.clipboard = (function() {
             $("#red-ui-clipboard-dialog-export-fmt-mini").trigger("click");
         }
         tabs.activateTab("red-ui-clipboard-dialog-export-tab-"+mode);
-        dialog.dialog("option","title",RED._("clipboard.exportNodes")).dialog( "open" );
+
+        var dialogHeight = 400;
+        var winHeight = $(window).height();
+        if (winHeight < 600) {
+            dialogHeight = 400 - (600 - winHeight);
+        }
+        $(".red-ui-clipboard-dialog-box").height(dialogHeight);
+
+        dialog.dialog("option","title",RED._("clipboard.exportNodes"))
+              .dialog("option","width",700)
+              .dialog("open");
 
         $("#red-ui-clipboard-dialog-export-text").trigger("focus");
         $("#red-ui-clipboard-dialog-cancel").show();
         $("#red-ui-clipboard-dialog-export").show();
         $("#red-ui-clipboard-dialog-download").show();
+        $("#red-ui-clipboard-dialog-import-conflict").hide();
 
     }
 
@@ -28296,6 +33326,12 @@ RED.clipboard = (function() {
                             // representation or null
                             return null;
                         }
+                        if (value.type === 'bigint') {
+                            return value.data.toString();
+                        }
+                        if (value.type === 'undefined') {
+                            return undefined;
+                        }
                     }
                 }
                 return value;
@@ -28320,17 +33356,315 @@ RED.clipboard = (function() {
         }
         return result;
     }
+
+
+    function importNodes(nodesStr,addFlow) {
+        var newNodes = nodesStr;
+        if (typeof nodesStr === 'string') {
+            try {
+                nodesStr = nodesStr.trim();
+                if (nodesStr.length === 0) {
+                    return;
+                }
+                newNodes = JSON.parse(nodesStr);
+            } catch(err) {
+                var e = new Error(RED._("clipboard.invalidFlow",{message:err.message}));
+                e.code = "NODE_RED";
+                throw e;
+            }
+        }
+        var importOptions = {generateIds: false, addFlow: addFlow};
+        try {
+            RED.view.importNodes(newNodes, importOptions);
+        } catch(error) {
+            // Thrown for import_conflict
+            confirmImport(error.importConfig, newNodes, importOptions);
+        }
+    }
+
+    function confirmImport(importConfig,importNodes,importOptions) {
+        var notification = RED.notify("<p>"+RED._("clipboard.import.conflictNotification1")+"</p>",{
+            type: "info",
+            fixed: true,
+            buttons: [
+                {text: RED._("common.label.cancel"), click: function() { notification.close(); }},
+                {text: RED._("clipboard.import.viewNodes"), click: function() {
+                    notification.close();
+                    showImportConflicts(importConfig,importNodes,importOptions);
+                }},
+                {text: RED._("clipboard.import.importCopy"), click: function() {
+                    notification.close();
+                    // generateIds=true to avoid conflicts
+                    // and default to the 'old' behaviour around matching
+                    // config nodes and subflows
+                    importOptions.generateIds = true;
+                    RED.view.importNodes(importNodes, importOptions);
+                }}
+            ]
+        })
+    }
+
+    function showImportConflicts(importConfig,importNodes,importOptions) {
+
+        pendingImportConfig = {
+            importConfig: importConfig,
+            importNodes: importNodes,
+            importOptions: importOptions
+        }
+
+        var id,node;
+        var treeData = [];
+        var container;
+        var addedHeader = false;
+        for (id in importConfig.subflows) {
+            if (importConfig.subflows.hasOwnProperty(id)) {
+                if (!addedHeader) {
+                    treeData.push({gutter:$('<span data-i18n="menu.label.subflows"></span>'), label: '', class:"red-ui-clipboard-dialog-import-conflicts-item-header"})
+                    addedHeader = true;
+                }
+                node = importConfig.subflows[id];
+                var isConflicted = importConfig.conflicted[node.id];
+                var isSelected = !isConflicted;
+                var elements = getNodeElement(node, isConflicted, isSelected );
+                container = {
+                    id: node.id,
+                    gutter: elements.gutter.element,
+                    element: elements.element,
+                    class: isSelected?"":"disabled",
+                    deferBuild: true,
+                    children: []
+                }
+                treeData.push(container);
+                if (importConfig.zMap[id]) {
+                    importConfig.zMap[id].forEach(function(node) {
+                        var childElements = getNodeElement(node, importConfig.conflicted[node.id], isSelected, elements.gutter.cb);
+                        container.children.push({
+                            id: node.id,
+                            gutter: childElements.gutter.element,
+                            element: childElements.element,
+                            class: isSelected?"":"disabled"
+                        })
+                    });
+                }
+            }
+        }
+        addedHeader = false;
+        for (id in importConfig.tabs) {
+            if (importConfig.tabs.hasOwnProperty(id)) {
+                if (!addedHeader) {
+                    treeData.push({gutter:$('<span data-i18n="menu.label.flows"></span>'), label: '', class:"red-ui-clipboard-dialog-import-conflicts-item-header"})
+                    addedHeader = true;
+                }
+                node = importConfig.tabs[id];
+                var isConflicted = importConfig.conflicted[node.id];
+                var isSelected = true;
+                var elements = getNodeElement(node, isConflicted, isSelected);
+                container = {
+                    id: node.id,
+                    gutter: elements.gutter.element,
+                    element: elements.element,
+                    icon: "red-ui-icons red-ui-icons-flow",
+                    deferBuild: true,
+                    class: isSelected?"":"disabled",
+                    children: []
+                }
+                treeData.push(container);
+                if (importConfig.zMap[id]) {
+                    importConfig.zMap[id].forEach(function(node) {
+                        var childElements = getNodeElement(node, importConfig.conflicted[node.id], isSelected, elements.gutter.cb);
+                        container.children.push({
+                            id: node.id,
+                            gutter: childElements.gutter.element,
+                            element: childElements.element,
+                            class: isSelected?"":"disabled"
+                        })
+                        // console.log("   ["+(importConfig.conflicted[node.id]?"*":" ")+"] "+node.type+" "+node.id);
+                    });
+                }
+            }
+        }
+        addedHeader = false;
+        var extraNodes = [];
+        importConfig.all.forEach(function(node) {
+            if (node.type !== "tab" && node.type !== "subflow" && !importConfig.tabs[node.z] && !importConfig.subflows[node.z]) {
+                var isConflicted = importConfig.conflicted[node.id];
+                var isSelected = !isConflicted || !importConfig.configs[node.id];
+                var elements = getNodeElement(node, isConflicted, isSelected);
+                var item = {
+                    id: node.id,
+                    gutter: elements.gutter.element,
+                    element: elements.element,
+                    class: isSelected?"":"disabled"
+                }
+                if (importConfig.configs[node.id]) {
+                    extraNodes.push(item);
+                } else {
+                    if (!addedHeader) {
+                        treeData.push({gutter:$('<span data-i18n="menu.label.nodes"></span>'), label: '', class:"red-ui-clipboard-dialog-import-conflicts-item-header"})
+                        addedHeader = true;
+                    }
+                    treeData.push(item);
+                }
+                // console.log("["+(importConfig.conflicted[node.id]?"*":" ")+"] "+node.type+" "+node.id);
+            }
+        })
+        if (extraNodes.length > 0) {
+            treeData.push({gutter:$('<span data-i18n="menu.label.displayConfig"></span>'), label: '', class:"red-ui-clipboard-dialog-import-conflicts-item-header"})
+            addedHeader = true;
+            treeData = treeData.concat(extraNodes);
+
+        }
+        dialogContainer.empty();
+        dialogContainer.append($(importConflictsDialog));
+
+
+        var nodeList = $("#red-ui-clipboard-dialog-import-conflicts-list").css({position:"absolute",top:0,right:0,bottom:0,left:0}).treeList({
+            data: treeData
+        })
+
+        dialogContainer.i18n();
+        var dialogHeight = 400;
+        var winHeight = $(window).height();
+        if (winHeight < 600) {
+            dialogHeight = 400 - (600 - winHeight);
+        }
+        $(".red-ui-clipboard-dialog-box").height(dialogHeight);
+
+        $("#red-ui-clipboard-dialog-ok").hide();
+        $("#red-ui-clipboard-dialog-cancel").show();
+        $("#red-ui-clipboard-dialog-export").hide();
+        $("#red-ui-clipboard-dialog-download").hide();
+        $("#red-ui-clipboard-dialog-import-conflict").show();
+
+
+        dialog.dialog("option","title",RED._("clipboard.importNodes"))
+              .dialog("option","width",500)
+              .dialog( "open" );
+
+    }
+
+    function getNodeElement(n, isConflicted, isSelected, parent) {
+        var element;
+        if (n.type === "tab") {
+            element = getFlowLabel(n, isSelected);
+        } else {
+            element = getNodeLabel(n, isConflicted, isSelected);
+        }
+        var controls = $('<div>',{class:"red-ui-clipboard-dialog-import-conflicts-controls"}).appendTo(element);
+        controls.on("click", function(evt) { evt.stopPropagation(); });
+        if (isConflicted && !parent) {
+            var cb = $('<label><input '+(isSelected?'':'disabled ')+'type="checkbox" data-node-id="'+n.id+'"> <span data-i18n="clipboard.import.replace"></span></label>').appendTo(controls);
+            if (n.type === "tab" || (n.type !== "subflow" && n.hasOwnProperty("x") && n.hasOwnProperty("y"))) {
+                cb.hide();
+            }
+        }
+        return {
+            element: element,
+            gutter: getGutter(n, isSelected, parent)
+        }
+    }
+
+    function getGutter(n, isSelected, parent) {
+        var span = $("<label>",{class:"red-ui-clipboard-dialog-import-conflicts-gutter"});
+        var cb = $('<input data-node-id="'+n.id+'" type="checkbox" '+(isSelected?"checked":"")+'>').appendTo(span);
+
+        if (parent) {
+            cb.attr("disabled",true);
+            parent.addChild(cb);
+        }
+        span.on("click", function(evt) {
+            evt.stopPropagation();
+        })
+        cb.on("change", function(evt) {
+            var state = this.checked;
+            span.parent().toggleClass("disabled",!!!state);
+            span.parent().find('.red-ui-clipboard-dialog-import-conflicts-controls  input[type="checkbox"]').attr("disabled",!!!state);
+            childItems.forEach(function(c) {
+                c.attr("checked",state);
+                c.trigger("change");
+            });
+        })
+        var childItems = [];
+
+        var checkbox = {
+            addChild: function(c) {
+                childItems.push(c);
+            }
+        }
+
+        return {
+            cb: checkbox,
+            element: span
+        }
+    }
+
+    function getNodeLabelText(n) {
+        var label = n.name || n.type+": "+n.id;
+        if (n._def.label) {
+            try {
+                label = (typeof n._def.label === "function" ? n._def.label.call(n) : n._def.label)||"";
+            } catch(err) {
+                console.log("Definition error: "+n.type+".label",err);
+            }
+        }
+        var newlineIndex = label.indexOf("\\n");
+        if (newlineIndex > -1) {
+            label = label.substring(0,newlineIndex)+"...";
+        }
+        return label;
+    }
+
+    function getFlowLabel(n) {
+        n = JSON.parse(JSON.stringify(n));
+        n._def = RED.nodes.getType(n.type) || {};
+        if (n._def) {
+            n._ = n._def._;
+        }
+
+        var div = $('<div>',{class:"red-ui-info-outline-item red-ui-info-outline-item-flow"});
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description red-ui-info-outline-item-label"}).appendTo(div);
+        var label = (typeof n === "string")? n : n.label;
+        var newlineIndex = label.indexOf("\\n");
+        if (newlineIndex > -1) {
+            label = label.substring(0,newlineIndex)+"...";
+        }
+        contentDiv.text(label);
+        // A conflicted flow should not be imported by default.
+        return div;
+    }
+
+    function getNodeLabel(n, isConflicted) {
+        n = JSON.parse(JSON.stringify(n));
+        n._def = RED.nodes.getType(n.type) || {};
+        if (n._def) {
+            n._ = n._def._;
+        }
+        var div = $('<div>',{class:"red-ui-info-outline-item"});
+        RED.utils.createNodeIcon(n).appendTo(div);
+        var contentDiv = $('<div>',{class:"red-ui-search-result-description"}).appendTo(div);
+        var labelText = getNodeLabelText(n);
+        var label = $('<div>',{class:"red-ui-search-result-node-label red-ui-info-outline-item-label"}).appendTo(contentDiv);
+        if (labelText) {
+            label.text(labelText)
+        } else {
+            label.html(n.type)
+        }
+        return div;
+    }
+
     return {
         init: function() {
             setupDialogs();
 
             $('<input type="text" id="red-ui-clipboard-hidden" tabIndex="-1">').appendTo("#red-ui-editor");
 
-            RED.actions.add("core:show-export-dialog",exportNodes);
-            RED.actions.add("core:show-import-dialog",importNodes);
+            RED.actions.add("core:show-export-dialog",showExportNodes);
+            RED.actions.add("core:show-import-dialog",showImportNodes);
 
-            RED.actions.add("core:show-library-export-dialog",function() { exportNodes('library') });
-            RED.actions.add("core:show-library-import-dialog",function() { importNodes('library') });
+            RED.actions.add("core:show-library-export-dialog",function() { showExportNodes('library') });
+            RED.actions.add("core:show-library-import-dialog",function() { showImportNodes('library') });
+
+            RED.actions.add("core:show-examples-import-dialog",function() { showImportNodes('examples') });
 
             RED.events.on("editor:open",function() { disabled = true; });
             RED.events.on("editor:close",function() { disabled = false; });
@@ -28364,7 +33698,7 @@ RED.clipboard = (function() {
                 if ($.inArray("text/plain",event.originalEvent.dataTransfer.types) != -1) {
                     var data = event.originalEvent.dataTransfer.getData("text/plain");
                     data = data.substring(data.indexOf('['),data.lastIndexOf(']')+1);
-                    RED.view.importNodes(data);
+                    importNodes(data);
                 } else if ($.inArray("Files",event.originalEvent.dataTransfer.types) != -1) {
                     var files = event.originalEvent.dataTransfer.files;
                     if (files.length === 1) {
@@ -28372,7 +33706,7 @@ RED.clipboard = (function() {
                         var reader = new FileReader();
                         reader.onload = (function(theFile) {
                             return function(e) {
-                                RED.view.importNodes(e.target.result);
+                                importNodes(e.target.result);
                             };
                         })(file);
                         reader.readAsText(file);
@@ -28383,8 +33717,8 @@ RED.clipboard = (function() {
             });
 
         },
-        import: importNodes,
-        export: exportNodes,
+        import: showImportNodes,
+        export: showExportNodes,
         copyText: copyText
     }
 })();
@@ -28412,7 +33746,7 @@ RED.library = (function() {
 
     var _libraryLookup = '<div id="red-ui-library-dialog-load" class="hide">'+
         '<form class="form-horizontal">'+
-            '<div style="height: 400px; position:relative; ">'+
+            '<div class="red-ui-library-dialog-box" style="height: 400px; position:relative; ">'+
                 '<div id="red-ui-library-dialog-load-panes">'+
                     '<div class="red-ui-panel" id="red-ui-library-dialog-load-browser"></div>'+
                     '<div class="red-ui-panel">'+
@@ -28431,7 +33765,7 @@ RED.library = (function() {
 
     var _librarySave = '<div id="red-ui-library-dialog-save" class="hide">'+
         '<form class="form-horizontal">'+
-        '<div style="height: 400px; position:relative; ">'+
+        '<div class="red-ui-library-dialog-box" style="height: 400px; position:relative; ">'+
             '<div id="red-ui-library-dialog-save-browser"></div>'+
             '<div class="form-row">'+
                 '<label data-i18n="clipboard.export.exportAs"></label><input id="red-ui-library-dialog-save-filename" type="text">'+
@@ -28454,12 +33788,14 @@ RED.library = (function() {
 
         var queryArgs = [];
         var data = {};
-        for (var i=0; i<activeLibrary.fields.length; i++) {
+        for (var i=0; i < activeLibrary.fields.length; i++) {
             var field = activeLibrary.fields[i];
-            if (field == "name") {
+            if (field === "name") {
                 data.name = name;
+            } else if (typeof(field) === 'object') {
+                data[field.name] = field.get();
             } else {
-                data[field] = $("#"+elementPrefix+field).val();
+                data[field] = $("#" + elementPrefix + field).val();
             }
         }
         data.text = activeLibrary.editor.getValue();
@@ -28644,6 +33980,13 @@ RED.library = (function() {
                     libraryEditor.renderer.$cursorLayer.element.style.opacity=0;
                     libraryEditor.$blockScrolling = Infinity;
 
+                    var dialogHeight = 400;
+                    var winHeight = $(window).height();
+                    if (winHeight < 570) {
+                        dialogHeight = 400 - (570 - winHeight);
+                    }
+                    $("#red-ui-library-dialog-load .red-ui-library-dialog-box").height(dialogHeight);
+
                     $( "#red-ui-library-dialog-load" ).dialog("option","title",RED._("library.typeLibrary", {type:options.type})).dialog( "open" );
                 }
             },
@@ -28683,6 +34026,15 @@ RED.library = (function() {
                             saveLibraryBrowser.select(listing[0].children[0]);
                         },200);
                     });
+
+                    var dialogHeight = 400;
+                    var winHeight = $(window).height();
+                    if (winHeight < 570) {
+                        dialogHeight = 400 - (570 - winHeight);
+                    }
+                    $("#red-ui-library-dialog-save .red-ui-library-dialog-box").height(dialogHeight);
+
+
                     $( "#red-ui-library-dialog-save" ).dialog( "open" );
                 }
             }
@@ -28844,6 +34196,8 @@ RED.library = (function() {
                 autoOpen: false,
                 width: 800,
                 resizable: false,
+                open: function( event, ui ) { RED.keyboard.disable() },
+                close: function( event, ui ) { RED.keyboard.enable() },
                 classes: {
                     "ui-dialog": "red-ui-editor-dialog",
                     "ui-dialog-titlebar-close": "hide",
@@ -28908,23 +34262,31 @@ RED.library = (function() {
                     {
                         text: RED._("common.label.load"),
                         class: "primary",
-                        click: function() {
+                        click: function () {
                             if (selectedLibraryItem) {
                                 var elementPrefix = activeLibrary.elementPrefix || "node-input-";
-                                for (var i=0; i<activeLibrary.fields.length; i++) {
+                                for (var i = 0; i < activeLibrary.fields.length; i++) {
                                     var field = activeLibrary.fields[i];
-                                    $("#"+elementPrefix+field).val(selectedLibraryItem[field]);
+                                    if (typeof(field) === 'object') {
+                                        var val = selectedLibraryItem[field.name];
+                                        field.set(val);
+                                    }
+                                    else {
+                                        $("#"+elementPrefix+field).val(selectedLibraryItem[field]);
+                                    }
                                 }
-                                activeLibrary.editor.setValue(libraryEditor.getValue(),-1);
+                                activeLibrary.editor.setValue(libraryEditor.getValue(), -1);
                             }
                             $( this ).dialog( "close" );
                         }
                     }
                 ],
                 open: function(e) {
+                    RED.keyboard.disable();
                     $(this).parent().find(".ui-dialog-titlebar-close").hide();
                 },
                 close: function(e) {
+                    RED.keyboard.enable();
                     if (libraryEditor) {
                         libraryEditor.destroy();
                         libraryEditor = null;
@@ -29282,10 +34644,8 @@ RED.search = (function() {
     var visible = false;
 
     var index = {};
-    var keys = [];
-    var results = [];
+    var currentResults = [];
     var previousActiveElement;
-
 
     function indexProperty(node,label,property) {
         if (typeof property === 'string' || typeof property === 'number') {
@@ -29320,53 +34680,110 @@ RED.search = (function() {
         }
         for (var i=0;i<properties.length;i++) {
             if (n.hasOwnProperty(properties[i])) {
+                if (n.type === "group" && properties[i] === "nodes") {
+                    continue;
+                }
                 indexProperty(n, l, n[properties[i]]);
             }
         }
     }
 
-    function indexWorkspace() {
-        index = {};
-        RED.nodes.eachWorkspace(indexNode);
-        RED.nodes.eachSubflow(indexNode);
-        RED.nodes.eachConfig(indexNode);
-        RED.nodes.eachNode(indexNode);
-        keys = Object.keys(index);
-        keys.sort();
-        keys.forEach(function(key) {
-            index[key] = Object.keys(index[key]).map(function(id) {
-                return index[key][id];
-            })
-        })
+    function extractFlag(val, flagName, flags) {
+        // is:XYZ
+
+        var regEx = new RegExp("(?:^| )is:"+flagName+"(?: |$)");
+        var m = regEx.exec(val);
+        if (m) {
+            val = val.replace(regEx," ").trim();
+            flags[flagName] = true;
+        }
+        return val;
+    }
+
+    function extractValue(val, flagName, flags) {
+        // flagName:XYZ
+        var regEx = new RegExp("(?:^| )"+flagName+":([^ ]+)(?: |$)");
+        var m
+        while(!!(m = regEx.exec(val))) {
+            val = val.replace(regEx," ").trim();
+            flags[flagName] = flags[flagName] || [];
+            flags[flagName].push(m[1]);
+        }
+        return val;
     }
 
     function search(val) {
-        searchResults.editableList('empty');
+        var results = [];
+        var keys = [];
         var typeFilter;
         var m = /(?:^| )type:([^ ]+)/.exec(val);
         if (m) {
             val = val.replace(/(?:^| )type:[^ ]+/,"");
             typeFilter = m[1];
         }
+        var flags = {};
+        val = extractFlag(val,"invalid",flags);
+        val = extractFlag(val,"unused",flags);
+        val = extractFlag(val,"config",flags);
+        val = extractFlag(val,"subflow",flags);
+        // uses:<node-id>
+        val = extractValue(val,"uses",flags);
+
+        var hasFlags = Object.keys(flags).length > 0;
 
         val = val.trim();
 
-        selected = -1;
-        results = [];
-        if (val.length > 0 || typeFilter) {
+        if (val.length > 0 || typeFilter || hasFlags) {
             val = val.toLowerCase();
             var i;
             var j;
             var list = [];
             var nodes = {};
+            if (flags.uses) {
+                keys = flags.uses;
+            } else {
+                keys = Object.keys(index);
+            }
             for (i=0;i<keys.length;i++) {
                 var key = keys[i];
                 var kpos = keys[i].indexOf(val);
                 if (kpos > -1) {
-                    for (j=0;j<index[key].length;j++) {
-                        var node = index[key][j];
+                    var ids = Object.keys(index[key]);
+                    for (j=0;j<ids.length;j++) {
+                        var node = index[key][ids[j]];
+                        var isConfigNode = node.node._def.category === "config" && node.node.type !== 'group';
+                        if (flags.uses && key === node.node.id) {
+                            continue;
+                        }
+                        if (flags.hasOwnProperty("invalid")) {
+                            var nodeIsValid = !node.node.hasOwnProperty("valid") || node.node.valid;
+                            if (flags.invalid === nodeIsValid) {
+                                continue;
+                            }
+                        }
+                        if (flags.hasOwnProperty("config")) {
+                            if (flags.config !== isConfigNode) {
+                                continue;
+                            }
+                        }
+                        if (flags.hasOwnProperty("subflow")) {
+                            if (flags.subflow !== (node.node.type === 'subflow')) {
+                                continue;
+                            }
+                        }
+
+                        if (flags.hasOwnProperty("unused")) {
+                            var isUnused = (node.node.type === 'subflow' && node.node.instances.length === 0) ||
+                                           (isConfigNode && node.node.users.length === 0)
+                            if (flags.unused !== isUnused) {
+                                continue;
+                            }
+                        }
                         if (!typeFilter || node.node.type === typeFilter) {
-                            nodes[node.node.id] = nodes[node.node.id] = node;
+                            nodes[node.node.id] = nodes[node.node.id] = {
+                                node: node.node,
+                                label: node.label
+                            };
                             nodes[node.node.id].index = Math.min(nodes[node.node.id].index||Infinity,kpos);
                         }
                     }
@@ -29380,22 +34797,8 @@ RED.search = (function() {
             for (i=0;i<list.length;i++) {
                 results.push(nodes[list[i]]);
             }
-            if (results.length > 0) {
-                for (i=0;i<Math.min(results.length,25);i++) {
-                    searchResults.editableList('addItem',results[i])
-                }
-                if (results.length > 25) {
-                    searchResults.editableList('addItem', {
-                        more: {
-                            results: results,
-                            start: 25
-                        }
-                    })
-                }
-            } else {
-                searchResults.editableList('addItem',{});
-            }
         }
+        return results;
     }
 
     function ensureSelectedIsVisible() {
@@ -29420,13 +34823,37 @@ RED.search = (function() {
         searchInput = $('<input type="text" data-i18n="[placeholder]menu.label.searchInput">').appendTo(searchDiv).searchBox({
             delay: 200,
             change: function() {
-                search($(this).val());
+                searchResults.editableList('empty');
+                selected = -1;
+                currentResults = search($(this).val());
+                if (currentResults.length > 0) {
+                    for (i=0;i<Math.min(currentResults.length,25);i++) {
+                        searchResults.editableList('addItem',currentResults[i])
+                    }
+                    if (currentResults.length > 25) {
+                        searchResults.editableList('addItem', {
+                            more: {
+                                results: currentResults,
+                                start: 25
+                            }
+                        })
+                    }
+                } else {
+                    searchResults.editableList('addItem',{});
+                }
+
+
             }
+        });
+        var copySearchContainer = $('<button type="button" class="red-ui-button red-ui-button-small"><i class="fa fa-caret-right"></button>').appendTo(searchDiv).on('click', function(evt) {
+            evt.preventDefault();
+            RED.sidebar.info.outliner.search(searchInput.val())
+            hide();
         });
 
         searchInput.on('keydown',function(evt) {
             var children;
-            if (results.length > 0) {
+            if (currentResults.length > 0) {
                 if (evt.keyCode === 40) {
                     // Down
                     children = searchResults.children();
@@ -29458,21 +34885,21 @@ RED.search = (function() {
                         var object = $(children[selected]).find(".red-ui-editableList-item-content").data('data');
                         if (object) {
                             searchResults.editableList('removeItem',object);
-                            for (i=object.more.start;i<Math.min(results.length,object.more.start+25);i++) {
-                                searchResults.editableList('addItem',results[i])
+                            for (i=object.more.start;i<Math.min(currentResults.length,object.more.start+25);i++) {
+                                searchResults.editableList('addItem',currentResults[i])
                             }
-                            if (results.length > object.more.start+25) {
+                            if (currentResults.length > object.more.start+25) {
                                 searchResults.editableList('addItem', {
                                     more: {
-                                        results: results,
+                                        results: currentResults,
                                         start: object.more.start+25
                                     }
                                 })
                             }
                         }
                     } else {
-                        if (results.length > 0) {
-                            reveal(results[Math.max(0,selected)].node);
+                        if (currentResults.length > 0) {
+                            reveal(currentResults[Math.max(0,selected)].node);
                         }
                     }
                 }
@@ -29493,13 +34920,13 @@ RED.search = (function() {
                     div.on("click", function(evt) {
                         evt.preventDefault();
                         searchResults.editableList('removeItem',object);
-                        for (i=object.more.start;i<Math.min(results.length,object.more.start+25);i++) {
-                            searchResults.editableList('addItem',results[i])
+                        for (i=object.more.start;i<Math.min(currentResults.length,object.more.start+25);i++) {
+                            searchResults.editableList('addItem',currentResults[i])
                         }
-                        if (results.length > object.more.start+25) {
+                        if (currentResults.length > object.more.start+25) {
                             searchResults.editableList('addItem', {
                                 more: {
-                                    results: results,
+                                    results: currentResults,
                                     start: object.more.start+25
                                 }
                             })
@@ -29512,17 +34939,7 @@ RED.search = (function() {
                     var def = node._def;
                     div = $('<a>',{href:'#',class:"red-ui-search-result"}).appendTo(container);
 
-                    var nodeDiv = $('<div>',{class:"red-ui-search-result-node"}).appendTo(div);
-                    var colour = RED.utils.getNodeColor(node.type,def);
-                    var icon_url = RED.utils.getNodeIcon(def,node);
-                    if (node.type === 'tab') {
-                        colour = "#C0DEED";
-                    }
-                    nodeDiv.css('backgroundColor',colour);
-
-                    var iconContainer = $('<div/>',{class:"red-ui-palette-icon-container"}).appendTo(nodeDiv);
-                    RED.utils.createIconElement(icon_url, iconContainer, true);
-
+                    RED.utils.createNodeIcon(node).appendTo(div);
                     var contentDiv = $('<div>',{class:"red-ui-search-result-node-description"}).appendTo(div);
                     if (node.z) {
                         var workspace = RED.nodes.workspace(node.z);
@@ -29567,7 +34984,7 @@ RED.search = (function() {
             $("#red-ui-palette-shade").show();
             $("#red-ui-sidebar-shade").show();
             $("#red-ui-sidebar-separator").hide();
-            indexWorkspace();
+
             if (dialog === null) {
                 createDialog();
             }
@@ -29601,6 +35018,28 @@ RED.search = (function() {
         }
     }
 
+    function clearIndex() {
+        index = {};
+    }
+
+    function addItemToIndex(item) {
+        indexNode(item);
+    }
+    function removeItemFromIndex(item) {
+        var keys = Object.keys(index);
+        for (var i=0,l=keys.length;i<l;i++) {
+            delete index[keys[i]][item.id];
+            if (Object.keys(index[keys[i]]).length === 0) {
+                delete index[keys[i]];
+            }
+        }
+    }
+    function updateItemOnIndex(item) {
+        removeItemFromIndex(item);
+        addItemToIndex(item);
+    }
+
+
     function init() {
         RED.actions.add("core:search",show);
 
@@ -29617,12 +35056,33 @@ RED.search = (function() {
         $("#red-ui-editor-shade").on('mousedown',hide);
         $("#red-ui-palette-shade").on('mousedown',hide);
         $("#red-ui-sidebar-shade").on('mousedown',hide);
+
+
+        RED.events.on("workspace:clear", clearIndex);
+
+        RED.events.on("flows:add", addItemToIndex);
+        RED.events.on("flows:remove", removeItemFromIndex);
+        RED.events.on("flows:change", updateItemOnIndex);
+
+        RED.events.on("subflows:add", addItemToIndex);
+        RED.events.on("subflows:remove", removeItemFromIndex);
+        RED.events.on("subflows:change", updateItemOnIndex);
+
+        RED.events.on("nodes:add",addItemToIndex);
+        RED.events.on("nodes:remove",removeItemFromIndex);
+        RED.events.on("nodes:change",updateItemOnIndex);
+
+        RED.events.on("groups:add",addItemToIndex);
+        RED.events.on("groups:remove",removeItemFromIndex);
+        RED.events.on("groups:change",updateItemOnIndex);
+
     }
 
     return {
         init: init,
         show: show,
-        hide: hide
+        hide: hide,
+        search: search
     };
 
 })();
@@ -30099,10 +35559,13 @@ RED.actionList = (function() {
         $(document).off('mousedown.red-ui-type-search');
         $(document).off('mouseup.red-ui-type-search');
         $(document).off('click.red-ui-type-search');
+        $(document).off('touchstart.red-ui-type-search');
+        $(document).off('mousedown.red-ui-type-search');
         setTimeout(function() {
             $(document).on('mousedown.red-ui-type-search',handleMouseActivity);
             $(document).on('mouseup.red-ui-type-search',handleMouseActivity);
             $(document).on('click.red-ui-type-search',handleMouseActivity);
+            $(document).on('touchstart.red-ui-type-search',handleMouseActivity);
         },200);
 
         refreshTypeList(opts);
@@ -30118,7 +35581,9 @@ RED.actionList = (function() {
         searchResultsDiv.slideDown(300);
         setTimeout(function() {
             searchResultsDiv.find(".red-ui-editableList-container").scrollTop(0);
-            searchInput.trigger("focus");
+            if (!opts.disableFocus) {
+                searchInput.trigger("focus");
+            }
         },100);
     }
     function hide(fast) {
@@ -30137,6 +35602,7 @@ RED.actionList = (function() {
             $(document).off('mousedown.red-ui-type-search');
             $(document).off('mouseup.red-ui-type-search');
             $(document).off('click.red-ui-type-search');
+            $(document).off('touchstart.red-ui-type-search');
         }
     }
     function getTypeLabel(type, def) {
@@ -30258,9 +35724,8 @@ RED.actionList = (function() {
  *
  * Todo after update:
  * - Search for "ports", "inputs" and "outputs" and replace make the necessary changes. Replace "ports" with "outputPorts" and add necessary code for input ports.
- * - Search for "link " and replace with "link-"
  * - Search for Node-RED property item types (num, str, json, bin, env) and replace them with Node-BLUE-supported types.
- **/
+ */
 
 /**
  * Copyright JS Foundation and other contributors, http://js.foundation
@@ -30334,6 +35799,10 @@ RED.subflow = (function() {
 
     function addSubflowInput() {
         var subflow = RED.nodes.subflow(RED.workspaces.active());
+        //Removed by Homegear GmbH to support multiple inputs
+        /*if (subflow.in.length === 1) {
+            return;
+        }*/
         var position = findAvailableSubflowIOPosition(subflow,true);
         var newInput = {
             type:"subflow",
@@ -30365,8 +35834,10 @@ RED.subflow = (function() {
         RED.view.select();
         RED.nodes.dirty(true);
         RED.view.redraw();
-        $("#red-ui-subflow-input .spinner-value").html(subflow.in.length);
-        RED.palette.refresh();
+        /*$("#red-ui-subflow-input-add").addClass("active"); //Removed by Homegear GmbH
+        $("#red-ui-subflow-input-remove").removeClass("active");*/
+        $("#red-ui-subflow-input .spinner-value").html(subflow.in.length); //Added by Homegear GmbH to support multiple inputs
+        RED.events.emit("subflows:change",subflow);
     }
 
     function removeSubflowInput() {
@@ -30374,6 +35845,21 @@ RED.subflow = (function() {
         if (activeSubflow.in.length === 0) {
             return;
         }
+        //Removed by Homegear GmbH
+        /*var removedInput = activeSubflow.in[0];
+        var removedInputLinks = [];
+        RED.nodes.eachLink(function(l) {
+            if (l.source.type == "subflow" && l.source.z == activeSubflow.id && l.source.i == removedInput.i) {
+                removedInputLinks.push(l);
+            } else if (l.target.type == "subflow:"+activeSubflow.id) {
+                removedInputLinks.push(l);
+            }
+        });
+        removedInputLinks.forEach(function(l) { RED.nodes.removeLink(l)});
+        activeSubflow.in = [];
+        $("#red-ui-subflow-input-add").removeClass("active");
+        $("#red-ui-subflow-input-remove").addClass("active");*/
+        //{{{ Added by Homegear GmbH to support multiple inputs - copied fom removeSubflowOutput and renamed "out" to "in"
         if (typeof removedSubflowInputs === "undefined") {
             removedSubflowInputs = [activeSubflow.in[activeSubflow.in.length-1]];
         }
@@ -30405,9 +35891,11 @@ RED.subflow = (function() {
                 activeSubflow.in[j].dirty = true;
             }
         }
+        //}}}
         activeSubflow.changed = true;
-        RED.palette.refresh();
-        return {subflowInputs: removedSubflowInputs, links: removedLinks}
+        RED.events.emit("subflows:change",activeSubflow);
+        //return {subflowInputs: [ removedInput ], links:removedInputLinks}; //Removed by Homegear GmbH
+        return {subflowInputs: removedSubflowInputs, links: removedLinks} //Added by Homegear GmbH
     }
 
     function addSubflowOutput(id) {
@@ -30447,7 +35935,7 @@ RED.subflow = (function() {
         RED.nodes.dirty(true);
         RED.view.redraw();
         $("#red-ui-subflow-output .spinner-value").text(subflow.out.length);
-        RED.palette.refresh();
+        RED.events.emit("subflows:change",subflow);
     }
 
     function removeSubflowOutput(removedSubflowOutputs) {
@@ -30487,7 +35975,7 @@ RED.subflow = (function() {
             }
         }
         activeSubflow.changed = true;
-        RED.palette.refresh();
+        RED.events.emit("subflows:change",activeSubflow);
         return {subflowOutputs: removedSubflowOutputs, links: removedLinks}
     }
 
@@ -30522,6 +36010,7 @@ RED.subflow = (function() {
         RED.view.select();
         RED.nodes.dirty(true);
         RED.view.redraw();
+        RED.events.emit("subflows:change",subflow);
         $("#red-ui-subflow-status").prop("checked",!!subflow.status);
         $("#red-ui-subflow-status").parent().parent().toggleClass("active",!!subflow.status);
     }
@@ -30560,13 +36049,7 @@ RED.subflow = (function() {
                     n.changed = true;
                 }
                 n.inputs = activeSubflow.in.length;
-                while (n.inputs < n.inputPorts.length) {
-                    n.inputPorts.pop();
-                }
                 n.outputs = activeSubflow.out.length;
-                while (n.outputs < n.outputPorts.length) {
-                    n.outputPorts.pop();
-                }
                 n.resize = true;
                 n.dirty = true;
                 RED.editor.updateNodeProperties(n);
@@ -30583,7 +36066,7 @@ RED.subflow = (function() {
             $("#red-ui-subflow-input-add").toggleClass("active", activeSubflow.in.length !== 0);
             $("#red-ui-subflow-input-remove").toggleClass("active",activeSubflow.in.length === 0);
 
-            $("#red-ui-subflow-input .spinner-value").text(activeSubflow.in.length);
+            $("#red-ui-subflow-input .spinner-value").text(activeSubflow.in.length); //Added by Homegear GmbH to support multiple inputs
             $("#red-ui-subflow-output .spinner-value").text(activeSubflow.out.length);
 
             $("#red-ui-subflow-status").prop("checked",!!activeSubflow.status);
@@ -30600,6 +36083,13 @@ RED.subflow = (function() {
         $('<a class="button" id="red-ui-subflow-edit" href="#" data-i18n="[append]subflow.editSubflowProperties"><i class="fa fa-pencil"></i> </a>').appendTo(toolbar);
 
         // Inputs
+        //Removed by Homegear GmbH
+        /*$('<span style="margin-left: 5px;" data-i18n="subflow.input"></span> '+
+            '<div style="display: inline-block;" class="button-group">'+
+            '<a id="red-ui-subflow-input-remove" class="button active" href="#">0</a>'+
+            '<a id="red-ui-subflow-input-add" class="button" href="#">1</a>'+
+            '</div>').appendTo(toolbar);*/
+        //Added by Homegear GmbH to support multiple inputs - copied from "Outputs" block below
         $('<span style="margin-left: 5px;" data-i18n="subflow.input"></span> <div id="red-ui-subflow-input" style="display: inline-block;" class="button-group spinner-group">'+
             '<a id="red-ui-subflow-input-remove" class="button" href="#"><i class="fa fa-minus"></i></a>'+
             '<div class="spinner-value">3</div>'+
@@ -30614,7 +36104,9 @@ RED.subflow = (function() {
             '</div>').appendTo(toolbar);
 
         // Status
-        // Hide status as this is not implemented in Homegear
+        //Removed by Homegear GmbH
+        //$('<span class="button-group"><span class="button" style="padding:0"><label for="red-ui-subflow-status"><input id="red-ui-subflow-status" type="checkbox"> <span data-i18n="subflow.status"></span></label></span></span>').appendTo(toolbar);
+        //Added by Homegear GmbH - hide status is this is not implemented
         $('<span class="button-group" style="display: none"><span class="button" style="padding:0"><label for="red-ui-subflow-status"><input id="red-ui-subflow-status" type="checkbox"> <span data-i18n="subflow.status"></span></label></span></span>').appendTo(toolbar);
 
         // $('<a class="button disabled" id="red-ui-subflow-add-input" href="#" data-i18n="[append]subflow.input"><i class="fa fa-plus"></i> </a>').appendTo(toolbar);
@@ -30738,26 +36230,30 @@ RED.subflow = (function() {
         $("#red-ui-workspace-chart").css({"margin-top": "0"});
     }
 
-    function removeSubflow(id) {
+    function removeSubflow(id, keepInstanceNodes) {
+        // TODO:  A lot of this logic is common with RED.nodes.removeWorkspace
         var removedNodes = [];
         var removedLinks = [];
+        var removedGroups = [];
 
         var activeSubflow = RED.nodes.subflow(id);
 
         RED.nodes.eachNode(function(n) {
-            if (n.type == "subflow:"+activeSubflow.id) {
+            if (!keepInstanceNodes && n.type == "subflow:"+id) {
                 removedNodes.push(n);
             }
-            if (n.z == activeSubflow.id) {
+            if (n.z == id) {
                 removedNodes.push(n);
             }
         });
         RED.nodes.eachConfig(function(n) {
-            if (n.z == activeSubflow.id) {
+            if (n.z == id) {
                 removedNodes.push(n);
             }
         });
-
+        RED.nodes.groups(id).forEach(function(n) {
+            removedGroups.push(n);
+        })
         var removedConfigNodes = [];
         for (var i=0;i<removedNodes.length;i++) {
             var removedEntities = RED.nodes.remove(removedNodes[i].id);
@@ -30767,6 +36263,18 @@ RED.subflow = (function() {
         // TODO: this whole delete logic should be in RED.nodes.removeSubflow..
         removedNodes = removedNodes.concat(removedConfigNodes);
 
+        removedGroups = RED.nodes.groups(id).filter(function(g) { return !g.g; });
+        for (i=0;i<removedGroups.length;i++) {
+            removedGroups[i].nodes.forEach(function(n) {
+                if (n.type === "group") {
+                    removedGroups.push(n);
+                }
+            });
+        }
+        // Now remove them in the reverse order
+        for (i=removedGroups.length-1; i>=0; i--) {
+            RED.nodes.removeGroup(removedGroups[i]);
+        }
         RED.nodes.removeSubflow(activeSubflow);
         RED.workspaces.remove(activeSubflow);
         RED.nodes.dirty(true);
@@ -30775,6 +36283,7 @@ RED.subflow = (function() {
         return {
             nodes:removedNodes,
             links:removedLinks,
+            groups: removedGroups,
             subflows: [activeSubflow]
         }
     }
@@ -30788,6 +36297,7 @@ RED.subflow = (function() {
                 hideWorkspaceToolbar();
             }
         });
+        //Removed by Homegear GmbH
         /*RED.events.on("view:selection-changed",function(selection) {
             if (!selection.nodes) {
                 RED.menu.setDisabled("menu-item-subflow-convert",true);
@@ -30797,7 +36307,7 @@ RED.subflow = (function() {
         });*/
 
         RED.actions.add("core:create-subflow",createSubflow);
-        //RED.actions.add("core:convert-to-subflow",convertToSubflow);
+        //RED.actions.add("core:convert-to-subflow",convertToSubflow); //Removed by Homegear GmbH
 
         $(_subflowEditTemplate).appendTo("#red-ui-editor-node-configs");
         $(_subflowTemplateEditTemplate).appendTo("#red-ui-editor-node-configs");
@@ -30843,6 +36353,7 @@ RED.subflow = (function() {
         return x;
     }
 
+    //Removed by Homegear GmbH as multiple inputs are note yet implemented for subflow conversion
     /*function convertToSubflow() {
         var selection = RED.view.selection();
         if (!selection.nodes) {
@@ -30850,6 +36361,34 @@ RED.subflow = (function() {
             return;
         }
         var i,n;
+        var nodeList = new Set();
+        var tmplist = selection.nodes.slice();
+        var includedGroups = new Set();
+        while(tmplist.length > 0) {
+            n = tmplist.shift();
+            if (n.type === "group") {
+                includedGroups.add(n.id);
+                tmplist = tmplist.concat(n.nodes);
+            }
+            nodeList.add(n);
+        }
+
+        nodeList = Array.from(nodeList);
+
+        var containingGroup = nodeList[0].g;
+        var nodesMovedFromGroup = [];
+
+        for (i=0; i<nodeList.length;i++) {
+            if (nodeList[i].g && !includedGroups.has(nodeList[i].g)) {
+                if (containingGroup !== nodeList[i].g) {
+                    RED.notify("Cannot create subflow across multiple groups","error");
+                    return;
+                }
+            }
+        }
+        if (containingGroup) {
+            containingGroup = RED.nodes.group(containingGroup);
+        }
         var nodes = {};
         var new_links = [];
         var removedLinks = [];
@@ -30858,13 +36397,13 @@ RED.subflow = (function() {
         var candidateOutputs = [];
         var candidateInputNodes = {};
 
-        var boundingBox = [selection.nodes[0].x,
-            selection.nodes[0].y,
-            selection.nodes[0].x,
-            selection.nodes[0].y];
+        var boundingBox = [nodeList[0].x,
+            nodeList[0].y,
+            nodeList[0].x,
+            nodeList[0].y];
 
-        for (i=0;i<selection.nodes.length;i++) {
-            n = selection.nodes[i];
+        for (i=0;i<nodeList.length;i++) {
+            n = nodeList[i];
             nodes[n.id] = {n:n,outputs:{}};
             boundingBox = [
                 Math.min(boundingBox[0],n.x),
@@ -30966,12 +36505,26 @@ RED.subflow = (function() {
             z: RED.workspaces.active(),
             inputs: subflow.in.length,
             outputs: subflow.out.length,
-            h: Math.max(30,(subflow.out.length||0) * 15),
+            h: Math.max(30/*node_height*//*,(subflow.out.length||0) * 15),
             changed:true
         }
         subflowInstance._def = RED.nodes.getType(subflowInstance.type);
         RED.editor.validateNode(subflowInstance);
         RED.nodes.add(subflowInstance);
+
+        if (containingGroup) {
+            RED.group.addToGroup(containingGroup, subflowInstance);
+            nodeList.forEach(function(nl) {
+                if (nl.g === containingGroup.id) {
+                    delete nl.g;
+                    var index = containingGroup.nodes.indexOf(nl);
+                    containingGroup.nodes.splice(index,1);
+                    nodesMovedFromGroup.push(nl);
+                }
+            })
+            containingGroup.dirty = true;
+        }
+
 
         candidateInputs.forEach(function(l) {
             var link = {source:l.source, sourcePort:l.sourcePort, target: subflowInstance};
@@ -31006,9 +36559,9 @@ RED.subflow = (function() {
             RED.nodes.removeLink(removedLinks[i]);
         }
 
-        for (i=0;i<selection.nodes.length;i++) {
-            n = selection.nodes[i];
-            if (/^link-/.test(n.type)) {
+        for (i=0;i<nodeList.length;i++) {
+            n = nodeList[i];
+            if (/^link /.test(n.type)) {
                 n.links = n.links.filter(function(id) {
                     var isLocalLink = nodes.hasOwnProperty(id);
                     if (!isLocalLink) {
@@ -31028,7 +36581,8 @@ RED.subflow = (function() {
             RED.nodes.moveNodeToTab(n, subflow.id);
         }
 
-        RED.history.push({
+
+        var historyEvent = {
             t:'createSubflow',
             nodes:[subflowInstance.id],
             links:new_links,
@@ -31042,18 +36596,36 @@ RED.subflow = (function() {
             removedLinks: removedLinks,
 
             dirty:RED.nodes.dirty()
-        });
-        RED.view.select(null);
+        }
+        if (containingGroup) {
+            historyEvent = {
+                t:'multi',
+                events: [ historyEvent ]
+            }
+            historyEvent.events.push({
+                t:'addToGroup',
+                group: containingGroup,
+                nodes: [subflowInstance]
+            })
+            historyEvent.events.push({
+                t:'removeFromGroup',
+                group: containingGroup,
+                nodes: nodesMovedFromGroup,
+                reparent: false
+            })
+        }
+        RED.history.push(historyEvent);
         RED.editor.validateNode(subflow);
         RED.nodes.dirty(true);
-        RED.view.redraw(true);
+        RED.view.updateActive();
+        RED.view.select(null);
     }*/
 
 
     /**
      * Create interface for controlling env var UI definition
      */
-    function buildEnvControl(envList) {
+    function buildEnvControl(envList,node) {
 
         var tabs = RED.tabs.create({
             id: "subflow-env-tabs",
@@ -31062,7 +36634,7 @@ RED.subflow = (function() {
                     var inputContainer = $("#subflow-input-ui");
                     var list = envList.editableList("items");
                     var exportedEnv = exportEnvList(list, true);
-                    buildEnvUI(inputContainer, exportedEnv);
+                    buildEnvUI(inputContainer, exportedEnv,node);
                 }
                 $("#subflow-env-tabs-content").children().hide();
                 $("#" + tab.id).show();
@@ -31114,6 +36686,11 @@ RED.subflow = (function() {
         });
     }
 
+    //var DEFAULT_ENV_TYPE_LIST = ['str','num','bool','json','bin','env']; //Removed by Homegear GmbH
+    //var DEFAULT_ENV_TYPE_LIST_INC_CRED = ['str','num','bool','json','bin','env','cred']; //Removed by Homegear GmbH
+    var DEFAULT_ENV_TYPE_LIST = ['bool','int','float','string','array','struct']; //Added by Homegear GmbH
+    var DEFAULT_ENV_TYPE_LIST_INC_CRED = ['bool','int','float','string','array','struct','cred']; //Added by Homegear GmbH
+
     /**
      * Create env var edit interface
      * @param container - container
@@ -31124,7 +36701,7 @@ RED.subflow = (function() {
         var isTemplateNode = (node.type === "subflow");
 
         if (isTemplateNode) {
-            buildEnvControl(envContainer);
+            buildEnvControl(envContainer, node);
         }
         envContainer
             .css({
@@ -31134,6 +36711,9 @@ RED.subflow = (function() {
             .editableList({
                 header: isTemplateNode?$('<div><div><div></div><div data-i18n="common.label.name"></div><div data-i18n="editor-tab.defaultValue"></div><div></div></div></div>'):undefined,
                 addItem: function(container, i, opt) {
+                    // If this is an instance node, these are properties unique to
+                    // this instance - ie opt.parent will not be defined.
+
                     if (isTemplateNode) {
                         container.addClass("red-ui-editor-subflow-env-editable")
                     }
@@ -31142,52 +36722,66 @@ RED.subflow = (function() {
                     var nameField = null;
                     var valueField = null;
 
-                    // if (opt.parent) {
-                    //     buildEnvUIRow(envRow,opt,opt.parent.ui||{})
-                    // } else {
-                        nameField = $('<input/>', {
-                            class: "node-input-env-name",
-                            type: "text",
-                            placeholder: RED._("common.label.name")
-                        }).attr("autocomplete","disable").appendTo(envRow).val(opt.name);
-                        valueField = $('<input/>',{
-                            style: "width:100%",
-                            class: "node-input-env-value",
-                            type: "text",
-                        }).attr("autocomplete","disable").appendTo(envRow)
-                        valueField.typedInput({default:'string',types:['bool','int','float','string','array','struct']});
-                        valueField.typedInput('type', opt.parent?(opt.type||opt.parent.type):opt.type);
-                        valueField.typedInput('value', opt.parent?((opt.value !== undefined)?opt.value:opt.parent.value):opt.value);
-                    // }
+                    nameField = $('<input/>', {
+                        class: "node-input-env-name",
+                        type: "text",
+                        placeholder: RED._("common.label.name")
+                    }).attr("autocomplete","disable").appendTo(envRow).val(opt.name);
+                    valueField = $('<input/>',{
+                        style: "width:100%",
+                        class: "node-input-env-value",
+                        type: "text",
+                    }).attr("autocomplete","disable").appendTo(envRow)
+                    //valueField.typedInput({default:'str',types:isTemplateNode?DEFAULT_ENV_TYPE_LIST:DEFAULT_ENV_TYPE_LIST_INC_CRED}); //Removed by Homegear GmbH
+                    valueField.typedInput({default:'string',types:isTemplateNode?DEFAULT_ENV_TYPE_LIST:DEFAULT_ENV_TYPE_LIST_INC_CRED}); //Added by Homegear GmbH
+                    valueField.typedInput('type', opt.type);
+                    if (opt.type === "cred") {
+                        console.log("Hi");
+                        if (opt.value) {
+                            valueField.typedInput('value', opt.value);
+                        } else if (node.credentials && node.credentials[opt.name]) {
+                            valueField.typedInput('value', node.credentials[opt.name]);
+                        } else if (node.credentials && node.credentials['has_'+opt.name]) {
+                            valueField.typedInput('value', "__PWRD__");
+                        } else {
+                            valueField.typedInput('value', "");
+                        }
+                    } else {
+                        valueField.typedInput('value', opt.value);
+                    }
 
 
                     opt.nameField = nameField;
                     opt.valueField = valueField;
 
-                    if (!opt.parent) {
-                        var actionButton = $('<a/>',{href:"#",class:"red-ui-editableList-item-remove red-ui-button red-ui-button-small"}).appendTo(envRow);
-                        $('<i/>',{class:"fa "+(opt.parent?"fa-reply":"fa-remove")}).appendTo(actionButton);
-                        var removeTip = RED.popover.tooltip(actionButton,RED._("subflow.env.remove"));
-                        actionButton.on("click", function(evt) {
-                            evt.preventDefault();
-                            removeTip.close();
-                            container.parent().addClass("red-ui-editableList-item-deleting")
-                            container.fadeOut(300, function() {
-                                envContainer.editableList('removeItem',opt);
-                            });
+                    var actionButton = $('<a/>',{href:"#",class:"red-ui-editableList-item-remove red-ui-button red-ui-button-small"}).appendTo(envRow);
+                    $('<i/>',{class:"fa "+(opt.parent?"fa-reply":"fa-remove")}).appendTo(actionButton);
+                    var removeTip = RED.popover.tooltip(actionButton,RED._("subflow.env.remove"));
+                    actionButton.on("click", function(evt) {
+                        evt.preventDefault();
+                        removeTip.close();
+                        container.parent().addClass("red-ui-editableList-item-deleting")
+                        container.fadeOut(300, function() {
+                            envContainer.editableList('removeItem',opt);
                         });
-                    }
+                    });
 
                     if (isTemplateNode) {
                         // Add the UI customisation row
                         // if `opt.ui` does not exist, then apply defaults. If these
                         // defaults do not change then they will get stripped off
                         // before saving.
-                        opt.ui = opt.ui || {
-                            icon: "",
-                            label: {},
-                            type: "input",
-                            opts: {types:['bool','int','float','string','array','struct']}
+                        if (opt.type === 'cred') {
+                            opt.ui = opt.ui || {
+                                icon: "",
+                                type: "cred"
+                            }
+                        } else {
+                            opt.ui = opt.ui || {
+                                icon: "",
+                                type: "input",
+                                opts: {types:DEFAULT_ENV_TYPE_LIST}
+                            }
                         }
                         opt.ui.label = opt.ui.label || {};
                         opt.ui.type = opt.ui.type || "input";
@@ -31278,11 +36872,11 @@ RED.subflow = (function() {
 
          var row = $('<div></div>').appendTo(container);
          $('<div><i class="red-ui-editableList-item-handle fa fa-bars"></i></div>').appendTo(row);
-
          var typeOptions = {
-             'input': {types:['bool','int','float','string','array','struct']},
+             'input': {types:DEFAULT_ENV_TYPE_LIST},
              'select': {opts:[]},
-             'spinner': {}
+             'spinner': {},
+             'cred': {}
          };
          if (ui.opts) {
              typeOptions[ui.type] = ui.opts;
@@ -31337,7 +36931,7 @@ RED.subflow = (function() {
              }
              langs.forEach(function(l) {
                  var row = $('<div>').appendTo(content);
-                 $('<span>').css({display:"inline-block",width:"120px"}).text(RED._("languages."+l)+(l===currentLocale?"*":"")).appendTo(row); 
+                 $('<span>').css({display:"inline-block",width:"120px"}).text(RED._("languages."+l)+(l===currentLocale?"*":"")).appendTo(row);
                  $('<span>').text(ui.label[l]||"").appendTo(row);
              });
              return content;
@@ -31345,314 +36939,331 @@ RED.subflow = (function() {
 
          nameField.on('change',function(evt) {
             labelInput.attr("placeholder",$(this).val())
-         });
+        });
 
-         var inputCell = $('<div></div>').appendTo(row);
-         var inputCellInput = $('<input type="text">').css("width","100%").appendTo(inputCell);
-         if (ui.type === "input") {
-             inputCellInput.val(ui.opts.types.join(","));
-         }
-         var checkbox;
-         var selectBox;
+        var inputCell = $('<div></div>').appendTo(row);
+        var inputCellInput = $('<input type="text">').css("width","100%").appendTo(inputCell);
+        if (ui.type === "input") {
+            inputCellInput.val(ui.opts.types.join(","));
+        }
+        var checkbox;
+        var selectBox;
 
-         inputCellInput.typedInput({
-             types: [
-                 {
-                     value:"input",
-                     label:RED._("editor.inputs.input"), icon:"fa fa-i-cursor",showLabel:false,multiple:true,options:[
-                         {value:"string",label:RED._("editor.types.string"),icon:"red/images/typedInput/az.svg"},
-                         {value:"int",label:RED._("editor.types.int"),icon:"red/images/typedInput/09.svg"},
-                         {value:"float",label:RED._("editor.types.float"),icon:"red/images/typedInput/09.svg"},
-                         {value:"bool",label:RED._("editor.types.bool"),icon:"red/images/typedInput/bool.svg"},
-                         {value:"array",label:RED._("editor.types.array"),icon:"red/images/typedInput/array.svg"},
-                         {value:"struct",label:RED._("editor.types.struct"),icon:"red/images/typedInput/json.svg"}
-                     ],
-                     default: ['bool','int','float','string','array','struct'],
-                     valueLabel: function(container,value) {
-                         container.css("padding",0);
-                         var innerContainer = $('<div>').css({
-                             "background":"white",
-                             "height":"100%",
-                             "box-sizing": "border-box"
-                         }).appendTo(container);
+        inputCellInput.typedInput({
+            types: [
+                {
+                    value:"input",
+                    label:RED._("editor.inputs.input"), icon:"fa fa-i-cursor",showLabel:false,multiple:true,options:[
+                        {value:"str",label:RED._("editor.types.str"),icon:"red/images/typedInput/az.svg"},
+                        {value:"num",label:RED._("editor.types.num"),icon:"red/images/typedInput/09.svg"},
+                        {value:"bool",label:RED._("editor.types.bool"),icon:"red/images/typedInput/bool.svg"},
+                        {value:"json",label:RED._("editor.types.json"),icon:"red/images/typedInput/json.svg"},
+                        {value: "bin",label: RED._("editor.types.bin"),icon: "red/images/typedInput/bin.svg"},
+                        {value: "env",label: RED._("editor.types.env"),icon: "red/images/typedInput/env.svg"},
+                        {value: "cred",label: RED._("editor.types.cred"),icon: "fa fa-lock"}
+                    ],
+                    default: DEFAULT_ENV_TYPE_LIST,
+                    valueLabel: function(container,value) {
+                        container.css("padding",0);
+                        var innerContainer = $('<div class="red-ui-editor-subflow-env-input-type"></div>').appendTo(container);
 
-                         var input = $('<div class="placeholder-input">').appendTo(innerContainer);
-                         $('<span><i class="fa fa-i-cursor"></i></span>').appendTo(input);
-                         if (value.length) {
-                             value.forEach(function(v) {
-                                 $('<img>',{src:v.icon,style:"max-width:14px; padding: 0 3px; margin-top:-4px; margin-left: 3px"}).appendTo(input);
-                             })
-                         } else {
-                             $("<span>").css({
-                                 "color":"#aaa",
-                                 "padding-left": "4px"
-                             }).text("select types...").appendTo(input);
-                         }
-                     }
-                 },
-                 {
-                     value:"select",
-                     label:RED._("editor.inputs.select"), icon:"fa fa-tasks",showLabel:false,
-                     valueLabel: function(container,value) {
-                         container.css("padding","0");
+                        var input = $('<div class="placeholder-input">').appendTo(innerContainer);
+                        $('<span><i class="fa fa-i-cursor"></i></span>').appendTo(input);
+                        if (value.length) {
+                            value.forEach(function(v) {
+                                if (!/^fa /.test(v.icon)) {
+                                    $('<img>',{src:v.icon,style:"max-width:14px; padding: 0 3px; margin-top:-4px; margin-left: 1px"}).appendTo(input);
+                                } else {
+                                    var s = $('<span>',{style:"max-width:14px; padding: 0 3px; margin-top:-4px; margin-left: 1px"}).appendTo(input);
+                                    $("<i>",{class: v.icon}).appendTo(s);
+                                }
+                            })
+                        } else {
+                            $('<span class="red-ui-editor-subflow-env-input-type-placeholder"></span>').text(RED._("editor.selectType")).appendTo(input);
+                        }
+                    }
+                },
+                {
+                    value: "cred",
+                    label: RED._("typedInput.type.cred"), icon:"fa fa-lock", showLabel: false,
+                    valueLabel: function(container,value) {
+                        container.css("padding",0);
+                        var innerContainer = $('<div class="red-ui-editor-subflow-env-input-type">').css({
+                            "border-top-right-radius": "4px",
+                            "border-bottom-right-radius": "4px"
+                        }).appendTo(container);
+                        $('<div class="placeholder-input">').html("&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;").appendTo(innerContainer);
+                    }
+                },
+                {
+                    value:"select",
+                    label:RED._("editor.inputs.select"), icon:"fa fa-tasks",showLabel:false,
+                    valueLabel: function(container,value) {
+                        container.css("padding","0");
 
-                         selectBox = $('<select></select>').appendTo(container);
-                         if (ui.opts && Array.isArray(ui.opts.opts)) {
-                             ui.opts.opts.forEach(function(o) {
-                                 var label = lookupLabel(o.l, o.l["en-US"]||o.v, currentLocale);
-                                 // $('<option>').val((o.t||'str')+":"+o.v).text(label).appendTo(selectBox);
-                                 $('<option>').val(o.v).text(label).appendTo(selectBox);
-                             })
-                         }
-                         selectBox.on('change', function(evt) {
-                             var v = selectBox.val();
-                             // var parts = v.split(":");
-                             // var t = parts.shift();
-                             // v = parts.join(":");
-                             //
-                             // valueField.typedInput("type",'str')
-                             valueField.typedInput("value",v)
-                         });
-                         selectBox.val(valueField.typedInput("value"));
-                         // selectBox.val(valueField.typedInput('type')+":"+valueField.typedInput("value"));
-                     },
-                     expand: {
-                         icon: "fa-caret-down",
-                         minWidth: 400,
-                         content: function(container) {
-                             var content = $('<div class="red-ui-editor-subflow-ui-edit-panel">').appendTo(container);
-                             var optList = $('<ol>').appendTo(content).editableList({
-                                 header:$("<div><div>"+RED._("editor.select.label")+"</div><div>"+RED._("editor.select.value")+"</div></div>"),
-                                 addItem: function(row,index,itemData) {
-                                     var labelDiv = $('<div>').appendTo(row);
-                                     var label = lookupLabel(itemData.l, "", currentLocale);
-                                     itemData.label = $('<input type="text">').val(label).appendTo(labelDiv);
-                                     itemData.label.on('keydown', function(evt) {
-                                         if (evt.keyCode === 13) {
-                                             itemData.input.focus();
-                                             evt.preventDefault();
-                                         }
-                                     });
-                                     var labelIcon = $('<span class="red-ui-editor-subflow-env-lang-icon"><i class="fa fa-language"></i></span>').appendTo(labelDiv);
-                                     RED.popover.tooltip(labelIcon,function() {
-                                         return currentLocale;
-                                     })
-                                     itemData.input = $('<input type="text">').val(itemData.v).appendTo(row);
+                        selectBox = $('<select></select>').appendTo(container);
+                        if (ui.opts && Array.isArray(ui.opts.opts)) {
+                            ui.opts.opts.forEach(function(o) {
+                                var label = lookupLabel(o.l, o.l["en-US"]||o.v, currentLocale);
+                                // $('<option>').val((o.t||'str')+":"+o.v).text(label).appendTo(selectBox);
+                                $('<option>').val(o.v).text(label).appendTo(selectBox);
+                            })
+                        }
+                        selectBox.on('change', function(evt) {
+                            var v = selectBox.val();
+                            // var parts = v.split(":");
+                            // var t = parts.shift();
+                            // v = parts.join(":");
+                            //
+                            // valueField.typedInput("type",'str')
+                            valueField.typedInput("value",v)
+                        });
+                        selectBox.val(valueField.typedInput("value"));
+                        // selectBox.val(valueField.typedInput('type')+":"+valueField.typedInput("value"));
+                    },
+                    expand: {
+                        icon: "fa-caret-down",
+                        minWidth: 400,
+                        content: function(container) {
+                            var content = $('<div class="red-ui-editor-subflow-ui-edit-panel">').appendTo(container);
+                            var optList = $('<ol>').appendTo(content).editableList({
+                                header:$("<div><div>"+RED._("editor.select.label")+"</div><div>"+RED._("editor.select.value")+"</div></div>"),
+                                addItem: function(row,index,itemData) {
+                                    var labelDiv = $('<div>').appendTo(row);
+                                    var label = lookupLabel(itemData.l, "", currentLocale);
+                                    itemData.label = $('<input type="text">').val(label).appendTo(labelDiv);
+                                    itemData.label.on('keydown', function(evt) {
+                                        if (evt.keyCode === 13) {
+                                            itemData.input.focus();
+                                            evt.preventDefault();
+                                        }
+                                    });
+                                    var labelIcon = $('<span class="red-ui-editor-subflow-env-lang-icon"><i class="fa fa-language"></i></span>').appendTo(labelDiv);
+                                    RED.popover.tooltip(labelIcon,function() {
+                                        return currentLocale;
+                                    })
+                                    itemData.input = $('<input type="text">').val(itemData.v).appendTo(row);
 
-                                     // Problem using a TI here:
-                                     //  - this is in a popout panel
-                                     //  - clicking the expand button in the TI will close the parent edit tray
-                                     //    and open the type editor.
-                                     //  - but it leaves the popout panel over the top.
-                                     //  - there is no way to get back to the popout panel after closing the type editor
-                                     //.typedInput({default:itemData.t||'str', types:['str','num','bool','json','bin','env']});
-                                     itemData.input.on('keydown', function(evt) {
-                                         if (evt.keyCode === 13) {
-                                             // Enter or Tab
-                                             var index = optList.editableList('indexOf',itemData);
-                                             var length = optList.editableList('length');
-                                             if (index + 1 === length) {
-                                                 var newItem = {};
-                                                 optList.editableList('addItem',newItem);
-                                                 setTimeout(function() {
-                                                     if (newItem.label) {
-                                                         newItem.label.focus();
-                                                     }
-                                                 },100)
-                                             } else {
-                                                 var nextItem = optList.editableList('getItemAt',index+1);
-                                                 if (nextItem.label) {
-                                                     nextItem.label.focus()
-                                                 }
-                                             }
-                                             evt.preventDefault();
-                                         }
-                                     });
-                                 },
-                                 sortable: true,
-                                 removable: true,
-                                 height: 160
-                             })
-                             if (ui.opts.opts.length > 0) {
-                                 ui.opts.opts.forEach(function(o) {
-                                     optList.editableList('addItem',$.extend(true,{},o))
-                                 })
-                             } else {
-                                 optList.editableList('addItem',{})
-                             }
-                             return {
-                                 onclose: function() {
-                                     var items = optList.editableList('items');
-                                     var vals = [];
-                                     items.each(function (i,el) {
-                                         var data = el.data('data');
-                                         var l = data.label.val().trim();
-                                         var v = data.input.val();
-                                         // var t = data.input.typedInput('type');
-                                         // var v = data.input.typedInput('value');
-                                         if (l.length > 0) {
-                                             data.l = data.l || {};
-                                             data.l[currentLocale] = l;
-                                         }
-                                         data.v = v;
+                                    // Problem using a TI here:
+                                    //  - this is in a popout panel
+                                    //  - clicking the expand button in the TI will close the parent edit tray
+                                    //    and open the type editor.
+                                    //  - but it leaves the popout panel over the top.
+                                    //  - there is no way to get back to the popout panel after closing the type editor
+                                    //.typedInput({default:itemData.t||'str', types:DEFAULT_ENV_TYPE_LIST});
+                                    itemData.input.on('keydown', function(evt) {
+                                        if (evt.keyCode === 13) {
+                                            // Enter or Tab
+                                            var index = optList.editableList('indexOf',itemData);
+                                            var length = optList.editableList('length');
+                                            if (index + 1 === length) {
+                                                var newItem = {};
+                                                optList.editableList('addItem',newItem);
+                                                setTimeout(function() {
+                                                    if (newItem.label) {
+                                                        newItem.label.focus();
+                                                    }
+                                                },100)
+                                            } else {
+                                                var nextItem = optList.editableList('getItemAt',index+1);
+                                                if (nextItem.label) {
+                                                    nextItem.label.focus()
+                                                }
+                                            }
+                                            evt.preventDefault();
+                                        }
+                                    });
+                                },
+                                sortable: true,
+                                removable: true,
+                                height: 160
+                            })
+                            if (ui.opts.opts.length > 0) {
+                                ui.opts.opts.forEach(function(o) {
+                                    optList.editableList('addItem',$.extend(true,{},o))
+                                })
+                            } else {
+                                optList.editableList('addItem',{})
+                            }
+                            return {
+                                onclose: function() {
+                                    var items = optList.editableList('items');
+                                    var vals = [];
+                                    items.each(function (i,el) {
+                                        var data = el.data('data');
+                                        var l = data.label.val().trim();
+                                        var v = data.input.val();
+                                        // var t = data.input.typedInput('type');
+                                        // var v = data.input.typedInput('value');
+                                        if (l.length > 0) {
+                                            data.l = data.l || {};
+                                            data.l[currentLocale] = l;
+                                        }
+                                        data.v = v;
 
-                                         if (l.length > 0 || v.length > 0) {
-                                             var val = {l:data.l,v:data.v};
-                                             // if (t !== 'str') {
-                                             //     val.t = t;
-                                             // }
-                                             vals.push(val);
-                                         }
-                                     });
-                                     ui.opts.opts = vals;
-                                     inputCellInput.typedInput('value',Date.now())
-                                 }
-                             }
-                         }
-                     }
-                 },
-                 {
-                     value:"checkbox",
-                     label:RED._("editor.inputs.checkbox"), icon:"fa fa-check-square-o",showLabel:false,
-                     valueLabel: function(container,value) {
-                         container.css("padding",0);
-                         checkbox = $('<input type="checkbox">').appendTo(container);
-                         checkbox.on('change', function(evt) {
-                             valueField.typedInput('value',$(this).prop('checked')?"true":"false");
-                         })
-                         checkbox.prop('checked',valueField.typedInput('value')==="true");
-                     }
-                 },
-                 {
-                     value:"spinner",
-                     label:RED._("editor.inputs.spinner"), icon:"fa fa-sort-numeric-asc", showLabel:false,
-                     valueLabel: function(container,value) {
-                         container.css("padding",0);
-                         var innerContainer = $('<div>').css({
-                             "background":"white",
-                             "height":"100%",
-                             "box-sizing": "border-box"
-                         }).appendTo(container);
+                                        if (l.length > 0 || v.length > 0) {
+                                            var val = {l:data.l,v:data.v};
+                                            // if (t !== 'str') {
+                                            //     val.t = t;
+                                            // }
+                                            vals.push(val);
+                                        }
+                                    });
+                                    ui.opts.opts = vals;
+                                    inputCellInput.typedInput('value',Date.now())
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    value:"checkbox",
+                    label:RED._("editor.inputs.checkbox"), icon:"fa fa-check-square-o",showLabel:false,
+                    valueLabel: function(container,value) {
+                        container.css("padding",0);
+                        checkbox = $('<input type="checkbox">').appendTo(container);
+                        checkbox.on('change', function(evt) {
+                            valueField.typedInput('value',$(this).prop('checked')?"true":"false");
+                        })
+                        checkbox.prop('checked',valueField.typedInput('value')==="true");
+                    }
+                },
+                {
+                    value:"spinner",
+                    label:RED._("editor.inputs.spinner"), icon:"fa fa-sort-numeric-asc", showLabel:false,
+                    valueLabel: function(container,value) {
+                        container.css("padding",0);
+                        var innerContainer = $('<div class="red-ui-editor-subflow-env-input-type"></div>').appendTo(container);
 
-                         var input = $('<div class="placeholder-input">').appendTo(innerContainer);
-                         $('<span><i class="fa fa-sort-numeric-asc"></i></span>').appendTo(input);
+                        var input = $('<div class="placeholder-input">').appendTo(innerContainer);
+                        $('<span><i class="fa fa-sort-numeric-asc"></i></span>').appendTo(input);
 
-                         var min = ui.opts && ui.opts.min;
-                         var max = ui.opts && ui.opts.max;
-                         var label = "";
-                         if (min !== undefined && max !== undefined) {
-                             label = Math.min(min,max)+" - "+Math.max(min,max);
-                         } else if (min !== undefined) {
-                             label = "> "+min;
-                         } else if (max !== undefined) {
-                             label = "< "+max;
-                         }
-                         $('<span>').css("margin-left","15px").text(label).appendTo(input);
-                     },
-                     expand: {
-                         icon: "fa-caret-down",
-                         content: function(container) {
-                             var content = $('<div class="red-ui-editor-subflow-ui-edit-panel">').appendTo(container);
-                             content.css("padding","8px 5px")
-                             var min = ui.opts.min;
-                             var max = ui.opts.max;
-                             var minInput = $('<input type="number" style="margin-bottom:0; width:60px">');
-                             minInput.val(min);
-                             var maxInput = $('<input type="number" style="margin-bottom:0; width:60px">');
-                             maxInput.val(max);
-                             $('<div class="form-row" style="margin-bottom:3px"><label>'+RED._("editor.spinner.min")+'</label></div>').append(minInput).appendTo(content);
-                             $('<div class="form-row" style="margin-bottom:0"><label>'+RED._("editor.spinner.max")+'</label></div>').append(maxInput).appendTo(content);
-                             return {
-                                 onclose: function() {
-                                     var min = minInput.val().trim();
-                                     var max = maxInput.val().trim();
-                                     if (min !== "") {
-                                         ui.opts.min = parseInt(min);
-                                     } else {
-                                         delete ui.opts.min;
-                                     }
-                                     if (max !== "") {
-                                         ui.opts.max = parseInt(max);
-                                     } else {
-                                         delete ui.opts.max;
-                                     }
-                                     inputCellInput.typedInput('value',Date.now())
-                                 }
-                             }
-                         }
-                     }
-                 },
-                 {
-                     value:"none",
-                     label:RED._("editor.inputs.none"), icon:"fa fa-times",hasValue:false
-                 },
-                 {
-                     value:"hide",
-                     label:RED._("editor.inputs.hidden"), icon:"fa fa-ban",hasValue:false
-                 }
-             ],
-             default: 'none'
-         }).on("typedinputtypechange", function(evt,type) {
-             ui.type = $(this).typedInput("type");
-             ui.opts = typeOptions[ui.type];
-             if (ui.type === 'input') {
-                 // In the case of 'input' type, the typedInput uses the multiple-option
-                 // mode. Its value needs to be set to a comma-separately list of the
-                 // selected options.
-                 inputCellInput.typedInput('value',ui.opts.types.join(","))
-             } else {
-                 // No other type cares about `value`, but doing this will
-                 // force a refresh of the label now that `ui.opts` has
-                 // been updated.
-                 inputCellInput.typedInput('value',Date.now())
-             }
+                        var min = ui.opts && ui.opts.min;
+                        var max = ui.opts && ui.opts.max;
+                        var label = "";
+                        if (min !== undefined && max !== undefined) {
+                            label = Math.min(min,max)+" - "+Math.max(min,max);
+                        } else if (min !== undefined) {
+                            label = "> "+min;
+                        } else if (max !== undefined) {
+                            label = "< "+max;
+                        }
+                        $('<span>').css("margin-left","15px").text(label).appendTo(input);
+                    },
+                    expand: {
+                        icon: "fa-caret-down",
+                        content: function(container) {
+                            var content = $('<div class="red-ui-editor-subflow-ui-edit-panel">').appendTo(container);
+                            content.css("padding","8px 5px")
+                            var min = ui.opts.min;
+                            var max = ui.opts.max;
+                            var minInput = $('<input type="number" style="margin-bottom:0; width:60px">');
+                            minInput.val(min);
+                            var maxInput = $('<input type="number" style="margin-bottom:0; width:60px">');
+                            maxInput.val(max);
+                            $('<div class="form-row" style="margin-bottom:3px"><label>'+RED._("editor.spinner.min")+'</label></div>').append(minInput).appendTo(content);
+                            $('<div class="form-row" style="margin-bottom:0"><label>'+RED._("editor.spinner.max")+'</label></div>').append(maxInput).appendTo(content);
+                            return {
+                                onclose: function() {
+                                    var min = minInput.val().trim();
+                                    var max = maxInput.val().trim();
+                                    if (min !== "") {
+                                        ui.opts.min = parseInt(min);
+                                    } else {
+                                        delete ui.opts.min;
+                                    }
+                                    if (max !== "") {
+                                        ui.opts.max = parseInt(max);
+                                    } else {
+                                        delete ui.opts.max;
+                                    }
+                                    inputCellInput.typedInput('value',Date.now())
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    value:"none",
+                    label:RED._("editor.inputs.none"), icon:"fa fa-times",hasValue:false
+                },
+                {
+                    value:"hide",
+                    label:RED._("editor.inputs.hidden"), icon:"fa fa-ban",hasValue:false
+                }
+            ],
+            default: 'none'
+        }).on("typedinputtypechange", function(evt,type) {
+            ui.type = $(this).typedInput("type");
+            ui.opts = typeOptions[ui.type];
+            if (ui.type === 'input') {
+                // In the case of 'input' type, the typedInput uses the multiple-option
+                // mode. Its value needs to be set to a comma-separately list of the
+                // selected options.
+                inputCellInput.typedInput('value',ui.opts.types.join(","))
+            } else {
+                // No other type cares about `value`, but doing this will
+                // force a refresh of the label now that `ui.opts` has
+                // been updated.
+                inputCellInput.typedInput('value',Date.now())
+            }
 
-             switch (ui.type) {
-                 case 'input':
+            switch (ui.type) {
+                case 'input':
                     valueField.typedInput('types',ui.opts.types);
                     break;
                 case 'select':
-                   valueField.typedInput('types',['string']);
-                   break;
-                 case 'checkbox':
+                    //valueField.typedInput('types',['str']); //Removed by Homegear GmbH
+                    valueField.typedInput('types',['string']); //Added by Homegear GmbH
+                    break;
+                case 'checkbox':
                     valueField.typedInput('types',['bool']);
                     break;
                 case 'spinner':
-                    valueField.typedInput('types',['int'])
+                    //valueField.typedInput('types',['num']); //Removed by Homegear GmbH
+                    valueField.typedInput('types',['int']); //Added by Homegear GmbH
+                    break;
+                case 'cred':
+                    valueField.typedInput('types',['cred']);
                     break;
                 default:
-                    valueField.typedInput('types',['bool','int','float','string','array','struct'])
-             }
-             if (ui.type === 'checkbox') {
-                 valueField.typedInput('type','bool');
-             } else if (ui.type === 'spinner') {
-                 valueField.typedInput('type','int');
-             }
-             if (ui.type !== 'checkbox') {
-                 checkbox = null;
-             }
+                    valueField.typedInput('types',DEFAULT_ENV_TYPE_LIST)
+            }
+            if (ui.type === 'checkbox') {
+                valueField.typedInput('type','bool');
+            } else if (ui.type === 'spinner') {
+                //valueField.typedInput('type','num'); //Removed by Homegear GmbH
+                valueField.typedInput('type',['int']); //Added by Homegear GmbH
+            }
+            if (ui.type !== 'checkbox') {
+                checkbox = null;
+            }
 
-         }).on("change", function(evt,type) {
-             if (ui.type === 'input') {
-                 ui.opts.types = inputCellInput.typedInput('value').split(",");
-                 valueField.typedInput('types',ui.opts.types);
-             }
-         });
-         valueField.on("change", function(evt) {
-             if (checkbox) {
-                 checkbox.prop('checked',$(this).typedInput('value')==="true")
-             }
-         })
-         // Set the input to the right type. This will trigger the 'typedinputtypechange'
-         // event handler (just above ^^) to update the value if needed
-         inputCellInput.typedInput('type',ui.type)
+        }).on("change", function(evt,type) {
+            if (ui.type === 'input') {
+                var types = inputCellInput.typedInput('value');
+                ui.opts.types = (types === "") ? ["str"] : types.split(",");
+                valueField.typedInput('types',ui.opts.types);
+            }
+        });
+        valueField.on("change", function(evt) {
+            if (checkbox) {
+                checkbox.prop('checked',$(this).typedInput('value')==="true")
+            }
+        })
+        // Set the input to the right type. This will trigger the 'typedinputtypechange'
+        // event handler (just above ^^) to update the value if needed
+        inputCellInput.typedInput('type',ui.type)
     }
 
-    function buildEnvUIRow(row, tenv, ui) {
+    function buildEnvUIRow(row, tenv, ui, node) {
         ui.label = ui.label||{};
-        if (!ui.type) {
+        if ((tenv.type === "cred" || (tenv.parent && tenv.parent.type === "cred")) && !ui.type) {
+            ui.type = "cred";
+            ui.opts = {};
+        } else if (!ui.type) {
             ui.type = "input";
-            ui.opts = {types:['bool','int','float','string','array','struct']}
+            ui.opts = {types:DEFAULT_ENV_TYPE_LIST}
         } else {
             if (!ui.opts) {
                 ui.opts = (ui.type === "select") ? {opts:[]} : {};
@@ -31750,6 +37361,24 @@ RED.subflow = (function() {
                 input.spinner(spinnerOpts).parent().width('70%');
                 input.val(val.value);
                 break;
+            case "cred":
+                input = $('<input type="password">').css('width','70%').appendTo(row);
+                if (node.credentials) {
+                    if (node.credentials[tenv.name]) {
+                        input.val(node.credentials[tenv.name]);
+                    } else if (node.credentials['has_'+tenv.name]) {
+                        input.val("__PWRD__")
+                    } else {
+                        input.val("");
+                    }
+                } else {
+                    input.val("");
+                }
+                input.typedInput({
+                    types: ['cred'],
+                    default: 'cred'
+                })
+                break;
         }
         if (input) {
             input.attr('id',getSubflowEnvPropertyName(tenv.name))
@@ -31761,7 +37390,7 @@ RED.subflow = (function() {
      * @param uiContainer - container for UI
      * @param envList - env var definitions of template
      */
-    function buildEnvUI(uiContainer, envList) {
+    function buildEnvUI(uiContainer, envList,node) {
         uiContainer.empty();
         var elementID = 0;
         for (var i = 0; i < envList.length; i++) {
@@ -31770,7 +37399,7 @@ RED.subflow = (function() {
                 continue;
             }
             var row = $("<div/>", { class: "form-row" }).appendTo(uiContainer);
-            buildEnvUIRow(row,tenv, tenv.ui || {});
+            buildEnvUIRow(row,tenv, tenv.ui || {}, node);
 
             // console.log(ui);
         }
@@ -31808,7 +37437,7 @@ RED.subflow = (function() {
                             //     icon: "",
                             //     label: {},
                             //     type: "input",
-                            //     opts: {types:['str','num','bool','json','bin','env']}
+                            //     opts: {types:DEFAULT_ENV_TYPE_LIST}
                             // }
                             if (!ui.icon) {
                                 delete ui.icon;
@@ -31818,12 +37447,18 @@ RED.subflow = (function() {
                             }
                             switch (ui.type) {
                                 case "input":
-                                    if (JSON.stringify(ui.opts) === JSON.stringify({types:['bool','int','float','string','array','struct']})) {
+                                    if (JSON.stringify(ui.opts) === JSON.stringify({types:DEFAULT_ENV_TYPE_LIST})) {
                                         // This is the default input config. Delete it as it will
                                         // be applied automatically
                                         delete ui.type;
                                         delete ui.opts;
                                     }
+                                    break;
+                                case "cred":
+                                    if (envItem.type === "cred") {
+                                        delete ui.type;
+                                    }
+                                    delete ui.opts;
                                     break;
                                 case "select":
                                     if (ui.opts && $.isEmptyObject(ui.opts.opts)) {
@@ -31868,7 +37503,7 @@ RED.subflow = (function() {
                             type: env.type,
                             value: env.value
                         },
-                        ui: env.ui
+                        ui: $.extend(true,{},env.ui)
                     }
                     envList.push(item);
                     parentEnv[env.name] = item;
@@ -31904,13 +37539,17 @@ RED.subflow = (function() {
             var item;
             var ui = data.ui || {};
             if (!ui.type) {
-                ui.type = "input";
-                ui.opts = {types:['bool','int','float','string','array','struct']}
+                if (data.parent && data.parent.type === "cred") {
+                    ui.type = "cred";
+                } else {
+                    ui.type = "input";
+                    ui.opts = {types:DEFAULT_ENV_TYPE_LIST}
+                }
             } else {
                 ui.opts = ui.opts || {};
             }
             var input = $("#"+getSubflowEnvPropertyName(data.name));
-            if (input.length) {
+            if (input.length || ui.type === "cred") {
                 item = { name: data.name };
                 switch(ui.type) {
                     case "input":
@@ -31919,23 +37558,30 @@ RED.subflow = (function() {
                             item.type = input.typedInput('type');
                         } else {
                             item.value = input.val();
-                            item.type = 'string';
+                            //item.type = 'str'; //Removed by Homegear GmbH
+                            item.type = 'string'; //Added by Homegear GmbH
                         }
+                        break;
+                    case "cred":
+                        item.value = input.val();
+                        item.type = 'cred';
                         break;
                     case "spinner":
                         item.value = input.val();
-                        item.type = 'int';
+                        //item.type = 'num'; //Removed by Homegear GmbH
+                        item.type = 'int'; //Added by Homegear GmbH
                         break;
                     case "select":
                         item.value = input.val();
-                        item.type = 'string';
+                        //item.type = 'str'; //Removed by Homegear GmbH
+                        item.type = 'string'; //Added by Homegear GmbH
                         break;
                     case "checkbox":
                         item.type = 'bool';
                         item.value = ""+input.prop("checked");
                         break;
                 }
-                if (item.type !== data.parent.type || item.value !== data.parent.value) {
+                if (ui.type === "cred" || item.type !== data.parent.type || item.value !== data.parent.value) {
                     env.push(item);
                 }
             }
@@ -31985,14 +37631,17 @@ RED.subflow = (function() {
         return defaultLabel;
     }
 
-    function buildEditForm(container,type,node) {
+    function buildEditForm(type,node) {
         if (type === "subflow-template") {
             buildPropertiesList($('#node-input-env-container'), node);
         } else  if (type === "subflow") {
-            buildEnvUI($("#subflow-input-ui"), getSubflowInstanceParentEnv(node));
+            // This gets called by the subflow type `oneditprepare` function
+            // registered in nodes.js#addSubflow()
+            buildEnvUI($("#subflow-input-ui"), getSubflowInstanceParentEnv(node), node);
         }
     }
-    function buildPropertiesForm(container, node) {
+    function buildPropertiesForm(node) {
+        var container = $('#editor-subflow-envProperties-content');
         var form = $('<form class="dialog-form form-horizontal"></form>').appendTo(container);
         var listContainer = $('<div class="form-row node-input-env-container-row"></div>').appendTo(form);
         var list = $('<ol id="red-ui-editor-subflow-env-list" class="red-ui-editor-subflow-env-list"></ol>').appendTo(listContainer);
@@ -32002,7 +37651,7 @@ RED.subflow = (function() {
     return {
         init: init,
         createSubflow: createSubflow,
-        //convertToSubflow: convertToSubflow,
+        //convertToSubflow: convertToSubflow, //Removed by Homegear GmbH
         removeSubflow: removeSubflow,
         refresh: refresh,
         removeInput: removeSubflowInput,
@@ -32016,6 +37665,708 @@ RED.subflow = (function() {
         exportSubflowTemplateEnv: exportEnvList,
         exportSubflowInstanceEnv: exportSubflowInstanceEnv
 
+    }
+})();
+;/**
+ * Copyright JS Foundation and other contributors, http://js.foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+
+RED.group = (function() {
+
+    var _groupEditTemplate = '<script type="text/x-red" data-template-name="group">'+
+        '<div class="form-row">'+
+            '<label for="node-input-name" data-i18n="[append]editor:common.label.name"><i class="fa fa-tag"></i> </label>'+
+            '<input type="text" id="node-input-name" data-i18n="[placeholder]common.label.name">'+
+        '</div>'+
+
+        // '<div class="node-input-group-style-tools"><span class="button-group"><button class="red-ui-button red-ui-button-small">Use default style</button><button class="red-ui-button red-ui-button-small">Set as default style</button></span></div>'+
+
+        '<div class="form-row" id="node-input-row-style-stroke">'+
+            '<label data-i18n="editor:common.label.style"></label>'+
+            '<label style="width: 70px;margin-right:10px" for="node-input-style-stroke" data-i18n="editor:common.label.line"></label>'+
+        '</div>'+
+        '<div class="form-row" style="padding-left: 100px;" id="node-input-row-style-fill">'+
+            '<label style="width: 70px;margin-right: 10px "  for="node-input-style-fill" data-i18n="editor:common.label.fill"></label>'+
+        '</div>'+
+        '<div class="form-row">'+
+            '<label for="node-input-style-label" data-i18n="editor:common.label.label"></label>'+
+            '<input type="checkbox" id="node-input-style-label"/>'+
+        '</div>'+
+        '<div class="form-row" id="node-input-row-style-label-options">'+
+            '<div style="margin-left: 100px; display: inline-block">'+
+                '<div class="form-row">'+
+                    '<span style="display: inline-block; min-width: 140px"  id="node-input-row-style-label-color">'+
+                        '<label style="width: 70px;margin-right: 10px" for="node-input-style-fill" data-i18n="editor:common.label.color"></label>'+
+                    '</span>'+
+                '</div>'+
+                '<div class="form-row">'+
+                    '<span style="display: inline-block; min-width: 140px;" id="node-input-row-style-label-position">'+
+                        '<label style="width: 70px;margin-right: 10px " for="node-input-style-label-position" data-i18n="editor:common.label.position"></label>'+
+                    '</span>'+
+                '</div>'+
+            '</div>'+
+        '</div>'+
+
+        '</script>';
+
+    var colorPalette = [
+        "#ff0000",
+        "#ffC000",
+        "#ffff00",
+        "#92d04f",
+        "#0070c0",
+        "#001f60",
+        "#6f2fa0",
+        "#000000",
+        "#777777"
+    ]
+    var colorSteps = 3;
+    var colorCount = colorPalette.length;
+    for (var i=0,len=colorPalette.length*colorSteps;i<len;i++) {
+        var ci = i%colorCount;
+        var j = Math.floor(i/colorCount)+1;
+        var c = colorPalette[ci];
+        var r = parseInt(c.substring(1, 3), 16);
+        var g = parseInt(c.substring(3, 5), 16);
+        var b = parseInt(c.substring(5, 7), 16);
+        var dr = (255-r)/(colorSteps+((ci===colorCount-1) ?0:1));
+        var dg = (255-g)/(colorSteps+((ci===colorCount-1) ?0:1));
+        var db = (255-b)/(colorSteps+((ci===colorCount-1) ?0:1));
+        r = Math.min(255,Math.floor(r+j*dr));
+        g = Math.min(255,Math.floor(g+j*dg));
+        b = Math.min(255,Math.floor(b+j*db));
+        var s = ((r<<16) + (g<<8) + b).toString(16);
+        colorPalette.push('#'+'000000'.slice(0, 6-s.length)+s);
+    }
+
+    var defaultGroupStyle = {
+        label: true,
+        "label-position": "nw"
+    };
+
+    var groupDef = {
+        defaults:{
+            name:{value:""},
+            style:{value:{label:true}},
+            nodes:{value:[]}
+        },
+        category: "config",
+        oneditprepare: function() {
+            var style = this.style || {};
+            RED.colorPicker.create({
+                id:"node-input-style-stroke",
+                value: style.stroke || defaultGroupStyle.stroke || "#a4a4a4",
+                palette: colorPalette,
+                cellPerRow: colorCount,
+                cellWidth: 16,
+                cellHeight: 16,
+                cellMargin: 3,
+                none: true,
+                opacity: style.hasOwnProperty('stroke-opacity')?style['stroke-opacity']:(defaultGroupStyle.hasOwnProperty('stroke-opacity')?defaultGroupStyle['stroke-opacity']:1.0)
+            }).appendTo("#node-input-row-style-stroke");
+            RED.colorPicker.create({
+                id:"node-input-style-fill",
+                value: style.fill || defaultGroupStyle.fill ||"none",
+                palette: colorPalette,
+                cellPerRow: colorCount,
+                cellWidth: 16,
+                cellHeight: 16,
+                cellMargin: 3,
+                none: true,
+                opacity: style.hasOwnProperty('fill-opacity')?style['fill-opacity']:(defaultGroupStyle.hasOwnProperty('fill-opacity')?defaultGroupStyle['fill-opacity']:1.0)
+            }).appendTo("#node-input-row-style-fill");
+
+            createLayoutPicker({
+                id:"node-input-style-label-position",
+                value:style["label-position"] || "nw"
+            }).appendTo("#node-input-row-style-label-position");
+
+            RED.colorPicker.create({
+                id:"node-input-style-color",
+                value: style.color || defaultGroupStyle.color ||"#a4a4a4",
+                palette: colorPalette,
+                cellPerRow: colorCount,
+                cellWidth: 16,
+                cellHeight: 16,
+                cellMargin: 3
+            }).appendTo("#node-input-row-style-label-color");
+
+            $("#node-input-style-label").toggleButton({
+                enabledLabel: RED._("editor.show"),
+                disabledLabel: RED._("editor.show"),
+            })
+
+            $("#node-input-style-label").on("change", function(evt) {
+                $("#node-input-row-style-label-options").toggle($(this).prop("checked"));
+            })
+            $("#node-input-style-label").prop("checked", this.style.label)
+            $("#node-input-style-label").trigger("change");
+
+        },
+        oneditresize: function(size) {
+        },
+        oneditsave: function() {
+            this.style.stroke = $("#node-input-style-stroke").val();
+            this.style.fill = $("#node-input-style-fill").val();
+            this.style["stroke-opacity"] = $("#node-input-style-stroke-opacity").val();
+            this.style["fill-opacity"] = $("#node-input-style-fill-opacity").val();
+            this.style.label = $("#node-input-style-label").prop("checked");
+            if (this.style.label) {
+                this.style["label-position"] = $("#node-input-style-label-position").val();
+                this.style.color = $("#node-input-style-color").val();
+            } else {
+                delete this.style["label-position"];
+                delete this.style.color;
+            }
+
+            var node = this;
+            ['stroke','fill','stroke-opacity','fill-opacity','color','label-position'].forEach(function(prop) {
+                if (node.style[prop] === defaultGroupStyle[prop]) {
+                    delete node.style[prop]
+                }
+            })
+
+            this.resize = true;
+        },
+        set:{
+            module: "node-red"
+        }
+    }
+
+    function init() {
+
+        RED.events.on("view:selection-changed",function(selection) {
+            var activateGroup = !!selection.nodes;
+            var activateUngroup = false;
+            var activateMerge = false;
+            var activateRemove = false;
+            if (activateGroup) {
+                selection.nodes.forEach(function (n) {
+                    if (n.type === "group") {
+                        activateUngroup = true;
+                    }
+                    if (!!n.g) {
+                        activateRemove = true;
+                    }
+                });
+                if (activateUngroup) {
+                    activateMerge = (selection.nodes.length > 1);
+                }
+            }
+            RED.menu.setDisabled("menu-item-group-group", !activateGroup);
+            RED.menu.setDisabled("menu-item-group-ungroup", !activateUngroup);
+            RED.menu.setDisabled("menu-item-group-merge", !activateMerge);
+            RED.menu.setDisabled("menu-item-group-remove", !activateRemove);
+        });
+
+        RED.actions.add("core:group-selection", function() { groupSelection() })
+        RED.actions.add("core:ungroup-selection", function() { ungroupSelection() })
+        RED.actions.add("core:merge-selection-to-group", function() { mergeSelection() })
+        RED.actions.add("core:remove-selection-from-group", function() { removeSelection() })
+        RED.actions.add("core:copy-group-style", function() { copyGroupStyle() });
+        RED.actions.add("core:paste-group-style", function() { pasteGroupStyle() });
+
+        $(_groupEditTemplate).appendTo("#red-ui-editor-node-configs");
+
+        var groupStyleDiv = $("<div>",{
+            class:"red-ui-flow-group-body",
+            style: "position: absolute; top: -1000px;"
+        }).appendTo(document.body);
+        var groupStyle = getComputedStyle(groupStyleDiv[0]);
+        defaultGroupStyle = {
+            stroke: convertColorToHex(groupStyle.stroke),
+            "stroke-opacity": groupStyle.strokeOpacity,
+            fill: convertColorToHex(groupStyle.fill),
+            "fill-opacity": groupStyle.fillOpacity,
+            label: true,
+            "label-position": "nw"
+        }
+        groupStyleDiv.remove();
+        groupStyleDiv = $("<div>",{
+            class:"red-ui-flow-group-label",
+            style: "position: absolute; top: -1000px;"
+        }).appendTo(document.body);
+        groupStyle = getComputedStyle(groupStyleDiv[0]);
+        defaultGroupStyle.color = convertColorToHex(groupStyle.fill);
+        groupStyleDiv.remove();
+    }
+
+    function convertColorToHex(c) {
+        var m = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(c);
+        if (m) {
+            var s = ((parseInt(m[1])<<16) + (parseInt(m[2])<<8) + parseInt(m[3])).toString(16)
+            return '#'+'000000'.slice(0, 6-s.length)+s;
+        }
+        return c;
+    }
+
+
+    var groupStyleClipboard;
+
+    function copyGroupStyle() {
+        if (RED.view.state() !== RED.state.DEFAULT) { return }
+        var selection = RED.view.selection();
+        if (selection.nodes && selection.nodes.length === 1 && selection.nodes[0].type === 'group') {
+            groupStyleClipboard = JSON.parse(JSON.stringify(selection.nodes[0].style));
+            RED.notify(RED._("clipboard.groupStyleCopied"),{id:"clipboard"})
+        }
+    }
+    function pasteGroupStyle() {
+        if (RED.view.state() !== RED.state.DEFAULT) { return }
+        if (groupStyleClipboard) {
+            var selection = RED.view.selection();
+            if (selection.nodes) {
+                var historyEvent = {
+                    t:'multi',
+                    events:[],
+                    dirty: RED.nodes.dirty()
+                }
+                selection.nodes.forEach(function(n) {
+                    if (n.type === 'group') {
+                        historyEvent.events.push({
+                            t: "edit",
+                            node: n,
+                            changes: {
+                                style: JSON.parse(JSON.stringify(n.style))
+                            },
+                            dirty: RED.nodes.dirty()
+                        });
+                        n.style = JSON.parse(JSON.stringify(groupStyleClipboard));
+                        n.dirty = true;
+
+                    }
+                })
+                if (historyEvent.events.length > 0) {
+                    RED.history.push(historyEvent);
+                    RED.nodes.dirty(true);
+                    RED.view.redraw();
+                }
+            }
+        }
+    }
+
+    function groupSelection() {
+        if (RED.view.state() !== RED.state.DEFAULT) { return }
+        var selection = RED.view.selection();
+        if (selection.nodes) {
+            var group = createGroup(selection.nodes);
+            if (group) {
+                var historyEvent = {
+                    t:"createGroup",
+                    groups: [ group ],
+                    dirty: RED.nodes.dirty()
+                }
+                RED.history.push(historyEvent);
+                RED.view.select({nodes:[group]});
+                RED.nodes.dirty(true);
+            }
+        }
+    }
+    function ungroupSelection() {
+        if (RED.view.state() !== RED.state.DEFAULT) { return }
+        var selection = RED.view.selection();
+        if (selection.nodes) {
+            var newSelection = [];
+            groups = selection.nodes.filter(function(n) { return n.type === "group" });
+
+            var historyEvent = {
+                t:"ungroup",
+                groups: [ ],
+                dirty: RED.nodes.dirty()
+            }
+            RED.history.push(historyEvent);
+
+
+            groups.forEach(function(g) {
+                newSelection = newSelection.concat(ungroup(g))
+                historyEvent.groups.push(g);
+            })
+            RED.history.push(historyEvent);
+            RED.view.select({nodes:newSelection})
+            RED.nodes.dirty(true);
+        }
+    }
+
+    function ungroup(g) {
+        var nodes = [];
+        var parentGroup = RED.nodes.group(g.g);
+        g.nodes.forEach(function(n) {
+            nodes.push(n);
+            if (parentGroup) {
+                // Move nodes to parent group
+                n.g = parentGroup.id;
+                parentGroup.nodes.push(n);
+                parentGroup.dirty = true;
+                n.dirty = true;
+            } else {
+                delete n.g;
+            }
+            if (n.type === 'group') {
+                RED.events.emit("groups:change",n)
+            } else {
+                RED.events.emit("nodes:change",n)
+            }
+        })
+        RED.nodes.removeGroup(g);
+        return nodes;
+    }
+
+    function mergeSelection() {
+        if (RED.view.state() !== RED.state.DEFAULT) { return }
+        var selection = RED.view.selection();
+        if (selection.nodes) {
+            var nodes = [];
+
+            var historyEvent = {
+                t: "multi",
+                events: []
+            }
+            var ungroupHistoryEvent = {
+                t: "ungroup",
+                groups: []
+            }
+
+
+            var n;
+            var parentGroup;
+            // First pass, check they are all in the same parent
+            // TODO: DRY mergeSelection,removeSelection,...
+            for (var i=0; i<selection.nodes.length; i++) {
+                n = selection.nodes[i];
+                if (i === 0) {
+                    parentGroup = n.g;
+                } else if (n.g !== parentGroup) {
+                    RED.notify(RED._("group.errors.cannotCreateDiffGroups"),"error");
+                    return;
+                }
+            }
+            var existingGroup;
+
+            // Second pass, ungroup any groups in the selection and add their contents
+            // to the selection
+            for (var i=0; i<selection.nodes.length; i++) {
+                n = selection.nodes[i];
+                if (n.type === "group") {
+                    if (!existingGroup) {
+                        existingGroup = n;
+                    }
+                    ungroupHistoryEvent.groups.push(n);
+                    nodes = nodes.concat(ungroup(n));
+                } else {
+                    nodes.push(n);
+                }
+                n.dirty = true;
+            }
+            if (ungroupHistoryEvent.groups.length > 0) {
+                historyEvent.events.push(ungroupHistoryEvent);
+            }
+            // Finally, create the new group
+            var group = createGroup(nodes);
+            if (group) {
+                if (existingGroup) {
+                    group.style = existingGroup.style;
+                    group.name = existingGroup.name;
+                }
+                RED.view.select({nodes:[group]})
+            }
+            historyEvent.events.push({
+                t:"createGroup",
+                groups: [ group ],
+                dirty: RED.nodes.dirty()
+            });
+            RED.history.push(historyEvent);
+            RED.nodes.dirty(true);
+        }
+    }
+
+    function removeSelection() {
+        if (RED.view.state() !== RED.state.DEFAULT) { return }
+        var selection = RED.view.selection();
+        if (selection.nodes) {
+            var nodes = [];
+            var n;
+            var parentGroup = RED.nodes.group(selection.nodes[0].g);
+            if (parentGroup) {
+                try {
+                    removeFromGroup(parentGroup,selection.nodes,true);
+                    var historyEvent = {
+                        t: "removeFromGroup",
+                        dirty: RED.nodes.dirty(),
+                        group: parentGroup,
+                        nodes: selection.nodes
+                    }
+                    RED.history.push(historyEvent);
+                    RED.nodes.dirty(true);
+                } catch(err) {
+                    RED.notify(err,"error");
+                    return;
+                }
+            }
+            RED.view.select({nodes:selection.nodes})
+        }
+    }
+    function createGroup(nodes) {
+        if (nodes.length === 0) {
+            return;
+        }
+        if (nodes.filter(function(n) { return n.type === "subflow" }).length > 0) {
+            RED.notify(RED._("group.errors.cannotAddSubflowPorts"),"error");
+            return;
+        }
+        // nodes is an array
+        // each node must be on the same tab (z)
+        var group = {
+            id: RED.nodes.id(),
+            type: 'group',
+            nodes: [],
+            style: JSON.parse(JSON.stringify(defaultGroupStyle)),
+            x: Number.POSITIVE_INFINITY,
+            y: Number.POSITIVE_INFINITY,
+            w: 0,
+            h: 0,
+            _def: RED.group.def
+        }
+
+        group.z = nodes[0].z;
+        RED.nodes.addGroup(group);
+
+        try {
+            addToGroup(group,nodes);
+        } catch(err) {
+            RED.notify(err,"error");
+            return;
+        }
+        return group;
+    }
+    function addToGroup(group,nodes) {
+        if (!Array.isArray(nodes)) {
+            nodes = [nodes];
+        }
+        var i,n,z;
+        var g;
+        // First pass - validate we can safely add these nodes to the group
+        for (i=0;i<nodes.length;i++) {
+            n = nodes[i]
+            if (!n.z) {
+                throw new Error("Cannot add node without a z property to a group")
+            }
+            if (!z) {
+                z = n.z;
+            } else if (z !== n.z) {
+                throw new Error("Cannot add nooes with different z properties")
+            }
+            if (n.g) {
+                // This is already in a group.
+                //  - check they are all in the same group
+                if (!g) {
+                    if (i!==0) {
+                        // TODO: this might be ok when merging groups
+                        throw new Error(RED._("group.errors.cannotCreateDiffGroups"))
+                    }
+                    g = n.g
+                }
+            }
+            if (g !== n.g) {
+                throw new Error(RED._("group.errors.cannotCreateDiffGroups"))
+            }
+        }
+        // The nodes are already in a group. The assumption is they should be
+        // wrapped in the newly provided group, and that group added to in their
+        // place to the existing containing group.
+        if (g) {
+            g = RED.nodes.group(g);
+            g.nodes.push(group);
+            g.dirty = true;
+            group.g = g.id;
+        }
+        // Second pass - add them to the group
+        for (i=0;i<nodes.length;i++) {
+            n = nodes[i];
+            if (n.type !== "subflow") {
+                if (g && n.g === g.id) {
+                    var ni = g.nodes.indexOf(n);
+                    if (ni > -1) {
+                        g.nodes.splice(ni,1)
+                    }
+                }
+                n.g = group.id;
+                n.dirty = true;
+                group.nodes.push(n);
+                group.x = Math.min(group.x,n.x-n.w/2-25-((n._def.button && n._def.align!=="right")?20:0));
+                group.y = Math.min(group.y,n.y-n.h/2-25);
+                group.w = Math.max(group.w,n.x+n.w/2+25+((n._def.button && n._def.align=="right")?20:0) - group.x);
+                group.h = Math.max(group.h,n.y+n.h/2+25-group.y);
+                if (n.type === 'group') {
+                    RED.events.emit("groups:change",n)
+                } else {
+                    RED.events.emit("nodes:change",n)
+                }
+            }
+        }
+        if (g) {
+            RED.events.emit("groups:change",group)
+        }
+        markDirty(group);
+    }
+    function removeFromGroup(group, nodes, reparent) {
+        if (!Array.isArray(nodes)) {
+            nodes = [nodes];
+        }
+        var n;
+        // First pass, check they are all in the same parent
+        // TODO: DRY mergeSelection,removeSelection,...
+        for (var i=0; i<nodes.length; i++) {
+            if (nodes[i].g !== group.id) {
+                return;
+            }
+        }
+        var parentGroup = RED.nodes.group(group.g);
+        for (var i=0; i<nodes.length; i++) {
+            n = nodes[i];
+            n.dirty = true;
+            var index = group.nodes.indexOf(n);
+            group.nodes.splice(index,1);
+            if (reparent && group.g) {
+                n.g = group.g
+                parentGroup.nodes.push(n);
+            } else {
+                delete n.g;
+            }
+            if (n.type === 'group') {
+                RED.events.emit("groups:change",n)
+            } else {
+                RED.events.emit("nodes:change",n)
+            }
+        }
+        markDirty(group);
+    }
+
+    function getNodes(group,recursive) {
+        var nodes = [];
+        group.nodes.forEach(function(n) {
+            nodes.push(n);
+            if (recursive && n.type === 'group') {
+                nodes = nodes.concat(getNodes(n,recursive))
+            }
+        })
+        return nodes;
+    }
+
+    function groupContains(group,item) {
+        if (item.g === group.id) {
+            return true;
+        }
+        for (var i=0;i<group.nodes.length;i++) {
+            if (group.nodes[i].type === "group") {
+                if (groupContains(group.nodes[i],item)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    function getRootGroup(group) {
+        if (!group.g) {
+            return group;
+        }
+        return getRootGroup(RED.nodes.group(group.g))
+    }
+
+    function createLayoutPicker(options) {
+
+        var container = $("<div>",{style:"display:inline-block"});
+        var layoutHiddenInput = $("<input/>", { id: options.id, type: "hidden", value: options.value }).appendTo(container);
+
+        var layoutButton = $('<button type="button" class="red-ui-button red-ui-editor-node-appearance-button">').appendTo(container);
+        $('<i class="fa fa-caret-down"></i>').appendTo(layoutButton);
+
+        var layoutDispContainer = $('<div>',{class:"red-ui-search-result-node"}).appendTo(layoutButton);
+        var layoutDisp = $('<div>',{class:"red-ui-group-layout-picker-cell-text red-ui-group-layout-text-pos-"}).appendTo(layoutDispContainer);
+
+        var refreshDisplay = function() {
+            var val = layoutHiddenInput.val();
+            layoutDisp.removeClass().addClass("red-ui-group-layout-picker-cell-text red-ui-group-layout-text-pos-"+val)
+        }
+        layoutButton.on("click", function(e) {
+            var picker = $("<div/>", {
+                class: "red-ui-group-layout-picker"
+            }).css({
+                width: "126px"
+            });
+
+            var row = null;
+
+            row = $("<div/>").appendTo(picker);
+            var currentButton;
+            for (var y=0;y<2;y++) { //red-ui-group-layout-text-pos
+                var yComponent= "ns"[y];
+                row = $("<div/>").appendTo(picker);
+                for (var x=0;x<3;x++) {
+                    var xComponent = ["w","","e"][x];
+                    var val = yComponent+xComponent;
+                    var button = $("<button/>", { class:"red-ui-search-result-node red-ui-button","data-pos":val }).appendTo(row);
+                    button.on("click",  function (e) {
+                        e.preventDefault();
+                        layoutHiddenInput.val($(this).data("pos"));
+                        layoutPanel.hide()
+                        refreshDisplay();
+                    });
+                    $('<div>',{class:"red-ui-group-layout-picker-cell-text red-ui-group-layout-text-pos-"+val}).appendTo(button);
+                    if (val === layoutHiddenInput.val()) {
+                        currentButton = button;
+                    }
+                }
+            }
+            refreshDisplay();
+            var layoutPanel = RED.popover.panel(picker);
+            layoutPanel.show({
+                target: layoutButton,
+                onclose: function() {
+                    layoutButton.focus();
+                }
+            });
+            if (currentButton) {
+                currentButton.focus();
+            }
+        })
+
+        refreshDisplay();
+
+        return container;
+
+    }
+
+    function markDirty(group) {
+        group.dirty = true;
+        while(group) {
+            group.dirty = true;
+            group = RED.nodes.group(group.g);
+        }
+    }
+
+
+    return {
+        def: groupDef,
+        init: init,
+        createGroup: createGroup,
+        ungroup: ungroup,
+        addToGroup: addToGroup,
+        removeFromGroup: removeFromGroup,
+        getNodes: getNodes,
+        contains: groupContains,
+        markDirty: markDirty
     }
 })();
 ;/**
@@ -32142,7 +38493,7 @@ RED.userSettings = (function() {
     var viewSettings = [
         {
             options: [
-                //Language is set through admin UI.
+                //Removed by Homegear GmbH: Language is set through admin UI.
                 //{setting:"editor-language",local: true, label:"menu.label.view.language",options:function(done){ done([{val:'',text:RED._('menu.label.view.browserDefault')}].concat(RED.settings.theme("languages").map(localeToName).sort(compText))) }},
             ]
         },{
@@ -32150,6 +38501,7 @@ RED.userSettings = (function() {
             options: [
                 {setting:"view-show-grid",oldSetting:"menu-menu-item-view-show-grid",label:"menu.label.view.showGrid", default: true, toggle:true,onchange:"core:toggle-show-grid"},
                 {setting:"view-snap-grid",oldSetting:"menu-menu-item-view-snap-grid",label:"menu.label.view.snapGrid", default: true, toggle:true,onchange:"core:toggle-snap-grid"},
+                //Modified by Homegear GmbH
                 {setting:"view-grid-size",label:"menu.label.view.gridSize",type:"number",default: 10, onchange:RED.view.gridSize}
             ]
         },
@@ -32400,8 +38752,8 @@ RED.projects = (function() {
                     $('<p>').text(RED._("projects.welcome.desc2")).appendTo(body);
 
                     var row = $('<div style="text-align: center"></div>').appendTo(body);
-                    var createAsEmpty = $('<button data-type="empty" class="red-ui-button red-ui-projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>'+RED._("projects.welcome.create")+'</button>').appendTo(row);
-                    var createAsClone = $('<button data-type="clone" class="red-ui-button red-ui-projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>'+RED._("projects.welcome.clone")+'</button>').appendTo(row);
+                    var createAsEmpty = $('<button data-type="empty" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>'+RED._("projects.welcome.create")+'</button>').appendTo(row);
+                    var createAsClone = $('<button data-type="clone" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>'+RED._("projects.welcome.clone")+'</button>').appendTo(row);
 
                     createAsEmpty.on("click", function(e) {
                         e.preventDefault();
@@ -32830,7 +39182,8 @@ RED.projects = (function() {
 
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
                         $('<label for="red-ui-projects-dialog-screen-create-project-repo-pass">'+RED._("projects.clone-project.passwd")+'</label>').appendTo(subrow);
-                        projectRepoPasswordInput = $('<input id="red-ui-projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
+                        projectRepoPasswordInput = $('<input style="width:100%" id="red-ui-projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
+                        projectRepoPasswordInput.typedInput({type:"cred"});
                         // -----------------------------------------------------
 
                         // Repo credentials - key/passphrase -------------------
@@ -32858,12 +39211,12 @@ RED.projects = (function() {
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
                         $('<label for="red-ui-projects-dialog-screen-create-project-repo-passphrase">'+RED._("projects.clone-project.passphrase")+'</label>').appendTo(subrow);
                         projectRepoPassphrase = $('<input id="red-ui-projects-dialog-screen-create-project-repo-passphrase" type="password"></input>').appendTo(subrow);
-
+                        projectRepoPassphrase.typedInput({type:"cred"});
                         subrow = $('<div class="form-row red-ui-projects-dialog-screen-create-row red-ui-projects-dialog-screen-create-row-sshkey"></div>').appendTo(cloneAuthRows);
                         var sshwarningRow = $('<div class="red-ui-projects-dialog-screen-create-row-auth-error-no-keys"></div>').hide().appendTo(subrow);
                         $('<div class="form-row"><i class="fa fa-warning"></i> '+RED._("projects.clone-project.ssh-key-desc")+'</div>').appendTo(sshwarningRow);
                         subrow = $('<div style="text-align: center">').appendTo(sshwarningRow);
-                        $('<button class="red-ui-button">'+RED._("projects.clone-project.ssh-key-add")+'</button>').appendTo(subrow).on("click", function(e) {
+                        $('<button class="red-ui-button red-ui-projects-dialog-button">'+RED._("projects.clone-project.ssh-key-add")+'</button>').appendTo(subrow).on("click", function(e) {
                             e.preventDefault();
                             dialog.dialog( "close" );
                             RED.userSettings.show('gitconfig');
@@ -32877,8 +39230,8 @@ RED.projects = (function() {
                         // Secret - clone
                         row = $('<div class="form-row red-ui-projects-dialog-screen-create-row red-ui-projects-dialog-screen-create-row-clone"></div>').appendTo(body);
                         $('<label>'+RED._("projects.clone-project.credential-key")+'</label>').appendTo(row);
-                        projectSecretInput = $('<input type="password"></input>').appendTo(row);
-
+                        projectSecretInput = $('<input style="width: 100%" type="password"></input>').appendTo(row);
+                        projectSecretInput.typedInput({type:"cred"});
 
 
                         return container;
@@ -33004,6 +39357,8 @@ RED.projects = (function() {
                                             }
                                         }
                                     },projectData).then(function() {
+                                        RED.menu.setDisabled('menu-item-projects-open',false);
+                                        RED.menu.setDisabled('menu-item-projects-settings',false);
                                         RED.events.emit("project:change", {name:name});
                                     }).always(function() {
                                         setTimeout(function() {
@@ -33211,6 +39566,7 @@ RED.projects = (function() {
                         $('<label class="red-ui-projects-edit-form-inline-label" style="margin-left: 5px"><input type="radio" style="vertical-align: middle; margin-top:0; margin-right: 10px;" value="custom" name="projects-encryption-key"> <span style="vertical-align: middle;">'+RED._("projects.encryption-config.use-custom")+'</span></label>').appendTo(row);
                         row = $('<div class="projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
                         emptyProjectCredentialInput = $('<input disabled type="password" style="margin-left: 25px; width: calc(100% - 30px);"></input>').appendTo(row);
+                        emptyProjectCredentialInput.typedInput({type:"cred"});
                         emptyProjectCredentialInput.on("change keyup paste", validateForm);
 
                         row = $('<div class="form-row projects-encryption-disabled-row"></div>').hide().appendTo(credentialsRightBox);
@@ -33486,11 +39842,11 @@ RED.projects = (function() {
 
                         row = $('<div class="form-row button-group"></div>').appendTo(container);
 
-                        var openProject = $('<button data-type="open" class="red-ui-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-folder-open"></i><br/>'+RED._("projects.create.open")+'</button>').appendTo(row);
-                        var createAsEmpty = $('<button data-type="empty" class="red-ui-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>'+RED._("projects.create.create")+'</button>').appendTo(row);
-                        // var createAsCopy = $('<button data-type="copy" class="red-ui-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i class="fa fa-long-arrow-right fa-2x"></i><i class="fa fa-archive fa-2x"></i><br/>Copy existing</button>').appendTo(row);
-                        var createAsClone = $('<button data-type="clone" class="red-ui-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>'+RED._("projects.create.clone")+'</button>').appendTo(row);
-                        // var createAsClone = $('<button data-type="clone" class="red-ui-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-git fa-2x"></i><i class="fa fa-arrows-h fa-2x"></i><i class="fa fa-archive fa-2x"></i><br/>Clone Repository</button>').appendTo(row);
+                        var openProject = $('<button data-type="open" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-folder-open"></i><br/>'+RED._("projects.create.open")+'</button>').appendTo(row);
+                        var createAsEmpty = $('<button data-type="empty" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-asterisk"></i><br/>'+RED._("projects.create.create")+'</button>').appendTo(row);
+                        // var createAsCopy = $('<button data-type="copy" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i class="fa fa-long-arrow-right fa-2x"></i><i class="fa fa-archive fa-2x"></i><br/>Copy existing</button>').appendTo(row);
+                        var createAsClone = $('<button data-type="clone" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-archive fa-2x"></i><i style="position: absolute;" class="fa fa-git"></i><br/>'+RED._("projects.create.clone")+'</button>').appendTo(row);
+                        // var createAsClone = $('<button data-type="clone" class="red-ui-button red-ui-projects-dialog-button red-ui-projects-dialog-screen-create-type toggle"><i class="fa fa-git fa-2x"></i><i class="fa fa-arrows-h fa-2x"></i><i class="fa fa-archive fa-2x"></i><br/>Clone Repository</button>').appendTo(row);
                         row.find(".red-ui-projects-dialog-screen-create-type").on("click", function(evt) {
                             evt.preventDefault();
                             container.find(".red-ui-projects-dialog-screen-create-type").removeClass('selected');
@@ -33615,6 +39971,7 @@ RED.projects = (function() {
                         $('<label class="red-ui-projects-edit-form-inline-label">'+RED._("projects.create.encryption-key")+'</label>').appendTo(row);
                         // row = $('<div class="projects-encryption-enabled-row"></div>').appendTo(credentialsRightBox);
                         emptyProjectCredentialInput = $('<input type="password"></input>').appendTo(row);
+                        emptyProjectCredentialInput.typedInput({type:"cred"});
                         emptyProjectCredentialInput.on("change keyup paste", validateForm);
                         $('<label class="red-ui-projects-edit-form-sublabel"><small>'+RED._("projects.create.desc0")+'</small></label>').appendTo(row);
 
@@ -33673,7 +40030,8 @@ RED.projects = (function() {
 
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
                         $('<label for="red-ui-projects-dialog-screen-create-project-repo-pass">'+RED._("projects.create.password")+'</label>').appendTo(subrow);
-                        projectRepoPasswordInput = $('<input id="red-ui-projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
+                        projectRepoPasswordInput = $('<input style="width:100%" id="red-ui-projects-dialog-screen-create-project-repo-pass" type="password"></input>').appendTo(subrow);
+                        projectRepoPasswordInput.typedInput({type:"cred"});
                         // -----------------------------------------------------
 
                         // Repo credentials - key/passphrase -------------------
@@ -33701,12 +40059,13 @@ RED.projects = (function() {
                         subrow = $('<div style="width: calc(50% - 10px); margin-left: 20px; display:inline-block;"></div>').appendTo(row);
                         $('<label for="red-ui-projects-dialog-screen-create-project-repo-passphrase">'+RED._("projects.create.passphrase")+'</label>').appendTo(subrow);
                         projectRepoPassphrase = $('<input id="red-ui-projects-dialog-screen-create-project-repo-passphrase" type="password"></input>').appendTo(subrow);
+                        projectRepoPassphrase.typedInput({type:"cred"});
 
                         subrow = $('<div class="form-row red-ui-projects-dialog-screen-create-row red-ui-projects-dialog-screen-create-row-sshkey"></div>').appendTo(cloneAuthRows);
                         var sshwarningRow = $('<div class="red-ui-projects-dialog-screen-create-row-auth-error-no-keys"></div>').hide().appendTo(subrow);
                         $('<div class="form-row"><i class="fa fa-warning"></i> '+RED._("projects.create.desc2")+'</div>').appendTo(sshwarningRow);
                         subrow = $('<div style="text-align: center">').appendTo(sshwarningRow);
-                        $('<button class="red-ui-button">'+RED._("projects.create.add-ssh-key")+'</button>').appendTo(subrow).on("click", function(e) {
+                        $('<button class="red-ui-button red-ui-projects-dialog-button">'+RED._("projects.create.add-ssh-key")+'</button>').appendTo(subrow).on("click", function(e) {
                             e.preventDefault();
                             $('#red-ui-projects-dialog-cancel').trigger("click");
                             RED.userSettings.show('gitconfig');
@@ -33720,8 +40079,8 @@ RED.projects = (function() {
                         // Secret - clone
                         row = $('<div class="hide form-row red-ui-projects-dialog-screen-create-row red-ui-projects-dialog-screen-create-row-clone"></div>').appendTo(container);
                         $('<label>'+RED._("projects.create.credentials-encryption-key")+'</label>').appendTo(row);
-                        projectSecretInput = $('<input type="password"></input>').appendTo(row);
-
+                        projectSecretInput = $('<input style="width:100%" type="password"></input>').appendTo(row);
+                        projectSecretInput.typedInput({type:"cred"});
 
                         switch(options.screen||"empty") {
                             case "empty": createAsEmpty.trigger("click"); break;
@@ -33814,7 +40173,6 @@ RED.projects = (function() {
                                         }
                                     } else if (projectType === 'open') {
                                         return switchProject(selectedProject.name,function(err,data) {
-                                            dialog.dialog( "close" );
                                             if (err) {
                                                 if (err.code !== 'credentials_load_failed') {
                                                     console.log(RED._("projects.create.unexpected_error"),err)
@@ -33923,6 +40281,7 @@ RED.projects = (function() {
                 },
             }
         },{active:true}).then(function() {
+            dialog.dialog( "close" );
             RED.events.emit("project:change", {name:name});
         }).always(function() {
             setTimeout(function() {
@@ -33932,25 +40291,16 @@ RED.projects = (function() {
     }
 
     function deleteProject(row,name,done) {
-        var cover = $('<div>').css({
-            background:"white",
-            position:"absolute",
-            top:0,right:0,bottom:0,left:"100%",
-            overflow:"hidden",
-            padding: "5px 20px",
-            transition: "left 0.4s",
-            whitespace: "nowrap",
-            width:"1000px"
-        }).on("click", function(evt) { evt.stopPropagation(); }).appendTo(row);
-        $('<span>').css({"lineHeight":"40px"}).text(RED._("projects.delete.confirm")).appendTo(cover);
-        $('<button style="margin-left:20px" class="red-ui-button">'+RED._("common.label.cancel")+'</button>')
+        var cover = $('<div class="red-ui-projects-dialog-project-list-entry-delete-confirm"></div>').on("click", function(evt) { evt.stopPropagation(); }).appendTo(row);
+        $('<span>').text(RED._("projects.delete.confirm")).appendTo(cover);
+        $('<button class="red-ui-button red-ui-projects-dialog-button">'+RED._("common.label.cancel")+'</button>')
             .appendTo(cover)
             .on("click", function(e) {
                 e.stopPropagation();
                 cover.remove();
                 done(true);
             });
-        $('<button style="margin-left:20px" class="red-ui-button primary">'+RED._("common.label.delete")+'</button>')
+        $('<button class="red-ui-button red-ui-projects-dialog-button primary">'+RED._("common.label.delete")+'</button>')
             .appendTo(cover)
             .on("click", function(e) {
                 e.stopPropagation();
@@ -33990,16 +40340,27 @@ RED.projects = (function() {
         if (typeof buttons === 'function') {
             buttons = buttons(options||{});
         }
+
+
+
         dialog.dialog('option','buttons',buttons);
         dialogBody.append(container);
+
+
+        var dialogHeight = 590;
+        var winHeight = $(window).height();
+        if (winHeight < 750) {
+            dialogHeight = 590 - (750 - winHeight);
+        }
+        $(".red-ui-projects-dialog-box").height(dialogHeight);
+        $(".red-ui-projects-dialog-project-list-inner-container").height(Math.max(500,dialogHeight) - 180);
         dialog.dialog('option','title',screen.title||"");
         dialog.dialog("open");
-        dialog.dialog({position: { 'my': 'center top', 'at': 'center top+20', 'of': window }});
     }
 
     function createProjectList(options) {
         options = options||{};
-        var height = options.height || "300px";
+        var height = options.height || "200px";
         var container = $('<div></div>',{class:"red-ui-projects-dialog-project-list-container" });
         var filterTerm = "";
 
@@ -34123,7 +40484,7 @@ RED.projects = (function() {
                 header.addClass("selectable");
 
                 var tools = $('<div class="red-ui-projects-dialog-project-list-entry-tools"></div>').appendTo(header);
-                $('<button class="red-ui-button red-ui-button-small" style="float: right;"><i class="fa fa-trash"></i></button>')
+                $('<button class="red-ui-button red-ui-projects-dialog-button red-ui-button-small" style="float: right;"><i class="fa fa-trash"></i></button>')
                     .appendTo(tools)
                     .on("click", function(e) {
                         e.stopPropagation();
@@ -34277,7 +40638,8 @@ RED.projects = (function() {
                         var isSSH = false;
                         if (/^https?:\/\//.test(url)) {
                             $('<div class="form-row"><label for="projects-user-auth-username">'+RED._("projects.send-req.username")+'</label><input id="projects-user-auth-username" type="text"></input></div>'+
-                            '<div class="form-row"><label for=projects-user-auth-password">'+RED._("projects.send-req.password")+'</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
+                            '<div class="form-row"><label for="projects-user-auth-password">'+RED._("projects.send-req.password")+'</label><input id="projects-user-auth-password" type="password"></input></div>').appendTo(message);
+                            message.find("#projects-user-auth-password").typedInput({type:"cred"})
                         } else if (/^(?:ssh|[\d\w\.\-_]+@[\w\.]+):(?:\/\/)?/.test(url)) {
                             isSSH = true;
                             var row = $('<div class="form-row"></div>').appendTo(message);
@@ -34295,7 +40657,7 @@ RED.projects = (function() {
                             });
                             row = $('<div class="form-row"></div>').appendTo(message);
                             $('<label for="projects-user-auth-passphrase">'+RED._("projects.send-req.passphrase")+'</label>').appendTo(row);
-                            $('<input id="projects-user-auth-passphrase" type="password"></input>').appendTo(row);
+                            $('<input id="projects-user-auth-passphrase" type="password"></input>').appendTo(row).typedInput({type:"cred"});
                         }
 
                         var notification = RED.notify(message,{
@@ -34571,13 +40933,19 @@ RED.projects = (function() {
     }
 
     function init() {
-        dialog = $('<div id="red-ui-projects-dialog" class="hide red-ui-projects-edit-form"><form class="form-horizontal"></form><div class="red-ui-component-spinner hide"><img src="red/images/spin.svg"/></div></div>')
+        dialog = $('<div id="red-ui-projects-dialog" class="hide red-ui-projects-edit-form"><div class="red-ui-projects-dialog-box"><form class="form-horizontal"></form><div class="red-ui-component-spinner hide"><img src="red/images/spin.svg"/></div></div></div>')
             .appendTo("#red-ui-editor")
             .dialog({
                 modal: true,
                 autoOpen: false,
                 width: 600,
                 resizable: false,
+                open: function(e) {
+                    RED.keyboard.disable();
+                },
+                close: function(e) {
+                    RED.keyboard.enable();
+                },
                 classes: {
                     "ui-dialog": "red-ui-editor-dialog",
                     "ui-dialog-titlebar-close": "hide",
@@ -34658,6 +41026,7 @@ RED.projects = (function() {
             if (data.active) {
                 $.getJSON("projects/"+data.active, function(project) {
                     activeProject = project;
+                    RED.events.emit("projects:load",activeProject);
                     RED.sidebar.versionControl.refresh(true);
                     if (done) {
                         done(activeProject);
@@ -34921,34 +41290,42 @@ RED.projects.settings = (function() {
         description.find(".red-ui-text-bidi-aware").contents().filter(function() { return this.nodeType === 3 && this.textContent.trim() !== "" }).wrap( "<span></span>" );
     }
 
-    function editSummary(activeProject, summary, container) {
+    function editSummary(activeProject, summary, container, version, versionContainer) {
         var editButton = container.prev();
         editButton.hide();
         container.empty();
+        versionContainer.empty();
         var bg = $('<span class="button-row" style="position: relative; float: right; margin-right:0;"></span>').appendTo(container);
         var input = $('<input type="text" style="width: calc(100% - 150px); margin-right: 10px;">').val(summary||"").appendTo(container);
+        var versionInput = $('<input type="text" style="width: calc(100% - 150px); margin-right: 10px;">').val(version||"").appendTo(versionContainer);
+
         $('<button class="red-ui-button">' + RED._("common.label.cancel") + '</button>')
             .appendTo(bg)
             .on("click", function(evt) {
                 evt.preventDefault();
                 updateProjectSummary(activeProject.summary, container);
+                updateProjectVersion(activeProject.version, versionContainer);
                 editButton.show();
             });
         $('<button class="red-ui-button">' + RED._("common.label.save") + '</button>')
             .appendTo(bg)
             .on("click", function(evt) {
                 evt.preventDefault();
-                var v = input.val();
-                updateProjectSummary(v, container);
-                var spinner = utils.addSpinnerOverlay(container);
+                var newSummary = input.val();
+                var newVersion = versionInput.val();
+                updateProjectSummary(newSummary, container);
+                updateProjectVersion(newVersion, versionContainer);
+                var spinner = utils.addSpinnerOverlay(container).addClass('red-ui-component-spinner-contain');
                 var done = function(err,res) {
                     if (err) {
                         spinner.remove();
-                        return editSummary(activeProject, summary, container);
+                        return editSummary(activeProject, summary, container, version, versionContainer);
                     }
-                    activeProject.summary = v;
+                    activeProject.summary = newSummary;
+                    activeProject.version = newVersion;
                     spinner.remove();
                     updateProjectSummary(activeProject.summary, container);
+                    updateProjectVersion(activeProject.version, versionContainer);
                     editButton.show();
                 }
                 utils.sendRequest({
@@ -34969,31 +41346,39 @@ RED.projects.settings = (function() {
                             }
                         },
                     }
-                },{summary:v});
+                },{summary:newSummary, version: newVersion});
             });
     }
     function updateProjectSummary(summary, container) {
         container.empty();
         if (summary) {
-            container.text(summary).removeClass('node-info-node');
+            container.text(summary).removeClass('red-ui-help-info-none');
         } else {
             container.text(RED._("sidebar.project.noSummaryAvailable")).addClass('red-ui-help-info-none');
         }
     }
-
+    function updateProjectVersion(version, container) {
+        container.empty();
+        if (version) {
+            container.text(version);
+        }
+    }
     function createMainPane(activeProject) {
 
         var pane = $('<div id="red-ui-project-settings-tab-main" class="red-ui-project-settings-tab-pane red-ui-help"></div>');
         $('<h1>').text(activeProject.name).appendTo(pane);
         var summary = $('<div style="position: relative">').appendTo(pane);
         var summaryContent = $('<div></div>').appendTo(summary);
+        var versionContent = $('<div></div>').addClass('red-ui-help-info-none').appendTo(summary);
         updateProjectSummary(activeProject.summary, summaryContent);
+        updateProjectVersion(activeProject.version, versionContent);
+
         if (RED.user.hasPermission("projects.write")) {
             $('<button class="red-ui-button red-ui-button-small" style="float: right;">' + RED._('sidebar.project.editDescription') + '</button>')
                 .prependTo(summary)
                 .on("click", function(evt) {
                     evt.preventDefault();
-                    editSummary(activeProject, activeProject.summary, summaryContent);
+                    editSummary(activeProject, activeProject.summary, summaryContent, activeProject.version, versionContent);
                 });
         }
         $('<hr>').appendTo(pane);
@@ -35772,7 +42157,7 @@ RED.projects.settings = (function() {
 
         var credentialSecretExistingRow = $('<div class="red-ui-settings-row red-ui-settings-row-credentials"></div>').appendTo(credentialFormRows);
         $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.currentKey")).appendTo(credentialSecretExistingRow);
-        var credentialSecretExistingInput = $('<input type="password">').appendTo(credentialSecretExistingRow)
+        var credentialSecretExistingInput = $('<input type="text">').appendTo(credentialSecretExistingRow).typedInput({type:"cred"})
             .on("change keyup paste",function() {
                 if (popover) {
                     popover.close();
@@ -35785,7 +42170,7 @@ RED.projects.settings = (function() {
 
 
         $('<label for=""></label>').text(RED._("sidebar.project.projectSettings.newKey")).appendTo(credentialSecretNewRow);
-        var credentialSecretNewInput = $('<input type="password">').appendTo(credentialSecretNewRow).on("change keyup paste",checkFiles);
+        var credentialSecretNewInput = $('<input type="text">').appendTo(credentialSecretNewRow).typedInput({type:"cred"}).on("change keyup paste",checkFiles);
 
         var credentialResetWarning = $('<div class="form-tips form-warning" style="margin: 10px;"><i class="fa fa-warning"></i>' + RED._("sidebar.project.projectSettings.credentialsAlert") + '</div>').hide().appendTo(credentialFormRows);
 
@@ -36328,8 +42713,6 @@ RED.projects.settings = (function() {
         updateForm();
     }
 
-
-
     function createSettingsPane(activeProject) {
         var pane = $('<div id="red-ui-project-settings-tab-settings" class="red-ui-project-settings-tab-pane red-ui-help"></div>');
         createFilesSection(activeProject,pane);
@@ -36457,13 +42840,34 @@ RED.projects.userSettings = (function() {
         $('<label for="user-settings-gitconfig-email"></label>').text(RED._("editor:sidebar.project.userSettings.email")).appendTo(row);
         gitEmailInput = $('<input type="text" id="user-settings-gitconfig-email">').appendTo(row);
         gitEmailInput.val(currentGitSettings.user.email||"");
+
+    }
+
+    function createWorkflowSection(pane) {
+
+        var currentGitSettings = RED.settings.get('git') || {};
+        currentGitSettings.workflow = currentGitSettings.workflow || {};
+        currentGitSettings.workflow.mode = currentGitSettings.workflow.mode || "manual";
+
+        var title = $('<h3></h3>').text(RED._("editor:sidebar.project.userSettings.workflow")).appendTo(pane);
+
+        var workflowContainer = $('<div class="red-ui-settings-section"></div>').appendTo(pane);
+        $('<div class="red-ui-settings-section-description"></div>').appendTo(workflowContainer).text(RED._("editor:sidebar.project.userSettings.workfowTip"));
+
+        var row = $('<div class="red-ui-settings-row"></div>').appendTo(workflowContainer);
+        $('<label><input type="radio" name="user-setting-gitworkflow" value="manual"> <div style="margin-left: 3px; display: inline-block"><div data-i18n="editor:sidebar.project.userSettings.workflowManual"></div><div style="color:#aaa;" data-i18n="editor:sidebar.project.userSettings.workflowManualTip"></div></div></label>').appendTo(row);
+        row = $('<div class="red-ui-settings-row"></div>').appendTo(workflowContainer);
+        $('<label><input type="radio" name="user-setting-gitworkflow" value="auto"> <div style="margin-left: 3px; display: inline-block"><div data-i18n="editor:sidebar.project.userSettings.workflowAuto"></div><div style="color:#aaa;" data-i18n="editor:sidebar.project.userSettings.workflowAutoTip"></div></div></label>').appendTo(row);
+
+        workflowContainer.find('[name="user-setting-gitworkflow"][type="radio"][value="'+currentGitSettings.workflow.mode+'"]').prop('checked',true)
+
     }
 
 
     function createSSHKeySection(pane) {
+        var title = $('<h3></h3>').text(RED._("editor:sidebar.project.userSettings.sshKeys")).appendTo(pane);
         var container = $('<div class="red-ui-settings-section"></div>').appendTo(pane);
         var popover;
-        var title = $('<h3></h3>').text(RED._("editor:sidebar.project.userSettings.sshKeys")).appendTo(container);
         var subtitle = $('<div class="red-ui-settings-section-description"></div>').appendTo(container).text(RED._("editor:sidebar.project.userSettings.sshKeysTip"));
 
         var addKeyButton = $('<button id="user-settings-gitconfig-add-key" class="red-ui-button red-ui-button-small" style="float: right; margin-right: 10px;">'+RED._("editor:sidebar.project.userSettings.add")+'</button>')
@@ -36810,6 +43214,7 @@ RED.projects.userSettings = (function() {
     function createSettingsPane(activeProject) {
         var pane = $('<div id="red-ui-settings-tab-gitconfig" class="project-settings-tab-pane red-ui-help"></div>');
         createGitUserSection(pane);
+        createWorkflowSection(pane);
         createSSHKeySection(pane);
         return pane;
     }
@@ -36826,6 +43231,9 @@ RED.projects.userSettings = (function() {
                 currentGitSettings.user = currentGitSettings.user || {};
                 currentGitSettings.user.name = gitUsernameInput.val();
                 currentGitSettings.user.email = gitEmailInput.val();
+                currentGitSettings.workflow = currentGitSettings.workflow || {};
+                currentGitSettings.workflow.mode = $('[name="user-setting-gitworkflow"][type="radio"]:checked').val()
+
                 RED.settings.set('git', currentGitSettings);
             }
         });
@@ -37130,14 +43538,20 @@ RED.sidebar.versionControl = (function() {
             if (activeProject) {
                 // TODO: this is a full refresh of the files - should be able to
                 //       just do an incremental refresh
-                allChanges = {};
-                unstagedChangesList.editableList('empty');
-                stagedChangesList.editableList('empty');
-                unmergedChangesList.editableList('empty');
 
-                $.getJSON("projects/"+activeProject.name+"/status",function(result) {
-                    refreshFiles(result);
-                });
+                var workflowMode = ((RED.settings.get('git') || {}).workflow || {}).mode || "manual";
+                if (workflowMode === 'auto') {
+                    refresh(true);
+                } else {
+                    allChanges = {};
+                    unstagedChangesList.editableList('empty');
+                    stagedChangesList.editableList('empty');
+                    unmergedChangesList.editableList('empty');
+
+                    $.getJSON("projects/"+activeProject.name+"/status",function(result) {
+                        refreshFiles(result);
+                    });
+                }
             }
         });
         RED.events.on("login",function() {
@@ -38345,14 +44759,14 @@ RED.touch.radialMenu = (function() {
                     if (!opt.disabled) {
                         if (p[0]>opt.x-30 && p[0]<opt.x+30 && p[1]>opt.y-30 && p[1]<opt.y+30) {
                             if (opt !== activeOption) {
-                                opt.el.style("background","#999");
+                                opt.el.classed("selected",true);
                                 activeOption = opt;
                             }
-                        } else if (opt === activeOption) {
-                            opt.el.style("background","#fff");
-                            activeOption = null;
                         } else {
-                            opt.el.style("background","#fff");
+                            if (opt === activeOption) {
+                                activeOption = null;
+                            }
+                            opt.el.classed("selected",false);
                         }
                     }
                 }

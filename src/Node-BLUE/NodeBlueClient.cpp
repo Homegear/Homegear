@@ -274,11 +274,13 @@ void NodeBlueClient::resetClient(Flows::PVariable packetId) {
     }
 
     // We don't reset _inputValues. This keeps old nodes in the array but you can still request history data for all
-    // nodes that still exist which outweighs this problem.
+    // nodes that still exist after reload which outweighs this problem.
     /*{
         std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
         _inputValues.clear();
     }*/
+
+    _nodeManager->clearManagerModuleInfo();
 
     _out.printMessage("Reinitializing...");
 
@@ -1311,10 +1313,6 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
       node->type = typeIterator->second->stringValue;
       node->info = element;
 
-      auto namespaceIterator = element->structValue->find("namespace");
-      if (namespaceIterator != element->structValue->end()) node->nodeNamespace = namespaceIterator->second->stringValue;
-      else node->nodeNamespace = node->type;
-
       auto wiresIterator = element->structValue->find("wires");
       if (wiresIterator != element->structValue->end()) {
         node->wiresOut.reserve(wiresIterator->second->arrayValue->size());
@@ -1377,7 +1375,7 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
         if (_bl->debugLevel >= 5) _out.printDebug("Starting node " + node->id + " of type " + node->type + ".");
 
         Flows::PINode nodeObject;
-        int32_t result = _nodeManager->loadNode(node->nodeNamespace, node->type, node->id, nodeObject);
+        int32_t result = _nodeManager->loadNode(node->type, node->id, nodeObject);
         if (result < 0) {
           _out.printError("Error: Could not load node " + node->type + ". Error code: " + std::to_string(result));
           continue;
@@ -1547,10 +1545,10 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray &parameters) {
         if (_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
         startTime = BaseLib::HelperFunctions::getTime();
         if (node) node->waitForStop();
-        if (BaseLib::HelperFunctions::getTime() - startTime > 1000)
+        if (BaseLib::HelperFunctions::getTime() - startTime > 1500)
           _out.printWarning(
               "Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue
-                  + " took longer than 1 second.");
+                  + " took longer than 1.5 seconds.");
       }
     }
     _nodesStopped = true;
@@ -1897,20 +1895,19 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray &parameters) {
         value->integerValue64 = Flows::Math::getNumber64(payload);
         value->integerValue = (int32_t)value->integerValue64;
         value->floatValue = value->integerValue64;
-      } else if (payloadType == "float") {
+      } else if (payloadType == "float" || payloadType == "num") {
         value->setType(Flows::VariableType::tFloat);
         value->floatValue = Flows::Math::getDouble(payload);
         value->integerValue = value->floatValue;
         value->integerValue64 = value->floatValue;
-      } else if (payloadType == "string") {
+      } else if (payloadType == "string" || payloadType == "str") {
         value->setType(Flows::VariableType::tString);
         value->stringValue = payload;
       } else if (payloadType == "array" || payloadType == "struct") {
-        Flows::JsonDecoder jsonDecoder;
-        value = jsonDecoder.decode(payload);
+        value = Flows::JsonDecoder::decode(payload);
       } else if (payloadType == "bin") {
         value->setType(Flows::VariableType::tBinary);
-        value->binaryValue = _bl->hf.getUBinary(payload);
+        value->binaryValue = BaseLib::HelperFunctions::getUBinary(payload);
       } else return Flows::Variable::createError(-3, "Unknown payload type.");
 
       {
