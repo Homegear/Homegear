@@ -165,6 +165,9 @@ void NodeManager::fillManagerModuleInfo() {
       }
       auto nodesJson = nodesJsonIterator->second;
 
+      auto localIterator = jsonIterator->second->structValue->find("local");
+      if (localIterator != jsonIterator->second->structValue->end()) managerModuleInfo->local = localIterator->second->booleanValue;
+
       auto maxThreadCountsJsonIterator = jsonIterator->second->structValue->find("maxThreadCounts");
       auto maxThreadCountsJson = (maxThreadCountsJsonIterator == jsonIterator->second->structValue->end() ? std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct) : maxThreadCountsJsonIterator->second);
 
@@ -295,7 +298,7 @@ BaseLib::PVariable NodeManager::getModuleInfo() {
       }
       nodeListEntry->structValue->emplace("types", typesEntry);
       nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(false));
+      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(module.second->local));
       nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(module.second->module));
       nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(module.second->version));
       moduleInfo->arrayValue->emplace_back(nodeListEntry);

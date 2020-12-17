@@ -97,6 +97,7 @@ class NodeManager {
     std::string name;
     std::string module;
     std::string version;
+    bool local = false;
     std::unordered_map<NodeType, PNodeInfo> nodes;
   };
   typedef std::shared_ptr<ManagerModuleInfo> PManagerNodeInfo;

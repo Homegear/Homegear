@@ -1801,18 +1801,22 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       _out.printInfo("Info: Installing node (2)...");
       BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
       auto moduleIterator = json->structValue->find("module");
-      if (moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return R"({"result":"error"})";
+      if (moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return R"({"result":"error","error":"module is missing."})";
+      auto urlIterator = json->structValue->find("url");
+      if (urlIterator == json->structValue->end() || urlIterator->second->stringValue.empty()) return R"({"result":"error","error":"URL is missing. Is pkg_url defined in catalog?"})";
 
       std::string method = "managementInstallNode";
       auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(2);
       parameters->push_back(moduleIterator->second);
+      parameters->push_back(urlIterator->second);
       BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
       if (result->errorStruct) {
         _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
         return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
       }
 
-      return R"({"result":"success","commandStatusId":)" + std::to_string(result->integerValue64) + "}";
+      return R"({"result":"success"})";
     } else if (path == "node-blue/settings/user") {
       if (!sessionValid) return "unauthorized";
 
