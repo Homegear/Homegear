@@ -1800,6 +1800,11 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
 
       return R"({"rev": ")" + md5String + "\"}";
+    } else if (path == "node-blue/flows/restart") {
+      if (!sessionValid) return "unauthorized";
+      _out.printInfo("Info: Restarting flows...");
+      GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
+      return R"({"result":"success"})";
     } else if (path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty()) {
       if (!sessionValid) return "unauthorized";
       responseEncoding = "application/json";

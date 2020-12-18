@@ -38,7 +38,7 @@ else
 ?>
 </script>
 <script src="vendor/vendor.js"></script>
-<script src="red/red.js"></script>
+<script src="red/red.min.js"></script>
 <script src="red/main.min.js"></script>
 </body>
 </html>

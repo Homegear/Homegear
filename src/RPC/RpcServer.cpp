@@ -1610,6 +1610,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                     !_info->xmlrpcServer ||
                         (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
                         (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
+                        http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                         http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                         http.getHeader().path.compare(0, 7, "/admin/") == 0
                 ) && (
