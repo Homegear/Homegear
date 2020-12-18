@@ -4,7 +4,7 @@
     },
     "menu": {
         "label": {
-            "restartFlows": "Flows neustarten",
+            "restartNodeBlue": "Node-BLUE neustarten",
             "powered": "Powered by Node-RED",
             "nodebluewebsite": "Node-BLUE website"
         }

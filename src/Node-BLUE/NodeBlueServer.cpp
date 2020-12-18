@@ -1849,8 +1849,16 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       }
 
       if (_nodeEventsEnabled) {
-        if(isUpdate) GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
-        else GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
+        if(isUpdate) {
+          GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
+
+          auto restartRequiredNotification = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+          restartRequiredNotification->structValue->emplace("type", std::make_shared<BaseLib::Variable>("warning"));
+          restartRequiredNotification->structValue->emplace("header", std::make_shared<BaseLib::Variable>("notification.warning"));
+          restartRequiredNotification->structValue->emplace("text", std::make_shared<BaseLib::Variable>("notification.warnings.restartRequired"));
+          restartRequiredNotification->structValue->emplace("fixed", std::make_shared<BaseLib::Variable>(true));
+          GD::rpcClient->broadcastNodeEvent("global", "showNotification", restartRequiredNotification);
+        } else GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
       }
 
       return R"({"result":"success"})";

@@ -125,6 +125,7 @@ void NodeManager::fillManagerModuleInfo() {
     std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
     std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.nodeBluePath() + "nodes/");
     for (auto &directory : directories) {
+      auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
       auto packageJsonPath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append("package.json");
       if (!BaseLib::Io::fileExists(packageJsonPath)) continue;
 
@@ -182,7 +183,7 @@ void NodeManager::fillManagerModuleInfo() {
 
           auto filename = node.second->stringValue;
           std::string filePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(filename);
-          if (filePath.empty() || !BaseLib::Io::fileExists(filePath)) {
+          if (!BaseLib::Io::fileExists(modulePath + ".compiling") && (filePath.empty() || !BaseLib::Io::fileExists(filePath))) {
             GD::out.printError("Error: Node file \"" + filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
             continue;
           }
@@ -290,25 +291,25 @@ Flows::PINode NodeManager::getNode(const std::string &id) {
 BaseLib::PVariable NodeManager::getModuleInfo() {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-    auto moduleInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-    moduleInfo->arrayValue->reserve(_managerModuleInfo.size());
-    for (auto &module : _managerModuleInfo) {
-      auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(module.second->module + "/" + module.second->name));
-      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(module.second->name));
-      auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-      typesEntry->arrayValue->reserve(module.second->nodes.size());
-      for (auto &element : module.second->nodes) {
-        typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(element.first));
+    auto moduleInfoArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    moduleInfoArray->arrayValue->reserve(_managerModuleInfo.size());
+    for (auto &moduleInfo : _managerModuleInfo) {
+      for (auto &node : moduleInfo.second->nodes) {
+        auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo.second->module + "/" + node.first));
+        nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
+        auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
+        nodeListEntry->structValue->emplace("types", typesEntry);
+        nodeListEntry->structValue->emplace("types", typesEntry);
+        nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
+        nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(moduleInfo.second->local));
+        nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(moduleInfo.second->module));
+        nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(moduleInfo.second->version));
+        moduleInfoArray->arrayValue->emplace_back(nodeListEntry);
       }
-      nodeListEntry->structValue->emplace("types", typesEntry);
-      nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(module.second->local));
-      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(module.second->module));
-      nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(module.second->version));
-      moduleInfo->arrayValue->emplace_back(nodeListEntry);
     }
-    return moduleInfo;
+    return moduleInfoArray;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
