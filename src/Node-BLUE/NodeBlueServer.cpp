@@ -1812,6 +1812,12 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       auto urlIterator = json->structValue->find("url");
       if (urlIterator == json->structValue->end() || urlIterator->second->stringValue.empty()) return R"({"result":"error","error":"URL is missing. Is pkg_url defined in catalog?"})";
 
+      //{{{ Check if this is an update
+      bool isUpdate = false;
+      auto updateInfo = _nodeManager->getNodesUpdatedInfo(moduleIterator->second->stringValue);
+      isUpdate = !updateInfo->structValue->empty();
+      //}}}
+
       std::string method = "managementInstallNode";
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
@@ -1825,13 +1831,22 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
 
       _nodeManager->fillManagerModuleInfo();
 
-      auto moduleInfo = _nodeManager->getNodesAddedInfo(moduleIterator->second->stringValue);
-      if (moduleInfo->arrayValue->empty()) {
-        _out.printError("Error: Could not install node: Node could not be loaded after installation.");
-        return R"({"result":"error","error":"Node could not be loaded after installation. See error log for more details."})";
+      BaseLib::PVariable moduleInfo;
+      if (isUpdate) {
+        //Get new version
+        updateInfo = _nodeManager->getNodesUpdatedInfo(moduleIterator->second->stringValue);
+      } else {
+        moduleInfo = _nodeManager->getNodesAddedInfo(moduleIterator->second->stringValue);
+        if (moduleInfo->arrayValue->empty()) {
+          _out.printError("Error: Could not install node: Node could not be loaded after installation.");
+          return R"({"result":"error","error":"Node could not be loaded after installation. See error log for more details."})";
+        }
       }
 
-      if (_nodeEventsEnabled) GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
+      if (_nodeEventsEnabled) {
+        if(isUpdate) GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
+        else GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
+      }
 
       return R"({"result":"success"})";
     } else if (path == "node-blue/settings/user") {

@@ -321,26 +321,45 @@ BaseLib::PVariable NodeManager::getNodesAddedInfo(const std::string &module) {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 
     auto moduleInfoIterator = _managerModuleInfo.find(module);
-    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-    auto module = moduleInfoIterator->second;
+    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    auto moduleInfo = moduleInfoIterator->second;
 
-    auto moduleInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-    moduleInfo->arrayValue->reserve(module->nodes.size());
-    for (auto &node : module->nodes) {
+    auto moduleInfoArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    moduleInfoArray->arrayValue->reserve(moduleInfo->nodes.size());
+    for (auto &node : moduleInfo->nodes) {
       auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(module->module + "/" + node.first));
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.first));
       nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
       auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
       nodeListEntry->structValue->emplace("types", typesEntry);
       nodeListEntry->structValue->emplace("added", std::make_shared<BaseLib::Variable>(true));
       nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
-      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(module->local));
-      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(module->module));
-      nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(module->version));
-      moduleInfo->arrayValue->emplace_back(nodeListEntry);
+      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(moduleInfo->local));
+      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(moduleInfo->module));
+      nodeListEntry->structValue->emplace("version", std::make_shared<BaseLib::Variable>(moduleInfo->version));
+      moduleInfoArray->arrayValue->emplace_back(nodeListEntry);
     }
-    return moduleInfo;
+    return moduleInfoArray;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+}
+
+BaseLib::PVariable NodeManager::getNodesUpdatedInfo(const std::string &module) {
+  try {
+    std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+
+    auto moduleInfoIterator = _managerModuleInfo.find(module);
+    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    auto moduleInfo = moduleInfoIterator->second;
+
+    auto updateInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    updateInfo->structValue->emplace("module", std::make_shared<BaseLib::Variable>(moduleInfo->module));
+    updateInfo->structValue->emplace("version", std::make_shared<BaseLib::Variable>(moduleInfo->version));
+    return updateInfo;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -353,29 +372,29 @@ BaseLib::PVariable NodeManager::getNodesRemovedInfo(const std::string &module) {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
 
     auto moduleInfoIterator = _managerModuleInfo.find(module);
-    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-    auto module = moduleInfoIterator->second;
+    if (moduleInfoIterator == _managerModuleInfo.end()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    auto moduleInfo = moduleInfoIterator->second;
 
-    auto moduleInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-    moduleInfo->arrayValue->reserve(module->nodes.size());
-    for (auto &node : module->nodes) {
+    auto moduleInfoArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    moduleInfoArray->arrayValue->reserve(moduleInfo->nodes.size());
+    for (auto &node : moduleInfo->nodes) {
       auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(module->module + "/" + node.first));
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.first));
       nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
       auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
       nodeListEntry->structValue->emplace("types", typesEntry);
       nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(false));
-      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(module->local));
-      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(module->module));
-      moduleInfo->arrayValue->emplace_back(nodeListEntry);
+      nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(moduleInfo->local));
+      nodeListEntry->structValue->emplace("module", std::make_shared<BaseLib::Variable>(moduleInfo->module));
+      moduleInfoArray->arrayValue->emplace_back(nodeListEntry);
     }
-    return moduleInfo;
+    return moduleInfoArray;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+  return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 }
 
 std::unordered_map<NodeManager::NodeType, uint32_t> NodeManager::getMaxThreadCounts() {

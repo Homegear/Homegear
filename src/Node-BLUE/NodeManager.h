@@ -122,6 +122,11 @@ class NodeManager {
   BaseLib::PVariable getNodesAddedInfo(const std::string &module);
 
   /**
+ * Returns information required for the node update frontend notification.
+ */
+  BaseLib::PVariable getNodesUpdatedInfo(const std::string &module);
+
+  /**
    * Returns information required for the node removed frontend notification.
    */
   BaseLib::PVariable getNodesRemovedInfo(const std::string &module);
