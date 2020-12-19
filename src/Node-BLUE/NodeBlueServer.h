@@ -243,6 +243,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
 
+  std::string processNodeUpload(BaseLib::Http &http);
+
   std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
 
   void frontendNodeEventLog(const std::string &message);

@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 
 #include <memory>
+#include <homegear-base/Encoding/GZip.h>
 
 namespace Homegear {
 
@@ -1849,7 +1850,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       }
 
       if (_nodeEventsEnabled) {
-        if(isUpdate) {
+        if (isUpdate) {
           GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
 
           auto restartRequiredNotification = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -1862,6 +1863,9 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       }
 
       return R"({"result":"success"})";
+    } else if (path == "node-blue/nodes" && http.getHeader().contentType == "multipart/form-data" && !http.getContent().empty()) {
+      if (!sessionValid) return "unauthorized";
+      return processNodeUpload(http);
     } else if (path == "node-blue/settings/user") {
       if (!sessionValid) return "unauthorized";
 
@@ -1904,6 +1908,130 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
   }
   return "";
 #endif
+}
+
+std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
+  std::string boundary;
+
+  {
+    auto contentTypeParts = BaseLib::HelperFunctions::splitAll(http.getHeader().contentTypeFull, ';');
+    for (auto &part : contentTypeParts) {
+      BaseLib::HelperFunctions::trim(part);
+      auto pair = BaseLib::HelperFunctions::splitFirst(part, '=');
+      BaseLib::HelperFunctions::toLower(pair.first);
+      if (pair.first == "boundary") {
+        boundary = pair.second;
+        break;
+      }
+    }
+  }
+
+  if (boundary.empty()) return R"({"result":"error","error":"Could not interprete data."})";
+
+  auto &content = http.getContent();
+  auto end = (char *)memmem(content.data(), content.size(), (boundary + "--").c_str(), boundary.size() + 2);
+  if (!end) return R"({"result":"error","error":"Could not interprete data."})";
+  auto start = (char *)memmem(content.data(), content.size(), (boundary).c_str(), boundary.size());
+  if (!start) return R"({"result":"error","error":"Could not interprete data."})";
+
+  std::vector<char> data(start + boundary.size() + 2, end - 4);
+  char *headerEnd = (char *)memmem(data.data(), data.size(), "\r\n\r\n", 4);
+  if (!headerEnd) return R"({"result":"error","error":"Could not interprete data."})";
+  std::string header(data.data(), headerEnd - data.data());
+  auto headerLines = BaseLib::HelperFunctions::splitAll(header, '\n');
+  std::string contentType;
+  for (auto &line : headerLines) {
+    auto pair = BaseLib::HelperFunctions::splitFirst(line, ':');
+    BaseLib::HelperFunctions::trim(pair.first);
+    BaseLib::HelperFunctions::toLower(pair.first);
+    if (pair.first == "content-type") {
+      contentType = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(pair.second));
+    }
+  }
+
+  if (contentType != "application/gzip") {
+    GD::out.printWarning("Warning: File upload has unknown content type.");
+    return R"({"result":"error","error":"Unsupported content type."})";
+  }
+
+  std::vector<char> packedData(headerEnd + 4, data.data() + data.size());
+  auto tempPath = "/tmp/" + BaseLib::HelperFunctions::getHexString(BaseLib::HelperFunctions::getRandomBytes(32)) + "/";
+  BaseLib::Io::createDirectory(tempPath, S_IRWXU | S_IRWXG);
+  BaseLib::Io::writeFile(tempPath + "archive.tar.gz", packedData, packedData.size());
+
+  _out.printInfo("Info: Installing node (1)...");
+  std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
+  _out.printInfo("Info: Installing node (2)...");
+
+  std::string output;
+  if (BaseLib::ProcessManager::exec("tar -C '" + tempPath + "' -zxf '" + tempPath + "archive.tar.gz'", GD::bl->fileDescriptorManager.getMax(), output) != 0) {
+    BaseLib::ProcessManager::exec("rm -Rf \"" + tempPath + "\"", GD::bl->fileDescriptorManager.getMax(), output);
+    return R"({"result":"error"})";
+  }
+
+  auto directories = BaseLib::Io::getDirectories(tempPath);
+  if (directories.empty()) return R"({"result":"error"})";
+
+  auto directory = tempPath + directories.front();
+  if (!BaseLib::Io::fileExists(directory + "package.json")) return R"({"result":"error","error":"No package.json found."})";
+
+  auto packageJsonContent = BaseLib::Io::getFileContent(directory + "package.json");
+  auto packageJson = BaseLib::Rpc::JsonDecoder::decode(packageJsonContent);
+
+  auto nameIterator = packageJson->structValue->find("name");
+  if (nameIterator == packageJson->structValue->end()) return R"({"result":"error","error":"No name in package.json."})";
+
+  auto module = nameIterator->second->stringValue;
+
+  if (BaseLib::ProcessManager::exec("mv '" + directory + "' '" + tempPath + module + "'", GD::bl->fileDescriptorManager.getMax(), output) != 0) {
+    return R"({"result":"error"})";
+  }
+
+  //{{{ Check if this is an update
+  bool isUpdate = false;
+  auto updateInfo = _nodeManager->getNodesUpdatedInfo(module);
+  isUpdate = !updateInfo->structValue->empty();
+  //}}}
+
+  std::string method = "managementInstallNode";
+  auto parameters = std::make_shared<BaseLib::Array>();
+  parameters->reserve(2);
+  parameters->push_back(std::make_shared<BaseLib::Variable>(module));
+  parameters->push_back(std::make_shared<BaseLib::Variable>(tempPath));
+  BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+  if (result->errorStruct) {
+    _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
+    return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+  }
+
+  _nodeManager->fillManagerModuleInfo();
+
+  BaseLib::PVariable moduleInfo;
+  if (isUpdate) {
+    //Get new version
+    updateInfo = _nodeManager->getNodesUpdatedInfo(module);
+  } else {
+    moduleInfo = _nodeManager->getNodesAddedInfo(module);
+    if (moduleInfo->arrayValue->empty()) {
+      _out.printError("Error: Could not install node: Node could not be loaded after installation.");
+      return R"({"result":"error","error":"Node could not be loaded after installation. See error log for more details."})";
+    }
+  }
+
+  if (_nodeEventsEnabled) {
+    if (isUpdate) {
+      GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
+
+      auto restartRequiredNotification = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      restartRequiredNotification->structValue->emplace("type", std::make_shared<BaseLib::Variable>("warning"));
+      restartRequiredNotification->structValue->emplace("header", std::make_shared<BaseLib::Variable>("notification.warning"));
+      restartRequiredNotification->structValue->emplace("text", std::make_shared<BaseLib::Variable>("notification.warnings.restartRequired"));
+      restartRequiredNotification->structValue->emplace("fixed", std::make_shared<BaseLib::Variable>(true));
+      GD::rpcClient->broadcastNodeEvent("global", "showNotification", restartRequiredNotification);
+    } else GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
+  }
+
+  return R"({"result":"success"})";
 }
 
 std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding) {

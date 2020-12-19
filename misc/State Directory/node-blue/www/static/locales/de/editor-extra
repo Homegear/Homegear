@@ -13,10 +13,10 @@
         "info": "<strong>Info</strong>: __message__",
         "infoMessages": {
             "flowsRestarting": "Flows werden neugestartet. Bitte warten...",
-            "flowsStarted": "Flows wurden (neu)gestartet."
+            "flowsStarted": "Flows wurden neugestartet."
         },
         "warnings": {
-            "restartRequired" : "Es wurden Knoten aktualisiert. Zum laden der aktualisieren Verisonen klicken Sie bitte auf den Menüeintrag \"Flows neustarten\".",
+            "restartRequired" : "Es wurden Knoten aktualisiert. Zum laden der aktualisieren Verisonen klicken Sie bitte auf den Menüeintrag \"Node-BLUE neustarten\".",
             "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
         },
         "errors": {
