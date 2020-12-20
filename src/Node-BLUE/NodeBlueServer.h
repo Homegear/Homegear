@@ -35,6 +35,7 @@
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
 #include "NodeManager.h"
+#include "NodeBlueCredentials.h"
 
 #include <queue>
 
@@ -180,6 +181,7 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::map<std::string, int32_t> _nodeClientIdMap;
   std::mutex _flowClientIdMapMutex;
   std::map<std::string, int32_t> _flowClientIdMap;
+  std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
 
   std::atomic<int64_t> _lastNodeEvent;
   std::atomic<uint32_t> _nodeEventCounter;
@@ -245,6 +247,10 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   std::string processNodeUpload(BaseLib::Http &http);
 
+  std::string deploy(BaseLib::Http &http);
+
+  std::string installNode(BaseLib::Http &http);
+
   std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
 
   void frontendNodeEventLog(const std::string &message);
@@ -256,13 +262,17 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable executePhpNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
+  BaseLib::PVariable frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
   BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable invokeIpcProcessMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable nodeEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+  BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
   // }}}
 };
 

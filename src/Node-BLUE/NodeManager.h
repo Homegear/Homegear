@@ -100,7 +100,7 @@ class NodeManager {
     bool local = true;
     std::unordered_map<NodeType, PNodeInfo> nodes;
   };
-  typedef std::shared_ptr<ManagerModuleInfo> PManagerNodeInfo;
+  typedef std::shared_ptr<ManagerModuleInfo> PManagerModuleInfo;
 
   explicit NodeManager(const std::atomic_bool *nodeEventsEnabled);
 
@@ -185,8 +185,8 @@ class NodeManager {
 
   std::mutex _nodesMutex;
   std::unordered_map<NodeId, Flows::PINode> _nodes;
-  std::unordered_map<ModuleName, PManagerNodeInfo> _managerModuleInfo;
-  std::unordered_map<NodeType, PManagerNodeInfo> _managerModuleInfoByNodeType;
+  std::unordered_map<ModuleName, PManagerModuleInfo> _managerModuleInfo;
+  std::unordered_map<NodeType, PManagerModuleInfo> _managerModuleInfoByNodeType;
   /**
    * This map is just a shortcut for faster access as node info is accessed a lot.
    */
@@ -197,6 +197,8 @@ class NodeManager {
   NodeManager(const NodeManager &) = delete;
 
   NodeManager &operator=(const NodeManager &) = delete;
+
+  NodeManager::PManagerModuleInfo fillManagerModuleInfo(const std::string &directory);
 };
 
 }

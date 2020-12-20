@@ -43,7 +43,6 @@
 #include <sys/stat.h>
 
 #include <memory>
-#include <homegear-base/Encoding/GZip.h>
 
 namespace Homegear {
 
@@ -66,6 +65,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.second = true;
 
   _nodeManager = std::make_unique<NodeManager>(&_nodeEventsEnabled);
+  _nodeBlueCredentials = std::make_unique<NodeBlueCredentials>(); //Constructor throws exceptions
 
   _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, false);
   _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
@@ -327,6 +327,10 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("executePhpNodeMethod",
                                                                                                                                                   std::bind(&NodeBlueServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 #endif
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("frontendEventLog",
+                                                                                                                                                  std::bind(&NodeBlueServer::frontendEventLog, this, std::placeholders::_1, std::placeholders::_2)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("getCredentials",
+                                                                                                                                                  std::bind(&NodeBlueServer::getCredentials, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("invokeNodeMethod",
                                                                                                                                                   std::bind(&NodeBlueServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("invokeIpcProcessMethod",
@@ -336,8 +340,8 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
                                                                                                                                                             std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeEvent",
                                                                                                                                                   std::bind(&NodeBlueServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("frontendEventLog",
-                                                                                                                                                  std::bind(&NodeBlueServer::frontendEventLog, this, std::placeholders::_1, std::placeholders::_2)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("setCredentials",
+                                                                                                                                                  std::bind(&NodeBlueServer::setCredentials, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 NodeBlueServer::~NodeBlueServer() {
@@ -529,6 +533,7 @@ void NodeBlueServer::backupFlows() {
 bool NodeBlueServer::start() {
   try {
     stop();
+
     _processCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&NodeBlueServer::processKilled,
                                                                                                                                                                      this,
                                                                                                                                                                      std::placeholders::_1,
@@ -1624,6 +1629,12 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         _jsonEncoder->encode(decodedContent, contentString);
       }
       responseEncoding = "application/json";
+    } else if (path.compare(0, 22, "node-blue/credentials/") == 0 && path.size() > 22) {
+      auto id = path.substr(2);
+      auto idPair = BaseLib::HelperFunctions::splitLast(id, '/');
+      auto credentials = _nodeBlueCredentials->getCredentials(idPair.second);
+      _jsonEncoder->encode(credentials, contentString);
+      responseEncoding = "application/json";
     } else if (path == "node-blue/flows") {
       if (!sessionValid) return "unauthorized";
       std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
@@ -1773,34 +1784,8 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
 
     if (path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty()) {
       if (!sessionValid) return "unauthorized";
-      _out.printInfo("Info: Deploying (1)...");
-      std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
-      _out.printInfo("Info: Deploying (2)...");
-      BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
-      auto flowsIterator = json->structValue->find("flows");
-      if (flowsIterator == json->structValue->end()) return "";
-
-      std::vector<char> flows;
-      _jsonEncoder->encode(flowsIterator->second, flows);
-
-      backupFlows();
-
-      {
-        std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-        std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
-        BaseLib::Io::writeFile(filename, flows, flows.size());
-      }
-
       responseEncoding = "application/json";
-      std::vector<char> md5;
-      BaseLib::Security::Hash::md5(flows, md5);
-      std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
-      BaseLib::HelperFunctions::toLower(md5String);
-
-      _out.printInfo("Info: Deploying (3)...");
-      GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
-
-      return R"({"rev": ")" + md5String + "\"}";
+      return deploy(http);
     } else if (path == "node-blue/flows/restart") {
       if (!sessionValid) return "unauthorized";
       _out.printInfo("Info: Restarting flows...");
@@ -1809,60 +1794,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
     } else if (path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty()) {
       if (!sessionValid) return "unauthorized";
       responseEncoding = "application/json";
-      _out.printInfo("Info: Installing node (1)...");
-      std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
-      _out.printInfo("Info: Installing node (2)...");
-      BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
-      auto moduleIterator = json->structValue->find("module");
-      if (moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return R"({"result":"error","error":"module is missing."})";
-      auto urlIterator = json->structValue->find("url");
-      if (urlIterator == json->structValue->end() || urlIterator->second->stringValue.empty()) return R"({"result":"error","error":"URL is missing. Is pkg_url defined in catalog?"})";
-
-      //{{{ Check if this is an update
-      bool isUpdate = false;
-      auto updateInfo = _nodeManager->getNodesUpdatedInfo(moduleIterator->second->stringValue);
-      isUpdate = !updateInfo->structValue->empty();
-      //}}}
-
-      std::string method = "managementInstallNode";
-      auto parameters = std::make_shared<BaseLib::Array>();
-      parameters->reserve(2);
-      parameters->push_back(moduleIterator->second);
-      parameters->push_back(urlIterator->second);
-      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
-      if (result->errorStruct) {
-        _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
-        return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
-      }
-
-      _nodeManager->fillManagerModuleInfo();
-
-      BaseLib::PVariable moduleInfo;
-      if (isUpdate) {
-        //Get new version
-        updateInfo = _nodeManager->getNodesUpdatedInfo(moduleIterator->second->stringValue);
-      } else {
-        moduleInfo = _nodeManager->getNodesAddedInfo(moduleIterator->second->stringValue);
-        if (moduleInfo->arrayValue->empty()) {
-          _out.printError("Error: Could not install node: Node could not be loaded after installation.");
-          return R"({"result":"error","error":"Node could not be loaded after installation. See error log for more details."})";
-        }
-      }
-
-      if (_nodeEventsEnabled) {
-        if (isUpdate) {
-          GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
-
-          auto restartRequiredNotification = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-          restartRequiredNotification->structValue->emplace("type", std::make_shared<BaseLib::Variable>("warning"));
-          restartRequiredNotification->structValue->emplace("header", std::make_shared<BaseLib::Variable>("notification.warning"));
-          restartRequiredNotification->structValue->emplace("text", std::make_shared<BaseLib::Variable>("notification.warnings.restartRequired"));
-          restartRequiredNotification->structValue->emplace("fixed", std::make_shared<BaseLib::Variable>(true));
-          GD::rpcClient->broadcastNodeEvent("global", "showNotification", restartRequiredNotification);
-        } else GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
-      }
-
-      return R"({"result":"success"})";
+      return installNode(http);
     } else if (path == "node-blue/nodes" && http.getHeader().contentType == "multipart/form-data" && !http.getContent().empty()) {
       if (!sessionValid) return "unauthorized";
       return processNodeUpload(http);
@@ -1908,6 +1840,111 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
   }
   return "";
 #endif
+}
+
+std::string NodeBlueServer::deploy(BaseLib::Http &http) {
+  try {
+    _out.printInfo("Info: Deploying (1)...");
+    std::lock_guard<std::mutex> flowsPostGuard(_flowsPostMutex);
+    _out.printInfo("Info: Deploying (2)...");
+    BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
+    auto flowsIterator = json->structValue->find("flows");
+    if (flowsIterator == json->structValue->end()) return "";
+    auto flowsJson = flowsIterator->second;
+
+    _nodeBlueCredentials->processFlowCredentials(flowsJson);
+
+    std::vector<char> flows;
+    _jsonEncoder->encode(flowsJson, flows);
+
+    backupFlows();
+
+    {
+      std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+      std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
+      BaseLib::Io::writeFile(filename, flows, flows.size());
+    }
+
+    std::vector<char> md5;
+    BaseLib::Security::Hash::md5(flows, md5);
+    std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
+    BaseLib::HelperFunctions::toLower(md5String);
+
+    _out.printInfo("Info: Deploying (3)...");
+    GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
+
+    return R"({"rev": ")" + md5String + "\"}";
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return "";
+}
+
+std::string NodeBlueServer::installNode(BaseLib::Http &http) {
+  try {
+    _out.printInfo("Info: Installing node (1)...");
+    std::lock_guard<std::mutex> nodesInstallGuard(_nodesInstallMutex);
+    _out.printInfo("Info: Installing node (2)...");
+    BaseLib::PVariable json = _jsonDecoder->decode(http.getContent());
+    auto moduleIterator = json->structValue->find("module");
+    if (moduleIterator == json->structValue->end() || moduleIterator->second->stringValue.empty()) return R"({"result":"error","error":"module is missing."})";
+    std::string url;
+    {
+      auto urlIterator = json->structValue->find("url");
+      if (urlIterator != json->structValue->end()) url = urlIterator->second->stringValue;
+    }
+
+    //{{{ Check if this is an update
+    bool isUpdate = false;
+    auto updateInfo = _nodeManager->getNodesUpdatedInfo(moduleIterator->second->stringValue);
+    isUpdate = !updateInfo->structValue->empty();
+    //}}}
+
+    std::string method = "managementInstallNode";
+    auto parameters = std::make_shared<BaseLib::Array>();
+    parameters->reserve(2);
+    parameters->push_back(moduleIterator->second);
+    parameters->push_back(std::make_shared<BaseLib::Variable>(url));
+    BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+    if (result->errorStruct) {
+      _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
+      return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+    }
+
+    _nodeManager->fillManagerModuleInfo();
+
+    BaseLib::PVariable moduleInfo;
+    if (isUpdate) {
+      //Get new version
+      updateInfo = _nodeManager->getNodesUpdatedInfo(moduleIterator->second->stringValue);
+    } else {
+      moduleInfo = _nodeManager->getNodesAddedInfo(moduleIterator->second->stringValue);
+      if (moduleInfo->arrayValue->empty()) {
+        _out.printError("Error: Could not install node: Node could not be loaded after installation.");
+        return R"({"result":"error","error":"Node could not be loaded after installation. See error log for more details."})";
+      }
+    }
+
+    if (_nodeEventsEnabled) {
+      if (isUpdate) {
+        GD::rpcClient->broadcastNodeEvent("", "notification/node/upgraded", updateInfo);
+
+        auto restartRequiredNotification = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        restartRequiredNotification->structValue->emplace("type", std::make_shared<BaseLib::Variable>("warning"));
+        restartRequiredNotification->structValue->emplace("header", std::make_shared<BaseLib::Variable>("notification.warning"));
+        restartRequiredNotification->structValue->emplace("text", std::make_shared<BaseLib::Variable>("notification.warnings.restartRequired"));
+        restartRequiredNotification->structValue->emplace("fixed", std::make_shared<BaseLib::Variable>(true));
+        GD::rpcClient->broadcastNodeEvent("global", "showNotification", restartRequiredNotification);
+      } else GD::rpcClient->broadcastNodeEvent("", "notification/node/added", moduleInfo);
+    }
+
+    return R"({"result":"success"})";
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return "";
 }
 
 std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
@@ -3441,6 +3478,33 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeMethod(PNodeBlueClientData &cli
 
 #endif
 
+BaseLib::PVariable NodeBlueServer::frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameter.");
+
+    if (parameters->at(0)->stringValue.empty()) frontendNodeEventLog(parameters->at(1)->stringValue);
+    else frontendNodeEventLog("Node " + parameters->at(0)->stringValue + ": " + parameters->at(1)->stringValue);
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::getCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
+
+    return _nodeBlueCredentials->getCredentials(parameters->at(0)->stringValue);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
@@ -3508,14 +3572,11 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData &clientData, Ba
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable NodeBlueServer::frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
+BaseLib::PVariable NodeBlueServer::setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameter.");
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
 
-    if (parameters->at(0)->stringValue.empty()) frontendNodeEventLog(parameters->at(1)->stringValue);
-    else frontendNodeEventLog("Node " + parameters->at(0)->stringValue + ": " + parameters->at(1)->stringValue);
-
-    return std::make_shared<BaseLib::Variable>();
+    return _nodeBlueCredentials->setCredentials(parameters->at(0)->stringValue, parameters->at(1));
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

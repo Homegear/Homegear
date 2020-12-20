@@ -114,6 +114,145 @@ void NodeManager::clearManagerModuleInfo() {
   }
 }
 
+NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::string &directory) {
+  auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
+  auto packageJsonPath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append("package.json");
+  if (!BaseLib::Io::fileExists(packageJsonPath)) return PManagerModuleInfo();
+
+  auto managerModuleInfo = std::make_shared<ManagerModuleInfo>();
+
+  BaseLib::PVariable packageJson;
+  try {
+    packageJson = BaseLib::Rpc::JsonDecoder::decode(BaseLib::Io::getFileContent(packageJsonPath));
+  } catch (const std::exception &ex) {
+    GD::out.printError("Error decoding " + packageJsonPath + ". Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
+    return PManagerModuleInfo();
+  }
+
+  managerModuleInfo->module = directory.substr(0, directory.size() - 1);
+
+  auto jsonIterator = packageJson->structValue->find("name");
+  if (jsonIterator == packageJson->structValue->end() || jsonIterator->second->stringValue.empty()) {
+    GD::out.printError("Error decoding " + packageJsonPath + ": Property \"name\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
+    return PManagerModuleInfo();
+  }
+  managerModuleInfo->name = jsonIterator->second->stringValue;
+
+  jsonIterator = packageJson->structValue->find("version");
+  if (jsonIterator == packageJson->structValue->end() || jsonIterator->second->stringValue.empty()) {
+    GD::out.printError("Error decoding " + packageJsonPath + ": Property \"version\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
+    return PManagerModuleInfo();
+  }
+  managerModuleInfo->version = jsonIterator->second->stringValue;
+
+  jsonIterator = packageJson->structValue->find("node-blue");
+  if (jsonIterator == packageJson->structValue->end()) {
+    jsonIterator = packageJson->structValue->find("node-red");
+    if (jsonIterator == packageJson->structValue->end()) {
+      GD::out.printError("Error decoding " + packageJsonPath + ": Property \"node-blue\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
+      return PManagerModuleInfo();
+    }
+  }
+
+  auto nodesJsonIterator = jsonIterator->second->structValue->find("nodes");
+  if (nodesJsonIterator == jsonIterator->second->structValue->end()) {
+    GD::out.printError("Error decoding " + packageJsonPath + R"(: Property "node-blue\nodes" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.)");
+    return PManagerModuleInfo();
+  }
+  auto nodesJson = nodesJsonIterator->second;
+
+  auto localIterator = jsonIterator->second->structValue->find("local");
+  if (localIterator != jsonIterator->second->structValue->end()) managerModuleInfo->local = localIterator->second->booleanValue;
+
+  auto maxThreadCountsJsonIterator = jsonIterator->second->structValue->find("maxThreadCounts");
+  auto maxThreadCountsJson = (maxThreadCountsJsonIterator == jsonIterator->second->structValue->end() ? std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct) : maxThreadCountsJsonIterator->second);
+
+  for (auto &node : *nodesJson->structValue) {
+    try {
+      auto nodeInfo = std::make_shared<NodeInfo>();
+
+      auto filename = node.second->stringValue;
+      std::string filePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(filename);
+      if (!BaseLib::Io::fileExists(modulePath + ".compiling") && (filePath.empty() || !BaseLib::Io::fileExists(filePath))) {
+        GD::out.printError("Error: Node file \"" + filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
+        continue;
+      }
+
+      nodeInfo->filename = filename;
+      nodeInfo->fullCodefilePath = filePath;
+
+      //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
+      auto dotPosition = filename.find_first_of('.');
+      if (dotPosition == std::string::npos) continue;
+      auto extension = filename.substr(dotPosition);
+
+      if (extension == ".so") {
+        nodeInfo->codeType = NodeCodeType::cpp;
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
+          GD::out.printError("Error: It is mandatory for C++ nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          continue;
+        }
+        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
+      } else if (extension == ".s.php") {
+        nodeInfo->codeType = NodeCodeType::statefulPhp;
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
+          GD::out.printError("Error: It is mandatory for stateful PHP nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          continue;
+        }
+        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
+      } else if (extension == ".s.hgn") {
+        nodeInfo->codeType = NodeCodeType::statefulPhpEncrypted;
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
+          GD::out.printError("Error: It is mandatory for stateful PHP nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          continue;
+        }
+        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
+      } else if (extension == ".php") {
+        nodeInfo->codeType = NodeCodeType::simplePhp;
+      } else if (extension == ".hgn") {
+        nodeInfo->codeType = NodeCodeType::simplePhpEncrypted;
+      } else if (extension == ".py") {
+        nodeInfo->codeType = NodeCodeType::python;
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
+          GD::out.printError("Error: It is mandatory for Python nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          continue;
+        }
+        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
+      } else if (extension == ".hgnpy") {
+        nodeInfo->codeType = NodeCodeType::pythonEncrypted;
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
+          GD::out.printError("Error: It is mandatory for Python nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          continue;
+        }
+        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
+      } else if (extension == ".js") {
+        nodeInfo->codeType = NodeCodeType::javascript;
+      } else if (extension == ".hgnjs") {
+        nodeInfo->codeType = NodeCodeType::javascriptEncrypted;
+      } else if (extension == ".hni" || extension == ".html") {
+        nodeInfo->codeType = NodeCodeType::none;
+      } else continue; //Unsupported type
+
+      if (_managerModuleInfoByNodeType.find(node.first) != _managerModuleInfoByNodeType.end()) {
+        GD::out.printError("Error: Node type \"" + node.first + "\" is used more than once. That is not allowed.");
+        continue;
+      }
+
+      managerModuleInfo->nodes.emplace(node.first, nodeInfo);
+      _managerModuleInfoByNodeType.emplace(node.first, managerModuleInfo);
+      _nodeInfoByNodeType.emplace(node.first, nodeInfo);
+    } catch (std::exception &ex) {
+      GD::out.printError("Error processing nodes entry in file \"" + packageJsonPath + "\": " + ex.what());
+    }
+  }
+  return managerModuleInfo;
+}
+
 void NodeManager::fillManagerModuleInfo() {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
@@ -122,146 +261,22 @@ void NodeManager::fillManagerModuleInfo() {
     _managerModuleInfoByNodeType.clear();
     _nodeInfoByNodeType.clear();
 
-    std::unique_ptr<BaseLib::Rpc::JsonDecoder> jsonDecoder(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
     std::vector<std::string> directories = GD::bl->io.getDirectories(GD::bl->settings.nodeBluePath() + "nodes/");
     for (auto &directory : directories) {
-      auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
-      auto packageJsonPath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append("package.json");
-      if (!BaseLib::Io::fileExists(packageJsonPath)) continue;
-
-      auto managerModuleInfo = std::make_shared<ManagerModuleInfo>();
-
-      BaseLib::PVariable packageJson;
-      try {
-        packageJson = BaseLib::Rpc::JsonDecoder::decode(BaseLib::Io::getFileContent(packageJsonPath));
-      } catch (const std::exception &ex) {
-        GD::out.printError("Error decoding " + packageJsonPath + ". Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-        continue;
-      }
-
-      managerModuleInfo->module = directory.substr(0, directory.size() - 1);
-
-      auto jsonIterator = packageJson->structValue->find("name");
-      if (jsonIterator == packageJson->structValue->end() || jsonIterator->second->stringValue.empty()) {
-        GD::out.printError("Error decoding " + packageJsonPath + ": Property \"name\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-        continue;
-      }
-      managerModuleInfo->name = jsonIterator->second->stringValue;
-
-      jsonIterator = packageJson->structValue->find("version");
-      if (jsonIterator == packageJson->structValue->end() || jsonIterator->second->stringValue.empty()) {
-        GD::out.printError("Error decoding " + packageJsonPath + ": Property \"version\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-        continue;
-      }
-      managerModuleInfo->version = jsonIterator->second->stringValue;
-
-      jsonIterator = packageJson->structValue->find("node-blue");
-      if (jsonIterator == packageJson->structValue->end()) {
-        jsonIterator = packageJson->structValue->find("node-red");
-        if (jsonIterator == packageJson->structValue->end()) {
-          GD::out.printError("Error decoding " + packageJsonPath + ": Property \"node-blue\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-          continue;
+      PManagerModuleInfo managerModuleInfo;
+      if (directory.at(0) == '@') {
+        auto subdirectories = BaseLib::Io::getDirectories(GD::bl->settings.nodeBluePath() + "nodes/" + directory);
+        for (auto &subdirectory : subdirectories) {
+          managerModuleInfo = fillManagerModuleInfo(directory + subdirectory);
+          if (!managerModuleInfo) continue;
+          _managerModuleInfo.emplace(managerModuleInfo->module, managerModuleInfo);
         }
+      } else {
+        if (directory == "node-red/") continue;
+        managerModuleInfo = fillManagerModuleInfo(directory);
+        if (!managerModuleInfo) continue;
+        _managerModuleInfo.emplace(managerModuleInfo->module, managerModuleInfo);
       }
-
-      auto nodesJsonIterator = jsonIterator->second->structValue->find("nodes");
-      if (nodesJsonIterator == jsonIterator->second->structValue->end()) {
-        GD::out.printError("Error decoding " + packageJsonPath + R"(: Property "node-blue\nodes" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.)");
-        continue;
-      }
-      auto nodesJson = nodesJsonIterator->second;
-
-      auto localIterator = jsonIterator->second->structValue->find("local");
-      if (localIterator != jsonIterator->second->structValue->end()) managerModuleInfo->local = localIterator->second->booleanValue;
-
-      auto maxThreadCountsJsonIterator = jsonIterator->second->structValue->find("maxThreadCounts");
-      auto maxThreadCountsJson = (maxThreadCountsJsonIterator == jsonIterator->second->structValue->end() ? std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct) : maxThreadCountsJsonIterator->second);
-
-      for (auto &node : *nodesJson->structValue) {
-        try {
-          auto nodeInfo = std::make_shared<NodeInfo>();
-
-          auto filename = node.second->stringValue;
-          std::string filePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(filename);
-          if (!BaseLib::Io::fileExists(modulePath + ".compiling") && (filePath.empty() || !BaseLib::Io::fileExists(filePath))) {
-            GD::out.printError("Error: Node file \"" + filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
-            continue;
-          }
-
-          nodeInfo->filename = filename;
-          nodeInfo->fullCodefilePath = filePath;
-
-          //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
-          auto dotPosition = filename.find_first_of('.');
-          if (dotPosition == std::string::npos) continue;
-          auto extension = filename.substr(dotPosition);
-
-          if (extension == ".so") {
-            nodeInfo->codeType = NodeCodeType::cpp;
-            auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-            if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-              GD::out.printError("Error: It is mandatory for C++ nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
-              continue;
-            }
-            nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
-          } else if (extension == ".s.php") {
-            nodeInfo->codeType = NodeCodeType::statefulPhp;
-            auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-            if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-              GD::out.printError("Error: It is mandatory for stateful PHP nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
-              continue;
-            }
-            nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
-          } else if (extension == ".s.hgn") {
-            nodeInfo->codeType = NodeCodeType::statefulPhpEncrypted;
-            auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-            if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-              GD::out.printError("Error: It is mandatory for stateful PHP nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
-              continue;
-            }
-            nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
-          } else if (extension == ".php") {
-            nodeInfo->codeType = NodeCodeType::simplePhp;
-          } else if (extension == ".hgn") {
-            nodeInfo->codeType = NodeCodeType::simplePhpEncrypted;
-          } else if (extension == ".py") {
-            nodeInfo->codeType = NodeCodeType::python;
-            auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-            if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-              GD::out.printError("Error: It is mandatory for Python nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
-              continue;
-            }
-            nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
-          } else if (extension == ".hgnpy") {
-            nodeInfo->codeType = NodeCodeType::pythonEncrypted;
-            auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-            if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-              GD::out.printError("Error: It is mandatory for Python nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
-              continue;
-            }
-            nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
-          } else if (extension == ".js") {
-            nodeInfo->codeType = NodeCodeType::javascript;
-          } else if (extension == ".hgnjs") {
-            nodeInfo->codeType = NodeCodeType::javascriptEncrypted;
-          } else if (extension == ".hni" || extension == ".html") {
-            nodeInfo->codeType = NodeCodeType::none;
-          } else continue; //Unsupported type
-
-          if (_managerModuleInfoByNodeType.find(node.first) != _managerModuleInfoByNodeType.end()) {
-            GD::out.printError("Error: Node type \"" + node.first + "\" is used more than once. That is not allowed.");
-            continue;
-          }
-
-          managerModuleInfo->nodes.emplace(node.first, nodeInfo);
-          _managerModuleInfoByNodeType.emplace(node.first, managerModuleInfo);
-          _nodeInfoByNodeType.emplace(node.first, nodeInfo);
-        } catch (std::exception &ex) {
-          GD::out.printError("Error processing nodes entry in file \"" + packageJsonPath + "\": " + ex.what());
-        }
-      }
-
-      _managerModuleInfo.emplace(managerModuleInfo->module, managerModuleInfo);
     }
   }
   catch (const std::exception &ex) {
@@ -551,10 +566,14 @@ std::string NodeManager::getNodeLocales(std::string &language) {
           }
           if (json->structValue->empty()) continue;
 
-          auto id = module.second->module + "/" + module.second->name;
-          auto localeStructIterator = localeStruct->structValue->find(id);
-          if (localeStructIterator == localeStruct->structValue->end()) localeStruct->structValue->emplace(id, json);
-          else localeStructIterator->second->structValue->emplace(json->structValue->begin()->first, json->structValue->begin()->second);
+          for (auto &node : *json->structValue) {
+            auto id = module.second->module + "/" + node.first;
+            auto nodeJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            nodeJson->structValue->emplace(node);
+            auto localeStructIterator = localeStruct->structValue->find(id);
+            if (localeStructIterator == localeStruct->structValue->end()) localeStruct->structValue->emplace(id, nodeJson);
+            else localeStructIterator->second->structValue->emplace(node.first, node.second);
+          }
         }
         catch (const std::exception &ex) {
           GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, "Error opening file " + path + ": " + ex.what());
@@ -569,7 +588,7 @@ std::string NodeManager::getNodeLocales(std::string &language) {
           auto type = file.substr(0, file.size() - 10);
           std::string help = BaseLib::Io::getFileContent(path);
 
-          auto id = module.second->module + "/" + module.second->name;
+          auto id = module.second->module + "/" + type;
           auto localeStructIterator = localeStruct->structValue->find(id);
           if (localeStructIterator != localeStruct->structValue->end()) {
             auto typeIterator = localeStructIterator->second->structValue->find(type);

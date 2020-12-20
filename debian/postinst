@@ -54,6 +54,13 @@ case $1 in
 		chown -R homegear:homegear /var/lib/homegear/www
 
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
+		  if test ! -e /etc/homegear/nodeBlueCredentialKey.txt; then
+		    # We need 43 characters to have the equivalent of 32 fully random bytes (1.18e77 vs. 1.16e77 possibilities)
+		    tr -dc A-Za-z0-9 < /dev/urandom | head -c 43 > /etc/homegear/nodeBlueCredentialKey.txt
+		    chown homegear:homegear /etc/homegear/nodeBlueCredentialKey.txt
+				chmod 400 /etc/homegear/nodeBlueCredentialKey.txt
+		  fi
+
 			if test ! -e /etc/homegear/homegear.crt; then
 				openssl genrsa -out /etc/homegear/homegear.key 2048
 				openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr

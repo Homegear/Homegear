@@ -2759,7 +2759,7 @@ std::set<std::string> DatabaseController::getAllNodeDataNodes() {
   return std::set<std::string>();
 }
 
-BaseLib::PVariable DatabaseController::getNodeData(std::string &node, std::string &key, bool requestFromTrustedServer) {
+BaseLib::PVariable DatabaseController::getNodeData(const std::string &node, const std::string &key, bool requestFromTrustedServer) {
   try {
     BaseLib::PVariable value;
 
@@ -2827,7 +2827,7 @@ BaseLib::PVariable DatabaseController::getNodeData(std::string &node, std::strin
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::setNodeData(std::string &node, std::string &key, BaseLib::PVariable &value) {
+BaseLib::PVariable DatabaseController::setNodeData(const std::string &node, const std::string &key, const BaseLib::PVariable &value) {
   try {
     if (!value) return BaseLib::Variable::createError(-32602, "Could not parse data.");
     if (node.empty()) return BaseLib::Variable::createError(-32602, "component is an empty string.");

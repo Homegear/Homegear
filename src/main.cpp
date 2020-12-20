@@ -807,19 +807,19 @@ void startUp() {
 
     GD::bl->globalServiceMessages.load();
 
-    GD::uiController.reset(new UiController());
+    GD::uiController = std::make_unique<UiController>();
     GD::uiController->load();
 
-    GD::variableProfileManager.reset(new VariableProfileManager());
+    GD::variableProfileManager = std::make_unique<VariableProfileManager>();
 
-    GD::ipcLogger.reset(new IpcLogger());
+    GD::ipcLogger = std::make_unique<IpcLogger>();
 
 #ifdef EVENTHANDLER
     GD::eventHandler.reset(new EventHandler());
 #endif
 
-    GD::nodeBlueServer.reset(new NodeBlue::NodeBlueServer());
-    GD::ipcServer.reset(new IpcServer());
+    GD::nodeBlueServer = std::make_unique<NodeBlue::NodeBlueServer>();
+    GD::ipcServer = std::make_unique<IpcServer>();
 
     if (!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php")) {
       if (!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG)) {
@@ -829,7 +829,7 @@ void startUp() {
     }
 #ifndef NO_SCRIPTENGINE
     GD::out.printInfo("Starting script engine server...");
-    GD::scriptEngineServer.reset(new ScriptEngine::ScriptEngineServer());
+    GD::scriptEngineServer = std::make_unique<ScriptEngine::ScriptEngineServer>();
     if (!GD::scriptEngineServer->start()) {
       GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
       exitHomegear(1);

@@ -216,9 +216,9 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   // }}}
 
   // {{{ Node data
-  BaseLib::PVariable setNodeData(std::string &node, std::string &key, BaseLib::PVariable &value) override;
+  BaseLib::PVariable setNodeData(const std::string &node, const std::string &key, const BaseLib::PVariable &value) override;
 
-  BaseLib::PVariable getNodeData(std::string &node, std::string &key, bool requestFromTrustedServer) override;
+  BaseLib::PVariable getNodeData(const std::string &node, const std::string &key, bool requestFromTrustedServer) override;
 
   std::set<std::string> getAllNodeDataNodes() override;
 

@@ -1014,18 +1014,29 @@ void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &top
 
 Flows::PVariable NodeBlueClient::getNodeData(const std::string &nodeId, const std::string &key) {
   try {
-    Flows::PArray parameters = std::make_shared<Flows::Array>();
-    parameters->reserve(2);
-    parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
-    parameters->push_back(std::make_shared<Flows::Variable>(key));
+    if (key == "credentials") {
+      Flows::PArray parameters = std::make_shared<Flows::Array>();
+      parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
 
-    Flows::PVariable result = invoke("getNodeData", parameters, true);
-    if (result->errorStruct) {
-      GD::out.printError("Error calling getNodeData: " + result->structValue->at("faultString")->stringValue);
-      return std::make_shared<Flows::Variable>();
+      Flows::PVariable result = invoke("getCredentials", parameters, true);
+      if (result->errorStruct) {
+        GD::out.printError("Error calling getCredentials: " + result->structValue->at("faultString")->stringValue);
+        return std::make_shared<Flows::Variable>();
+      }
+      return result;
+    } else {
+      Flows::PArray parameters = std::make_shared<Flows::Array>();
+      parameters->reserve(2);
+      parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+      parameters->push_back(std::make_shared<Flows::Variable>(key));
+
+      Flows::PVariable result = invoke("getNodeData", parameters, true);
+      if (result->errorStruct) {
+        GD::out.printError("Error calling getNodeData: " + result->structValue->at("faultString")->stringValue);
+        return std::make_shared<Flows::Variable>();
+      }
+      return result;
     }
-
-    return result;
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1035,13 +1046,22 @@ Flows::PVariable NodeBlueClient::getNodeData(const std::string &nodeId, const st
 
 void NodeBlueClient::setNodeData(const std::string &nodeId, const std::string &key, Flows::PVariable value) {
   try {
-    Flows::PArray parameters = std::make_shared<Flows::Array>();
-    parameters->reserve(3);
-    parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
-    parameters->push_back(std::make_shared<Flows::Variable>(key));
-    parameters->push_back(value);
+    if (key == "credentials") {
+      Flows::PArray parameters = std::make_shared<Flows::Array>();
+      parameters->reserve(2);
+      parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+      parameters->push_back(value);
 
-    invoke("setNodeData", parameters, true);
+      invoke("setCredentials", parameters, true);
+    } else {
+      Flows::PArray parameters = std::make_shared<Flows::Array>();
+      parameters->reserve(3);
+      parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+      parameters->push_back(std::make_shared<Flows::Variable>(key));
+      parameters->push_back(value);
+
+      invoke("setNodeData", parameters, true);
+    }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
