@@ -167,7 +167,7 @@ cat > "$rootfs/build/CreatePackage.sh" <<-'EOF'
 
 set -x
 
-if [[ $1 -lt 1 ]]; then
+if [[ -n $1 ]]; then
         echo "Please provide a version number."
         exit 1
 fi
