@@ -3,7 +3,7 @@ project(Homegear)
 
 set(CMAKE_CXX_STANDARD 14)
 
-include_directories(/usr/include/php8-homegear /usr/include/php8-homegear/main /usr/include/php8-homegear/sapi /usr/include/php8-homegear/TSRM /usr/include/php8-homegear/Zend /usr/include/php8-homegear/php /usr/include/php8-homegear/php/main /usr/include/php8-homegear/php/sapi /usr/include/php8-homegear/php/TSRM /usr/include/php8-homegear/php/Zend)
+include_directories(/usr/include/nodejs-homegear /usr/include/php8-homegear /usr/include/php8-homegear/main /usr/include/php8-homegear/sapi /usr/include/php8-homegear/TSRM /usr/include/php8-homegear/Zend /usr/include/php8-homegear/php /usr/include/php8-homegear/php/main /usr/include/php8-homegear/php/sapi /usr/include/php8-homegear/php/TSRM /usr/include/php8-homegear/php/Zend)
 
 set(SOURCE_FILES
         homegear-miscellaneous/src/Factory.cpp
@@ -120,7 +120,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/IpcLogger.cpp
         src/IpcLogger.h
-        src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h src/VariableProfiles/VariableProfileManager.cpp src/VariableProfiles/VariableProfileManager.h src/RPC/RpcMethods/VariableProfileRpcMethods.cpp src/RPC/RpcMethods/VariableProfileRpcMethods.h src/RPC/RpcMethods/UiRpcMethods.cpp src/RPC/RpcMethods/UiRpcMethods.h src/RPC/RpcMethods/BuildingRpcMethods.cpp src/RPC/RpcMethods/BuildingRpcMethods.h src/Node-BLUE/FlowParser.cpp src/Node-BLUE/FlowParser.h src/RPC/RpcMethods/NodeBlueRpcMethods.cpp src/RPC/RpcMethods/NodeBlueRpcMethods.h src/RPC/RpcMethods/UiNotificationsRpcMethods.cpp src/RPC/RpcMethods/UiNotificationsRpcMethods.h src/Node-BLUE/NodeBlueCredentials.cpp src/Node-BLUE/NodeBlueCredentials.h)
+        src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h src/VariableProfiles/VariableProfileManager.cpp src/VariableProfiles/VariableProfileManager.h src/RPC/RpcMethods/VariableProfileRpcMethods.cpp src/RPC/RpcMethods/VariableProfileRpcMethods.h src/RPC/RpcMethods/UiRpcMethods.cpp src/RPC/RpcMethods/UiRpcMethods.h src/RPC/RpcMethods/BuildingRpcMethods.cpp src/RPC/RpcMethods/BuildingRpcMethods.h src/Node-BLUE/FlowParser.cpp src/Node-BLUE/FlowParser.h src/RPC/RpcMethods/NodeBlueRpcMethods.cpp src/RPC/RpcMethods/NodeBlueRpcMethods.h src/RPC/RpcMethods/UiNotificationsRpcMethods.cpp src/RPC/RpcMethods/UiNotificationsRpcMethods.h src/Node-BLUE/NodeBlueCredentials.cpp src/Node-BLUE/NodeBlueCredentials.h src/Nodejs/Nodejs.cpp src/Nodejs/Nodejs.h)
 
 add_custom_target(homegear COMMAND ../../devscripts/makeAll.sh SOURCES ${SOURCE_FILES})
 

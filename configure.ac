@@ -87,18 +87,18 @@ AS_IF([test "x$with_scriptengine" = "xno"], [
 	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
 	])
 
+AC_ARG_WITH([nodejs], [AS_HELP_STRING([--without-nodejs], [Compile without Node.js])], [with_nodejs=no], [])
+AS_IF([test "x$with_nodejs" = "xno"], [
+    AM_CONDITIONAL(WITH_NODEJS, false)
+    ], [
+    AM_CONDITIONAL(WITH_NODEJS, true)
+    ])
+
 AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
 AS_IF([test "x$with_eventhandler" != "xno"], [
 	AM_CONDITIONAL(WITH_EVENTHANDLER, true)
 	], [
 	AM_CONDITIONAL(WITH_EVENTHANDLER, false)
-	])
-
-AC_ARG_WITH([ccu2], [AS_HELP_STRING([--with-ccu2], [Compile for CCU2])], [with_ccu2=yes], [])
-AS_IF([test "x$with_ccu2" = "xyes"], [
-	AM_CONDITIONAL(WITH_CCU2, true)
-	], [
-	AM_CONDITIONAL(WITH_CCU2, false)
 	])
 
 #AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])

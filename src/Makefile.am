@@ -34,13 +34,20 @@ noinst_LIBRARIES = libscriptengine.a
 libscriptengine_a_SOURCES = ScriptEngine/php_homegear_globals.cpp ScriptEngine/php_device.cpp ScriptEngine/php_node.cpp ScriptEngine/php_sapi.cpp ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
 homegear_LDADD += libscriptengine.a
 libscriptengine_a_CPPFLAGS = -Wall -std=c++14 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
-if BSDSYSTEM
 libscriptengine_a_CPPFLAGS += -I/usr/include/php8-homegear -I/usr/include/php8-homegear/main -I/usr/include/php8-homegear/sapi -I/usr/include/php8-homegear/TSRM -I/usr/include/php8-homegear/Zend -I/usr/include/php8-homegear/php -I/usr/include/php8-homegear/php/main -I/usr/include/php8-homegear/php/sapi -I/usr/include/php8-homegear/php/TSRM -I/usr/include/php8-homegear/php/Zend
-else
-libscriptengine_a_CPPFLAGS += -I/usr/include/php8-homegear -I/usr/include/php8-homegear/main -I/usr/include/php8-homegear/sapi -I/usr/include/php8-homegear/TSRM -I/usr/include/php8-homegear/Zend -I/usr/include/php8-homegear/php -I/usr/include/php8-homegear/php/main -I/usr/include/php8-homegear/php/sapi -I/usr/include/php8-homegear/php/TSRM -I/usr/include/php8-homegear/php/Zend
-endif
 else
 AM_CPPFLAGS += -DNO_SCRIPTENGINE
+endif
+
+if WITH_NODEJS
+noinst_LIBRARIES = libnodejs.a
+libnodejs_a_SOURCES = Nodejs/Nodejs.cpp
+homegear_LDADD += libnodejs.a
+LIBS += -lnodejs-homegear
+libnodejs_a_CPPFLAGS = -Wall -std=c++14 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
+libnodejs_a_CPPFLAGS += -I/usr/include/nodejs-homegear
+else
+AM_CPPFLAGS += -DNO_NODEJS
 endif
 
 if WITH_EVENTHANDLER
@@ -49,8 +56,4 @@ endif
 
 if WITH_I2C
 AM_CPPFLAGS += -DI2CSUPPORT
-endif
-
-if WITH_CCU2
-AM_CPPFLAGS += -DCCU2
 endif

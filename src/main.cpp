@@ -34,6 +34,7 @@
 #include "Node-BLUE/NodeBlueClient.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
+#include "Nodejs/Nodejs.h"
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
@@ -444,6 +445,7 @@ void printHelp() {
   std::cout << "-s <user> <group>   Set GPIO settings and necessary permissions for all defined physical devices" << std::endl;
   std::cout << "-r                  Connect to Homegear on this machine" << std::endl;
   std::cout << "-e <command>        Execute CLI command" << std::endl;
+  std::cout << "-n <args> <script>  Run Node.js script" << std::endl;
   std::cout << "-o <input> <output> Convert old device description file into new format." << std::endl;
   std::cout << "-l                  Checks the lifeticks of all components. Exit code \"0\" means everything is ok." << std::endl;
   std::cout << "-i                  Generates and prints a new time UUID." << std::endl;
@@ -943,7 +945,7 @@ int main(int argc, char *argv[]) {
   try {
     getExecutablePath(argc, argv);
     _errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    GD::bl.reset(new BaseLib::SharedObjects());
+    GD::bl = std::make_unique<BaseLib::SharedObjects>();
 
     if (BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
     else if (BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
@@ -1077,7 +1079,21 @@ int main(int argc, char *argv[]) {
         exit(0);
       }
 #endif
-      else if (arg == "-rl") {
+      else if (arg == "-n") {
+        if (i + 1 < argc) {
+          int newArgc = argc - i;
+          char *newArgv[newArgc];
+          newArgv[0] = argv[0];
+          for (int j = i + 1; j < argc; j++) {
+            newArgv[j - i] = argv[j];
+          }
+          auto exitCode = Nodejs::run(newArgc, newArgv);
+          exit(exitCode);
+        } else {
+          std::cerr << "Invalid number of arguments." << std::endl;
+          exit(1);
+        }
+      } else if (arg == "-rl") {
         GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
         initGnuTls();
         setLimits();
@@ -1315,9 +1331,11 @@ int main(int argc, char *argv[]) {
         std::cout << "  - libhomegear-base: " << GD::baseLibVersion << std::endl;
         std::cout << "  - libhomegear-node: " << GD::nodeLibVersion << std::endl;
         std::cout << "  - libhomegear-ipc:  " << GD::ipcLibVersion << std::endl << std::endl;
-        std::cout << "PHP (License: PHP License):" << std::endl;
-        std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-        std::cout << "Copyright (c) 1999-2020 The PHP Group. All rights reserved." << std::endl << std::endl;
+        std::cout << "Included open source software:" << std::endl;
+        std::cout << "  - Node.js (license: MIT License, homepage: nodejs.org)" << std::endl;
+        std::cout << "  - PHP (license: PHP License, homepage: www.php.net):" << std::endl;
+        std::cout << "      This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
+        std::cout << "      Copyright (c) 1999-2020 The PHP Group. All rights reserved." << std::endl << std::endl;
 
         exit(0);
       } else {

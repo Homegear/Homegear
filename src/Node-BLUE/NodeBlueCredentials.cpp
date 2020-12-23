@@ -82,7 +82,7 @@ BaseLib::PVariable NodeBlueCredentials::getCredentials(const std::string &nodeId
   try {
     auto nodeData = GD::bl->db->getNodeData(nodeId, "credentials");
     if (!nodeData || nodeData->stringValue.empty()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-    
+
     auto dataPair = BaseLib::HelperFunctions::splitFirst(nodeData->stringValue, '.');
 
     BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
