@@ -49,6 +49,8 @@ namespace Homegear {
 
 int Nodejs::run(int argc, char** argv) {
   try {
+    //Code from node_main.cc of Node.js source
+
     setvbuf(stdout, nullptr, _IONBF, 0);
     setvbuf(stderr, nullptr, _IONBF, 0);
 
