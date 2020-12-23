@@ -4,6 +4,14 @@ case $1 in
 	# Configure this package. If the package must prompt the user for
 	# information, do it here.
 	configure)
+		if test ! -e /usr/bin/npm; then
+			ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npm /usr/bin/npm
+		fi
+		if test ! -e /usr/bin/node; then
+			echo '#!/bin/bash
+/usr/bin/homegear -n "$@"' > /usr/bin/node
+			chmod 755 /usr/bin/node
+		fi
 		;;
 
 	# Back out of an attempt to upgrade this package FROM THIS VERSION

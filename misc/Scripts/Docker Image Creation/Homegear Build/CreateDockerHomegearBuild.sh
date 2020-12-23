@@ -155,40 +155,9 @@ wget -P $rootfs https://homegear.eu/packages/Release.key
 chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
-wget -P $rootfs https://deb.nodesource.com/gpgkey/nodesource.gpg.key
-chroot $rootfs apt-key add nodesource.gpg.key
-rm $rootfs/nodesource.gpg.key
-
-if [ "$distver" != "buster" ] || [ "$arch" == "i386" ]; then
-	if [ "$arch" == "i386" ]; then
-		# 10.x and later are not available for i386
-		echo "deb https://deb.nodesource.com/node_9.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
-	else
-		echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
-	fi
-fi
-
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 # python: Needed by homegear-ui's npm on some systems
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev python
-
-if [ "$distver" == "buster" ] && [ "$arch" != "i386" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install npm
-else
-	if [ "$arch" == "i386" ]; then
-		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install nodejs=9.11.2-1nodesource1
-	else
-		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install nodejs
-	fi
-fi
-
-# Fix npm uid/gid issue (effect: npm install doesn't work)
-if test -d $rootfs/usr/lib/node_modules/npm/node_modules/uid-number; then
-	echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
-fi
-if test -d $rootfs/usr/lib/nodejs/npm/node_modules/uid-number; then
-	echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/nodejs/npm/node_modules/uid-number/uid-number.js
-fi
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev python
 
 if [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
@@ -221,8 +190,6 @@ fi
 
 # {{{ UI build dependencies
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
-DEBIAN_FRONTEND=noninteractive chroot $rootfs npm -g install babel-cli
-DEBIAN_FRONTEND=noninteractive chroot $rootfs ln -s /usr/local/bin/babel /usr/bin/babel
 # }}}
 
 mkdir $rootfs/build
