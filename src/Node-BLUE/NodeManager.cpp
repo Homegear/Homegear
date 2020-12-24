@@ -504,6 +504,18 @@ std::string NodeManager::getFrontendCode(const std::string &type) {
   return std::string();
 }
 
+bool NodeManager::isNodeRedNode(const std::string &type) {
+  try {
+    auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
+    if (nodeInfoIterator == _nodeInfoByNodeType.end()) return false;
+
+    return (nodeInfoIterator->second->codeType == NodeCodeType::javascript || nodeInfoIterator->second->codeType == NodeCodeType::javascriptEncrypted);
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
+}
+
 BaseLib::PVariable NodeManager::getIcons() {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);

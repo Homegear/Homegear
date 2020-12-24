@@ -1240,6 +1240,9 @@ void NodeBlueServer::startFlows() {
     }
     //}}}
 
+    BaseLib::PArray nodeRedFlow;
+    nodeRedFlow->reserve(flowNodes.size());
+
     for (auto &element : flowNodes) {
       if (subflowInfos.find(element.first) != subflowInfos.end()) continue;
       BaseLib::PVariable flow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
@@ -1253,6 +1256,9 @@ void NodeBlueServer::startFlows() {
           if (typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
           auto threadCountIterator = _maxThreadCounts.find(typeIterator->second->stringValue);
           maxThreadCount += (threadCountIterator == _maxThreadCounts.end() ? 0 : threadCountIterator->second);
+          //{{{ Filter Node-RED nodes
+          if (_nodeManager->isNodeRedNode(typeIterator->second->stringValue)) nodeRedFlow->emplace_back(node.second);
+          //}}}
         } else GD::out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
       }
 
@@ -1264,6 +1270,12 @@ void NodeBlueServer::startFlows() {
         startFlow(flowInfo, nodeIds[element.first]);
       }
     }
+
+    //{{{ Start Node-RED
+    if (!nodeRedFlow->empty()) {
+      ...
+    }
+    //}}}
 
     std::vector<PNodeBlueClientData> clients;
     {

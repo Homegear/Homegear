@@ -146,6 +146,8 @@ class NodeManager {
    */
   std::string getFrontendCode(const std::string &type);
 
+  bool isNodeRedNode(const std::string &type);
+
   std::string getNodeLocales(std::string &language);
 
   /**
