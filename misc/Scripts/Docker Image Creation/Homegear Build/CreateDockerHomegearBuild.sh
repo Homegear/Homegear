@@ -735,6 +735,9 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
 fi
 
 function cleanUp {
@@ -887,6 +890,9 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
@@ -911,6 +917,9 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
