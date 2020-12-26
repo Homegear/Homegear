@@ -1242,8 +1242,10 @@ void NodeBlueServer::startFlows() {
     }
     //}}}
 
-    BaseLib::PArray nodeRedFlow;
-    nodeRedFlow->reserve(flowNodes.size());
+    BaseLib::PVariable nodeRedFlow;
+    std::string nodeRedFlowsFile = _bl->settings.nodeBlueDataPath() + "node-red/flows.json";
+    bool hasNoderedFlowsFile = BaseLib::Io::fileExists(nodeRedFlowsFile);
+    if (!hasNoderedFlowsFile) nodeRedFlow->arrayValue->reserve(flowNodes.size());
 
     for (auto &element : flowNodes) {
       if (subflowInfos.find(element.first) != subflowInfos.end()) continue;
@@ -1259,7 +1261,7 @@ void NodeBlueServer::startFlows() {
           auto threadCountIterator = _maxThreadCounts.find(typeIterator->second->stringValue);
           maxThreadCount += (threadCountIterator == _maxThreadCounts.end() ? 0 : threadCountIterator->second);
           //{{{ Filter Node-RED nodes
-          if (_nodeManager->isNodeRedNode(typeIterator->second->stringValue)) nodeRedFlow->emplace_back(node.second);
+          if (!hasNoderedFlowsFile && _nodeManager->isNodeRedNode(typeIterator->second->stringValue)) nodeRedFlow->arrayValue->emplace_back(node.second);
           //}}}
         } else GD::out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
       }
@@ -1274,8 +1276,18 @@ void NodeBlueServer::startFlows() {
     }
 
     //{{{ Start Node-RED
-    if (!nodeRedFlow->empty()) {
-      //Todo: ...
+
+    if (!nodeRedFlow->arrayValue->empty() && !hasNoderedFlowsFile) {
+      std::vector<char> flows;
+      _jsonEncoder->encode(nodeRedFlow, flows);
+
+      {
+        std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+        BaseLib::Io::writeFile(nodeRedFlowsFile, flows, flows.size());
+      }
+    }
+    if (!nodeRedFlow->arrayValue->empty()) {
+      _nodeRed->start();
     }
     //}}}
 
@@ -1474,6 +1486,7 @@ void NodeBlueServer::restartFlows() {
       _out.printInfo("Info: Closing connections to Flows clients...");
       closeClientConnections();
     }
+    _nodeRed->stop();
     _out.printInfo("Info: Reloading node information...");
     _nodeManager->fillManagerModuleInfo();
     getMaxThreadCounts();
@@ -1875,6 +1888,7 @@ std::string NodeBlueServer::deploy(BaseLib::Http &http) {
 
     {
       std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
+      BaseLib::Io::deleteFile(_bl->settings.nodeBlueDataPath() + "node-red/flows.json");
       std::string filename = _bl->settings.nodeBlueDataPath() + "flows.json";
       BaseLib::Io::writeFile(filename, flows, flows.size());
     }
@@ -2132,7 +2146,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_nodeBlueClientInfo, method, parameters);
       if (result->errorStruct) {
         _out.printError("Error: Could not uninstall node: " + result->structValue->at("faultString")->stringValue);
-        return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
+        return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
       }
 
       auto moduleInfo = _nodeManager->getNodesRemovedInfo(module);
@@ -2141,7 +2155,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
 
       if (_nodeEventsEnabled && !moduleInfo->arrayValue->empty()) GD::rpcClient->broadcastNodeEvent("", "notification/node/removed", moduleInfo);
 
-      return "{\"result\":\"success\"}";
+      return R"({"result":"success"})";
     }
 
     return contentString;
