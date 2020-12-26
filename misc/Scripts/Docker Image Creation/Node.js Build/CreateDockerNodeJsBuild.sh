@@ -147,7 +147,13 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano python python3-distutils wget
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano python wget
+
+if [ "$distver" == "stretch" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libpython3.5-stdlib
+else
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-distutils
+fi
 
 if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install dirmngr
