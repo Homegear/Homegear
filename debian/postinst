@@ -43,6 +43,18 @@ case $1 in
 			rm -Rf /tmp/HomegearScriptsDir
 		fi
 
+		if test ! -e /usr/bin/npm; then
+			ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npm /usr/bin/npm
+		fi
+		if test ! -e /usr/bin/node; then
+			echo '#!/bin/bash
+/usr/bin/homegear -n "$@"' > /usr/bin/node
+			chmod 755 /usr/bin/node
+		fi
+		if test ! -e /usr/bin/node_modules; then
+			ln -s /usr/share/homegear/nodejs/lib/node_modules /usr/bin/node_modules
+		fi
+
 		mkdir -p /var/log/homegear
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear

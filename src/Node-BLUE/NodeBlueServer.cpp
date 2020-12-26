@@ -64,6 +64,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
+  _nodeRed = std::make_unique<Nodered>();
   _nodeManager = std::make_unique<NodeManager>(&_nodeEventsEnabled);
   _nodeBlueCredentials = std::make_unique<NodeBlueCredentials>(); //Constructor throws exceptions
 
@@ -71,13 +72,13 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
   _jsonEncoder = std::make_unique<BaseLib::Rpc::JsonEncoder>(GD::bl.get());
   _jsonDecoder = std::make_unique<BaseLib::Rpc::JsonDecoder>(GD::bl.get());
-  _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-  _dummyClientInfo->flowsServer = true;
-  _dummyClientInfo->initInterfaceId = "nodeBlue";
-  _dummyClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
+  _nodeBlueClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
+  _nodeBlueClientInfo->flowsServer = true;
+  _nodeBlueClientInfo->initInterfaceId = "nodeBlue";
+  _nodeBlueClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
   std::vector<uint64_t> groups{4};
-  _dummyClientInfo->acls->fromGroups(groups);
-  _dummyClientInfo->user = "SYSTEM (4)";
+  _nodeBlueClientInfo->acls->fromGroups(groups);
+  _nodeBlueClientInfo->user = "SYSTEM (4)";
 
   _rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
   _rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -577,6 +578,7 @@ void NodeBlueServer::stop() {
     stopQueue(2);
     unlink(_socketPath.c_str());
     BaseLib::ProcessManager::unregisterCallbackHandler(_processCallbackHandlerId);
+    _nodeRed->stop();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1918,7 +1920,7 @@ std::string NodeBlueServer::installNode(BaseLib::Http &http) {
     parameters->reserve(2);
     parameters->push_back(moduleIterator->second);
     parameters->push_back(std::make_shared<BaseLib::Variable>(url));
-    BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+    BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_nodeBlueClientInfo, method, parameters);
     if (result->errorStruct) {
       _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
       return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
@@ -2047,7 +2049,7 @@ std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
   parameters->reserve(2);
   parameters->push_back(std::make_shared<BaseLib::Variable>(module));
   parameters->push_back(std::make_shared<BaseLib::Variable>(tempPath));
-  BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+  BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_nodeBlueClientInfo, method, parameters);
   if (result->errorStruct) {
     _out.printError("Error: Could not install node: " + result->structValue->at("faultString")->stringValue);
     return R"({"result":"error","error":")" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
@@ -2127,7 +2129,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       std::string method = "managementUninstallNode";
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->push_back(std::make_shared<BaseLib::Variable>(module));
-      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, method, parameters);
+      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_nodeBlueClientInfo, method, parameters);
       if (result->errorStruct) {
         _out.printError("Error: Could not uninstall node: " + result->structValue->at("faultString")->stringValue);
         return "{\"result\":\"error\",\"error\":\"" + _jsonEncoder->encodeString(result->structValue->at("faultString")->stringValue) + "\"}";
@@ -2187,9 +2189,9 @@ uint32_t NodeBlueServer::flowCount() {
 void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-    bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
     if (id != 0) {
@@ -2209,14 +2211,14 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
         if (id == 0) {
-          if (_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
+          if (_nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
-            if (systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
+            if (systemVariable && _nodeBlueClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
               newVariables->push_back(variables->at(i));
               newValues->push_back(values->at(i));
             }
           }
-        } else if (peer && _dummyClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i))) {
+        } else if (peer && _nodeBlueClientInfo->acls->checkVariableReadAccess(peer, channel, variables->at(i))) {
           newVariables->push_back(variables->at(i));
           newValues->push_back(values->at(i));
         }
@@ -2349,7 +2351,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
 void NodeBlueServer::broadcastFlowVariableEvent(std::string &flowId, std::string &variable, BaseLib::PVariable &value) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
     std::vector<PNodeBlueClientData> clients;
     {
@@ -2382,7 +2384,7 @@ void NodeBlueServer::broadcastFlowVariableEvent(std::string &flowId, std::string
 void NodeBlueServer::broadcastGlobalVariableEvent(std::string &variable, BaseLib::PVariable &value) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
     std::vector<PNodeBlueClientData> clients;
     {
@@ -2415,8 +2417,8 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PV
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-    if (_dummyClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
+    if (_nodeBlueClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
@@ -2424,7 +2426,7 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PV
         {
           for (auto id : ids) {
             auto peer = central->getPeer((uint64_t)id);
-            if (!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+            if (!peer || !_nodeBlueClientInfo->acls->checkDeviceReadAccess(peer)) return;
           }
         }
       }
@@ -2485,14 +2487,14 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-    if (_dummyClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
+    if (_nodeBlueClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
         if (central) peer = central->getPeer(id);
-        if (!peer || !_dummyClientInfo->acls->checkDeviceReadAccess(peer)) return;
+        if (!peer || !_nodeBlueClientInfo->acls->checkDeviceReadAccess(peer)) return;
       }
     }
 
@@ -2521,7 +2523,7 @@ void NodeBlueServer::broadcastVariableProfileStateChanged(uint64_t profileId, bo
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("variableProfileStateChanged")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("variableProfileStateChanged")) return;
 
     std::vector<PNodeBlueClientData> clients;
     {
@@ -2552,7 +2554,7 @@ void NodeBlueServer::broadcastUiNotificationCreated(uint64_t uiNotificationId) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("uiNotificationCreated")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("uiNotificationCreated")) return;
 
     std::vector<PNodeBlueClientData> clients;
     {
@@ -2581,7 +2583,7 @@ void NodeBlueServer::broadcastUiNotificationRemoved(uint64_t uiNotificationId) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("uiNotificationRemoved")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("uiNotificationRemoved")) return;
 
     std::vector<PNodeBlueClientData> clients;
     {
@@ -2610,7 +2612,7 @@ void NodeBlueServer::broadcastUiNotificationAction(uint64_t uiNotificationId, co
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
-    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("uiNotificationAction")) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("uiNotificationAction")) return;
 
     std::vector<PNodeBlueClientData> clients;
     {
@@ -2685,7 +2687,7 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
 
       auto methodIterator = _rpcMethods.find(queueEntry->methodName);
       if (methodIterator == _rpcMethods.end()) {
-        BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_dummyClientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
+        BaseLib::PVariable result = GD::ipcServer->callRpcMethod(_nodeBlueClientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
         if (queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, queueEntry->parameters->at(0), queueEntry->parameters->at(1), result);
         return;
       }
@@ -2697,7 +2699,7 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         }
       }
 
-      BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_dummyClientInfo, queueEntry->parameters->at(3)->arrayValue);
+      BaseLib::PVariable result = _rpcMethods.at(queueEntry->methodName)->invoke(_nodeBlueClientInfo, queueEntry->parameters->at(3)->arrayValue);
       if (GD::bl->debugLevel >= 5) {
         _out.printDebug("Response: ");
         result->print(true, false);
@@ -3552,7 +3554,7 @@ BaseLib::PVariable NodeBlueServer::invokeIpcProcessMethod(PNodeBlueClientData &c
     if (parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Second parameter is not of type String.");
     if (parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Third parameter is not of type Array.");
 
-    return GD::ipcServer->callProcessRpcMethod(parameters->at(0)->integerValue64, _dummyClientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
+    return GD::ipcServer->callProcessRpcMethod(parameters->at(0)->integerValue64, _nodeBlueClientInfo, parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

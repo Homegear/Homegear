@@ -36,6 +36,7 @@
 #include "FlowInfoServer.h"
 #include "NodeManager.h"
 #include "NodeBlueCredentials.h"
+#include "Node-RED/Nodered.h"
 
 #include <queue>
 
@@ -159,10 +160,11 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _currentFlowIdMutex;
   int32_t _currentFlowId = 0;
   std::mutex _stateMutex;
+  std::unique_ptr<Nodered> _nodeRed;
   std::map<int32_t, PNodeBlueClientData> _clients;
   int32_t _currentClientId = 0;
   int64_t _lastGarbageCollection = 0;
-  std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+  std::shared_ptr<BaseLib::RpcClientInfo> _nodeBlueClientInfo;
   std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
   std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>> _localRpcMethods;
   std::mutex _packetIdMutex;
