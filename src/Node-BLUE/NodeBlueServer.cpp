@@ -1242,7 +1242,7 @@ void NodeBlueServer::startFlows() {
     }
     //}}}
 
-    BaseLib::PVariable nodeRedFlow;
+    BaseLib::PVariable nodeRedFlow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     std::string nodeRedFlowsFile = _bl->settings.nodeBlueDataPath() + "node-red/flows.json";
     bool hasNoderedFlowsFile = BaseLib::Io::fileExists(nodeRedFlowsFile);
     if (!hasNoderedFlowsFile) nodeRedFlow->arrayValue->reserve(flowNodes.size());
