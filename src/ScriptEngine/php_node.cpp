@@ -98,15 +98,15 @@ ZEND_FUNCTION(hg_node_log) {
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   int32_t logLevel = 3;
   std::string message;
-  if (argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::log().");
-  else if (argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::log().");
+  if (argc > 2) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::log().");
+  else if (argc < 2) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::log().");
   else {
-    if (Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "logLevel is not of type integer.");
+    if (Z_TYPE(args[0]) != IS_LONG) php_error_docref(nullptr, E_WARNING, "logLevel is not of type integer.");
     else {
       logLevel = Z_LVAL(args[0]);
     }
 
-    if (Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "message is not of type string.");
+    if (Z_TYPE(args[1]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "message is not of type string.");
     else {
       if (Z_STRLEN(args[1]) > 0) message = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
     }
@@ -250,15 +250,17 @@ ZEND_FUNCTION(hg_node_node_event) {
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
   BaseLib::PVariable value;
-  if (argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::nodeEvent().");
-  else if (argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::nodeEvent().");
+  bool retain = true;
+  if (argc > 3) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::nodeEvent().");
+  else if (argc < 2) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::nodeEvent().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "topic is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "topic is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
 
-    value = Homegear::PhpVariableConverter::getVariable(&(args[1]));
+    value = Homegear::PhpVariableConverter::getVariable(&args[1]);
+    if (argc >= 3) retain = Z_TYPE_P(&args[2]) == IS_TRUE;
   }
 
   std::string methodName("executePhpNodeBaseMethod");
@@ -267,10 +269,11 @@ ZEND_FUNCTION(hg_node_node_event) {
   parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
   parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("nodeEvent"));
   BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  innerParameters->arrayValue->reserve(3);
+  innerParameters->arrayValue->reserve(4);
   innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
   innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
   innerParameters->arrayValue->push_back(value);
+  innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(retain));
   parameters->arrayValue->push_back(innerParameters);
   php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
@@ -280,10 +283,10 @@ ZEND_FUNCTION(hg_node_get_node_data) {
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
-  if (argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::getNodeData().");
-  else if (argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::getNodeData().");
+  if (argc > 1) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::getNodeData().");
+  else if (argc < 1) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::getNodeData().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "key is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
@@ -303,10 +306,10 @@ ZEND_FUNCTION(hg_node_set_node_data) {
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
   BaseLib::PVariable value;
-  if (argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::setNodeData().");
-  else if (argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::setNodeData().");
+  if (argc > 2) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::setNodeData().");
+  else if (argc < 2) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::setNodeData().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "key is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
@@ -328,10 +331,10 @@ ZEND_FUNCTION(hg_node_get_flow_data) {
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
-  if (argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::getFlowData().");
-  else if (argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::getFlowData().");
+  if (argc > 1) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::getFlowData().");
+  else if (argc < 1) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::getFlowData().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "key is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }

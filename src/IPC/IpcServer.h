@@ -166,6 +166,8 @@ class IpcServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getClientId(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
+  BaseLib::PVariable getNoderedCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
   BaseLib::PVariable registerRpcMethod(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable cliGeneralCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
@@ -173,6 +175,8 @@ class IpcServer : public BaseLib::IQueue {
   BaseLib::PVariable cliFamilyCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable cliPeerCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable noderedEvent(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable ptyOutput(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
   // }}}

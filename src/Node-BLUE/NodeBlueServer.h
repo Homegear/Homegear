@@ -37,6 +37,7 @@
 #include "NodeManager.h"
 #include "NodeBlueCredentials.h"
 #include "Node-RED/Nodered.h"
+#include "Node-RED/NoderedWebsocket.h"
 
 #include <queue>
 
@@ -49,6 +50,9 @@ class NodeBlueServer : public BaseLib::IQueue {
   NodeBlueServer();
 
   virtual ~NodeBlueServer();
+
+  std::shared_ptr<Nodered> getNodered() { return _nodered; }
+  std::shared_ptr<NoderedWebsocket> getNoderedWebsocket() { return _noderedWebsocket; }
 
   bool lifetick();
 
@@ -86,13 +90,15 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
 
-  std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
+  std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-  std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
+  std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-  std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
+  std::string handlePut(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-  void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
+  std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
+
+  void nodeOutput(const std::string& nodeId, uint32_t index, const BaseLib::PVariable& message, bool synchronous);
 
   BaseLib::PVariable addNodesToFlow(const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes);
 
@@ -104,6 +110,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodesWithFixedInputs();
 
+  BaseLib::PVariable getNodeCredentials(const std::string &nodeId);
+
   BaseLib::PVariable getNodeVariable(std::string nodeId, std::string topic);
 
   void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
@@ -111,7 +119,6 @@ class NodeBlueServer : public BaseLib::IQueue {
   void enableNodeEvents();
 
   void disableNodeEvents();
-
  private:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
@@ -160,7 +167,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _currentFlowIdMutex;
   int32_t _currentFlowId = 0;
   std::mutex _stateMutex;
-  std::unique_ptr<Nodered> _nodeRed;
+  std::shared_ptr<Nodered> _nodered;
+  std::shared_ptr<NoderedWebsocket> _noderedWebsocket;
   std::map<int32_t, PNodeBlueClientData> _clients;
   int32_t _currentClientId = 0;
   int64_t _lastGarbageCollection = 0;
@@ -184,6 +192,7 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _flowClientIdMapMutex;
   std::map<std::string, int32_t> _flowClientIdMap;
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
+  std::unique_ptr<BaseLib::HttpClient> _nodeRedHttpClient;
 
   std::atomic<int64_t> _lastNodeEvent;
   std::atomic<uint32_t> _nodeEventCounter;
@@ -273,6 +282,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   BaseLib::PVariable invokeIpcProcessMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable nodeEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable nodeRedNodeInput(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
   // }}}

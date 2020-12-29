@@ -140,8 +140,8 @@ void terminateHomegear(int signalNumber) {
     GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
     GD::bl->shuttingDown = true;
 
-    if (GD::ipcServer) GD::ipcServer->homegearShuttingDown();
     if (GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+    if (GD::ipcServer) GD::ipcServer->homegearShuttingDown();
     #ifndef NO_SCRIPTENGINE
     if (GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
     #endif
@@ -168,10 +168,11 @@ void terminateHomegear(int signalNumber) {
       GD::out.printInfo("(Shutdown) => Stopping Homegear Daisy Chain client...");
       if (GD::bl->hgdc) GD::bl->hgdc->stop();
     }
-    GD::out.printInfo("(Shutdown) => Stopping IPC server...");
-    if (GD::ipcServer) GD::ipcServer->stop();
     if (GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
     if (GD::nodeBlueServer) GD::nodeBlueServer->stop();
+    //Stop after Node-BLUE server so that nodes connected over IPC are properly stopped
+    GD::out.printInfo("(Shutdown) => Stopping IPC server...");
+    if (GD::ipcServer) GD::ipcServer->stop();
     #ifndef NO_SCRIPTENGINE
     GD::out.printInfo("(Shutdown) => Stopping script engine server...");
     if (GD::scriptEngineServer) GD::scriptEngineServer->stop();

@@ -97,6 +97,7 @@ class NodeManager {
     std::string name;
     std::string module;
     std::string version;
+    std::string codeDirectory;
     bool local = true;
     std::unordered_map<NodeType, PNodeInfo> nodes;
   };
@@ -110,6 +111,8 @@ class NodeManager {
    * Returns a map with the maximum thread count of all node types.
    */
   std::unordered_map<NodeType, uint32_t> getMaxThreadCounts();
+
+  bool nodeRedRequired();
 
   /**
    * Returns a struct with information about all modules as required by the frontend.
@@ -130,6 +133,11 @@ class NodeManager {
    * Returns information required for the node removed frontend notification.
    */
   BaseLib::PVariable getNodesRemovedInfo(const std::string &module);
+
+  /**
+   * Returns the directory where the specifed module's icons are stored.
+   */
+  std::string getModuleIconsDirectory(const std::string &module);
 
   /**
    * Returns the icons of all modules.
@@ -195,6 +203,7 @@ class NodeManager {
   std::unordered_map<NodeType, PNodeInfo> _nodeInfoByNodeType;
 
   const std::atomic_bool *_nodeEventsEnabled;
+  std::atomic_bool _nodeRedRequired{false};
 
   NodeManager(const NodeManager &) = delete;
 

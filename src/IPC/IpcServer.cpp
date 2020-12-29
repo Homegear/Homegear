@@ -29,6 +29,8 @@
 */
 
 #include "IpcServer.h"
+
+#include <memory>
 #include "../GD/GD.h"
 #include "../CLI/CliServer.h"
 #include "../RPC/RpcMethods/BuildingRpcMethods.h"
@@ -51,8 +53,8 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
-  _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
+  _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, false);
+  _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
   _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
   _dummyClientInfo->ipcServer = true;
   _dummyClientInfo->initInterfaceId = "ipcServer";
@@ -346,6 +348,18 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
                                                                                                                                                                          std::placeholders::_1,
                                                                                                                                                                          std::placeholders::_2,
                                                                                                                                                                          std::placeholders::_3)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("getNoderedCredentials",
+                                                                                                                                                               std::bind(&IpcServer::getNoderedCredentials,
+                                                                                                                                                                         this,
+                                                                                                                                                                         std::placeholders::_1,
+                                                                                                                                                                         std::placeholders::_2,
+                                                                                                                                                                         std::placeholders::_3)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("noderedEvent",
+                                                                                                                                                               std::bind(&IpcServer::noderedEvent,
+                                                                                                                                                                         this,
+                                                                                                                                                                         std::placeholders::_1,
+                                                                                                                                                                         std::placeholders::_2,
+                                                                                                                                                                         std::placeholders::_3)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("ptyOutput",
                                                                                                                                                                std::bind(&IpcServer::ptyOutput,
                                                                                                                                                                          this,
@@ -486,20 +500,7 @@ void IpcServer::homegearShuttingDown() {
   try {
     _shuttingDown = true;
 
-    {
-      std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        closeClientConnection(i->second);
-      }
-    }
-
-    int32_t i = 0;
-    while (_clients.size() > 0 && i < 60) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      collectGarbage();
-      i++;
-    }
+    //Don't close client connections here as they are still needed until "stop()" is called.
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1061,7 +1062,7 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
       std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
       packetId = _currentPacketId++;
     }
-    BaseLib::PArray array(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters))});
+    BaseLib::PArray array(new BaseLib::Array{std::make_shared<BaseLib::Variable>(packetId), std::make_shared<BaseLib::Variable>(parameters)});
     std::vector<char> data;
     _rpcEncoder->encodeRequest(methodName, array, data);
 
@@ -1091,7 +1092,7 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
       return response->finished || clientData->closed || _stopServer;
     })) {
       i++;
-      if (i == 15) {
+      if (i == 300) {
         _out.printError("Error: IPC client with ID " + std::to_string(clientData->id) + " is not responding... Closing connection.");
         closeClientConnection(clientData);
         break;
@@ -1536,6 +1537,36 @@ BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData &clientData, int32_t
 
     CliServer cliServer(clientData->id);
     return std::make_shared<BaseLib::Variable>(cliServer.peerCommand((uint64_t)parameters->at(0)->integerValue64, command));
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::getNoderedCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
+
+    return GD::nodeBlueServer->getNodeCredentials(parameters->at(0)->stringValue);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::noderedEvent(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+  try {
+    GD::nodeBlueServer->getNodered()->event(parameters);
+
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

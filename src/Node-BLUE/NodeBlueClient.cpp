@@ -564,7 +564,7 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
             queueEntry->nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
             Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
             timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-            nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout);
+            nodeEvent(queueEntry->nodeInfo->id, "highlightNode/" + queueEntry->nodeInfo->id, timeout, false);
           }
           auto internalMessageIterator = queueEntry->message->structValue->find("_internal");
           if (internalMessageIterator != queueEntry->message->structValue->end()) setInternalMessage(queueEntry->nodeInfo->id, internalMessageIterator->second);
@@ -583,7 +583,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
             }
           }
 
-          {
+          if (_nodeManager->isNodeRedNode(queueEntry->nodeInfo->type)) {
+            auto parameters = std::make_shared<Flows::Array>();
+            parameters->reserve(5);
+            parameters->emplace_back(std::make_shared<Flows::Variable>(node->getId()));
+            parameters->emplace_back(queueEntry->nodeInfo->serialize());
+            parameters->emplace_back(std::make_shared<Flows::Variable>(queueEntry->targetPort));
+            parameters->emplace_back(queueEntry->message);
+            parameters->emplace_back(std::make_shared<Flows::Variable>(false));
+            auto result = invoke("nodeRedNodeInput", parameters, false);
+            if (result->errorStruct) _out.printError("Error calling \"nodeRedNodeInput\": " + result->structValue->at("faultString")->stringValue);
+          } else {
             std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
             node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
           }
@@ -889,17 +899,17 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
       if (_frontendConnected && _startUpComplete && nodeInfo->info->structValue->at("flow")->stringValue == eventFlowId) {
         Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-        nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
+        nodeEvent(nodeId, "highlightNode/" + nodeId, timeout, false);
         Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
-        nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+        nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex, false);
 
         Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         std::string statusText = message->structValue->at("payload")->toString();
         if (statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
         statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
         status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-        nodeEvent(nodeId, "statusTop/" + nodeId, status);
+        nodeEvent(nodeId, "statusTop/" + nodeId, status, false);
       }
     }
 
@@ -919,7 +929,7 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
             outputNodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
             Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
             timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-            nodeEvent(outputNodeInfo->id, "highlightNode/" + outputNodeInfo->id, timeout);
+            nodeEvent(outputNodeInfo->id, "highlightNode/" + outputNodeInfo->id, timeout, false);
           }
           auto internalMessageIterator = message->structValue->find("_internal");
           if (internalMessageIterator != message->structValue->end()) {
@@ -947,7 +957,17 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
             }
           }
 
-          {
+          if (_nodeManager->isNodeRedNode(nextNode->getType())) {
+            auto parameters = std::make_shared<Flows::Array>();
+            parameters->reserve(5);
+            parameters->emplace_back(std::make_shared<Flows::Variable>(nextNode->getId()));
+            parameters->emplace_back(outputNodeInfo->serialize());
+            parameters->emplace_back(std::make_shared<Flows::Variable>(node.port));
+            parameters->emplace_back(message);
+            parameters->emplace_back(std::make_shared<Flows::Variable>(true));
+            auto result = invoke("nodeRedNodeInput", parameters, true);
+            if (result->errorStruct) _out.printError("Error calling \"nodeRedNodeInput\": " + result->structValue->at("faultString")->stringValue);
+          } else {
             std::lock_guard<std::mutex> nodeInputGuard(nextNode->getInputMutex());
             nextNode->input(outputNodeInfo, node.port, message);
           }
@@ -973,17 +993,17 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
         nodeInfo->lastNodeEvent1 = BaseLib::HelperFunctions::getTime();
         Flows::PVariable timeout = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         timeout->structValue->emplace("timeout", std::make_shared<Flows::Variable>(500));
-        nodeEvent(nodeId, "highlightNode/" + nodeId, timeout);
+        nodeEvent(nodeId, "highlightNode/" + nodeId, timeout, false);
         Flows::PVariable outputIndex = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         outputIndex->structValue->emplace("index", std::make_shared<Flows::Variable>(index));
-        nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex);
+        nodeEvent(nodeId, "highlightLink/" + nodeId, outputIndex, false);
 
         Flows::PVariable status = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         std::string statusText = message->structValue->at("payload")->toString();
         if (statusText.size() > 20) statusText = statusText.substr(0, 17) + "...";
         statusText = std::to_string(index) + ": " + BaseLib::HelperFunctions::stripNonPrintable(statusText);
         status->structValue->emplace("text", std::make_shared<Flows::Variable>(statusText));
-        nodeEvent(nodeId, "statusTop/" + nodeId, status);
+        nodeEvent(nodeId, "statusTop/" + nodeId, status, false);
       }
     }
   }
@@ -992,7 +1012,7 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
   }
 }
 
-void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &topic, Flows::PVariable value) {
+void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &topic, const Flows::PVariable& value, bool retain) {
   try {
     if (!value || !_startUpComplete) return;
 
@@ -1003,6 +1023,7 @@ void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &top
     parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
     parameters->push_back(std::make_shared<Flows::Variable>(topic));
     parameters->push_back(value);
+    parameters->push_back(std::make_shared<Flows::Variable>(retain));
 
     Flows::PVariable result = invoke("nodeEvent", parameters, false);
     if (result->errorStruct) GD::out.printError("Error calling nodeEvent: " + result->structValue->at("faultString")->stringValue);
@@ -1401,6 +1422,8 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
           continue;
         }
 
+        if (!nodeObject) continue;
+
         nodeObject->setId(node->id);
         nodeObject->setFlowId(node->flowId);
 
@@ -1431,7 +1454,7 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
         nodeObject->setSubscribeHomegearEvents(std::function<void(const std::string &)>(std::bind(&NodeBlueClient::subscribeHomegearEvents, this, std::placeholders::_1)));
         nodeObject->setUnsubscribeHomegearEvents(std::function<void(const std::string &)>(std::bind(&NodeBlueClient::unsubscribeHomegearEvents, this, std::placeholders::_1)));
         nodeObject->setOutput(std::function<void(const std::string &, uint32_t, Flows::PVariable, bool)>(std::bind(&NodeBlueClient::queueOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
-        nodeObject->setNodeEvent(std::function<void(const std::string &, const std::string &, Flows::PVariable)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+        nodeObject->setNodeEvent(std::function<void(const std::string &, const std::string &, const Flows::PVariable &, bool)>(std::bind(&NodeBlueClient::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
         nodeObject->setGetNodeData(std::function<Flows::PVariable(const std::string &, const std::string &)>(std::bind(&NodeBlueClient::getNodeData, this, std::placeholders::_1, std::placeholders::_2)));
         nodeObject->setSetNodeData(std::function<void(const std::string &, const std::string &, Flows::PVariable)>(std::bind(&NodeBlueClient::setNodeData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
         nodeObject->setGetFlowData(std::function<Flows::PVariable(const std::string &, const std::string &)>(std::bind(&NodeBlueClient::getFlowData, this, std::placeholders::_1, std::placeholders::_2)));
@@ -1743,11 +1766,12 @@ Flows::PVariable NodeBlueClient::executePhpNodeBaseMethod(Flows::PArray &paramet
       queueOutput(innerParameters->at(0)->stringValue, static_cast<uint32_t>(innerParameters->at(1)->integerValue), innerParameters->at(2), innerParameters->size() == 4 ? innerParameters->at(3)->booleanValue : false);
       return std::make_shared<Flows::Variable>();
     } else if (methodName == "nodeEvent") {
-      if (innerParameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+      if (innerParameters->size() != 3 && innerParameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
       if (innerParameters->at(0)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 1 is not of type string.");
       if (innerParameters->at(1)->type != Flows::VariableType::tString) return Flows::Variable::createError(-1, "Parameter 2 is not of type string.");
+      if (innerParameters->size() == 4 && innerParameters->at(3)->type != Flows::VariableType::tBoolean) return Flows::Variable::createError(-1, "Parameter 4 is not of type boolean.");
 
-      nodeEvent(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2));
+      nodeEvent(innerParameters->at(0)->stringValue, innerParameters->at(1)->stringValue, innerParameters->at(2), innerParameters->size() == 4 ? innerParameters->at(3)->booleanValue : true);
       return std::make_shared<Flows::Variable>();
     } else if (methodName == "getNodeData") {
       if (innerParameters->size() != 1) return Flows::Variable::createError(-1, "Wrong parameter count.");

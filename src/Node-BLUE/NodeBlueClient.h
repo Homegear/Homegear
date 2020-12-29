@@ -183,7 +183,7 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void sendResponse(Flows::PVariable &packetId, Flows::PVariable &variable);
 
-  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
   Flows::PVariable send(std::vector<char> &data);
 
@@ -209,7 +209,7 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void queueOutput(const std::string &nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
-  void nodeEvent(const std::string &nodeId, const std::string &topic, Flows::PVariable value);
+  void nodeEvent(const std::string &nodeId, const std::string &topic, const Flows::PVariable& value, bool retain);
 
   Flows::PVariable getNodeData(const std::string &nodeId, const std::string &key);
 

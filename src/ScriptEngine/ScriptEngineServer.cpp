@@ -2869,9 +2869,9 @@ BaseLib::PVariable ScriptEngineServer::getTrialStartTime(PScriptEngineClientData
 // {{{ Flows
 BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
+    if (parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");
 
-    GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+    GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2), parameters->at(3)->booleanValue);
 
     return std::make_shared<BaseLib::Variable>();
   }
@@ -2884,7 +2884,7 @@ BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData &client
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
     if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");

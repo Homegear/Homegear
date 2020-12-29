@@ -631,6 +631,14 @@ fi
 createPackageWithoutAutomake python3-homegear $1 python3-homegear 0
 
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
+cd "Homegear-master/misc/State Directory"
+wget --https-only https://gitit.de/api/v4/projects/112/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+mv node-blue-master* node-red
+cd ../../../
 createPackage Homegear $1 homegear 0
 if test -f homegear*.deb; then
 	dpkg --purge php8-homegear-dev

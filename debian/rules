@@ -41,7 +41,6 @@ override_dh_auto_install:
 	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 
 	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/data
 	mkdir $(CURDIR)/debian/homegear/var/lib/homegear/phpinclude
 	cp -R $(CURDIR)/misc/State\ Directory/* $(CURDIR)/debian/homegear/var/lib/homegear
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear

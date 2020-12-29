@@ -59,6 +59,7 @@ void Nodered::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDump
       _stdOut = -1;
       _stdErr = -1;
       _pid = -1;
+      if (!_processStartUpComplete) _startUpError = true;
       _out.printInfo("Info: Node-RED process " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + " (Core dumped: " + std::to_string(coreDumped) + +", signal: " + std::to_string(signal) + ").");
     }
   }
@@ -67,8 +68,13 @@ void Nodered::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDump
   }
 }
 
+bool Nodered::isStarted() {
+  return _processStartUpComplete;
+}
+
 void Nodered::start() {
   try {
+    _out.printInfo("Starting Node-RED...");
     _callbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&Nodered::sigchildHandler,
                                                                                                                                                               this,
                                                                                                                                                               std::placeholders::_1,
@@ -78,16 +84,17 @@ void Nodered::start() {
 
     startProgram();
 
-    {
-      while (!_startUpError) {
-        if (_processStartUpComplete) break;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
+    std::unique_lock<std::mutex> waitLock(_processStartUpMutex);
+    while (!_processStartUpConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&] {
+      return _stopThread || _startUpError || _processStartUpComplete;
+    })) {
+      _out.printInfo("Waiting for Node-RED to get ready.");
     }
 
-    if (_startUpError) {
-      GD::out.printError("Error: Node-RED could not be started.");
+    if (_startUpError || _pid == -1) {
+      _out.printError("Error: Node-RED could not be started. ");
+    } else if (_processStartUpComplete) {
+      _out.printInfo("Node-RED started and is ready (PID: " + std::to_string(_pid) + ").");
     }
   }
   catch (const std::exception &ex) {
@@ -97,6 +104,8 @@ void Nodered::start() {
 
 void Nodered::stop() {
   try {
+    if (!_processStartUpComplete && _pid == -1) return;
+    _out.printInfo("Stopping Node-RED...");
     _processStartUpComplete = false;
     _stopThread = true;
     if (_pid != -1) {
@@ -120,6 +129,7 @@ void Nodered::stop() {
     if (_errorThread.joinable()) _errorThread.join();
     BaseLib::ProcessManager::unregisterCallbackHandler(_callbackHandlerId);
     _callbackHandlerId = -1;
+    _out.printInfo("Node-RED stopped.");
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -130,6 +140,7 @@ void Nodered::startProgram() {
   try {
     if (_execThread.joinable()) _execThread.join();
     if (_errorThread.joinable()) _errorThread.join();
+    _stopThread = false;
     _execThread = std::thread(&Nodered::execThread, this);
   }
   catch (const std::exception &ex) {
@@ -147,11 +158,12 @@ void Nodered::execThread() {
       if (_errorThread.joinable()) _errorThread.join();
 
       _processStartUpComplete = false;
+      _startUpError = false;
 
       auto redJsPath = GD::bl->settings.nodeRedJsPath();
       if (redJsPath.empty()) redJsPath = GD::bl->settings.dataPath() + "node-blue/node-red/node_modules/node-red/red.js";
 
-      std::vector<std::string> arguments{"-n", redJsPath, "-s", GD::bl->settings.dataPath() + "node-blue/node-red/settings.js"};
+      std::vector<std::string> arguments{"-n", redJsPath, "-s", GD::bl->settings.nodeBlueDataPath() + "node-red/settings.js", "--title", "node-pink"};
       int stdIn = -1;
       int stdOut = -1;
       int stdErr = -1;
@@ -162,33 +174,18 @@ void Nodered::execThread() {
 
       _errorThread = std::thread(&Nodered::errorThread, this);
 
-      while (_pid != -1) //While process is running
-      {
-        auto result = invoke("ping", std::make_shared<BaseLib::Array>());
-        if (!result->errorStruct) break; //Process started and responding
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      if (_pid == -1) _startUpError = true;
-      else _processStartUpComplete = true;
-
       std::array<uint8_t, 4096> buffer{};
-      std::string bufferOut;
+      ssize_t bytesRead = 0;
       while (_stdOut != -1) {
-        auto bytesRead = 0;
-        bufferOut.clear();
-        do {
-          bytesRead = read(_stdOut, buffer.data(), buffer.size());
-          if (bytesRead > 0) {
-            bufferOut.insert(bufferOut.end(), buffer.begin(), buffer.begin() + bytesRead);
-          }
-        } while (bytesRead > 0);
-
-        if (!bufferOut.empty()) _out.printInfo(bufferOut);
+        bytesRead = read(_stdOut, buffer.data(), buffer.size());
+        if (bytesRead > 0) {
+          auto output = std::string(buffer.begin(), buffer.begin() + bytesRead);
+          _out.printInfo(BaseLib::HelperFunctions::trim(output));
+        }
       }
 
       std::this_thread::sleep_for(std::chrono::seconds(1));
-    } while (!_stopThread);
+    } while (!_stopThread && !GD::bl->shuttingDown);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -198,18 +195,13 @@ void Nodered::execThread() {
 void Nodered::errorThread() {
   try {
     std::array<uint8_t, 4096> buffer{};
-    std::string bufferErr;
+    ssize_t bytesRead = 0;
     while (_stdErr != -1) {
-      int32_t bytesRead = 0;
-      bufferErr.clear();
-      do {
-        bytesRead = read(_stdErr, buffer.data(), buffer.size());
-        if (bytesRead > 0) {
-          bufferErr.insert(bufferErr.end(), buffer.begin(), buffer.begin() + bytesRead);
-        }
-      } while (bytesRead > 0);
-
-      if (!bufferErr.empty()) _out.printError(bufferErr);
+      bytesRead = read(_stdErr, buffer.data(), buffer.size());
+      if (bytesRead > 0) {
+        auto output = std::string(buffer.begin(), buffer.begin() + bytesRead);
+        _out.printError(BaseLib::HelperFunctions::trim(output));
+      }
     }
   }
   catch (const std::exception &ex) {
@@ -226,6 +218,63 @@ BaseLib::PVariable Nodered::invoke(const std::string &method, const BaseLib::PAr
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void Nodered::nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous) {
+  try {
+    if (!_processStartUpComplete) return;
+    auto parameters = std::make_shared<BaseLib::Array>();
+    parameters->reserve(5);
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
+    parameters->emplace_back(nodeInfo);
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(inputIndex));
+    parameters->emplace_back(message);
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(synchronous));
+    GD::ipcServer->callProcessRpcMethod(_pid, _nodeBlueClientInfo, "nodeInput", parameters);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Nodered::event(const BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() >= 2 && parameters->at(0)->stringValue == "global") {
+      if (parameters->at(1)->stringValue == "isReady") {
+        {
+          std::lock_guard<std::mutex> waitLock(_processStartUpMutex);
+          _processStartUpComplete = true;
+        }
+        _processStartUpConditionVariable.notify_all();
+      } else if (!_processStartUpComplete) {
+        return;
+      } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "node-output") {
+        auto &payload = parameters->at(2);
+        auto nodeIdIterator = payload->structValue->find("nodeId");
+        if (nodeIdIterator == payload->structValue->end()) return;
+        auto &nodeId = nodeIdIterator->second->stringValue;
+        bool synchronous = false;
+        auto synchronousIterator = payload->structValue->find("synchronous");
+        if (synchronousIterator != payload->structValue->end()) synchronous = synchronousIterator->second->booleanValue;
+        auto messageIterator = payload->structValue->find("message");
+        if (messageIterator != payload->structValue->end()) {
+          auto &message = messageIterator->second;
+          if (message->type == BaseLib::VariableType::tArray) {
+            for (uint32_t i = 0; i < message->arrayValue->size(); i++) {
+              GD::nodeBlueServer->nodeOutput(nodeId, i, message->arrayValue->at(i), synchronous);
+            }
+          } else GD::nodeBlueServer->nodeOutput(nodeId, 0, message, synchronous);
+        }
+      } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "frontend-event") {
+        GD::rpcClient->broadcastNodeEvent("", parameters->at(2)->structValue->at("topic")->stringValue, parameters->at(2)->structValue->at("data"), parameters->at(2)->structValue->at("retain")->booleanValue);
+      }
+    } else if (!_processStartUpComplete) {
+      return;
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

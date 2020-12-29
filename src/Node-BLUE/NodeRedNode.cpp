@@ -28,49 +28,13 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODERED_H_
-#define HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODERED_H_
+#include "NodeRedNode.h"
 
-#include <homegear-base/BaseLib.h>
+#include "../GD/GD.h"
 
 namespace Homegear {
 
-namespace NodeBlue {
-
-class Nodered {
- private:
-  BaseLib::Output _out;
-  std::shared_ptr<BaseLib::RpcClientInfo> _nodeBlueClientInfo;
-  std::atomic_bool _startUpError{false};
-  std::mutex _processStartUpMutex;
-  std::condition_variable _processStartUpConditionVariable;
-  std::atomic_bool _processStartUpComplete{false};
-  int32_t _callbackHandlerId = -1;
-  std::atomic_bool _stopThread{false};
-  std::thread _execThread;
-  std::thread _errorThread;
-  std::atomic_int _pid{-1};
-  std::atomic_int _stdIn{-1};
-  std::atomic_int _stdOut{-1};
-  std::atomic_int _stdErr{-1};
-
-  void sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped);
-  void execThread();
-  void errorThread();
-  void startProgram();
- public:
-  Nodered();
-
-  bool isStarted();
-  void start();
-  void stop();
-  BaseLib::PVariable invoke(const std::string &method, const BaseLib::PArray &parameters);
-  void nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous);
-  void event(const BaseLib::PArray &parameters);
-};
-
+NodeRedNode::NodeRedNode(const std::string &path, const std::string &type, const std::atomic_bool *frontendConnected) : INode(path, type, frontendConnected) {
 }
 
 }
-
-#endif //HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODERED_H_

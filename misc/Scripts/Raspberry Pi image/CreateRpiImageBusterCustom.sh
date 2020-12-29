@@ -171,6 +171,10 @@ TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
 apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
 
+# Create Homegear data directory before installing Homegear so it can be detected in Homegear's postinst script.
+mkdir -p /data/homegear-data
+chown homegear:homegear /data/homegear-data
+
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
 apt-get -y install homegear homegear-management homegear-webssh homegear-adminui homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno homegear-ccu homegear-zwave homegear-nanoleaf | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
@@ -180,8 +184,6 @@ if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     apt-get -y -f install  | dialog --title "System setup" --progressbox "Installing dependencies..." $TTY_Y $TTY_X
 fi
 
-mkdir -p /data/homegear-data
-chown homegear:homegear /data/homegear-data
 sed -i 's/debugLevel = 4/debugLevel = 3/g' /etc/homegear/main.conf
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
@@ -194,6 +196,11 @@ sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/
 sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
 
 sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php"/g' /etc/homegear/php.ini
+
+mkdir -p /data/homegear-data/node-blue/node-red
+cp /var/lib/homegear/node-blue/data/node-red/settings.js /data/homegear-data/node-blue/node-red/
+chown -R homegear:homegear /data/homegear-data
+sed -i 's/\/var\/lib\/homegear\/node-blue\/data\/node-red/\/data\/homegear-data\/node-blue\/node-red/g' /data/homegear-data/node-blue/node-red/settings.js
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh

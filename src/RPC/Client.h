@@ -76,7 +76,7 @@ class Client {
 
   void initServerMethods(std::pair<std::string, std::string> address);
 
-  void broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
+  void broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value, bool retain);
 
   void broadcastEvent(const std::string &source,
                       uint64_t id,

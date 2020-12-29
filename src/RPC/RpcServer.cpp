@@ -1384,6 +1384,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none)) {
                 _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
                 http.reset();
+                doBreak = true;
                 break;
               }
 
@@ -1536,6 +1537,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
 
         if (processHttp) {
           try {
+            bool doBreak = false;
             processedBytes = 0;
             while (processedBytes < bytesRead) {
               processedBytes += http.process(buffer.data() + processedBytes, bytesRead - processedBytes);
@@ -1545,6 +1547,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 std::vector<char> data;
                 _webServer->getError(400, "Bad Request", "Your client sent a request larger than 100 MiB.", data);
                 sendRPCResponseToClient(client, data, false);
+                doBreak = true;
                 break;
               }
 
@@ -1570,10 +1573,18 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 //}}}
 
                 if (_info->webSocket && (http.getHeader().connection & BaseLib::Http::Connection::upgrade)) {
-                  //Do this before basic auth, because currently basic auth is not supported by WebSockets. Authorization takes place after the upgrade.
-                  handleConnectionUpgrade(client, http);
-                  http.reset();
-                  break;
+                  if (http.getHeader().path.compare(0, 11, "/node-blue/") == 0) {
+                    GD::nodeBlueServer->getNoderedWebsocket()->handoverClient(client->socket, client->socketDescriptor, http);
+                    client->socketDescriptor.reset(new BaseLib::FileDescriptor());
+                    client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+                    client->closed = true;
+                    continue;
+                  } else {
+                    //Do this before basic auth, because currently basic auth is not supported by WebSockets. Authorization takes place after the upgrade.
+                    handleConnectionUpgrade(client, http);
+                    http.reset();
+                    continue;
+                  }
                 }
 
                 if (!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)) {
@@ -1583,6 +1594,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                         _out.printError(
                             "Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
                         http.reset();
+                        doBreak = true;
                         break;
                       } else _out.printInfo("Info: Basic authentication failed. Falling back to no authentication.");
                     } else {
@@ -1595,12 +1607,14 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                     _out.printError("Error: Authorization failed for host " + http.getHeader().host
                                         + ". Closing connection. Error was: " + ex.what());
                     http.reset();
+                    doBreak = true;
                     break;
                   }
                 } else if (!client->authenticated
                     && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none)) {
                   _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
                   http.reset();
+                  doBreak = true;
                   break;
                 }
                 if (_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0) {
@@ -1654,7 +1668,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 }
               }
             }
-            continue;
+            if (doBreak) break;
           }
           catch (BaseLib::HttpException &ex) {
             _out.printError("XML RPC Server: Could not process HTTP packet: " + std::string(ex.what()) + " Buffer: "
@@ -1665,6 +1679,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                                  "Your client sent a request that this server could not understand.",
                                  data);
             sendRPCResponseToClient(client, data, false);
+            break;
           }
         }
       }

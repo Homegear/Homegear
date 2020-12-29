@@ -31,6 +31,7 @@
 #include "NodeManager.h"
 #include "SimplePhpNode.h"
 #include "StatefulPhpNode.h"
+#include "NodeRedNode.h"
 #include "../GD/GD.h"
 #include <homegear-base/BaseLib.h>
 
@@ -170,27 +171,25 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
   for (auto &node : *nodesJson->structValue) {
     try {
       auto nodeInfo = std::make_shared<NodeInfo>();
-
-      auto filename = node.second->stringValue;
-      std::string filePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(filename);
-      if (!BaseLib::Io::fileExists(modulePath + ".compiling") && (filePath.empty() || !BaseLib::Io::fileExists(filePath))) {
-        GD::out.printError("Error: Node file \"" + filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
+      nodeInfo->filename = node.second->stringValue;
+      nodeInfo->fullCodefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(nodeInfo->filename);
+      auto slashPos = nodeInfo->fullCodefilePath.find_last_of('/');
+      if (managerModuleInfo->codeDirectory.empty()) managerModuleInfo->codeDirectory = nodeInfo->fullCodefilePath.substr(0, slashPos + 1);
+      if (!BaseLib::Io::fileExists(modulePath + ".compiling") && (nodeInfo->fullCodefilePath.empty() || !BaseLib::Io::fileExists(nodeInfo->fullCodefilePath))) {
+        GD::out.printError("Error: Node file \"" + nodeInfo->filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
         continue;
       }
 
-      nodeInfo->filename = filename;
-      nodeInfo->fullCodefilePath = filePath;
-
       //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
-      auto dotPosition = filename.find_first_of('.');
+      auto dotPosition = nodeInfo->filename.find_first_of('.');
       if (dotPosition == std::string::npos) continue;
-      auto extension = filename.substr(dotPosition);
+      auto extension = nodeInfo->filename.substr(dotPosition);
 
       if (extension == ".so") {
         nodeInfo->codeType = NodeCodeType::cpp;
         auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError("Error: It is mandatory for C++ nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for C++ nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
@@ -198,7 +197,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         nodeInfo->codeType = NodeCodeType::statefulPhp;
         auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError("Error: It is mandatory for stateful PHP nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for stateful PHP nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
@@ -206,7 +205,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         nodeInfo->codeType = NodeCodeType::statefulPhpEncrypted;
         auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError("Error: It is mandatory for stateful PHP nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for stateful PHP nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
@@ -218,7 +217,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         nodeInfo->codeType = NodeCodeType::python;
         auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError("Error: It is mandatory for Python nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for Python nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
@@ -226,13 +225,15 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         nodeInfo->codeType = NodeCodeType::pythonEncrypted;
         auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError("Error: It is mandatory for Python nodes to define \"maxThreadCounts\" for every node in package.json. No entry was found for \"" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for Python nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
       } else if (extension == ".js") {
+        _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascript;
       } else if (extension == ".hgnjs") {
+        _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascriptEncrypted;
       } else if (extension == ".hni" || extension == ".html") {
         nodeInfo->codeType = NodeCodeType::none;
@@ -272,7 +273,6 @@ void NodeManager::fillManagerModuleInfo() {
           _managerModuleInfo.emplace(managerModuleInfo->module, managerModuleInfo);
         }
       } else {
-        if (directory == "node-red/") continue;
         managerModuleInfo = fillManagerModuleInfo(directory);
         if (!managerModuleInfo) continue;
         _managerModuleInfo.emplace(managerModuleInfo->module, managerModuleInfo);
@@ -413,6 +413,20 @@ BaseLib::PVariable NodeManager::getNodesRemovedInfo(const std::string &module) {
   return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 }
 
+std::string NodeManager::getModuleIconsDirectory(const std::string &module) {
+  try {
+    std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+
+    auto moduleInfoIterator = _managerModuleInfo.find(module);
+    if (moduleInfoIterator == _managerModuleInfo.end()) return "";
+    return moduleInfoIterator->second->codeDirectory + "icons/";
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return "";
+}
+
 std::unordered_map<NodeManager::NodeType, uint32_t> NodeManager::getMaxThreadCounts() {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
@@ -428,6 +442,10 @@ std::unordered_map<NodeManager::NodeType, uint32_t> NodeManager::getMaxThreadCou
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return std::unordered_map<NodeType, uint32_t>();
+}
+
+bool NodeManager::nodeRedRequired() {
+  return _nodeRedRequired;
 }
 
 std::string NodeManager::getFrontendCode() {
@@ -523,7 +541,7 @@ BaseLib::PVariable NodeManager::getIcons() {
 
     std::string iconsPath = GD::bl->settings.nodeBluePath() + "www/icons/";
     if (BaseLib::Io::directoryExists(iconsPath)) {
-      std::vector<std::string> files = GD::bl->io.getFiles(iconsPath);
+      std::vector<std::string> files = BaseLib::Io::getFiles(iconsPath);
       if (!files.empty()) {
         auto moduleIcons = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
         moduleIcons->arrayValue->reserve(files.size());
@@ -535,9 +553,9 @@ BaseLib::PVariable NodeManager::getIcons() {
     }
 
     for (auto &module : _managerModuleInfo) {
-      iconsPath = GD::bl->settings.nodeBluePath() + "nodes/" + module.first + "/icons/";
+      iconsPath = module.second->codeDirectory + "icons/";
       if (!BaseLib::Io::directoryExists(iconsPath)) continue;
-      std::vector<std::string> files = GD::bl->io.getFiles(iconsPath);
+      std::vector<std::string> files = BaseLib::Io::getFiles(iconsPath);
       if (files.empty()) continue;
       auto moduleIcons = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       moduleIcons->arrayValue->reserve(files.size());
@@ -558,7 +576,7 @@ std::string NodeManager::getNodeLocales(std::string &language) {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
     BaseLib::PVariable localeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     for (auto &module : _managerModuleInfo) {
-      std::string localePath = GD::bl->settings.nodeBluePath() + "nodes/" + module.first + "/locales/" + language + "/";
+      std::string localePath = module.second->codeDirectory + "/locales/" + language + "/";
       if (!BaseLib::Io::directoryExists(localePath)) continue;
       std::vector<std::string> files = GD::bl->io.getFiles(localePath);
       if (files.empty()) continue;
@@ -727,6 +745,11 @@ int32_t NodeManager::loadNode(std::string type, const std::string &id, Flows::PI
         GD::out.printError("Error: Could not load node file " + nodeInfo->fullCodefilePath + ".");
         return -3;
       }
+      return 0;
+    } else if (nodeInfo->codeType == NodeCodeType::javascript) {
+      GD::out.printInfo("Info: Loading node " + type + ".js");
+      node = std::make_shared<NodeRedNode>(nodeInfo->fullCodefilePath, type, _nodeEventsEnabled);
+      _nodes.emplace(id, node);
       return 0;
     } else if (nodeInfo->codeType == NodeCodeType::none) {
       //Do nothing

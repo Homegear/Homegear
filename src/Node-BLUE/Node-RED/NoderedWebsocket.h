@@ -28,8 +28,8 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODERED_H_
-#define HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODERED_H_
+#ifndef HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODEREDWEBSOCKET_H_
+#define HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODEREDWEBSOCKET_H_
 
 #include <homegear-base/BaseLib.h>
 
@@ -37,40 +37,50 @@ namespace Homegear {
 
 namespace NodeBlue {
 
-class Nodered {
+/**
+ * This class proxies WebSocket connections to Node-RED. Only third party connections are handled here (like from Dashboard). Editor connections are handled by Node-BLUE.
+ */
+class NoderedWebsocket {
  private:
+  struct ClientData {
+    int32_t id = 0;
+    BaseLib::PTcpSocket socket;
+    BaseLib::PFileDescriptor fileDescriptor;
+    std::vector<uint8_t> buffer;
+    BaseLib::PTcpSocket clientSocket;
+
+    ClientData() {
+      buffer.resize(1024);
+    }
+  };
+  typedef std::shared_ptr<ClientData> PClientData;
+
   BaseLib::Output _out;
-  std::shared_ptr<BaseLib::RpcClientInfo> _nodeBlueClientInfo;
-  std::atomic_bool _startUpError{false};
-  std::mutex _processStartUpMutex;
-  std::condition_variable _processStartUpConditionVariable;
-  std::atomic_bool _processStartUpComplete{false};
-  int32_t _callbackHandlerId = -1;
-  std::atomic_bool _stopThread{false};
-  std::thread _execThread;
-  std::thread _errorThread;
-  std::atomic_int _pid{-1};
-  std::atomic_int _stdIn{-1};
-  std::atomic_int _stdOut{-1};
-  std::atomic_int _stdErr{-1};
+  std::atomic_bool _started{false};
+  std::atomic_bool _stopThreads{false};
+  std::thread _mainThread;
 
-  void sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped);
-  void execThread();
-  void errorThread();
-  void startProgram();
+  int64_t _lastGarbageCollection = 0;
+  static const uint32_t _maxConnections = 50;
+  int32_t _currentClientId = 0;
+  std::mutex _clientsMutex;
+  std::map<int32_t, PClientData> _clients;
+
+  void readClient(const PClientData &clientData);
+  void readNoderedClient(const PClientData &clientData);
+  void mainThread();
+  void collectGarbage();
  public:
-  Nodered();
+  NoderedWebsocket();
+  ~NoderedWebsocket();
 
-  bool isStarted();
   void start();
   void stop();
-  BaseLib::PVariable invoke(const std::string &method, const BaseLib::PArray &parameters);
-  void nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous);
-  void event(const BaseLib::PArray &parameters);
+  void handoverClient(const BaseLib::PTcpSocket &socket, const BaseLib::PFileDescriptor &fileDescriptor, const BaseLib::Http &initialPacket);
 };
 
 }
 
 }
 
-#endif //HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODERED_H_
+#endif //HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODEREDWEBSOCKET_H_
