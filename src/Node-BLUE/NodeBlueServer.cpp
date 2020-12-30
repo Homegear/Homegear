@@ -735,7 +735,7 @@ BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs() {
 }
 
 BaseLib::PVariable NodeBlueServer::getNodeCredentials(const std::string &nodeId) {
-  return _nodeBlueCredentials->getNodeCredentials(nodeId);
+  return _nodeBlueCredentials->getCredentials(nodeId);
 }
 
 BaseLib::PVariable NodeBlueServer::getNodeVariable(std::string nodeId, std::string topic) {
