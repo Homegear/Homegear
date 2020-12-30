@@ -88,6 +88,14 @@ void exitHomegear(int exitCode) {
   exit(exitCode);
 }
 
+void loadSettings(bool hideOutput = false) {
+#ifdef NODE_BLUE
+  GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath, hideOutput, true);
+#else
+  GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath, hideOutput);
+#endif
+}
+
 void bindRPCServers() {
   BaseLib::TcpSocket tcpSocket(GD::bl.get());
   // Bind all RPC servers listening on ports <= 1024
@@ -241,7 +249,7 @@ void reloadHomegear() {
       //Binding fails sometimes with "address is already in use" without waiting.
       std::this_thread::sleep_for(std::chrono::milliseconds(10000));
       GD::out.printMessage("Reloading settings...");
-      GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+      loadSettings();
       GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
       GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
       startRPCServers();
@@ -435,6 +443,21 @@ void setLimits() {
 }
 
 void printHelp() {
+#ifdef NODE_BLUE
+  std::cout << "Usage: node-blue [OPTIONS]" << std::endl << std::endl;
+  std::cout << "Option              Meaning" << std::endl;
+  std::cout << "-h                  Show this help" << std::endl;
+  std::cout << "-u                  Run as user" << std::endl;
+  std::cout << "-g                  Run as group" << std::endl;
+  std::cout << "-c <path>           Specify path to config directory" << std::endl;
+  std::cout << "-d                  Run as daemon" << std::endl;
+  std::cout << "-p <pid path>       Specify path to process id file" << std::endl;
+  std::cout << "-r                  Connect to Node-BLUE on this machine" << std::endl;
+  std::cout << "-e <command>        Execute CLI command" << std::endl;
+  std::cout << "-n <script> <args>  Run Node.js script. \"-n\" can be ommited when filename ends with \".js\"." << std::endl;
+  std::cout << "-l                  Checks the lifeticks of all components. Exit code \"0\" means everything is ok." << std::endl;
+  std::cout << "-v                  Print program version" << std::endl;
+#else
   std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
   std::cout << "Option              Meaning" << std::endl;
   std::cout << "-h                  Show this help" << std::endl;
@@ -451,6 +474,7 @@ void printHelp() {
   std::cout << "-l                  Checks the lifeticks of all components. Exit code \"0\" means everything is ok." << std::endl;
   std::cout << "-i                  Generates and prints a new time UUID." << std::endl;
   std::cout << "-v                  Print program version" << std::endl;
+#endif
 }
 
 void startDaemon() {
@@ -950,7 +974,11 @@ int main(int argc, char *argv[]) {
 
     if (BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
     else if (BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
+#ifdef NODE_BLUE
+      else GD::configPath = "/etc/node-blue/";
+#else
     else GD::configPath = "/etc/homegear/";
+#endif
 
     if (std::string(GD::baseLibVersion) != GD::bl->version()) {
       GD::out.printCritical(std::string("Base library has wrong version. Expected version ") + GD::baseLibVersion + " but got version " + GD::bl->version());
@@ -1014,7 +1042,7 @@ int main(int argc, char *argv[]) {
             std::cout << "Please run Homegear as root to set the device permissions." << std::endl;
             exit(1);
           }
-          GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+          loadSettings();
           GD::bl->debugLevel = 3; //Only output warnings.
           GD::licensingController.reset(new LicensingController());
           GD::familyController.reset(new FamilyController());
@@ -1042,7 +1070,7 @@ int main(int argc, char *argv[]) {
         }
       } else if (arg == "-o") {
         if (i + 2 < argc) {
-          GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+          loadSettings();
           std::string inputFile(argv[i + 1]);
           std::string outputFile(argv[i + 2]);
           BaseLib::DeviceDescription::Devices devices(GD::bl.get(), nullptr, 0);
@@ -1068,7 +1096,7 @@ int main(int argc, char *argv[]) {
       } else if (arg == "-d") {
         _startAsDaemon = true;
       } else if (arg == "-r") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
         std::string command;
         int32_t exitCode = cliClient.terminal(command);
@@ -1076,7 +1104,7 @@ int main(int argc, char *argv[]) {
       }
 #ifndef NO_SCRIPTENGINE
       else if (arg == "-rse") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         initGnuTls();
         setLimits();
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
@@ -1105,7 +1133,7 @@ int main(int argc, char *argv[]) {
           std::cerr << "Invalid number of arguments." << std::endl;
           exit(1);
         }
-      } else if(arg.compare(arg.size() - 3, 3, ".js") == 0 && BaseLib::Io::fileExists(arg)) {
+      } else if (arg.compare(arg.size() - 3, 3, ".js") == 0 && BaseLib::Io::fileExists(arg)) {
         int newArgc = (argc - i) + 1;
         char *newArgv[newArgc];
         newArgv[0] = argv[0];
@@ -1115,7 +1143,7 @@ int main(int argc, char *argv[]) {
         auto exitCode = Nodejs::run(newArgc, newArgv);
         exit(exitCode);
       } else if (arg == "-rl") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         initGnuTls();
         setLimits();
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
@@ -1129,7 +1157,7 @@ int main(int argc, char *argv[]) {
         BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
         exit(0);
       } else if (arg == "-e") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath, true);
+        loadSettings(true);
         GD::bl->debugLevel = 0; //Disable output messages
         std::stringstream command;
         if (i + 1 < argc) {
@@ -1154,19 +1182,19 @@ int main(int argc, char *argv[]) {
         std::cout << GD::bl->threadManager.getMaxThreadCount() << std::endl;
         exit(0);
       } else if (arg == "-l") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         GD::bl->debugLevel = 0; //Only output warnings.
         std::string command = "lifetick";
         CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
         int32_t exitCode = cliClient.terminal(command);
         exit(exitCode);
       } else if (arg == "-i") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         GD::bl->debugLevel = 3; //Only output warnings.
         std::cout << BaseLib::HelperFunctions::getTimeUuid() << std::endl;
         exit(0);
       } else if (arg == "-pre") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         GD::serverInfo.init(GD::bl.get());
         GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
         if (GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
@@ -1346,7 +1374,11 @@ int main(int argc, char *argv[]) {
 
         exit(0);
       } else if (arg == "-v") {
+#ifdef NODE_BLUE
+        std::cout << "Node-BLUE version " << GD::baseLibVersion << std::endl;
+#else
         std::cout << "Homegear version " << GD::baseLibVersion << std::endl;
+#endif
         std::cout << "Copyright (c) 2013-2020 Homegear GmbH" << std::endl << std::endl;
         std::cout << "Required library versions:" << std::endl;
         std::cout << "  - libhomegear-base: " << GD::baseLibVersion << std::endl;
@@ -1394,7 +1426,7 @@ int main(int argc, char *argv[]) {
 
     // {{{ Load settings
     GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
-    GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+    loadSettings();
     if (GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
     if (GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
     if ((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty())) {
