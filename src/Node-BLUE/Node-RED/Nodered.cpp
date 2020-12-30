@@ -161,7 +161,7 @@ void Nodered::execThread() {
       _startUpError = false;
 
       auto redJsPath = GD::bl->settings.nodeRedJsPath();
-      if (redJsPath.empty()) redJsPath = GD::bl->settings.dataPath() + "node-blue/node-red/node_modules/node-red/red.js";
+      if (redJsPath.empty()) redJsPath = GD::bl->settings.dataPath() + "node-blue/node-red/packages/node_modules/node-red/red.js";
 
       std::vector<std::string> arguments{"-n", redJsPath, "-s", GD::bl->settings.nodeBlueDataPath() + "node-red/settings.js", "--title", "node-pink"};
       int stdIn = -1;

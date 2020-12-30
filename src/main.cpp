@@ -1119,7 +1119,7 @@ int main(int argc, char *argv[]) {
         initGnuTls();
         setLimits();
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
-        GD::licensingController.reset(new LicensingController());
+        GD::licensingController = std::make_unique<LicensingController>();
         GD::licensingController->loadModules();
         GD::licensingController->init();
         GD::licensingController->load();
