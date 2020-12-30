@@ -638,6 +638,8 @@ unzip master.zip
 [ $? -ne 0 ] && exit 1
 rm master.zip
 mv node-blue-master* node-red
+# Remove unneeded editor client to save space
+rm -Rf node-red/packages/node_modules/@node-red/editor-client
 cd ../../../
 createPackage Homegear $1 homegear 0
 if test -f homegear*.deb; then
