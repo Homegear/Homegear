@@ -1133,7 +1133,7 @@ int main(int argc, char *argv[]) {
           std::cerr << "Invalid number of arguments." << std::endl;
           exit(1);
         }
-      } else if (arg.compare(arg.size() - 3, 3, ".js") == 0 && BaseLib::Io::fileExists(arg)) {
+      } else if (arg.size() > 3 && arg.compare(arg.size() - 3, 3, ".js") == 0 && BaseLib::Io::fileExists(arg)) {
         int newArgc = (argc - i) + 1;
         char *newArgv[newArgc];
         newArgv[0] = argv[0];

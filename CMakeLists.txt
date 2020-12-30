@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(Homegear)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 include_directories(/usr/include/nodejs-homegear /usr/include/php8-homegear /usr/include/php8-homegear/main /usr/include/php8-homegear/sapi /usr/include/php8-homegear/TSRM /usr/include/php8-homegear/Zend /usr/include/php8-homegear/php /usr/include/php8-homegear/php/main /usr/include/php8-homegear/php/sapi /usr/include/php8-homegear/php/TSRM /usr/include/php8-homegear/php/Zend)
 

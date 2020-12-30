@@ -51,6 +51,7 @@ autom4te.cache
 *.in~
 config.log
 homegear
+node-blue
 core
 vgcore.*
 
