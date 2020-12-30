@@ -340,12 +340,12 @@ void errorCallback(int32_t level, std::string message) {
 }
 
 void getExecutablePath(int argc, char *argv[]) {
-  char path[1024];
-  if (!getcwd(path, sizeof(path))) {
+  std::array<char, PATH_MAX> path{};
+  if (!getcwd(path.data(), path.size())) {
     std::cerr << "Could not get working directory." << std::endl;
     exit(1);
   }
-  GD::workingDirectory = std::string(path);
+  GD::workingDirectory = std::string(path.data());
 #ifdef KERN_PROC //BSD system
   int mib[4];
   mib[0] = CTL_KERN;
@@ -363,7 +363,7 @@ void getExecutablePath(int argc, char *argv[]) {
   GD::executablePath = std::string(path);
   GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 #else
-  int length = readlink("/proc/self/exe", path, sizeof(path) - 1);
+  int length = readlink("/proc/self/exe", path.data(), path.size() - 1);
   if (length < 0) {
     std::cerr << "Could not get executable path." << std::endl;
     exit(1);
@@ -373,7 +373,7 @@ void getExecutablePath(int argc, char *argv[]) {
     exit(1);
   }
   path[length] = '\0';
-  GD::executablePath = std::string(path);
+  GD::executablePath = std::string(path.data());
   GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 #endif
 
@@ -1059,6 +1059,7 @@ int main(int argc, char *argv[]) {
           auto processTitle = std::string(argv[i + 1]);
           auto maxTitleSize = strlen(argv[0]); //We can't exceed this size. Assigning a newly allocated string won't make the title show in ps and top.
           strncpy(argv[0], processTitle.data(), maxTitleSize);
+          getExecutablePath(argc, argv);
           i++;
         } else {
           printHelp();
@@ -1104,6 +1105,15 @@ int main(int argc, char *argv[]) {
           std::cerr << "Invalid number of arguments." << std::endl;
           exit(1);
         }
+      } else if(arg.compare(arg.size() - 3, 3, ".js") == 0) {
+        int newArgc = (argc - i) + 1;
+        char *newArgv[newArgc];
+        newArgv[0] = argv[0];
+        for (int j = i; j < argc; j++) {
+          newArgv[(j - i) + 1] = argv[j];
+        }
+        auto exitCode = Nodejs::run(newArgc, newArgv);
+        exit(exitCode);
       } else if (arg == "-rl") {
         GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
         initGnuTls();
