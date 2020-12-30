@@ -446,7 +446,7 @@ void printHelp() {
   std::cout << "-s <user> <group>   Set GPIO settings and necessary permissions for all defined physical devices" << std::endl;
   std::cout << "-r                  Connect to Homegear on this machine" << std::endl;
   std::cout << "-e <command>        Execute CLI command" << std::endl;
-  std::cout << "-n <args> <script>  Run Node.js script" << std::endl;
+  std::cout << "-n <script> <args>  Run Node.js script. \"-n\" can be ommited when filename ends with \".js\"." << std::endl;
   std::cout << "-o <input> <output> Convert old device description file into new format." << std::endl;
   std::cout << "-l                  Checks the lifeticks of all components. Exit code \"0\" means everything is ok." << std::endl;
   std::cout << "-i                  Generates and prints a new time UUID." << std::endl;
@@ -1105,7 +1105,7 @@ int main(int argc, char *argv[]) {
           std::cerr << "Invalid number of arguments." << std::endl;
           exit(1);
         }
-      } else if(arg.compare(arg.size() - 3, 3, ".js") == 0) {
+      } else if(arg.compare(arg.size() - 3, 3, ".js") == 0 && BaseLib::Io::fileExists(arg)) {
         int newArgc = (argc - i) + 1;
         char *newArgv[newArgc];
         newArgv[0] = argv[0];
