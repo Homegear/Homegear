@@ -631,7 +631,7 @@ fi
 createPackageWithoutAutomake python3-homegear $1 python3-homegear 0
 
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
-cd "Homegear-master/misc/State Directory"
+cd "Homegear-${1}/misc/State Directory"
 wget --https-only https://gitit.de/api/v4/projects/112/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
 [ $? -ne 0 ] && exit 1
 unzip master.zip
