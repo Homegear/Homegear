@@ -1054,6 +1054,16 @@ int main(int argc, char *argv[]) {
           printHelp();
           exit(1);
         }
+      } else if (arg == "--title") {
+        if (i + 1 < argc) {
+          auto processTitle = std::string(argv[i + 1]);
+          auto maxTitleSize = strlen(argv[0]); //We can't exceed this size. Assigning a newly allocated string won't make the title show in ps and top.
+          strncpy(argv[0], processTitle.data(), maxTitleSize);
+          i++;
+        } else {
+          printHelp();
+          exit(1);
+        }
       } else if (arg == "-d") {
         _startAsDaemon = true;
       } else if (arg == "-r") {
