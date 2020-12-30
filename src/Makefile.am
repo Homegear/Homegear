@@ -57,3 +57,7 @@ endif
 if WITH_I2C
 AM_CPPFLAGS += -DI2CSUPPORT
 endif
+
+if NODEBLUE
+AM_CPPFLAGS += -DNODE_BLUE
+endif

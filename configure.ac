@@ -101,13 +101,6 @@ AS_IF([test "x$with_eventhandler" != "xno"], [
 	AM_CONDITIONAL(WITH_EVENTHANDLER, false)
 	])
 
-AC_ARG_WITH([nodeblue], [AS_HELP_STRING([--nodeblue], [Compile Node-BLUE binary instead of Homegear])], [node_blue=yes], [])
-AS_IF([test "x$node_blue" = "xyes"], [
-	AM_CONDITIONAL(NODE_BLUE, true)
-	], [
-	AM_CONDITIONAL(NODE_BLUE, false)
-	])
-
 #AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])
 #AS_IF([test "x$with_openssl" = "xyes"], [
 #	AM_CONDITIONAL(WITH_CURL, true)
@@ -120,6 +113,13 @@ AS_IF([test "x$with_i2c" = "xno"], [
 	AM_CONDITIONAL(WITH_I2C, false)
 	], [
 	AM_CONDITIONAL(WITH_I2C, true)
+	])
+
+AC_ARG_WITH([nodeblue], [AS_HELP_STRING([--with-nodeblue], [Compile Node-BLUE binary instead of Homegear])], [node_blue=yes], [])
+AS_IF([test "x$node_blue" = "xyes"], [
+	AM_CONDITIONAL(NODEBLUE, true)
+	], [
+	AM_CONDITIONAL(NODEBLUE, false)
 	])
 
 AC_OUTPUT(Makefile src/Makefile homegear-miscellaneous/src/Makefile)
