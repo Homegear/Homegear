@@ -199,9 +199,6 @@ void FamilyController::onRPCDeleteDevices(std::vector<uint64_t> &ids, BaseLib::P
 void FamilyController::onEvent(std::string source, uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values) {
   try {
     if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, peerID, channel, variables, values);
-#ifdef EVENTHANDLER
-    GD::eventHandler->trigger(peerID, channel, variables, values);
-#endif
 #ifndef NO_SCRIPTENGINE
     if (GD::scriptEngineServer) GD::scriptEngineServer->broadcastEvent(source, peerID, channel, variables, values);
 #endif

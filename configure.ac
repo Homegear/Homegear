@@ -94,13 +94,6 @@ AS_IF([test "x$with_nodejs" = "xno"], [
     AM_CONDITIONAL(WITH_NODEJS, true)
     ])
 
-AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
-AS_IF([test "x$with_eventhandler" != "xno"], [
-	AM_CONDITIONAL(WITH_EVENTHANDLER, true)
-	], [
-	AM_CONDITIONAL(WITH_EVENTHANDLER, false)
-	])
-
 #AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])
 #AS_IF([test "x$with_openssl" = "xyes"], [
 #	AM_CONDITIONAL(WITH_CURL, true)

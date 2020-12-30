@@ -276,30 +276,6 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAbortEventReset::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("abortEventReset")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->abortReset(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCAcknowledgeGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo clientInfo,
                                                               BaseLib::PArray parameters) {
   try {
@@ -1023,31 +999,6 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCAddEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("addEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tStruct}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->add(parameters->at(0));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
 }
 
 BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
@@ -2412,30 +2363,6 @@ BaseLib::PVariable RPCDeleteUserData::invoke(BaseLib::PRpcClientInfo clientInfo,
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("enableEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->enable(parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCExecuteMiscellaneousDeviceMethod::invoke(BaseLib::PRpcClientInfo clientInfo,
                                                                BaseLib::PArray parameters) {
 #ifndef NO_SCRIPTENGINE
@@ -3341,30 +3268,6 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->get(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
 }
 
 BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
@@ -5920,52 +5823,6 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("listEvents")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        if(parameters->size() > 0)
-        {
-            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}),
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
-                                                                                                                     }));
-            if(error != ParameterError::Enum::noError) return getError(error);
-        }
-
-        int32_t type = -1;
-        uint64_t peerID = 0;
-        int32_t channel = -1;
-        std::string variable;
-        if(parameters->size() > 0)
-        {
-            if(parameters->size() == 1) type = parameters->at(0)->integerValue;
-            else
-            {
-                peerID = parameters->at(0)->integerValue64;
-                channel = parameters->at(1)->integerValue;
-            }
-            if(parameters->size() == 3) variable = parameters->at(2)->stringValue;
-        }
-        return GD::eventHandler->list(type, peerID, channel, variable);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("listFamilies"))
@@ -6712,31 +6569,6 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("removeEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->remove(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
 }
 
 BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
@@ -8650,31 +8482,6 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("triggerEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->trigger(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
 }
 
 BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {

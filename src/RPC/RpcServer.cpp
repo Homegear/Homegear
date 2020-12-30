@@ -119,7 +119,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("system.multicall", std::make_shared<RPCSystemMulticall>());
   _rpcMethods->emplace("acknowledgeGlobalServiceMessage", std::make_shared<RPCAcknowledgeGlobalServiceMessage>());
   _rpcMethods->emplace("activateLinkParamset", std::make_shared<RPCActivateLinkParamset>());
-  _rpcMethods->emplace("abortEventReset", std::make_shared<RPCTriggerEvent>());
   _rpcMethods->emplace("addCategoryToChannel", std::make_shared<RPCAddCategoryToChannel>());
   _rpcMethods->emplace("addCategoryToDevice", std::make_shared<RPCAddCategoryToDevice>());
   _rpcMethods->emplace("addCategoryToSystemVariable", std::make_shared<RPCAddCategoryToSystemVariable>());
@@ -127,7 +126,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("addChannelToRoom", std::make_shared<RPCAddChannelToRoom>());
   _rpcMethods->emplace("addDevice", std::make_shared<RPCAddDevice>());
   _rpcMethods->emplace("addDeviceToRoom", std::make_shared<RPCAddDeviceToRoom>());
-  _rpcMethods->emplace("addEvent", std::make_shared<RPCAddEvent>());
   _rpcMethods->emplace("addLink", std::make_shared<RPCAddLink>());
   _rpcMethods->emplace("addRoomToStory", std::make_shared<RPCAddRoomToStory>());
   _rpcMethods->emplace("addSystemVariableToRoom", std::make_shared<RPCAddSystemVariableToRoom>());
@@ -147,7 +145,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("deleteRoom", std::make_shared<RPCDeleteRoom>());
   _rpcMethods->emplace("deleteStory", std::make_shared<RPCDeleteStory>());
   _rpcMethods->emplace("deleteSystemVariable", std::make_shared<RPCDeleteSystemVariable>());
-  _rpcMethods->emplace("enableEvent", std::make_shared<RPCEnableEvent>());
   _rpcMethods->emplace("executeMiscellaneousDeviceMethod", std::make_shared<RPCExecuteMiscellaneousDeviceMethod>());
   _rpcMethods->emplace("familyExists", std::make_shared<RPCFamilyExists>());
   _rpcMethods->emplace("forceConfigUpdate", std::make_shared<RPCForceConfigUpdate>());
@@ -166,7 +163,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("getDeviceInfo", std::make_shared<RPCGetDeviceInfo>());
   _rpcMethods->emplace("getDevicesInCategory", std::make_shared<RPCGetDevicesInCategory>());
   _rpcMethods->emplace("getDevicesInRoom", std::make_shared<RPCGetDevicesInRoom>());
-  _rpcMethods->emplace("getEvent", std::make_shared<RPCGetEvent>());
   _rpcMethods->emplace("getLastEvents", std::make_shared<RPCGetLastEvents>());
   _rpcMethods->emplace("getInstallMode", std::make_shared<RPCGetInstallMode>());
   _rpcMethods->emplace("getInstanceId", std::make_shared<RPCGetInstanceId>());
@@ -210,7 +206,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("listBidcosInterfaces", std::make_shared<RPCListBidcosInterfaces>());
   _rpcMethods->emplace("listClientServers", std::make_shared<RPCListClientServers>());
   _rpcMethods->emplace("listDevices", std::make_shared<RPCListDevices>());
-  _rpcMethods->emplace("listEvents", std::make_shared<RPCListEvents>());
   _rpcMethods->emplace("listFamilies", std::make_shared<RPCListFamilies>());
   _rpcMethods->emplace("listInterfaces", std::make_shared<RPCListInterfaces>());
   _rpcMethods->emplace("listKnownDeviceTypes", std::make_shared<RPCListKnownDeviceTypes>());
@@ -229,7 +224,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("removeRoomFromStory", std::make_shared<RPCRemoveRoomFromStory>());
   _rpcMethods->emplace("removeSystemVariableFromRoom", std::make_shared<RPCRemoveSystemVariableFromRoom>());
   _rpcMethods->emplace("removeVariableFromRoom", std::make_shared<RPCRemoveVariableFromRoom>());
-  _rpcMethods->emplace("removeEvent", std::make_shared<RPCRemoveEvent>());
   _rpcMethods->emplace("removeLink", std::make_shared<RPCRemoveLink>());
   _rpcMethods->emplace("reportValueUsage", std::make_shared<RPCReportValueUsage>());
   _rpcMethods->emplace("rssiInfo", std::make_shared<RPCRssiInfo>());
@@ -258,7 +252,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("startSniffing", std::make_shared<RPCStartSniffing>());
   _rpcMethods->emplace("stopSniffing", std::make_shared<RPCStopSniffing>());
   _rpcMethods->emplace("subscribePeers", std::make_shared<RPCSubscribePeers>());
-  _rpcMethods->emplace("triggerEvent", std::make_shared<RPCTriggerEvent>());
   _rpcMethods->emplace("triggerRpcEvent", std::make_shared<RPCTriggerRpcEvent>());
   _rpcMethods->emplace("unsubscribePeers", std::make_shared<RPCUnsubscribePeers>());
   _rpcMethods->emplace("updateCategory", std::make_shared<RPCUpdateCategory>());

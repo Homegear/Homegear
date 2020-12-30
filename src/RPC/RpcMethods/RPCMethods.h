@@ -103,15 +103,6 @@ class RPCSystemMulticall : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCAbortEventReset : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCAbortEventReset() {
-    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCAcknowledgeGlobalServiceMessage : public BaseLib::Rpc::RpcMethod {
  public:
   RPCAcknowledgeGlobalServiceMessage() {
@@ -237,15 +228,6 @@ class RPCAddDeviceToRoom : public BaseLib::Rpc::RpcMethod {
   RPCAddDeviceToRoom() {
     addSignature(BaseLib::VariableType::tVoid,
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddEvent : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCAddEvent() {
-    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -537,16 +519,6 @@ class RPCDeleteUserData : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCEnableEvent : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCEnableEvent() {
-    addSignature(BaseLib::VariableType::tVoid,
-                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCExecuteMiscellaneousDeviceMethod : public BaseLib::Rpc::RpcMethod {
  public:
   RPCExecuteMiscellaneousDeviceMethod() {
@@ -726,15 +698,6 @@ class RPCGetDevicesInRoom : public BaseLib::Rpc::RpcMethod {
  public:
   RPCGetDevicesInRoom() {
     addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCGetEvent : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCGetEvent() {
-    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -1316,21 +1279,6 @@ class RPCListDevices : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
 };
 
-class RPCListEvents : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCListEvents() {
-    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}));
-    addSignature(BaseLib::VariableType::tArray,
-                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger,
-                                                     BaseLib::VariableType::tInteger}));
-    addSignature(BaseLib::VariableType::tArray,
-                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
-                                                     BaseLib::VariableType::tString}));
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
 class RPCListFamilies : public BaseLib::Rpc::RpcMethod {
  public:
   RPCListFamilies() {
@@ -1503,15 +1451,6 @@ class RPCRemoveDeviceFromRoom : public BaseLib::Rpc::RpcMethod {
   RPCRemoveDeviceFromRoom() {
     addSignature(BaseLib::VariableType::tVoid,
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCRemoveEvent : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCRemoveEvent() {
-    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
@@ -1937,15 +1876,6 @@ class RPCSubscribePeers : public BaseLib::Rpc::RpcMethod {
   RPCSubscribePeers() {
     addSignature(BaseLib::VariableType::tVoid,
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCTriggerEvent : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCTriggerEvent() {
-    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);

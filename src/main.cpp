@@ -76,7 +76,6 @@ std::mutex _stopHomegearMutex;
 std::condition_variable _stopHomegearConditionVariable;
 
 void exitHomegear(int exitCode) {
-  if (GD::eventHandler) GD::eventHandler->dispose();
   if (GD::familyController) GD::familyController->disposeDeviceFamilies();
   if (GD::bl->hgdc) GD::bl->hgdc->stop();
   if (GD::bl->db) {
@@ -158,10 +157,6 @@ void terminateHomegear(int signalNumber) {
       GD::out.printInfo("Stopping UPnP server...");
       GD::uPnP->stop();
     }
-    #ifdef EVENTHANDLER
-    GD::out.printInfo( "(Shutdown) => Stopping Event handler");
-    if(GD::eventHandler) GD::eventHandler->dispose();
-    #endif
     if (GD::mqtt && GD::mqtt->enabled()) {
       GD::out.printInfo("(Shutdown) => Stopping MQTT client");;
       GD::mqtt->stop();
@@ -841,10 +836,6 @@ void startUp() {
 
     GD::ipcLogger = std::make_unique<IpcLogger>();
 
-#ifdef EVENTHANDLER
-    GD::eventHandler.reset(new EventHandler());
-#endif
-
     GD::nodeBlueServer = std::make_unique<NodeBlue::NodeBlueServer>();
     GD::ipcServer = std::make_unique<IpcServer>();
 
@@ -892,13 +883,6 @@ void startUp() {
       GD::out.printInfo("Starting MQTT client...");
       GD::mqtt->start();
     }
-
-#ifdef EVENTHANDLER
-    GD::out.printInfo("Initializing event handler...");
-    GD::eventHandler->init();
-    GD::out.printInfo("Loading events...");
-    GD::eventHandler->load();
-#endif
 
     GD::out.printInfo("Start listening for packets...");
     GD::familyController->physicalInterfaceStartListening();

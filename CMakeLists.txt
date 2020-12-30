@@ -24,8 +24,6 @@ set(SOURCE_FILES
         src/Database/DatabaseController.h
         src/Database/SQLite3.cpp
         src/Database/SQLite3.h
-        src/Events/EventHandler.cpp
-        src/Events/EventHandler.h
         src/FamilyModules/FamilyModuleInfo.h
         src/FamilyModules/FamilyController.cpp
         src/FamilyModules/FamilyController.h

@@ -306,7 +306,7 @@ class ScriptEngineServer : public BaseLib::IQueue {
 
   BaseLib::PVariable nodeOutput(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
   // }}}
   // }}}
 };

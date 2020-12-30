@@ -3010,9 +3010,6 @@ BaseLib::PVariable DatabaseController::setMetadata(BaseLib::PRpcClientInfo clien
     entry = std::make_shared<QueueEntry>("INSERT INTO metadata VALUES(?, ?, ?)", data);
     enqueue(0, entry);
 
-#ifdef EVENTHANDLER
-    GD::eventHandler->trigger(peerID, -1, dataID, metadata);
-#endif
     std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{dataID});
     std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{metadata});
     std::string &source = clientInfo->initInterfaceId;
@@ -3063,9 +3060,6 @@ BaseLib::PVariable DatabaseController::deleteMetadata(uint64_t peerID, std::stri
     value->structValue->insert(BaseLib::StructElement("TYPE", std::make_shared<BaseLib::Variable>(1)));
     value->structValue->insert(BaseLib::StructElement("CODE", std::make_shared<BaseLib::Variable>(1)));
     values->push_back(value);
-#ifdef EVENTHANDLER
-    GD::eventHandler->trigger(peerID, -1, dataID, value);
-#endif
     std::string source;
     if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, peerID, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
