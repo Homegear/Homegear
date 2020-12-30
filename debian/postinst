@@ -110,6 +110,9 @@ case $1 in
 				chown homegear:homegear /etc/homegear/dh1024.pem
 				chmod 400 /etc/homegear/dh1024.pem
 			fi
+
+			cd /var/lib/homegear/node-blue/node-red
+			npm install
 		fi
 
 		sed -i -e 's/\/var\/lib\/homegear\/flows/\/var\/lib\/homegear\/node-blue/g' /etc/homegear/main.conf
@@ -120,9 +123,6 @@ case $1 in
 			sed -i 's/\/var\/lib\/homegear\/node-blue\/data\/node-red/\/data\/homegear-data\/node-blue\/node-red/g' /data/homegear-data/node-blue/node-red/settings.js
 			chown -R homegear:homegear /data/homegear-data
 		fi
-
-		cd /var/lib/homegear/node-blue/node-red
-		npm install
 
 		if [[ ! -f /.dockerenv ]]; then
 			pidof systemd
