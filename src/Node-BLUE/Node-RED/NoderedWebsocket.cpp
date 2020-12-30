@@ -179,7 +179,7 @@ void NoderedWebsocket::readClient(const PClientData &clientData) {
         _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (1).");
         return;
       }
-      _out.printInfo("Moin: Writing to client socket: " + BaseLib::HelperFunctions::getHexString(clientData->buffer.data(), bytesRead));
+      if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Writing to client socket: " + BaseLib::HelperFunctions::getHexString(clientData->buffer.data(), bytesRead));
       clientData->clientSocket->proofwrite((char *)clientData->buffer.data(), bytesRead);
     }
   }
@@ -207,7 +207,7 @@ void NoderedWebsocket::readNoderedClient(const PClientData &clientData) {
         _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (3).");
         return;
       }
-      _out.printInfo("Moin: Writing to browser socket: " + BaseLib::HelperFunctions::getHexString(clientData->buffer.data(), bytesRead));
+      if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Writing to browser socket: " + BaseLib::HelperFunctions::getHexString(clientData->buffer.data(), bytesRead));
       clientData->socket->proofwrite((char *)clientData->buffer.data(), bytesRead);
     }
   }
@@ -238,7 +238,8 @@ void NoderedWebsocket::handoverClient(const BaseLib::PTcpSocket &socket, const B
     std::vector<char> packet;
     packet.reserve(rawHeader.size() + initialPacket.getContentSize());
     packet.insert(packet.end(), rawHeader.begin(), rawHeader.end());
-    packet.insert(packet.end(), initialPacket.getContent().begin(), initialPacket.getContent().end());
+    packet.insert(packet.end(), initialPacket.getContent().data(), initialPacket.getContent().data() + initialPacket.getContentSize());
+    if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Writing to client socket: " + BaseLib::HelperFunctions::getHexString(packet.data(), packet.size()));
     clientData->clientSocket->proofwrite(packet);
 
     std::lock_guard<std::mutex> clientsGuard(_clientsMutex);

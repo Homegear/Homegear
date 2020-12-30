@@ -1801,7 +1801,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       } else if (_nodered->isStarted()) {
         if (!sessionValid) return "unauthorized";
         BaseLib::Http nodeRedHttp;
-        auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+        auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
         BaseLib::HelperFunctions::stringReplace(packet, "GET /node-blue/", "GET /");
         packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
         _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
@@ -1892,7 +1892,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
     } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodered->isStarted()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
-      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
       BaseLib::HelperFunctions::stringReplace(packet, "POST /node-blue/", "POST /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
@@ -2209,7 +2209,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       return R"({"result":"success"})";
     } else if (path.compare(0, 10, "node-blue/") == 0 && _nodered->isStarted()) {
       BaseLib::Http nodeRedHttp;
-      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
       BaseLib::HelperFunctions::stringReplace(packet, "DELETE /node-blue/", "DELETE /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
@@ -2252,7 +2252,7 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
     if (path.compare(0, 10, "node-blue/") == 0 && _nodered->isStarted()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
-      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
       BaseLib::HelperFunctions::stringReplace(packet, "PUT /node-blue/", "PUT /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
