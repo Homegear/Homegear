@@ -263,7 +263,11 @@ void Nodered::event(const BaseLib::PArray &parameters) {
           auto &message = messageIterator->second;
           if (message->type == BaseLib::VariableType::tArray) {
             for (uint32_t i = 0; i < message->arrayValue->size(); i++) {
-              GD::nodeBlueServer->nodeOutput(nodeId, i, message->arrayValue->at(i), synchronous);
+              if (message->arrayValue->at(i)->type == BaseLib::VariableType::tArray) {
+                for (uint32_t j = 0; j < message->arrayValue->at(i)->arrayValue->size(); j++) {
+                  GD::nodeBlueServer->nodeOutput(nodeId, i, message->arrayValue->at(i)->arrayValue->at(j), synchronous);
+                }
+              } else GD::nodeBlueServer->nodeOutput(nodeId, i, message->arrayValue->at(i), synchronous);
             }
           } else GD::nodeBlueServer->nodeOutput(nodeId, 0, message, synchronous);
         }

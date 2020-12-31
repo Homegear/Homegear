@@ -84,7 +84,7 @@ module.exports = {
 
     // Node-RED scans the `nodes` directory in the userDir to find local node files.
     // The following property can be used to specify an additional directory to scan.
-    //nodesDir: '/var/lib/homegear/node-blue/node-red/data/nodes/node_modules',
+    nodesDir: ['/var/lib/homegear/node-blue/nodes/node-red-nodes'],
 
     // By default, the Node-RED UI is available at http://localhost:1880/
     // The following property can be used to specify a different root path.
