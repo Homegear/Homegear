@@ -106,9 +106,6 @@ void DatabaseController::initializeDatabase() {
     _db.executeCommand("CREATE INDEX IF NOT EXISTS userDataIndex ON userData (userID, component, key)");
     _db.executeCommand("CREATE TABLE IF NOT EXISTS groups (id INTEGER PRIMARY KEY UNIQUE, translations BLOB NOT NULL, acl BLOB NOT NULL)");
     _db.executeCommand("CREATE INDEX IF NOT EXISTS groupsIndex ON groups (id)");
-    _db.executeCommand(
-        "CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
-    _db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
     _db.executeCommand("CREATE TABLE IF NOT EXISTS nodeData (node TEXT, key TEXT, value BLOB)");
     _db.executeCommand("CREATE INDEX IF NOT EXISTS nodeDataIndex ON nodeData (node, key)");
     _db.executeCommand("CREATE TABLE IF NOT EXISTS data (component TEXT, key TEXT, value BLOB)");
@@ -3957,49 +3954,6 @@ BaseLib::PVariable DatabaseController::updateGroup(uint64_t groupId, BaseLib::PV
 }
 //End groups
 
-//Events
-std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getEvents() {
-  try {
-    std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM events");
-    return result;
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return std::shared_ptr<BaseLib::Database::DataTable>();
-}
-
-void DatabaseController::saveEventAsynchronous(BaseLib::Database::DataRow &event) {
-  if (event.size() == 24) {
-    event.push_front(event.at(0));
-    std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(
-        "INSERT OR REPLACE INTO events (eventID, name, type, peerID, peerChannel, variable, trigger, triggerValue, eventMethod, eventMethodParameters, resetAfter, initialTime, timeOperation, timeFactor, timeLimit, resetMethod, resetMethodParameters, eventTime, endTime, recurEvery, lastValue, lastRaised, lastReset, currentTime, enabled) VALUES((SELECT eventID FROM events WHERE name=?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        event);
-    enqueue(0, entry);
-  } else if (event.size() == 25 && event.at(0)->intValue != 0) {
-    std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
-    enqueue(0, entry);
-  } else GD::out.printError("Error: Either eventID is 0 or the number of columns is invalid.");
-}
-
-void DatabaseController::deleteEvent(std::string &name) {
-  try {
-    BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(name)});
-    std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("DELETE FROM events WHERE name=?", data);
-    enqueue(0, entry);
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-}
-//End events
-
 // {{{ Family
 void DatabaseController::deleteFamily(int32_t familyId) {
   BaseLib::Database::DataRow data;
@@ -4546,8 +4500,6 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID) {
     entry = std::make_shared<QueueEntry>("UPDATE peerVariables SET peerID=? WHERE peerID=?", data);
     enqueue(0, entry);
     entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET peerID=? WHERE peerID=?", data);
-    enqueue(0, entry);
-    entry = std::make_shared<QueueEntry>("UPDATE events SET peerID=? WHERE peerID=?", data);
     enqueue(0, entry);
 
     {
