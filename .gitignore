@@ -50,8 +50,8 @@ local.properties
 autom4te.cache
 *.in~
 config.log
-homegear
-node-blue
+src/homegear
+src/node-blue
 core
 vgcore.*
 
