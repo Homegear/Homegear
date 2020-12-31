@@ -311,14 +311,6 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl) override;
   // }}}
 
-  // {{{ Events
-  std::shared_ptr<BaseLib::Database::DataTable> getEvents() override;
-
-  void saveEventAsynchronous(BaseLib::Database::DataRow &event) override;
-
-  void deleteEvent(std::string &name) override;
-  // }}}
-
   // {{{ Family
   void deleteFamily(int32_t familyId) override;
 
