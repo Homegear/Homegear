@@ -181,6 +181,7 @@ void Nodered::execThread() {
         if (bytesRead > 0) {
           auto output = std::string(buffer.begin(), buffer.begin() + bytesRead);
           _out.printInfo(BaseLib::HelperFunctions::trim(output));
+          GD::nodeBlueServer->frontendNodeEventLog("Node-PINK: " + output);
         }
       }
 
@@ -201,6 +202,7 @@ void Nodered::errorThread() {
       if (bytesRead > 0) {
         auto output = std::string(buffer.begin(), buffer.begin() + bytesRead);
         _out.printError(BaseLib::HelperFunctions::trim(output));
+        GD::nodeBlueServer->frontendNodeEventLog("Node-PINK: " + output);
       }
     }
   }

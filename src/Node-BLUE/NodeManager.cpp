@@ -171,7 +171,15 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
   for (auto &node : *nodesJson->structValue) {
     try {
       auto nodeInfo = std::make_shared<NodeInfo>();
+      nodeInfo->type = node.first;
       nodeInfo->filename = node.second->stringValue;
+      {
+        nodeInfo->filePrefix = nodeInfo->filename;
+        auto pos = nodeInfo->filePrefix.find_last_of('/');
+        if (pos != std::string::npos) nodeInfo->filePrefix = nodeInfo->filePrefix.substr(pos + 1);
+        pos = nodeInfo->filePrefix.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
+        if (pos != std::string::npos) nodeInfo->filePrefix = nodeInfo->filePrefix.substr(0, pos);
+      }
       nodeInfo->fullCodefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(nodeInfo->filename);
       auto slashPos = nodeInfo->fullCodefilePath.find_last_of('/');
       if (managerModuleInfo->codeDirectory.empty()) managerModuleInfo->codeDirectory = nodeInfo->fullCodefilePath.substr(0, slashPos + 1);
@@ -181,7 +189,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       }
 
       //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
-      auto dotPosition = nodeInfo->filename.find_first_of('.');
+      auto dotPosition = nodeInfo->filename.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
       if (dotPosition == std::string::npos) continue;
       auto extension = nodeInfo->filename.substr(dotPosition);
 
@@ -244,7 +252,8 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         continue;
       }
 
-      managerModuleInfo->nodes.emplace(node.first, nodeInfo);
+      managerModuleInfo->nodes.emplace(nodeInfo->type, nodeInfo);
+      managerModuleInfo->nodesByFilePrefix.emplace(nodeInfo->filePrefix, nodeInfo);
       _managerModuleInfoByNodeType.emplace(node.first, managerModuleInfo);
       _nodeInfoByNodeType.emplace(node.first, nodeInfo);
     } catch (std::exception &ex) {
@@ -578,7 +587,7 @@ std::string NodeManager::getNodeLocales(std::string &language) {
     for (auto &module : _managerModuleInfo) {
       std::string localePath = module.second->codeDirectory + "/locales/" + language + "/";
       if (!BaseLib::Io::directoryExists(localePath)) continue;
-      std::vector<std::string> files = GD::bl->io.getFiles(localePath);
+      std::vector<std::string> files = BaseLib::Io::getFiles(localePath);
       if (files.empty()) continue;
       for (auto &file : files) {
         std::string path = localePath + file;
@@ -597,12 +606,24 @@ std::string NodeManager::getNodeLocales(std::string &language) {
           if (json->structValue->empty()) continue;
 
           for (auto &node : *json->structValue) {
-            auto id = module.second->module + "/" + node.first;
-            auto nodeJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-            nodeJson->structValue->emplace(node);
-            auto localeStructIterator = localeStruct->structValue->find(id);
-            if (localeStructIterator == localeStruct->structValue->end()) localeStruct->structValue->emplace(id, nodeJson);
-            else localeStructIterator->second->structValue->emplace(node.first, node.second);
+            auto nodeInfoIterator = module.second->nodesByFilePrefix.find(node.first);
+            if (nodeInfoIterator == module.second->nodesByFilePrefix.end()) {
+              //Fallback - use info from locale JSON.
+              auto id = module.second->module + "/" + node.first;
+              auto nodeJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+              nodeJson->structValue->emplace(node);
+              auto localeStructIterator = localeStruct->structValue->find(id);
+              if (localeStructIterator == localeStruct->structValue->end()) localeStruct->structValue->emplace(id, nodeJson);
+              else localeStructIterator->second->structValue->emplace(node.first, node.second);
+            } else {
+              auto &nodeInfo = nodeInfoIterator->second;
+              auto id = module.second->module + "/" + nodeInfo->type;
+              auto nodeJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+              nodeJson->structValue->emplace(node);
+              auto localeStructIterator = localeStruct->structValue->find(id);
+              if (localeStructIterator == localeStruct->structValue->end()) localeStruct->structValue->emplace(id, nodeJson);
+              else localeStructIterator->second->structValue->emplace(node.first, node.second);
+            }
           }
         }
         catch (const std::exception &ex) {

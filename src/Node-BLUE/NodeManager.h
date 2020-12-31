@@ -87,8 +87,10 @@ class NodeManager {
     std::atomic_bool locked{false};
     std::atomic_int referenceCounter{0};
     NodeCodeType codeType = NodeCodeType::undefined;
+    NodeType type;
     uint32_t maxThreadCount = 0;
     std::string filename;
+    std::string filePrefix;
     std::string fullCodefilePath;
   };
   typedef std::shared_ptr<NodeInfo> PNodeInfo;
@@ -100,6 +102,7 @@ class NodeManager {
     std::string codeDirectory;
     bool local = true;
     std::unordered_map<NodeType, PNodeInfo> nodes;
+    std::unordered_map<std::string, PNodeInfo> nodesByFilePrefix;
   };
   typedef std::shared_ptr<ManagerModuleInfo> PManagerModuleInfo;
 

@@ -3505,6 +3505,7 @@ std::string NodeBlueServer::getNodeBlueFormatFromVariableType(const BaseLib::PVa
 
 void NodeBlueServer::frontendNodeEventLog(const std::string &message) {
   try {
+    if (!_nodeEventsEnabled) return;
     auto value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     value->structValue->emplace("ts", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime()));
     value->structValue->emplace("data", std::make_shared<BaseLib::Variable>(message));

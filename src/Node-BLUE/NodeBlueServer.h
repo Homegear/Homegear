@@ -119,6 +119,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   void enableNodeEvents();
 
   void disableNodeEvents();
+
+  void frontendNodeEventLog(const std::string &message);
  private:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
@@ -263,8 +265,6 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::string installNode(BaseLib::Http &http);
 
   std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
-
-  void frontendNodeEventLog(const std::string &message);
 
   // {{{ RPC methods
   BaseLib::PVariable registerFlowsClient(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
