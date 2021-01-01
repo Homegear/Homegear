@@ -112,7 +112,8 @@ case $1 in
 			fi
 
 			cd /var/lib/homegear/node-blue/node-red
-			npm install
+			NODE_ENV=production
+			npm install --no-audit --no-update-notifier --no-fund --production
 		fi
 
 		sed -i -e 's/\/var\/lib\/homegear\/flows/\/var\/lib\/homegear\/node-blue/g' /etc/homegear/main.conf
