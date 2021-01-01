@@ -28,39 +28,39 @@
  * files in the program, then also delete it here.
 */
 
-#include "NoderedWebsocket.h"
+#include "NodepinkWebsocket.h"
 #include "../../GD/GD.h"
 
 namespace Homegear {
 
 namespace NodeBlue {
 
-NoderedWebsocket::NoderedWebsocket() {
+NodepinkWebsocket::NodepinkWebsocket() {
   _out.init(GD::bl.get());
-  _out.setPrefix("Node-RED WebSocket: ");
+  _out.setPrefix("Node-PINK WebSocket: ");
 }
 
-NoderedWebsocket::~NoderedWebsocket() {
+NodepinkWebsocket::~NodepinkWebsocket() {
   if (_started == false) return;
   stop();
 }
 
-void NoderedWebsocket::start() {
+void NodepinkWebsocket::start() {
   try {
     if (_started) return;
-    GD::out.printInfo("Info: Starting Node-RED WebSockets.");
+    GD::out.printInfo("Info: Starting Node-PINK WebSockets.");
     _started = true;
     _stopThreads = false;
-    GD::bl->threadManager.start(_mainThread, false, &NoderedWebsocket::mainThread, this);
+    GD::bl->threadManager.start(_mainThread, false, &NodepinkWebsocket::mainThread, this);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
-void NoderedWebsocket::stop() {
+void NodepinkWebsocket::stop() {
   try {
-    GD::out.printInfo("Info: Stopping Node-RED WebSockets.");
+    GD::out.printInfo("Info: Stopping Node-PINK WebSockets.");
     _stopThreads = true;
     GD::bl->threadManager.join(_mainThread);
     std::lock_guard<std::mutex> clientsGuard(_clientsMutex);
@@ -72,7 +72,7 @@ void NoderedWebsocket::stop() {
   }
 }
 
-void NoderedWebsocket::collectGarbage() {
+void NodepinkWebsocket::collectGarbage() {
   try {
     _lastGarbageCollection = BaseLib::HelperFunctions::getTime();
     std::vector<int32_t> clientsToRemove;
@@ -93,7 +93,7 @@ void NoderedWebsocket::collectGarbage() {
   }
 }
 
-void NoderedWebsocket::mainThread() {
+void NodepinkWebsocket::mainThread() {
   try {
     int32_t result = 0;
     std::map<int32_t, PClientData> clients;
@@ -164,7 +164,7 @@ void NoderedWebsocket::mainThread() {
   }
 }
 
-void NoderedWebsocket::readClient(const PClientData &clientData) {
+void NodepinkWebsocket::readClient(const PClientData &clientData) {
   try {
     int32_t bytesRead = 0;
     bool moreData = true;
@@ -192,7 +192,7 @@ void NoderedWebsocket::readClient(const PClientData &clientData) {
   }
 }
 
-void NoderedWebsocket::readNoderedClient(const PClientData &clientData) {
+void NodepinkWebsocket::readNoderedClient(const PClientData &clientData) {
   try {
     int32_t bytesRead = 0;
     bool moreData = true;
@@ -220,9 +220,9 @@ void NoderedWebsocket::readNoderedClient(const PClientData &clientData) {
   }
 }
 
-void NoderedWebsocket::handoverClient(const BaseLib::PTcpSocket &socket, const BaseLib::PFileDescriptor &fileDescriptor, const BaseLib::Http &initialPacket) {
+void NodepinkWebsocket::handoverClient(const BaseLib::PTcpSocket &socket, const BaseLib::PFileDescriptor &fileDescriptor, const BaseLib::Http &initialPacket) {
   try {
-    _out.printInfo("Info: New Node-RED WebSocket connection.");
+    _out.printInfo("Info: New Node-PINK WebSocket connection.");
     auto clientData = std::make_shared<ClientData>();
     clientData->socket = socket;
     clientData->fileDescriptor = fileDescriptor;

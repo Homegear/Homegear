@@ -36,8 +36,8 @@
 #include "FlowInfoServer.h"
 #include "NodeManager.h"
 #include "NodeBlueCredentials.h"
-#include "Node-RED/Nodered.h"
-#include "Node-RED/NoderedWebsocket.h"
+#include "Node-PINK/Nodepink.h"
+#include "Node-PINK/NodepinkWebsocket.h"
 
 #include <queue>
 
@@ -51,8 +51,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   virtual ~NodeBlueServer();
 
-  std::shared_ptr<Nodered> getNodered() { return _nodered; }
-  std::shared_ptr<NoderedWebsocket> getNoderedWebsocket() { return _noderedWebsocket; }
+  std::shared_ptr<Nodepink> getNodered() { return _nodered; }
+  std::shared_ptr<NodepinkWebsocket> getNoderedWebsocket() { return _noderedWebsocket; }
 
   bool lifetick();
 
@@ -169,8 +169,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _currentFlowIdMutex;
   int32_t _currentFlowId = 0;
   std::mutex _stateMutex;
-  std::shared_ptr<Nodered> _nodered;
-  std::shared_ptr<NoderedWebsocket> _noderedWebsocket;
+  std::shared_ptr<Nodepink> _nodered;
+  std::shared_ptr<NodepinkWebsocket> _noderedWebsocket;
   std::map<int32_t, PNodeBlueClientData> _clients;
   int32_t _currentClientId = 0;
   int64_t _lastGarbageCollection = 0;

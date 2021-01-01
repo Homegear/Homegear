@@ -64,8 +64,8 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _nodered = std::make_shared<Nodered>();
-  _noderedWebsocket = std::make_shared<NoderedWebsocket>();
+  _nodered = std::make_shared<Nodepink>();
+  _noderedWebsocket = std::make_shared<NodepinkWebsocket>();
   _nodeManager = std::make_unique<NodeManager>(&_nodeEventsEnabled);
   _nodeBlueCredentials = std::make_unique<NodeBlueCredentials>(); //Constructor throws exceptions
 

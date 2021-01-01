@@ -28,17 +28,17 @@
  * files in the program, then also delete it here.
 */
 
-#include "Nodered.h"
-#include "../../GD/GD.h"
+#include "Nodepink.h"
+#include "src/GD/GD.h"
 #include <homegear-base/Managers/ProcessManager.h>
 
 namespace Homegear {
 
 namespace NodeBlue {
 
-Nodered::Nodered() {
+Nodepink::Nodepink() {
   _out.init(GD::bl.get());
-  _out.setPrefix("Node-RED: ");
+  _out.setPrefix("Node-PINK: ");
 
   _nodeBlueClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
   _nodeBlueClientInfo->flowsServer = true;
@@ -49,7 +49,7 @@ Nodered::Nodered() {
   _nodeBlueClientInfo->user = "SYSTEM (4)";
 }
 
-void Nodered::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped) {
+void Nodepink::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped) {
   try {
     if (pid == _pid) {
       close(_stdIn);
@@ -60,7 +60,7 @@ void Nodered::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDump
       _stdErr = -1;
       _pid = -1;
       if (!_processStartUpComplete) _startUpError = true;
-      _out.printInfo("Info: Node-RED process " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + " (Core dumped: " + std::to_string(coreDumped) + +", signal: " + std::to_string(signal) + ").");
+      _out.printInfo("Info: Node-PINK process " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + " (Core dumped: " + std::to_string(coreDumped) + +", signal: " + std::to_string(signal) + ").");
     }
   }
   catch (const std::exception &ex) {
@@ -68,14 +68,14 @@ void Nodered::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDump
   }
 }
 
-bool Nodered::isStarted() {
+bool Nodepink::isStarted() {
   return _processStartUpComplete;
 }
 
-void Nodered::start() {
+void Nodepink::start() {
   try {
-    _out.printInfo("Starting Node-RED...");
-    _callbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&Nodered::sigchildHandler,
+    _out.printInfo("Starting Node-PINK...");
+    _callbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&Nodepink::sigchildHandler,
                                                                                                                                                               this,
                                                                                                                                                               std::placeholders::_1,
                                                                                                                                                               std::placeholders::_2,
@@ -88,13 +88,13 @@ void Nodered::start() {
     while (!_processStartUpConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&] {
       return _stopThread || _startUpError || _processStartUpComplete;
     })) {
-      _out.printInfo("Waiting for Node-RED to get ready.");
+      _out.printInfo("Waiting for Node-PINK to get ready.");
     }
 
     if (_startUpError || _pid == -1) {
-      _out.printError("Error: Node-RED could not be started. ");
+      _out.printError("Error: Node-PINK could not be started.");
     } else if (_processStartUpComplete) {
-      _out.printInfo("Node-RED started and is ready (PID: " + std::to_string(_pid) + ").");
+      _out.printInfo("Node-PINK started and is ready (PID: " + std::to_string(_pid) + ").");
     }
   }
   catch (const std::exception &ex) {
@@ -102,10 +102,10 @@ void Nodered::start() {
   }
 }
 
-void Nodered::stop() {
+void Nodepink::stop() {
   try {
     if (!_processStartUpComplete && _pid == -1) return;
-    _out.printInfo("Stopping Node-RED...");
+    _out.printInfo("Stopping Node-PINK...");
     _processStartUpComplete = false;
     _stopThread = true;
     if (_pid != -1) {
@@ -129,26 +129,28 @@ void Nodered::stop() {
     if (_errorThread.joinable()) _errorThread.join();
     BaseLib::ProcessManager::unregisterCallbackHandler(_callbackHandlerId);
     _callbackHandlerId = -1;
-    _out.printInfo("Node-RED stopped.");
+    _out.printInfo("Node-PINK stopped.");
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
-void Nodered::startProgram() {
+void Nodepink::startProgram() {
   try {
     if (_execThread.joinable()) _execThread.join();
     if (_errorThread.joinable()) _errorThread.join();
     _stopThread = false;
-    _execThread = std::thread(&Nodered::execThread, this);
+    _startUpError = false;
+    _processStartUpComplete = false;
+    _execThread = std::thread(&Nodepink::execThread, this);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
-void Nodered::execThread() {
+void Nodepink::execThread() {
   try {
     do {
       if (_stdErr != -1) {
@@ -172,7 +174,7 @@ void Nodered::execThread() {
       _stdOut = stdOut;
       _stdErr = stdErr;
 
-      _errorThread = std::thread(&Nodered::errorThread, this);
+      _errorThread = std::thread(&Nodepink::errorThread, this);
 
       std::array<uint8_t, 4096> buffer{};
       ssize_t bytesRead = 0;
@@ -193,7 +195,7 @@ void Nodered::execThread() {
   }
 }
 
-void Nodered::errorThread() {
+void Nodepink::errorThread() {
   try {
     std::array<uint8_t, 4096> buffer{};
     ssize_t bytesRead = 0;
@@ -211,7 +213,7 @@ void Nodered::errorThread() {
   }
 }
 
-BaseLib::PVariable Nodered::invoke(const std::string &method, const BaseLib::PArray &parameters) {
+BaseLib::PVariable Nodepink::invoke(const std::string &method, const BaseLib::PArray &parameters) {
   try {
     if (_pid == -1) return BaseLib::Variable::createError(-1, "No process found.");
     return GD::ipcServer->callProcessRpcMethod(_pid, _nodeBlueClientInfo, method, parameters);
@@ -222,7 +224,7 @@ BaseLib::PVariable Nodered::invoke(const std::string &method, const BaseLib::PAr
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void Nodered::nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous) {
+void Nodepink::nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous) {
   try {
     if (!_processStartUpComplete) return;
     auto parameters = std::make_shared<BaseLib::Array>();
@@ -239,7 +241,7 @@ void Nodered::nodeInput(const std::string &nodeId, const BaseLib::PVariable &nod
   }
 }
 
-void Nodered::event(const BaseLib::PArray &parameters) {
+void Nodepink::event(const BaseLib::PArray &parameters) {
   try {
     if (parameters->size() >= 2 && parameters->at(0)->stringValue == "global") {
       if (parameters->at(1)->stringValue == "isReady") {
