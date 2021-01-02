@@ -966,20 +966,20 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
     std::unordered_map<std::string, BaseLib::PVariable> subflow;
     nodesToAdd.reserve(subflowNodes.size());
     for (auto &subflowElement : subflowNodes) {
-      BaseLib::PVariable subflowNode = std::make_shared<BaseLib::Variable>();
-      *subflowNode = *subflowElement.second;
-      subflowNode->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode->structValue->at("id")->stringValue;
-      subflowNode->structValue->emplace("env", environmentVariables);
-      allNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
-      flowNodeIds.emplace(subflowNode->structValue->at("id")->stringValue);
+      BaseLib::PVariable subflowNode2 = std::make_shared<BaseLib::Variable>();
+      *subflowNode2 = *subflowElement.second;
+      subflowNode2->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode2->structValue->at("id")->stringValue;
+      subflowNode2->structValue->emplace("env", environmentVariables);
+      allNodeIds.emplace(subflowNode2->structValue->at("id")->stringValue);
+      flowNodeIds.emplace(subflowNode2->structValue->at("id")->stringValue);
 
-      auto &subflowNodeType = subflowNode->structValue->at("type")->stringValue;
+      auto &subflowNodeType = subflowNode2->structValue->at("type")->stringValue;
       if (subflowNodeType.compare(0, 8, "subflow:") == 0) {
-        subsubflows.emplace(subflowNode->structValue->at("id")->stringValue);
+        subsubflows.emplace(subflowNode2->structValue->at("id")->stringValue);
       }
 
-      auto subflowNodeWiresIterator = subflowNode->structValue->find("wires");
-      if (subflowNodeWiresIterator == subflowNode->structValue->end()) continue;
+      auto subflowNodeWiresIterator = subflowNode2->structValue->find("wires");
+      if (subflowNodeWiresIterator == subflowNode2->structValue->end()) continue;
       for (auto &output : *subflowNodeWiresIterator->second->arrayValue) {
         for (auto &wire : *output->arrayValue) {
           auto idIterator = wire->structValue->find("id");
@@ -988,8 +988,8 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         }
       }
 
-      subflow.emplace(subflowElement.first, subflowNode);
-      nodesToAdd.push_back(std::make_pair(subflowNode->structValue->at("id")->stringValue, subflowNode));
+      subflow.emplace(subflowElement.first, subflowNode2);
+      nodesToAdd.emplace_back(subflowNode2->structValue->at("id")->stringValue, subflowNode2);
     }
 
     //Find output node and redirect it to the subflow output
