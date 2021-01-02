@@ -122,10 +122,11 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinks()));
   _rpcMethods.emplace("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata()));
   _rpcMethods.emplace("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName()));
-  _rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
-  _rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
-  _rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
-  _rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeVariable()));
+  _rpcMethods.emplace("getNodeBlueDataKeys", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetNodeBlueDataKeys()));
+  _rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetNodeData()));
+  _rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetFlowData()));
+  _rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetGlobalData()));
+  _rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetNodeVariable()));
   _rpcMethods.emplace("getPairingInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingInfo()));
   _rpcMethods.emplace("getPairingState", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingState()));
   _rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
@@ -168,10 +169,10 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
   _rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
   _rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
-  _rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
-  _rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetFlowData()));
-  _rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalData()));
-  _rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeVariable()));
+  _rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetNodeData()));
+  _rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetFlowData()));
+  _rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetGlobalData()));
+  _rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetNodeVariable()));
   _rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
   _rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
   _rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));
@@ -1801,12 +1802,20 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       } else if (_nodered->isStarted()) {
         if (!sessionValid) return "unauthorized";
         BaseLib::Http nodeRedHttp;
-        auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+        auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
+                                                 std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
+                                                 "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
         BaseLib::HelperFunctions::stringReplace(packet, "GET /node-blue/", "GET /");
         packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
-        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+        try {
+          _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+        } catch (const BaseLib::HttpClientException &ex) {
+          _out.printInfo(std::string("Info: ") + ex.what());
+        }
         if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
-        responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()), std::unordered_set<std::string>{"transfer-encoding", "content-length"}, "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
+        responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
+                                                    std::unordered_set<std::string>{"transfer-encoding", "content-length"},
+                                                    "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
         contentString = std::string(nodeRedHttp.getContent().data(), nodeRedHttp.getContentSize());
       }
     }
@@ -1892,12 +1901,20 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
     } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodered->isStarted()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
-      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
+                                               std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
+                                               "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
       BaseLib::HelperFunctions::stringReplace(packet, "POST /node-blue/", "POST /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
-      _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+      try {
+        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+      } catch (const BaseLib::HttpClientException &ex) {
+        _out.printInfo(std::string("Info: ") + ex.what());
+      }
       if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
-      responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()), std::unordered_set<std::string>{"transfer-encoding", "content-length"}, "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
+      responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
+                                                  std::unordered_set<std::string>{"transfer-encoding", "content-length"},
+                                                  "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
       return std::string(nodeRedHttp.getContent().data(), nodeRedHttp.getContentSize());
     }
   }
@@ -2209,12 +2226,20 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       return R"({"result":"success"})";
     } else if (path.compare(0, 10, "node-blue/") == 0 && _nodered->isStarted()) {
       BaseLib::Http nodeRedHttp;
-      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
+                                               std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
+                                               "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
       BaseLib::HelperFunctions::stringReplace(packet, "DELETE /node-blue/", "DELETE /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
-      _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+      try {
+        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+      } catch (const BaseLib::HttpClientException &ex) {
+        _out.printInfo(std::string("Info: ") + ex.what());
+      }
       if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
-      responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()), std::unordered_set<std::string>{"transfer-encoding", "content-length"}, "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
+      responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
+                                                  std::unordered_set<std::string>{"transfer-encoding", "content-length"},
+                                                  "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
       contentString = std::string(nodeRedHttp.getContent().data(), nodeRedHttp.getContentSize());
     }
 
@@ -2252,12 +2277,20 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
     if (path.compare(0, 10, "node-blue/") == 0 && _nodered->isStarted()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
-      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()), std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"}, "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
+      auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
+                                               std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
+                                               "Host: 127.0.0.1:" + std::to_string(GD::bl->settings.nodeRedPort()) + "\r\n");
       BaseLib::HelperFunctions::stringReplace(packet, "PUT /node-blue/", "PUT /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
-      _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+      try {
+        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+      } catch (const BaseLib::HttpClientException &ex) {
+        _out.printInfo(std::string("Info: ") + ex.what());
+      }
       if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
-      responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()), std::unordered_set<std::string>{"transfer-encoding", "content-length"}, "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
+      responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
+                                                  std::unordered_set<std::string>{"transfer-encoding", "content-length"},
+                                                  "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
       return std::string(nodeRedHttp.getContent().data(), nodeRedHttp.getContentSize());
     }
   }

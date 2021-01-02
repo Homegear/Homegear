@@ -34,8 +34,7 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear {
-namespace RpcMethods {
+namespace Homegear::RpcMethods {
 
 class RPCAddNodesToFlow : public BaseLib::Rpc::RpcMethod {
  public:
@@ -45,7 +44,7 @@ class RPCAddNodesToFlow : public BaseLib::Rpc::RpcMethod {
                                                     BaseLib::VariableType::tArray});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RPCFlowHasTag : public BaseLib::Rpc::RpcMethod {
@@ -55,7 +54,77 @@ class RPCFlowHasTag : public BaseLib::Rpc::RpcMethod {
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetNodeBlueDataKeys : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetNodeBlueDataKeys() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetNodeData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetNodeData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetFlowData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetFlowData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetGlobalData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetGlobalData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetNodeEvents : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetNodeEvents() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetNodesWithFixedInputs : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetNodesWithFixedInputs() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetNodeVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetNodeVariable() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RPCRemoveNodesFromFlow : public BaseLib::Rpc::RpcMethod {
@@ -68,6 +137,49 @@ class RPCRemoveNodesFromFlow : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-}
+class RPCSetNodeData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetNodeData() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tArray});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCSetFlowData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetFlowData() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tArray});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCSetGlobalData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetGlobalData() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray, BaseLib::VariableType::tArray});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCSetNodeVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetNodeVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 }
 #endif //HOMEGEAR_NODEBLUERPCMETHODS_H

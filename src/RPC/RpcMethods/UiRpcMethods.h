@@ -34,8 +34,7 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear {
-namespace RpcMethods {
+namespace Homegear::RpcMethods {
 
 class RpcAddUiElement : public BaseLib::Rpc::RpcMethod {
  public:
@@ -51,7 +50,7 @@ class RpcAddUiElement : public BaseLib::Rpc::RpcMethod {
                                                     BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcCheckUiElementSimpleCreation : public BaseLib::Rpc::RpcMethod {
@@ -62,7 +61,7 @@ class RpcCheckUiElementSimpleCreation : public BaseLib::Rpc::RpcMethod {
                                                     BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcGetAllUiElements : public BaseLib::Rpc::RpcMethod {
@@ -71,7 +70,7 @@ class RpcGetAllUiElements : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 
@@ -81,7 +80,7 @@ class RpcGetAvailableUiElements : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcGetCategoryUiElements : public BaseLib::Rpc::RpcMethod {
@@ -91,7 +90,7 @@ class RpcGetCategoryUiElements : public BaseLib::Rpc::RpcMethod {
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcGetRoomUiElements : public BaseLib::Rpc::RpcMethod {
@@ -101,7 +100,7 @@ class RpcGetRoomUiElements : public BaseLib::Rpc::RpcMethod {
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcGetUiElement : public BaseLib::Rpc::RpcMethod {
@@ -110,7 +109,7 @@ class RpcGetUiElement : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcGetUiElementMetadata : public BaseLib::Rpc::RpcMethod {
@@ -119,7 +118,7 @@ class RpcGetUiElementMetadata : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcGetUiElementsWithVariable : public BaseLib::Rpc::RpcMethod {
@@ -128,7 +127,7 @@ class RpcGetUiElementsWithVariable : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcRequestUiRefresh : public BaseLib::Rpc::RpcMethod {
@@ -137,7 +136,7 @@ class RpcRequestUiRefresh : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcRemoveUiElement : public BaseLib::Rpc::RpcMethod {
@@ -146,7 +145,7 @@ class RpcRemoveUiElement : public BaseLib::Rpc::RpcMethod {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
 class RpcSetUiElementMetadata : public BaseLib::Rpc::RpcMethod {
@@ -156,10 +155,9 @@ class RpcSetUiElementMetadata : public BaseLib::Rpc::RpcMethod {
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
   }
 
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-}
 }
 
 #endif //HOMEGEAR_UIRPCMETHODS_H

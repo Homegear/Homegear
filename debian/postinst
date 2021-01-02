@@ -116,7 +116,20 @@ case $1 in
 			npm install --no-audit --no-update-notifier --no-fund --production
 		fi
 
+		# {{{ Move old Node-BLUE data path to new one
+		sed -i -e 's/\/data\/homegear-data\/flows/\/data\/homegear-data\/node-blue/g' /etc/homegear/main.conf
+		if test -d /data/homegear-data/flows; then
+			mkdir -p /data/homegear-data/node-blue
+			cp -a /data/homegear-data/flows/* /data/homegear-data/node-blue/
+			rm -Rf /data/homegear-data/flows
+		fi
 		sed -i -e 's/\/var\/lib\/homegear\/flows/\/var\/lib\/homegear\/node-blue/g' /etc/homegear/main.conf
+		if test -d /var/lib/homegear/flows; then
+			mkdir -p /var/lib/homegear/node-blue
+			cp -a /var/lib/homegear/flows/* /var/lib/homegear/node-blue/
+			rm -Rf /var/lib/homegear/flows
+		fi
+		# }}}
 
 		if test -e /data/homegear-data && test ! -e /data/homegear-data/node-blue/node-red/settings.js; then
 			mkdir -p /data/homegear-data/node-blue/node-red
