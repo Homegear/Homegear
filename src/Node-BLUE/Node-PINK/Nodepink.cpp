@@ -165,11 +165,11 @@ void Nodepink::execThread() {
       auto redJsPath = GD::bl->settings.nodeRedJsPath();
       if (redJsPath.empty()) redJsPath = GD::bl->settings.dataPath() + "node-blue/node-red/packages/node_modules/node-red/red.js";
 
-      std::vector<std::string> arguments{"-n", redJsPath, "-s", GD::bl->settings.nodeBlueDataPath() + "node-red/settings.js", "--title", "node-pink"};
+      std::vector<std::string> arguments{redJsPath, "-s", GD::bl->settings.nodeBlueDataPath() + "node-red/settings.js", "--title", "node-pink"};
       int stdIn = -1;
       int stdOut = -1;
       int stdErr = -1;
-      _pid = BaseLib::ProcessManager::systemp(GD::executablePath + "/" + GD::executableFile, arguments, GD::bl->fileDescriptorManager.getMax(), stdIn, stdOut, stdErr);
+      _pid = BaseLib::ProcessManager::systemp(GD::executablePath + "/" + GD::executableFile + "-node", arguments, GD::bl->fileDescriptorManager.getMax(), stdIn, stdOut, stdErr);
       _stdIn = stdIn;
       _stdOut = stdOut;
       _stdErr = stdErr;
