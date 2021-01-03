@@ -40,16 +40,15 @@
 #include "Node-PINK/NodepinkWebsocket.h"
 
 #include <queue>
+#include <utility>
 
-namespace Homegear {
-
-namespace NodeBlue {
+namespace Homegear::NodeBlue {
 
 class NodeBlueServer : public BaseLib::IQueue {
  public:
   NodeBlueServer();
 
-  virtual ~NodeBlueServer();
+  ~NodeBlueServer() override;
 
   std::shared_ptr<Nodepink> getNodered() { return _nodered; }
   std::shared_ptr<NodepinkWebsocket> getNoderedWebsocket() { return _noderedWebsocket; }
@@ -76,11 +75,15 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastGlobalVariableEvent(std::string &variable, BaseLib::PVariable &value);
 
-  void broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions);
+  void broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable& deviceDescriptions);
 
-  void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
+  void broadcastDeleteDevices(const BaseLib::PVariable& deviceInfo);
 
   void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+
+  void broadcastStatus(const std::string &nodeId, const BaseLib::PVariable &status);
+
+  void broadcastError(const std::string &nodeId, int32_t level, const BaseLib::PVariable &error);
 
   void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
@@ -124,20 +127,20 @@ class NodeBlueServer : public BaseLib::IQueue {
  private:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() {}
+    QueueEntry() = default;
 
     QueueEntry(PNodeBlueClientData clientData, std::vector<char> &packet) {
-      this->clientData = clientData;
+      this->clientData = std::move(clientData);
       this->packet = packet;
     }
 
     QueueEntry(PNodeBlueClientData clientData, std::string methodName, BaseLib::PArray parameters) {
-      this->clientData = clientData;
-      this->methodName = methodName;
-      this->parameters = parameters;
+      this->clientData = std::move(clientData);
+      this->methodName = std::move(methodName);
+      this->parameters = std::move(parameters);
     }
 
-    virtual ~QueueEntry() {}
+    ~QueueEntry() override = default;
 
     PNodeBlueClientData clientData;
 
@@ -186,7 +189,6 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _nodesInstallMutex;
   std::unique_ptr<NodeManager> _nodeManager;
   std::map<std::string, uint32_t> _maxThreadCounts;
-  std::vector<NodeManager::PNodeInfo> _nodeInfo;
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
   std::mutex _nodeClientIdMapMutex;
@@ -256,7 +258,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void startFlow(PFlowInfoServer &flowInfo, std::set<std::string> &nodes);
 
-  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
   std::string processNodeUpload(BaseLib::Http &http);
 
@@ -268,6 +270,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   // {{{ RPC methods
   BaseLib::PVariable registerFlowsClient(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable errorEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable executePhpNode(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
@@ -288,8 +292,6 @@ class NodeBlueServer : public BaseLib::IQueue {
   BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
   // }}}
 };
-
-}
 
 }
 

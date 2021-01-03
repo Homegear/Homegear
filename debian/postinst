@@ -52,9 +52,7 @@ case $1 in
 			ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npx /usr/bin/npx
 		fi
 		if test ! -e /usr/bin/node; then
-			echo '#!/bin/bash
-/usr/bin/homegear -n "$@"' > /usr/bin/node
-			chmod 755 /usr/bin/node
+			ln -s homegear-node /usr/bin/node
 		fi
 		if test ! -e /usr/bin/node_modules; then
 			# This works and doesn't bite with the real Node.js if installled.

@@ -153,8 +153,12 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   std::mutex _peerSubscriptionsMutex;
   std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
-  std::mutex _eventSubscriptionsMutex;
-  std::set<std::string> _eventSubscriptions;
+  std::mutex _homegearEventSubscriptionsMutex;
+  std::set<std::string> _homegearEventSubscriptions;
+  std::mutex _statusEventSubscriptionsMutex;
+  std::set<std::string> _statusEventSubscriptions;
+  std::mutex _errorEventSubscriptionsMutex;
+  std::set<std::string> _errorEventSubscriptions;
 
   std::mutex _flowSubscriptionsMutex;
   std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
@@ -189,6 +193,8 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void log(const std::string &nodeId, int32_t logLevel, const std::string &message);
 
+  void errorEvent(const std::string &nodeId, int32_t level, const std::string &message);
+
   void frontendEventLog(const std::string &nodeId, const std::string &message);
 
   void subscribePeer(const std::string &nodeId, uint64_t peerId, int32_t channel, const std::string &variable);
@@ -206,6 +212,14 @@ class NodeBlueClient : public BaseLib::IQueue {
   void subscribeHomegearEvents(const std::string &nodeId);
 
   void unsubscribeHomegearEvents(const std::string &nodeId);
+
+  void subscribeStatusEvents(const std::string &nodeId);
+
+  void unsubscribeStatusEvents(const std::string &nodeId);
+
+  void subscribeErrorEvents(const std::string &nodeId);
+
+  void unsubscribeErrorEvents(const std::string &nodeId);
 
   void queueOutput(const std::string &nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
@@ -322,6 +336,10 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable broadcastDeleteDevices(Flows::PArray &parameters);
 
   Flows::PVariable broadcastUpdateDevice(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastStatus(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastError(Flows::PArray &parameters);
 
   Flows::PVariable broadcastVariableProfileStateChanged(Flows::PArray &parameters);
 

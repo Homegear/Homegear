@@ -324,6 +324,8 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("executePhpNodeMethod",
                                                                                                                                                   std::bind(&NodeBlueServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
 #endif
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("errorEvent",
+                                                                                                                                                  std::bind(&NodeBlueServer::errorEvent, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("frontendEventLog",
                                                                                                                                                   std::bind(&NodeBlueServer::frontendEventLog, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("getCredentials",
@@ -2561,7 +2563,7 @@ void NodeBlueServer::broadcastGlobalVariableEvent(std::string &variable, BaseLib
   }
 }
 
-void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions) {
+void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
 
@@ -2604,7 +2606,7 @@ void NodeBlueServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PV
   }
 }
 
-void NodeBlueServer::broadcastDeleteDevices(BaseLib::PVariable deviceInfo) {
+void NodeBlueServer::broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo) {
   try {
     if (_shuttingDown || _flowsRestarting) return;
     std::vector<PNodeBlueClientData> clients;
@@ -2657,9 +2659,81 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     }
 
     for (std::vector<PNodeBlueClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-      BaseLib::PArray parameters(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(id)), BaseLib::PVariable(new BaseLib::Variable(channel)), BaseLib::PVariable(new BaseLib::Variable(hint))});
+      BaseLib::PArray parameters(new BaseLib::Array{std::make_shared<BaseLib::Variable>(id), std::make_shared<BaseLib::Variable>(channel), std::make_shared<BaseLib::Variable>(hint)});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastUpdateDevice", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void NodeBlueServer::broadcastStatus(const std::string &nodeId, const BaseLib::PVariable &status) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return; //"event" provides access to this method. This is correct.
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(2);
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
+      parameters->emplace_back(status);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastStatus", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastStatus\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void NodeBlueServer::broadcastError(const std::string &nodeId, int32_t level, const BaseLib::PVariable &error) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return; //"event" provides access to this method. This is correct.
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(3);
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(level));
+      parameters->emplace_back(error);
+
+      BaseLib::PVariable response = sendRequest(client, "broadcastError", parameters, true);
+      if (!response->booleanValue && _nodeEventsEnabled) {
+        auto sourceStruct = error->structValue->at("error")->structValue->at("source");
+
+        auto value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        value->structValue->emplace("id", std::make_shared<BaseLib::Variable>(nodeId));
+        value->structValue->emplace("type", std::make_shared<BaseLib::Variable>("function"));
+        value->structValue->emplace("z", sourceStruct->structValue->at("z"));
+        value->structValue->emplace("_source", sourceStruct);
+        value->structValue->emplace("name", sourceStruct->structValue->at("name"));
+        value->structValue->emplace("level", std::make_shared<BaseLib::Variable>(level));
+        value->structValue->emplace("msg", error->structValue->at("error")->structValue->at("message"));
+        GD::rpcClient->broadcastNodeEvent(nodeId, "debug", value, true);
+      }
     }
   }
   catch (const std::exception &ex) {
@@ -3588,8 +3662,21 @@ BaseLib::PVariable NodeBlueServer::registerFlowsClient(PNodeBlueClientData &clie
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-#ifndef NO_SCRIPTENGINE
+BaseLib::PVariable NodeBlueServer::errorEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
 
+    broadcastError(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2));
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+#ifndef NO_SCRIPTENGINE
 BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly three or four parameters.");
@@ -3672,7 +3759,7 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData &clientD
   try {
     if (parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
-    PNodeBlueClientData clientData;
+    PNodeBlueClientData nodeClientData;
     int32_t clientId = 0;
     {
       std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
@@ -3685,10 +3772,10 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData &clientD
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       auto clientIterator = _clients.find(clientId);
       if (clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Node process not found.");
-      clientData = clientIterator->second;
+      nodeClientData = clientIterator->second;
     }
 
-    return sendRequest(clientData, "invokeNodeMethod", parameters, parameters->at(3)->booleanValue);
+    return sendRequest(nodeClientData, "invokeNodeMethod", parameters, parameters->at(3)->booleanValue);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

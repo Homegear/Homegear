@@ -29,7 +29,7 @@
 */
 
 #include "Nodepink.h"
-#include "src/GD/GD.h"
+#include "../../GD/GD.h"
 #include <homegear-base/Managers/ProcessManager.h>
 
 namespace Homegear {
@@ -275,6 +275,8 @@ void Nodepink::event(const BaseLib::PArray &parameters) {
         }
       } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "frontend-event") {
         GD::rpcClient->broadcastNodeEvent("", parameters->at(2)->structValue->at("topic")->stringValue, parameters->at(2)->structValue->at("data"), parameters->at(2)->structValue->at("retain")->booleanValue);
+      } else if(parameters->size() >= 3 && parameters->at(1)->stringValue == "error") {
+        GD::nodeBlueServer->broadcastError(parameters->at(2)->structValue->at("nodeId")->stringValue, parameters->at(2)->structValue->at("level")->integerValue, parameters->at(2)->structValue->at("message"));
       }
     } else if (!_processStartUpComplete) {
       return;

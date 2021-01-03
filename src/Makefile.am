@@ -20,58 +20,31 @@ endif
 
 LIBS += -latomic
 
-if NODEBLUE
-bin_PROGRAMS = node-blue
-node_blue_SOURCES = main.cpp IpcLogger.cpp CLI/CliClient.cpp CLI/CliServer.cpp Database/DatabaseController.cpp Database/SQLite3.cpp Database/SystemVariableController.cpp FamilyModules/FamilyController.cpp FamilyModules/FamilyServer.cpp FamilyModules/SocketCentral.cpp FamilyModules/SocketDeviceFamily.cpp FamilyModules/SocketPeer.cpp Node-BLUE/Node-PINK/Nodepink.cpp Node-BLUE/Node-PINK/NodepinkWebsocket.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/NodeBlueCredentials.cpp Node-BLUE/FlowParser.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/NodeRedNode.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/RpcMethods/BuildingRpcMethods.cpp RPC/RpcMethods/NodeBlueRpcMethods.cpp RPC/RpcMethods/RPCMethods.cpp RPC/RpcMethods/UiNotificationsRpcMethods.cpp RPC/RpcMethods/UiRpcMethods.cpp RPC/RpcMethods/VariableProfileRpcMethods.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/Roles.cpp RPC/RpcClient.cpp RPC/RpcServer.cpp UI/UiController.cpp WebServer/WebServer.cpp UPnP/UPnP.cpp User/User.cpp VariableProfiles/VariableProfileManager.cpp
-node_blue_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomegear-node -lhomegear-ipc -lgpg-error -lsqlite3
-else
-bin_PROGRAMS = homegear
+bin_PROGRAMS = homegear homegear-node
 homegear_SOURCES = main.cpp IpcLogger.cpp CLI/CliClient.cpp CLI/CliServer.cpp Database/DatabaseController.cpp Database/SQLite3.cpp Database/SystemVariableController.cpp FamilyModules/FamilyController.cpp FamilyModules/FamilyServer.cpp FamilyModules/SocketCentral.cpp FamilyModules/SocketDeviceFamily.cpp FamilyModules/SocketPeer.cpp Node-BLUE/Node-PINK/Nodepink.cpp Node-BLUE/Node-PINK/NodepinkWebsocket.cpp Node-BLUE/NodeBlueClient.cpp Node-BLUE/NodeBlueClientData.cpp Node-BLUE/NodeBlueCredentials.cpp Node-BLUE/FlowParser.cpp Node-BLUE/NodeBlueProcess.cpp Node-BLUE/NodeBlueServer.cpp Node-BLUE/NodeManager.cpp Node-BLUE/NodeRedNode.cpp Node-BLUE/SimplePhpNode.cpp Node-BLUE/StatefulPhpNode.cpp IPC/IpcClientData.cpp IPC/IpcServer.cpp GD/GD.cpp Licensing/LicensingController.cpp MQTT/Mqtt.cpp MQTT/MqttSettings.cpp RPC/RpcMethods/BuildingRpcMethods.cpp RPC/RpcMethods/NodeBlueRpcMethods.cpp RPC/RpcMethods/RPCMethods.cpp RPC/RpcMethods/UiNotificationsRpcMethods.cpp RPC/RpcMethods/UiRpcMethods.cpp RPC/RpcMethods/VariableProfileRpcMethods.cpp RPC/Auth.cpp RPC/Client.cpp RPC/ClientSettings.cpp RPC/RemoteRpcServer.cpp RPC/RestServer.cpp RPC/Roles.cpp RPC/RpcClient.cpp RPC/RpcServer.cpp UI/UiController.cpp WebServer/WebServer.cpp UPnP/UPnP.cpp User/User.cpp VariableProfiles/VariableProfileManager.cpp
 homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomegear-node -lhomegear-ipc -lgpg-error -lsqlite3
+
+if WITH_NODEJS
+homegear_node_SOURCES = Nodejs/main.cpp Nodejs/Nodejs.cpp
+homegear_node_LDADD = -lpthread -lnodejs-homegear
+homegear_node_CPPFLAGS = -Wall -std=c++17 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -I/usr/include/nodejs-homegear
 endif
 
 if BSDSYSTEM
 else
-if NODEBLUE
-node_blue_LDADD += -ldl
-else
 homegear_LDADD += -ldl
-endif
 endif
 
 if WITH_SCRIPTENGINE
 noinst_LIBRARIES = libscriptengine.a
 libscriptengine_a_SOURCES = ScriptEngine/php_homegear_globals.cpp ScriptEngine/php_device.cpp ScriptEngine/php_node.cpp ScriptEngine/php_sapi.cpp ScriptEngine/PhpVariableConverter.cpp ScriptEngine/PhpEvents.cpp ScriptEngine/PhpEvents.h ScriptEngine/ScriptEngineServer.cpp ScriptEngine/ScriptEngineServer.h ScriptEngine/ScriptEngineClient.cpp ScriptEngine/ScriptEngineClient.h ScriptEngine/ScriptEngineClientData.cpp ScriptEngine/ScriptEngineClientData.h ScriptEngine/ScriptEngineProcess.cpp ScriptEngine/ScriptEngineProcess.h
-if NODEBLUE
-node_blue_LDADD += libscriptengine.a
-else
 homegear_LDADD += libscriptengine.a
-endif
 libscriptengine_a_CPPFLAGS = -Wall -std=c++17 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
 libscriptengine_a_CPPFLAGS += -I/usr/include/php8-homegear -I/usr/include/php8-homegear/main -I/usr/include/php8-homegear/sapi -I/usr/include/php8-homegear/TSRM -I/usr/include/php8-homegear/Zend -I/usr/include/php8-homegear/php -I/usr/include/php8-homegear/php/main -I/usr/include/php8-homegear/php/sapi -I/usr/include/php8-homegear/php/TSRM -I/usr/include/php8-homegear/php/Zend
 else
 AM_CPPFLAGS += -DNO_SCRIPTENGINE
 endif
 
-if WITH_NODEJS
-noinst_LIBRARIES = libnodejs.a
-libnodejs_a_SOURCES = Nodejs/Nodejs.cpp
-if NODEBLUE
-node_blue_LDADD += libnodejs.a
-else
-homegear_LDADD += libnodejs.a
-endif
-LIBS += -lnodejs-homegear
-libnodejs_a_CPPFLAGS = -Wall -std=c++17 -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED
-libnodejs_a_CPPFLAGS += -I/usr/include/nodejs-homegear
-else
-AM_CPPFLAGS += -DNO_NODEJS
-endif
-
 if WITH_I2C
 AM_CPPFLAGS += -DI2CSUPPORT
-endif
-
-if NODEBLUE
-AM_CPPFLAGS += -DNODE_BLUE
 endif

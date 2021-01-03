@@ -108,11 +108,4 @@ AS_IF([test "x$with_i2c" = "xno"], [
 	AM_CONDITIONAL(WITH_I2C, true)
 	])
 
-AC_ARG_WITH([nodeblue], [AS_HELP_STRING([--with-nodeblue], [Compile Node-BLUE binary instead of Homegear])], [node_blue=yes], [])
-AS_IF([test "x$node_blue" = "xyes"], [
-	AM_CONDITIONAL(NODEBLUE, true)
-	], [
-	AM_CONDITIONAL(NODEBLUE, false)
-	])
-
 AC_OUTPUT(Makefile src/Makefile homegear-miscellaneous/src/Makefile)
