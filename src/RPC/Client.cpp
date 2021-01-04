@@ -198,7 +198,9 @@ void Client::broadcastNodeEvent(const std::string &nodeId, const std::string &to
     }
 
     if (topic.compare(0, 13, "statusBottom/") == 0 || topic.compare(0, 7, "status/") == 0) {
-      GD::nodeBlueServer->broadcastStatus(nodeId, value);
+      auto pair = BaseLib::HelperFunctions::splitFirst(topic, '/'); //Parameter nodeId might be empty (e. g. from Node-RED) so we need to get the node ID from topic.
+      GD::out.printInfo("Moin " + pair.second + " " + value->print());
+      GD::nodeBlueServer->broadcastStatus(pair.second, value);
     }
 
     if (!GD::bl->booting && BaseLib::HelperFunctions::getTime() - _lastGarbageCollection > 60000) collectGarbage();

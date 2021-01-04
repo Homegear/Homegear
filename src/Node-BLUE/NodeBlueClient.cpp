@@ -1090,7 +1090,14 @@ void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &top
   try {
     if (!value || !_startUpComplete) return;
 
-    if (!_frontendConnected && topic.compare(0, 13, "statusBottom/") != 0) return;
+    if (!_frontendConnected && !retain) return;
+
+    auto node = _nodeManager->getNode(nodeId);
+    auto sourceStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+    sourceStruct->structValue->emplace("id", std::make_shared<Flows::Variable>(node->getId()));
+    sourceStruct->structValue->emplace("z", std::make_shared<Flows::Variable>(node->getFlowId()));
+    sourceStruct->structValue->emplace("name", std::make_shared<Flows::Variable>(node->getName()));
+    value->structValue->emplace("source", sourceStruct);
 
     Flows::PArray parameters = std::make_shared<Flows::Array>();
     parameters->reserve(3);
@@ -2282,9 +2289,16 @@ Flows::PVariable NodeBlueClient::broadcastStatus(Flows::PArray &parameters) {
   try {
     if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
+    auto sourceIterator = parameters->at(1)->structValue->find("source");
+    if (sourceIterator == parameters->at(1)->structValue->end()) return std::make_shared<Flows::Variable>();
+    auto flowIdIterator = sourceIterator->second->structValue->find("z");
+    if (flowIdIterator == sourceIterator->second->structValue->end()) return std::make_shared<Flows::Variable>();
+    auto &flowId = flowIdIterator->second->stringValue;
+
     std::lock_guard<std::mutex> eventsGuard(_statusEventSubscriptionsMutex);
     for (const auto &nodeId : _statusEventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
+      if (node->getFlowId() != flowId) continue;
       if (node) node->statusEvent(parameters->at(0)->stringValue, parameters->at(1));
     }
 
