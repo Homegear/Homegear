@@ -2151,19 +2151,25 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray &parameters) {
   try {
     if (parameters->size() != 6) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
+    auto peerId = static_cast<uint64_t>(parameters->at(1)->integerValue64);
+    int32_t channel = parameters->at(2)->integerValue;
+
     {
+      std::string eventType;
+      if (peerId == 0) eventType = "systemVariableEvent";
+      else if (channel == -1) eventType = "metadataVariableEvent";
+      else eventType = "deviceVariableEvent";
+
       std::lock_guard<std::mutex> eventsGuard(_homegearEventSubscriptionsMutex);
       for (auto &nodeId : _homegearEventSubscriptions) {
         Flows::PINode node = _nodeManager->getNode(nodeId);
-        if (node) node->homegearEvent("deviceVariableEvent", parameters);
+        if (node) node->homegearEvent(eventType, parameters);
       }
     }
 
     {
       std::lock_guard<std::mutex> eventsGuard(_peerSubscriptionsMutex);
       std::string &source = parameters->at(0)->stringValue;
-      auto peerId = static_cast<uint64_t>(parameters->at(1)->integerValue64);
-      int32_t channel = parameters->at(2)->integerValue;
 
       auto peerIterator = _peerSubscriptions.find(peerId);
       if (peerIterator == _peerSubscriptions.end()) return std::make_shared<Flows::Variable>();
