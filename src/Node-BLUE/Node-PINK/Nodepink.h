@@ -33,9 +33,7 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear {
-
-namespace NodeBlue {
+namespace Homegear::NodeBlue {
 
 class Nodepink {
  private:
@@ -68,8 +66,6 @@ class Nodepink {
   void nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous);
   void event(const BaseLib::PArray &parameters);
 };
-
-}
 
 }
 

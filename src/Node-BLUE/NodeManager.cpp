@@ -510,6 +510,7 @@ std::string NodeManager::getFrontendCode() {
           }
 
           if (code.size() + content.size() + 1024 > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
+          //The following line helps the frontend to split module code. This is essential on HTML errors (e. g. missing closing tags).
           code.append("<!-- --- [red-module:" + module.second->module + "/" + node.second->nodeSet + "] --- -->\r\n");
           code.append(content);
         }

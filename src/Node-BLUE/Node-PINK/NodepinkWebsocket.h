@@ -33,9 +33,7 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear {
-
-namespace NodeBlue {
+namespace Homegear::NodeBlue {
 
 /**
  * This class proxies WebSocket connections to Node-RED. Only third party connections are handled here (like from Dashboard). Editor connections are handled by Node-BLUE.
@@ -78,8 +76,6 @@ class NodepinkWebsocket {
   void stop();
   void handoverClient(const BaseLib::PTcpSocket &socket, const BaseLib::PFileDescriptor &fileDescriptor, const BaseLib::Http &initialPacket);
 };
-
-}
 
 }
 
