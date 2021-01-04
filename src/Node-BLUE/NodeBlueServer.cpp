@@ -2713,6 +2713,7 @@ void NodeBlueServer::broadcastError(const std::string &nodeId, int32_t level, co
       }
     }
 
+    bool handled = false;
     for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
@@ -2721,19 +2722,21 @@ void NodeBlueServer::broadcastError(const std::string &nodeId, int32_t level, co
       parameters->emplace_back(error);
 
       BaseLib::PVariable response = sendRequest(client, "broadcastError", parameters, true);
-      if (!response->booleanValue && _nodeEventsEnabled) {
-        auto sourceStruct = error->structValue->at("error")->structValue->at("source");
+      if (response->booleanValue) handled = true;
+    }
 
-        auto value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        value->structValue->emplace("id", std::make_shared<BaseLib::Variable>(nodeId));
-        value->structValue->emplace("type", std::make_shared<BaseLib::Variable>("function"));
-        value->structValue->emplace("z", sourceStruct->structValue->at("z"));
-        value->structValue->emplace("_source", sourceStruct);
-        value->structValue->emplace("name", sourceStruct->structValue->at("name"));
-        value->structValue->emplace("level", std::make_shared<BaseLib::Variable>(level));
-        value->structValue->emplace("msg", error->structValue->at("error")->structValue->at("message"));
-        GD::rpcClient->broadcastNodeEvent(nodeId, "debug", value, true);
-      }
+    if (!handled && _nodeEventsEnabled) {
+      auto sourceStruct = error->structValue->at("error")->structValue->at("source");
+
+      auto value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      value->structValue->emplace("id", std::make_shared<BaseLib::Variable>(nodeId));
+      value->structValue->emplace("type", std::make_shared<BaseLib::Variable>("function"));
+      value->structValue->emplace("z", sourceStruct->structValue->at("z"));
+      value->structValue->emplace("_source", sourceStruct);
+      value->structValue->emplace("name", sourceStruct->structValue->at("name"));
+      value->structValue->emplace("level", std::make_shared<BaseLib::Variable>(level));
+      value->structValue->emplace("msg", error->structValue->at("error")->structValue->at("message"));
+      GD::rpcClient->broadcastNodeEvent(nodeId, "debug", value, true);
     }
   }
   catch (const std::exception &ex) {
@@ -3428,7 +3431,7 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, std::set<std::string> 
     }
 
     BaseLib::PArray parameters(new BaseLib::Array{
-        BaseLib::PVariable(new BaseLib::Variable(flowInfo->id)),
+        std::make_shared<BaseLib::Variable>(flowInfo->id),
         flowInfo->flow
     });
 
@@ -3560,14 +3563,14 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray &par
     {
       std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
       auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (2).");
       clientId = nodeClientIdIterator->second;
     }
 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       auto clientIterator = _clients.find(clientId);
-      if (clientIterator == _clients.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+      if (clientIterator == _clients.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (3).");
       clientData = clientIterator->second;
     }
 
@@ -3700,7 +3703,7 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData &clientDat
       scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCount);
     }
     GD::scriptEngineServer->executeScript(scriptInfo, wait);
-    return BaseLib::PVariable(new BaseLib::Variable());
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3764,7 +3767,7 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData &clientD
     {
       std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
       auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (1).");
       clientId = nodeClientIdIterator->second;
     }
 

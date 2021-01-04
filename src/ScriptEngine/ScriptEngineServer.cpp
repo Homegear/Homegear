@@ -728,7 +728,7 @@ BaseLib::PVariable ScriptEngineServer::executePhpNodeMethod(BaseLib::PArray &par
     {
       std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
       auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Unknown node.");
+      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in script engine server.");
       clientId = nodeClientIdIterator->second;
     }
     {
@@ -1835,7 +1835,7 @@ void ScriptEngineServer::executeScript(PScriptInfo &scriptInfo, bool wait) {
         GD::bl->threadManager.start(_scriptFinishedThread, true, &ScriptEngineServer::invokeScriptFinished, this, process, scriptInfo->id, result->structValue->at("faultCode")->integerValue);
       }
 
-      if (scriptType == ScriptInfo::ScriptType::statefulNode) {
+      if (scriptType == ScriptInfo::ScriptType::statefulNode || scriptType == ScriptInfo::ScriptType::simpleNode) {
         std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
         _nodeClientIdMap.erase(scriptInfo->nodeInfo->structValue->at("id")->stringValue);
       } else if (scriptType == ScriptInfo::ScriptType::device2) {

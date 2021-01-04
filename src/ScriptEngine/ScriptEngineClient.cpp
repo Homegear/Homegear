@@ -1599,7 +1599,7 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray &par
     {
       std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
       auto nodeIterator = _nodeInfo.find(nodeId);
-      if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Unknown node.");
+      if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Node is unknown in script engine client.");
       nodeInfo = nodeIterator->second;
     }
 

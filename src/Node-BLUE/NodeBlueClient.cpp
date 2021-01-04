@@ -1760,7 +1760,7 @@ Flows::PVariable NodeBlueClient::invokeExternalNodeMethod(Flows::PArray &paramet
     if (parameters->size() != 4) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
     Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
-    if (!node) return Flows::Variable::createError(-1, "Unknown node.");
+    if (!node) return Flows::Variable::createError(-1, "Node is unknown in Node-BLUE client.");
     return node->invokeLocal(parameters->at(1)->stringValue, parameters->at(2)->arrayValue);
   }
   catch (const std::exception &ex) {

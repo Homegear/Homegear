@@ -484,7 +484,7 @@ static const zend_function_entry homegear_node_base_methods[] = {
     ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, hg_node_set_global_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME_MAPPING(setInternalMessage, hg_node_set_internal_message, hg_node_set_internal_message_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, hg_node_get_config_parameter_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    {NULL, NULL, NULL}
+    {nullptr, nullptr, nullptr}
 };
 
 void php_node_startup() {
@@ -574,7 +574,8 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo &scriptInfo, zval *h
     std::string methodName2 = methodName;
     BaseLib::HelperFunctions::toLower(methodName2);
     if (!zend_hash_str_find_ptr(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), methodName2.c_str(), methodName2.size())) {
-      if (methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "startUpComplete" && methodName != "variableEvent" && methodName != "setNodeVariable" && methodName != "waitForStop") {
+      if ((methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "startUpComplete" && methodName != "variableEvent" && methodName != "setNodeVariable" && methodName != "waitForStop") ||
+          (scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode && methodName != "start" && methodName != "stop")) {
         return BaseLib::Variable::createError(-1, "Unknown method.");
       } else return std::make_shared<BaseLib::Variable>();
     }
@@ -583,7 +584,7 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo &scriptInfo, zval *h
     zval function;
     ZVAL_STRINGL(&function, methodName.c_str(), methodName.size());
     int result = 0;
-    if (methodParameters->size() == 0) {
+    if (methodParameters->empty()) {
       zend_try
           {
             result = call_user_function(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), homegearNodeObject, &function, &returnValue, 0, nullptr);
