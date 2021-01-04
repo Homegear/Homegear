@@ -65,8 +65,9 @@ class NodeLoader {
 
 class NodeManager {
  public:
-  typedef std::string NodeId; //Node ID from Homegear
-  typedef std::string NodeType; //Node type from Homegear
+  typedef std::string NodeId;
+  typedef std::string NodeSet;
+  typedef std::string NodeType;
   typedef std::string ModuleName;
 
   enum class NodeCodeType {
@@ -87,6 +88,7 @@ class NodeManager {
     std::atomic_bool locked{false};
     std::atomic_int referenceCounter{0};
     NodeCodeType codeType = NodeCodeType::undefined;
+    NodeSet nodeSet;
     NodeType type;
     uint32_t maxThreadCount = 0;
     std::string filename;
@@ -101,6 +103,7 @@ class NodeManager {
     std::string version;
     std::string codeDirectory;
     bool local = true;
+    std::string modulePath;
     std::unordered_map<NodeType, PNodeInfo> nodes;
     std::unordered_map<std::string, PNodeInfo> nodesByFilePrefix;
   };

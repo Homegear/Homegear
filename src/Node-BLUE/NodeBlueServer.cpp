@@ -64,8 +64,8 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _nodered = std::make_shared<Nodepink>();
-  _noderedWebsocket = std::make_shared<NodepinkWebsocket>();
+  _nodepink = std::make_shared<Nodepink>();
+  _nodepinkWebsocket = std::make_shared<NodepinkWebsocket>();
   _nodeManager = std::make_unique<NodeManager>(&_nodeEventsEnabled);
   _nodeBlueCredentials = std::make_unique<NodeBlueCredentials>(); //Constructor throws exceptions
 
@@ -80,7 +80,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   std::vector<uint64_t> groups{4};
   _nodeBlueClientInfo->acls->fromGroups(groups);
   _nodeBlueClientInfo->user = "SYSTEM (4)";
-  _nodeRedHttpClient = std::make_unique<BaseLib::HttpClient>(GD::bl.get(), "127.0.0.1", GD::bl->settings.nodeRedPort(), true, false);
+  _nodePinkHttpClient = std::make_unique<BaseLib::HttpClient>(GD::bl.get(), "127.0.0.1", GD::bl->settings.nodeRedPort(), true, false);
 
   _rpcMethods.emplace("devTest", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDevTest()));
   _rpcMethods.emplace("system.getCapabilities", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemGetCapabilities()));
@@ -578,8 +578,8 @@ void NodeBlueServer::stop() {
     stopQueue(2);
     unlink(_socketPath.c_str());
     BaseLib::ProcessManager::unregisterCallbackHandler(_processCallbackHandlerId);
-    _noderedWebsocket->stop();
-    _nodered->stop();
+    _nodepinkWebsocket->stop();
+    _nodepink->stop();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1313,8 +1313,8 @@ void NodeBlueServer::startFlows() {
       }
     }
     if (_nodeManager->nodeRedRequired()) {
-      _nodered->start();
-      _noderedWebsocket->start();
+      _nodepink->start();
+      _nodepinkWebsocket->start();
     }
     //}}}
 
@@ -1510,7 +1510,7 @@ void NodeBlueServer::restartFlows() {
       _out.printInfo("Info: Closing connections to Flows clients...");
       closeClientConnections();
     }
-    _nodered->stop();
+    _nodepink->stop();
     _out.printInfo("Info: Reloading node information...");
     _nodeManager->fillManagerModuleInfo();
     getMaxThreadCounts();
@@ -1531,6 +1531,12 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
   return "unauthorized";
 #else
   try {
+    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
+      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
+      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
+      return content;
+    }
+
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -1801,7 +1807,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         BaseLib::HelperFunctions::toLower(ending);
         responseEncoding = http.getMimeType(ending);
         if (responseEncoding.empty()) responseEncoding = "application/octet-stream";
-      } else if (_nodered->isStarted()) {
+      } else if (_nodepink->isStarted()) {
         if (!sessionValid) return "unauthorized";
         BaseLib::Http nodeRedHttp;
         auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
@@ -1810,11 +1816,11 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         BaseLib::HelperFunctions::stringReplace(packet, "GET /node-blue/", "GET /");
         packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
         try {
-          _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+          _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
         } catch (const BaseLib::HttpClientException &ex) {
           _out.printInfo(std::string("Info: ") + ex.what());
         }
-        if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
+        if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodePinkHttpClient->disconnect();
         responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
                                                     std::unordered_set<std::string>{"transfer-encoding", "content-length"},
                                                     "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
@@ -1838,6 +1844,12 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
   return "unauthorized";
 #else
   try {
+    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
+      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
+      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
+      return content;
+    }
+
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -1900,7 +1912,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
 
       responseEncoding = "application/json";
       return R"({"result":"success"})";
-    } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodered->isStarted()) {
+    } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodepink->isStarted()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
@@ -1909,11 +1921,11 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       BaseLib::HelperFunctions::stringReplace(packet, "POST /node-blue/", "POST /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       try {
-        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+        _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
       } catch (const BaseLib::HttpClientException &ex) {
         _out.printInfo(std::string("Info: ") + ex.what());
       }
-      if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
+      if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodePinkHttpClient->disconnect();
       responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
                                                   std::unordered_set<std::string>{"transfer-encoding", "content-length"},
                                                   "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
@@ -2007,9 +2019,9 @@ std::string NodeBlueServer::installNode(BaseLib::Http &http) {
 
     _nodeManager->fillManagerModuleInfo();
     //Start Node-RED if not started yet
-    if (_nodeManager->nodeRedRequired() && !_nodered->isStarted()) {
-      _nodered->start();
-      _noderedWebsocket->start();
+    if (_nodeManager->nodeRedRequired() && !_nodepink->isStarted()) {
+      _nodepink->start();
+      _nodepinkWebsocket->start();
     }
 
     BaseLib::PVariable moduleInfo;
@@ -2174,6 +2186,12 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
   return "unauthorized";
 #else
   try {
+    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
+      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
+      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
+      return content;
+    }
+
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -2226,7 +2244,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       if (_nodeEventsEnabled && !moduleInfo->arrayValue->empty()) GD::rpcClient->broadcastNodeEvent("", "notification/node/removed", moduleInfo, false);
 
       return R"({"result":"success"})";
-    } else if (path.compare(0, 10, "node-blue/") == 0 && _nodered->isStarted()) {
+    } else if (path.compare(0, 10, "node-blue/") == 0 && _nodepink->isStarted()) {
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
                                                std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
@@ -2234,11 +2252,11 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       BaseLib::HelperFunctions::stringReplace(packet, "DELETE /node-blue/", "DELETE /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       try {
-        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+        _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
       } catch (const BaseLib::HttpClientException &ex) {
         _out.printInfo(std::string("Info: ") + ex.what());
       }
-      if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
+      if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodePinkHttpClient->disconnect();
       responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
                                                   std::unordered_set<std::string>{"transfer-encoding", "content-length"},
                                                   "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
@@ -2262,6 +2280,12 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
   return "unauthorized";
 #else
   try {
+    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
+      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
+      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
+      return content;
+    }
+
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -2276,7 +2300,7 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
       }
     }
 
-    if (path.compare(0, 10, "node-blue/") == 0 && _nodered->isStarted()) {
+    if (path.compare(0, 10, "node-blue/") == 0 && _nodepink->isStarted()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
@@ -2285,11 +2309,11 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
       BaseLib::HelperFunctions::stringReplace(packet, "PUT /node-blue/", "PUT /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       try {
-        _nodeRedHttpClient->sendRequest(packet, nodeRedHttp);
+        _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
       } catch (const BaseLib::HttpClientException &ex) {
         _out.printInfo(std::string("Info: ") + ex.what());
       }
-      if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodeRedHttpClient->disconnect();
+      if (!(http.getHeader().connection & BaseLib::Http::Connection::keepAlive)) _nodePinkHttpClient->disconnect();
       responseHeader = BaseLib::Http::stripHeader(std::string(nodeRedHttp.getRawHeader().begin(), nodeRedHttp.getRawHeader().end()),
                                                   std::unordered_set<std::string>{"transfer-encoding", "content-length"},
                                                   "Content-Length: " + std::to_string(nodeRedHttp.getContentSize()) + "\r\n");
@@ -2334,6 +2358,10 @@ uint32_t NodeBlueServer::flowCount() {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return 0;
+}
+
+bool NodeBlueServer::isReady() {
+  return !((_nodeManager->nodeRedRequired() && !_nodepink->isStarted()) || _flowsRestarting);
 }
 
 void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values) {
@@ -3829,7 +3857,7 @@ BaseLib::PVariable NodeBlueServer::nodeRedNodeInput(PNodeBlueClientData &clientD
   try {
     if (parameters->size() != 5) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
-    _nodered->nodeInput(parameters->at(0)->stringValue, parameters->at(1), parameters->at(2)->integerValue, parameters->at(3), parameters->at(4)->booleanValue);
+    _nodepink->nodeInput(parameters->at(0)->stringValue, parameters->at(1), parameters->at(2)->integerValue, parameters->at(3), parameters->at(4)->booleanValue);
     return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {

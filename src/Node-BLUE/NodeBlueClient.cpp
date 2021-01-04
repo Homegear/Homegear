@@ -2314,11 +2314,18 @@ Flows::PVariable NodeBlueClient::broadcastError(Flows::PArray &parameters) {
   try {
     if (parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
 
+    auto sourceIterator = parameters->at(1)->structValue->find("source");
+    if (sourceIterator == parameters->at(1)->structValue->end()) return std::make_shared<Flows::Variable>();
+    auto flowIdIterator = sourceIterator->second->structValue->find("z");
+    if (flowIdIterator == sourceIterator->second->structValue->end()) return std::make_shared<Flows::Variable>();
+    auto &flowId = flowIdIterator->second->stringValue;
+
     bool handled = false;
 
     std::lock_guard<std::mutex> eventsGuard(_errorEventSubscriptionsMutex);
     for (const auto &nodeId : _errorEventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
+      if (node->getFlowId() != flowId) continue;
       if (node->errorEvent(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2))) handled = true;
     }
 

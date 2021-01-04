@@ -50,8 +50,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   ~NodeBlueServer() override;
 
-  std::shared_ptr<Nodepink> getNodered() { return _nodered; }
-  std::shared_ptr<NodepinkWebsocket> getNoderedWebsocket() { return _noderedWebsocket; }
+  std::shared_ptr<Nodepink> getNodered() { return _nodepink; }
+  std::shared_ptr<NodepinkWebsocket> getNoderedWebsocket() { return _nodepinkWebsocket; }
 
   bool lifetick();
 
@@ -68,6 +68,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
   uint32_t flowCount();
+
+  bool isReady();
 
   void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
@@ -172,8 +174,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _currentFlowIdMutex;
   int32_t _currentFlowId = 0;
   std::mutex _stateMutex;
-  std::shared_ptr<Nodepink> _nodered;
-  std::shared_ptr<NodepinkWebsocket> _noderedWebsocket;
+  std::shared_ptr<Nodepink> _nodepink;
+  std::shared_ptr<NodepinkWebsocket> _nodepinkWebsocket;
   std::map<int32_t, PNodeBlueClientData> _clients;
   int32_t _currentClientId = 0;
   int64_t _lastGarbageCollection = 0;
@@ -196,7 +198,7 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _flowClientIdMapMutex;
   std::map<std::string, int32_t> _flowClientIdMap;
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
-  std::unique_ptr<BaseLib::HttpClient> _nodeRedHttpClient;
+  std::unique_ptr<BaseLib::HttpClient> _nodePinkHttpClient;
 
   std::atomic<int64_t> _lastNodeEvent;
   std::atomic<uint32_t> _nodeEventCounter;

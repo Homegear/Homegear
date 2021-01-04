@@ -116,11 +116,11 @@ void NodeManager::clearManagerModuleInfo() {
 }
 
 NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::string &directory) {
-  auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
   auto packageJsonPath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append("package.json");
   if (!BaseLib::Io::fileExists(packageJsonPath)) return PManagerModuleInfo();
 
   auto managerModuleInfo = std::make_shared<ManagerModuleInfo>();
+  managerModuleInfo->modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
 
   BaseLib::PVariable packageJson;
   try {
@@ -171,7 +171,8 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
   for (auto &node : *nodesJson->structValue) {
     try {
       auto nodeInfo = std::make_shared<NodeInfo>();
-      nodeInfo->type = node.first;
+      nodeInfo->type = node.first; //Node type and node set are always the same in Homegear. For Node-RED they can differ (see .js section below)
+      nodeInfo->nodeSet = node.first;
       nodeInfo->filename = node.second->stringValue;
       {
         nodeInfo->filePrefix = nodeInfo->filename;
@@ -183,7 +184,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       nodeInfo->fullCodefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(nodeInfo->filename);
       auto slashPos = nodeInfo->fullCodefilePath.find_last_of('/');
       if (managerModuleInfo->codeDirectory.empty()) managerModuleInfo->codeDirectory = nodeInfo->fullCodefilePath.substr(0, slashPos + 1);
-      if (!BaseLib::Io::fileExists(modulePath + ".compiling") && (nodeInfo->fullCodefilePath.empty() || !BaseLib::Io::fileExists(nodeInfo->fullCodefilePath))) {
+      if (!BaseLib::Io::fileExists(managerModuleInfo->modulePath + ".compiling") && (nodeInfo->fullCodefilePath.empty() || !BaseLib::Io::fileExists(nodeInfo->fullCodefilePath))) {
         GD::out.printError("Error: Node file \"" + nodeInfo->filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
         continue;
       }
@@ -240,9 +241,37 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       } else if (extension == ".js") {
         _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascript;
+
+        std::string htmlContent;
+        if (BaseLib::Io::fileExists(managerModuleInfo->codeDirectory + nodeInfo->filePrefix + ".html")) {
+          htmlContent = BaseLib::Io::getFileContent(managerModuleInfo->codeDirectory + nodeInfo->filePrefix + ".html");
+        } else if (BaseLib::Io::fileExists(managerModuleInfo->codeDirectory + nodeInfo->filePrefix + ".hni")) {
+          htmlContent = BaseLib::Io::getFileContent(managerModuleInfo->codeDirectory + nodeInfo->filePrefix + ".hni");
+        }
+        if (!htmlContent.empty()) {
+          auto registerPos = htmlContent.find("RED.nodes.registerType(");
+          registerPos += sizeof("RED.nodes.registerType(") - 1;
+          if (registerPos != std::string::npos) {
+            bool doubleQuote = false;
+            auto startPos = htmlContent.find('\'', registerPos);
+            auto startPos2 = htmlContent.find('"', registerPos);
+            if (startPos == std::string::npos || (startPos2 != std::string::npos && startPos2 < startPos)) {
+              doubleQuote = true;
+              startPos = startPos2;
+            }
+            if (startPos != std::string::npos) {
+              auto endPos = doubleQuote ? htmlContent.find('"', startPos + 1) : htmlContent.find('\'', startPos + 1);
+              if (endPos != std::string::npos) {
+                nodeInfo->type = htmlContent.substr(startPos + 1, endPos - startPos - 1);
+              }
+            }
+          }
+        }
       } else if (extension == ".hgnjs") {
         _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascriptEncrypted;
+        //Unsupported at the moment, so continue
+        continue;
       } else if (extension == ".hni" || extension == ".html") {
         nodeInfo->codeType = NodeCodeType::none;
       } else continue; //Unsupported type
@@ -254,8 +283,8 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
 
       managerModuleInfo->nodes.emplace(nodeInfo->type, nodeInfo);
       managerModuleInfo->nodesByFilePrefix.emplace(nodeInfo->filePrefix, nodeInfo);
-      _managerModuleInfoByNodeType.emplace(node.first, managerModuleInfo);
-      _nodeInfoByNodeType.emplace(node.first, nodeInfo);
+      _managerModuleInfoByNodeType.emplace(nodeInfo->type, managerModuleInfo);
+      _nodeInfoByNodeType.emplace(nodeInfo->type, nodeInfo);
     } catch (std::exception &ex) {
       GD::out.printError("Error processing nodes entry in file \"" + packageJsonPath + "\": " + ex.what());
     }
@@ -320,11 +349,10 @@ BaseLib::PVariable NodeManager::getModuleInfo() {
     for (auto &moduleInfo : _managerModuleInfo) {
       for (auto &node : moduleInfo.second->nodes) {
         auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-        nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo.second->module + "/" + node.first));
-        nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
+        nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo.second->module + "/" + node.second->nodeSet));
+        nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.second->nodeSet));
         auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-        typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
-        nodeListEntry->structValue->emplace("types", typesEntry);
+        typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.second->type));
         nodeListEntry->structValue->emplace("types", typesEntry);
         nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
         nodeListEntry->structValue->emplace("local", std::make_shared<BaseLib::Variable>(moduleInfo.second->local));
@@ -463,30 +491,27 @@ std::string NodeManager::getFrontendCode() {
     code.reserve(1 * 1024 * 1024);
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
     for (auto &module : _managerModuleInfo) {
-      auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(module.second->module).append("/");
       std::string content;
-      if (BaseLib::Io::fileExists(modulePath + module.second->module + ".hni")) {
-        content = BaseLib::Io::getFileContent(modulePath + module.second->module + ".hni");
+      if (BaseLib::Io::fileExists(module.second->codeDirectory + module.second->module + ".hni")) {
+        content = BaseLib::Io::getFileContent(module.second->codeDirectory + module.second->module + ".hni");
         if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
         code.append(content);
-      } else if (BaseLib::Io::fileExists(modulePath + module.second->module + ".html")) {
-        content = BaseLib::Io::getFileContent(modulePath + module.second->module + ".html");
+      } else if (BaseLib::Io::fileExists(module.second->codeDirectory + module.second->module + ".html")) {
+        content = BaseLib::Io::getFileContent(module.second->codeDirectory + module.second->module + ".html");
         if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
         code.append(content);
       } else {
         for (auto &node : module.second->nodes) {
-          auto extensionPos = node.second->filename.find('.'); //There might be two points, so we can't search for the last one
-          if (extensionPos == std::string::npos) continue;
-          auto filePrefix = node.second->filename.substr(0, extensionPos);
-          if (BaseLib::Io::fileExists(modulePath + filePrefix + ".hni")) {
-            content = BaseLib::Io::getFileContent(modulePath + filePrefix + ".hni");
-            if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
-            code.append(content);
-          } else if (BaseLib::Io::fileExists(modulePath + filePrefix + ".html")) {
-            content = BaseLib::Io::getFileContent(modulePath + filePrefix + ".html");
-            if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
-            code.append(content);
+          std::string content;
+          if (BaseLib::Io::fileExists(module.second->codeDirectory + node.second->filePrefix + ".hni")) {
+            content = BaseLib::Io::getFileContent(module.second->codeDirectory + node.second->filePrefix + ".hni");
+          } else if (BaseLib::Io::fileExists(module.second->codeDirectory + node.second->filePrefix + ".html")) {
+            content = BaseLib::Io::getFileContent(module.second->codeDirectory + node.second->filePrefix + ".html");
           }
+
+          if (code.size() + content.size() + 1024 > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
+          code.append("<!-- --- [red-module:" + module.second->module + "/" + node.second->nodeSet + "] --- -->\r\n");
+          code.append(content);
         }
       }
     }
@@ -509,20 +534,19 @@ std::string NodeManager::getFrontendCode(const std::string &type) {
     if (nodeInfoIterator == moduleInfoIterator->second->nodes.end()) return "";
     auto node = nodeInfoIterator->second;
 
-    auto modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(moduleInfoIterator->second->module).append("/");
-
     auto extensionPos = node->filename.find('.'); //There might be two points, so we can't search for the last one
     if (extensionPos == std::string::npos) return "";
     auto filePrefix = node->filename.substr(0, extensionPos);
-    if (BaseLib::Io::fileExists(modulePath + filePrefix + ".hni")) {
-      auto content = BaseLib::Io::getFileContent(modulePath + filePrefix + ".hni");
-      if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
-      code.append(content);
-    } else if (BaseLib::Io::fileExists(modulePath + filePrefix + ".html")) {
-      auto content = BaseLib::Io::getFileContent(modulePath + filePrefix + ".html");
-      if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
-      code.append(content);
+    std::string content;
+    if (BaseLib::Io::fileExists(moduleInfoIterator->second->codeDirectory + filePrefix + ".hni")) {
+      content = BaseLib::Io::getFileContent(moduleInfoIterator->second->codeDirectory + filePrefix + ".hni");
+    } else if (BaseLib::Io::fileExists(moduleInfoIterator->second->codeDirectory + filePrefix + ".html")) {
+      content = BaseLib::Io::getFileContent(moduleInfoIterator->second->codeDirectory + filePrefix + ".html");
     }
+
+    if (code.size() + content.size() + 1024 > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
+    code.append("<!-- --- [red-module:" + moduleInfoIterator->second->module + "/" + node->nodeSet + "] --- -->\r\n");
+    code.append(content);
 
     return code;
   } catch (const std::exception &ex) {
@@ -617,12 +641,12 @@ std::string NodeManager::getNodeLocales(std::string &language) {
               else localeStructIterator->second->structValue->emplace(node.first, node.second);
             } else {
               auto &nodeInfo = nodeInfoIterator->second;
-              auto id = module.second->module + "/" + nodeInfo->type;
+              auto id = module.second->module + "/" + nodeInfo->nodeSet;
               auto nodeJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
               nodeJson->structValue->emplace(node);
               auto localeStructIterator = localeStruct->structValue->find(id);
               if (localeStructIterator == localeStruct->structValue->end()) localeStruct->structValue->emplace(id, nodeJson);
-              else localeStructIterator->second->structValue->emplace(node.first, node.second);
+              else localeStructIterator->second->structValue->emplace(nodeInfo->type, node.second);
             }
           }
         }
