@@ -32,6 +32,7 @@
 #include <homegear-node/JsonEncoder.h>
 #include <homegear-node/JsonDecoder.h>
 #include "../GD/GD.h"
+#include <memory>
 #include <utility>
 
 namespace Homegear::NodeBlue {
@@ -43,11 +44,11 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
 
   _dummyClientInfo.reset(new BaseLib::RpcClientInfo());
 
-  _nodeManager = std::unique_ptr<NodeManager>(new NodeManager(&_frontendConnected));
+  _nodeManager = std::make_unique<NodeManager>(&_frontendConnected);
 
-  _binaryRpc = std::unique_ptr<Flows::BinaryRpc>(new Flows::BinaryRpc());
-  _rpcDecoder = std::unique_ptr<Flows::RpcDecoder>(new Flows::RpcDecoder());
-  _rpcEncoder = std::unique_ptr<Flows::RpcEncoder>(new Flows::RpcEncoder(true));
+  _binaryRpc = std::make_unique<Flows::BinaryRpc>();
+  _rpcDecoder = std::make_unique<Flows::RpcDecoder>();
+  _rpcEncoder = std::make_unique<Flows::RpcEncoder>(true);
 
   _localRpcMethods.emplace("reload", std::bind(&NodeBlueClient::reload, this, std::placeholders::_1));
   _localRpcMethods.emplace("shutdown", std::bind(&NodeBlueClient::shutdown, this, std::placeholders::_1));
@@ -1100,7 +1101,7 @@ void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &top
     value->structValue->emplace("source", sourceStruct);
 
     Flows::PArray parameters = std::make_shared<Flows::Array>();
-    parameters->reserve(3);
+    parameters->reserve(4);
     parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
     parameters->push_back(std::make_shared<Flows::Variable>(topic));
     parameters->push_back(value);
