@@ -169,7 +169,7 @@ void Nodepink::execThread() {
       int stdIn = -1;
       int stdOut = -1;
       int stdErr = -1;
-      _pid = BaseLib::ProcessManager::systemp(GD::executablePath + "/" + GD::executableFile + "-node", arguments, GD::bl->fileDescriptorManager.getMax(), stdIn, stdOut, stdErr);
+      _pid = BaseLib::ProcessManager::systemp(GD::executablePath + GD::executableFile + "-node", arguments, GD::bl->fileDescriptorManager.getMax(), stdIn, stdOut, stdErr);
       _stdIn = stdIn;
       _stdOut = stdOut;
       _stdErr = stdErr;

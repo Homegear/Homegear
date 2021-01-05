@@ -29,7 +29,7 @@ override_dh_auto_install:
 	cp -a $(CURDIR)/build/bin $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/
 	cp -a $(CURDIR)/build/lib/node_modules $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib
 	chmod 755 $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib/node_modules/npm/bin/*.js
-	find $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib -type f -print0 | xargs -0 sed -i 's/#!\/usr\/bin\/env node/#!\/usr\/bin\/homegear-node/g'
+	find $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib -type f -print0 | xargs -0 sed -i 's/#!\/usr\/bin\/env node/#!\/usr\/bin\/env homegear-node/g'
 
 override_dh_auto_test:
 

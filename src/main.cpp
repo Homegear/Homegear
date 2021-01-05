@@ -373,7 +373,7 @@ void getExecutablePath(int argc, char *argv[]) {
   }
   path[length] = '\0';
   GD::executablePath = std::string(path.data());
-  GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+  GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of('/') + 1);
 #endif
 
   GD::executableFile = std::string(argc > 0 ? argv[0] : "homegear");
