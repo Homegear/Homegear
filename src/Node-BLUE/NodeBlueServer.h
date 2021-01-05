@@ -159,9 +159,9 @@ class NodeBlueServer : public BaseLib::IQueue {
   BaseLib::Output _out;
   std::string _socketPath;
   std::string _webroot;
-  std::atomic_bool _shuttingDown;
-  std::atomic_bool _stopServer;
-  std::atomic_bool _nodeEventsEnabled;
+  std::atomic_bool _shuttingDown{false};
+  std::atomic_bool _stopServer{false};
+  std::atomic_bool _nodeEventsEnabled{false};
   std::thread _mainThread;
   std::thread _maintenanceThread;
   int32_t _backlog = 100;
@@ -184,7 +184,7 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>> _localRpcMethods;
   std::mutex _packetIdMutex;
   int32_t _currentPacketId = 0;
-  std::atomic_bool _flowsRestarting;
+  std::atomic_bool _flowsRestarting{false};
   std::mutex _restartFlowsMutex;
   std::mutex _flowsPostMutex;
   std::mutex _flowsFileMutex;
@@ -200,8 +200,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
   std::unique_ptr<BaseLib::HttpClient> _nodePinkHttpClient;
 
-  std::atomic<int64_t> _lastNodeEvent;
-  std::atomic<uint32_t> _nodeEventCounter;
+  std::atomic<int64_t> _lastNodeEvent{0};
+  std::atomic<uint32_t> _nodeEventCounter{0};
 
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;

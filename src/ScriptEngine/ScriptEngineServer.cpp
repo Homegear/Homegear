@@ -2641,7 +2641,7 @@ BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData &clie
 BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    if (!parameters->->empty()) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
+    if (!parameters->empty()) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
     auto moduleInfo = GD::familyController->getModuleInfo();
 

@@ -44,20 +44,11 @@
 
 #include <memory>
 
-namespace Homegear {
-
-namespace NodeBlue {
+namespace Homegear::NodeBlue {
 
 NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _out.init(GD::bl.get());
   _out.setPrefix("Node-BLUE Server: ");
-
-  _shuttingDown = false;
-  _stopServer = false;
-  _nodeEventsEnabled = false;
-  _flowsRestarting = false;
-  _lastNodeEvent = 0;
-  _nodeEventCounter = 0;
 
   _lifetick1.first = 0;
   _lifetick1.second = true;
@@ -3878,7 +3869,5 @@ BaseLib::PVariable NodeBlueServer::setCredentials(PNodeBlueClientData &clientDat
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 // }}}
-
-}
 
 }
