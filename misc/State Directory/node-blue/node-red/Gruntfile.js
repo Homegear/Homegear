@@ -3,6 +3,7 @@
  *
  * Changes:
  * - Include HomegearWS
+ * - Include select2
  * - Don't delete public/icons on clean
  * - Copy node icons to public/icons
  * - Copy translation files
@@ -218,16 +219,18 @@ module.exports = function(grunt) {
                         "node_modules/dompurify/dist/purify.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/d3/d3.v3.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/homegear-ws/homegear-ws.js",
+                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/js/select2.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/i18next/i18next.min.js",
                         "node_modules/jsonata/jsonata-es5.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/jsonata/formatter.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/ace/ace.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/ace/ext-language_tools.js",
                     ],
-                    // "packages/node_modules/@node-red/editor-client/public/vendor/vendor.css": [
-                    //     // TODO: resolve relative resource paths in
-                    //     //       bootstrap/FA/jquery
-                    // ],
+                     "packages/node_modules/@node-red/editor-client/public/vendor/vendor.css": [
+                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/css/select2.min.css"
+                         // TODO: resolve relative resource paths in
+                         //       bootstrap/FA/jquery
+                    ],
                     "packages/node_modules/@node-red/editor-client/public/vendor/ace/worker-jsonata.js": [
                         "node_modules/jsonata/jsonata-es5.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/jsonata/worker-jsonata.js"

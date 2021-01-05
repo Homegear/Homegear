@@ -282,7 +282,7 @@ class ScriptEngineServer : public BaseLib::IQueue {
   // }}}
 
   // {{{ Module methods
-  BaseLib::PVariable listModules(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable listModules(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
   BaseLib::PVariable loadModule(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
@@ -292,11 +292,11 @@ class ScriptEngineServer : public BaseLib::IQueue {
   // }}}
 
   // {{{ Licensing methods
-  BaseLib::PVariable checkLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable checkLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable removeLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable removeLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable getLicenseStates(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable getLicenseStates(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
   BaseLib::PVariable getTrialStartTime(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
   // }}}

@@ -26,9 +26,11 @@
         }
     ],
     "dependencies": {
+        "@homegear/homegear-nodejs": "1.0.5",
         "ajv": "6.12.6",
         "async-mutex": "0.2.4",
         "basic-auth": "2.0.1",
+        "bcrypt": "3.0.8",
         "bcryptjs": "2.4.3",
         "body-parser": "1.19.0",
         "cheerio": "0.22.0",
@@ -76,8 +78,7 @@
         "uglify-js": "3.11.6",
         "when": "3.7.8",
         "ws": "6.2.1",
-        "xml2js": "0.4.23",
-        "@homegear/homegear-nodejs": "1.0.5"
+        "xml2js": "0.4.23"
     },
     "optionalDependencies": {
         "bcrypt": "3.0.8"

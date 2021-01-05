@@ -2638,10 +2638,10 @@ BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData &clie
 // }}}
 
 // {{{ Module methods
-BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    if (parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
+    if (!parameters->->empty()) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
     auto moduleInfo = GD::familyController->getModuleInfo();
 
@@ -2650,11 +2650,11 @@ BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clie
     for (auto &module : moduleInfo) {
       BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 
-      element->structValue->insert(BaseLib::StructElement("FILENAME", BaseLib::PVariable(new BaseLib::Variable(module->filename))));
-      element->structValue->insert(BaseLib::StructElement("FAMILY_ID", BaseLib::PVariable(new BaseLib::Variable(module->familyId))));
-      element->structValue->insert(BaseLib::StructElement("FAMILY_NAME", BaseLib::PVariable(new BaseLib::Variable(module->familyName))));
-      element->structValue->insert(BaseLib::StructElement("BASELIB_VERSION", BaseLib::PVariable(new BaseLib::Variable(module->baselibVersion))));
-      element->structValue->insert(BaseLib::StructElement("LOADED", BaseLib::PVariable(new BaseLib::Variable(module->loaded))));
+      element->structValue->insert(BaseLib::StructElement("FILENAME", std::make_shared<BaseLib::Variable>(module->filename)));
+      element->structValue->insert(BaseLib::StructElement("FAMILY_ID", std::make_shared<BaseLib::Variable>(module->familyId)));
+      element->structValue->insert(BaseLib::StructElement("FAMILY_NAME", std::make_shared<BaseLib::Variable>(module->familyName)));
+      element->structValue->insert(BaseLib::StructElement("BASELIB_VERSION", std::make_shared<BaseLib::Variable>(module->baselibVersion)));
+      element->structValue->insert(BaseLib::StructElement("LOADED", std::make_shared<BaseLib::Variable>(module->loaded)));
 
       result->arrayValue->push_back(element);
     }
@@ -2726,7 +2726,7 @@ BaseLib::PVariable ScriptEngineServer::reloadModule(PScriptEngineClientData &cli
 // }}}
 
 // {{{ Licensing methods
-BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("checkLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters. " + std::to_string(parameters->size()) + " given.");
@@ -2740,13 +2740,13 @@ BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &cli
     int32_t deviceId = parameters->at(2)->integerValue;
     std::string licenseKey = (parameters->size() == 4) ? parameters->at(3)->stringValue : "";
 
-    std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+    auto i = GD::licensingModules.find(moduleId);
     if (i == GD::licensingModules.end() || !i->second) {
       _out.printError("Error: Could not check license. License module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-      return BaseLib::PVariable(new BaseLib::Variable(-2));
+      return std::make_shared<BaseLib::Variable>(-2);
     }
 
-    return BaseLib::PVariable(new BaseLib::Variable(i->second->checkLicense(familyId, deviceId, licenseKey)));
+    return std::make_shared<BaseLib::Variable>(i->second->checkLicense(familyId, deviceId, licenseKey));
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2757,7 +2757,7 @@ BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &cli
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("removeLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
@@ -2769,15 +2769,15 @@ BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &cl
     int32_t familyId = parameters->at(1)->integerValue;
     int32_t deviceId = parameters->at(2)->integerValue;
 
-    std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+    auto i = GD::licensingModules.find(moduleId);
     if (i == GD::licensingModules.end() || !i->second) {
       _out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-      return BaseLib::PVariable(new BaseLib::Variable(-2));
+      return std::make_shared<BaseLib::Variable>(-2);
     }
 
     i->second->removeLicense(familyId, deviceId);
 
-    return BaseLib::PVariable(new BaseLib::Variable(true));
+    return std::make_shared<BaseLib::Variable>(true);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2788,7 +2788,7 @@ BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &cl
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getLicenseStates")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
@@ -2796,10 +2796,10 @@ BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData 
 
     int32_t moduleId = parameters->at(0)->integerValue;
 
-    std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = GD::licensingModules.find(moduleId);
+    auto i = GD::licensingModules.find(moduleId);
     if (i == GD::licensingModules.end() || !i->second) {
       _out.printError("Error: Could not check license. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
-      return BaseLib::PVariable(new BaseLib::Variable(false));
+      return std::make_shared<BaseLib::Variable>(false);
     }
 
     BaseLib::Licensing::Licensing::DeviceStates states = i->second->getDeviceStates();
