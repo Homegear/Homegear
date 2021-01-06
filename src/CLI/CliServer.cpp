@@ -614,7 +614,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
 
       std::stringstream stream(command);
       std::string element;
-      std::stringstream arguments;
+      std::stringstream scriptArguments;
       int32_t index = 0;
       while (std::getline(stream, element, ' ')) {
         if (index == 0) {
@@ -622,10 +622,11 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
           continue;
         } else if (index == 1) {
           if (element == "help" || element.empty()) break;
-          relativePath = '/' + element;
-          fullPath = GD::bl->settings.scriptPath() + element;
+          relativePath = element;
+          if (!BaseLib::Io::fileExists(relativePath)) fullPath = GD::bl->settings.scriptPath() + element;
+          else fullPath = element;
         } else {
-          arguments << element << " ";
+          scriptArguments << element << " ";
         }
         index++;
       }
@@ -640,7 +641,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
         return std::make_shared<BaseLib::Variable>(stringStream.str());
       }
 
-      std::string argumentsString = arguments.str();
+      std::string argumentsString = scriptArguments.str();
       BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, argumentsString));
       scriptInfo->scriptFinishedCallback = std::bind(&CliServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
       scriptInfo->scriptOutputCallback = std::bind(&CliServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
