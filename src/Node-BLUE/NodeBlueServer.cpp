@@ -524,6 +524,7 @@ void NodeBlueServer::backupFlows() {
 
 bool NodeBlueServer::start() {
   try {
+    _flowsRestarting = true;
     stop();
 
     _processCallbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&NodeBlueServer::processKilled,
@@ -536,7 +537,10 @@ bool NodeBlueServer::start() {
     _socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
     _shuttingDown = false;
     _stopServer = false;
-    if (!getFileDescriptor(true)) return false;
+    if (!getFileDescriptor(true)) {
+      _flowsRestarting = false;
+      return false;
+    }
     _webroot = GD::bl->settings.nodeBluePath() + "www/";
     getMaxThreadCounts();
     uint32_t flowsProcessingThreadCountServer = GD::bl->settings.nodeBlueProcessingThreadCountServer();
@@ -546,6 +550,7 @@ bool NodeBlueServer::start() {
     startQueue(2, false, flowsProcessingThreadCountServer, 0, SCHED_OTHER);
     GD::bl->threadManager.start(_mainThread, true, &NodeBlueServer::mainThread, this);
     startFlows();
+    _flowsRestarting = false;
     return true;
   }
   catch (const std::exception &ex) {
@@ -554,6 +559,7 @@ bool NodeBlueServer::start() {
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  _flowsRestarting = false;
   return false;
 }
 
@@ -633,9 +639,13 @@ void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool cor
     }
 
     if (process) {
-      if (signal != -1 && signal != 15) _out.printCritical("Critical: Client process with pid " + std::to_string(pid) + " was killed with signal " + std::to_string(signal) + '.');
+      if (signal != -1 && signal != 15) {
+        _out.printCritical("Critical: Client process with pid " + std::to_string(pid) + " was killed with signal " + std::to_string(signal) + '.');
+        GD::rpcClient->broadcastNodeEvent("global", "flowStartError", std::make_shared<BaseLib::Variable>("crash"), false);
+      }
       else if (exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
       else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
+
 
       if (signal != -1 && signal != 15) exitCode = -32500;
 
@@ -1161,6 +1171,7 @@ void NodeBlueServer::startFlows() {
       auto typeIterator = element->structValue->find("type");
       if (typeIterator == element->structValue->end()) continue;
       else if (typeIterator->second->stringValue == "comment") continue;
+      else if (typeIterator->second->stringValue == "group") continue;
       else if (typeIterator->second->stringValue == "subflow") {
         subflowInfos.emplace(idIterator->second->stringValue, element);
         continue;
@@ -1533,12 +1544,6 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
   return "unauthorized";
 #else
   try {
-    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
-      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
-      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
-      return content;
-    }
-
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -1809,7 +1814,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         BaseLib::HelperFunctions::toLower(ending);
         responseEncoding = http.getMimeType(ending);
         if (responseEncoding.empty()) responseEncoding = "application/octet-stream";
-      } else if (_nodepink->isStarted()) {
+      } else if (_nodeManager->nodeRedRequired()) {
         if (!sessionValid) return "unauthorized";
         BaseLib::Http nodeRedHttp;
         auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
@@ -1818,6 +1823,12 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         BaseLib::HelperFunctions::stringReplace(packet, "GET /node-blue/", "GET /");
         packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
         try {
+          uint32_t retries = 300;
+          while (_flowsRestarting && !_shuttingDown && retries) {
+            _out.printInfo("Info: Node-PINK is not ready yet. Waiting...");
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            retries--;
+          }
           _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
         } catch (const BaseLib::HttpClientException &ex) {
           _out.printInfo(std::string("Info: ") + ex.what());
@@ -1846,12 +1857,6 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
   return "unauthorized";
 #else
   try {
-    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
-      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
-      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
-      return content;
-    }
-
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -1913,7 +1918,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
 
       responseEncoding = "application/json";
       return R"({"result":"success"})";
-    } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodepink->isStarted()) {
+    } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodeManager->nodeRedRequired()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
@@ -1922,6 +1927,12 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       BaseLib::HelperFunctions::stringReplace(packet, "POST /node-blue/", "POST /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       try {
+        uint32_t retries = 300;
+        while (_flowsRestarting && !_shuttingDown && retries) {
+          _out.printInfo("Info: Node-PINK is not ready yet. Waiting...");
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          retries--;
+        }
         _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
       } catch (const BaseLib::HttpClientException &ex) {
         _out.printInfo(std::string("Info: ") + ex.what());
@@ -2187,12 +2198,6 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
   return "unauthorized";
 #else
   try {
-    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
-      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
-      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
-      return content;
-    }
-
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -2245,7 +2250,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       if (_nodeEventsEnabled && !moduleInfo->arrayValue->empty()) GD::rpcClient->broadcastNodeEvent("", "notification/node/removed", moduleInfo, false);
 
       return R"({"result":"success"})";
-    } else if (path.compare(0, 10, "node-blue/") == 0 && _nodepink->isStarted()) {
+    } else if (path.compare(0, 10, "node-blue/") == 0 && _nodeManager->nodeRedRequired()) {
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
                                                std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
@@ -2253,6 +2258,12 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
       BaseLib::HelperFunctions::stringReplace(packet, "DELETE /node-blue/", "DELETE /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       try {
+        uint32_t retries = 300;
+        while (_flowsRestarting && !_shuttingDown && retries) {
+          _out.printInfo("Info: Node-PINK is not ready yet. Waiting...");
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          retries--;
+        }
         _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
       } catch (const BaseLib::HttpClientException &ex) {
         _out.printInfo(std::string("Info: ") + ex.what());
@@ -2281,12 +2292,6 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
   return "unauthorized";
 #else
   try {
-    if (!isReady() && path != "node-blue/red/images/node-blue.svg") {
-      auto content = BaseLib::Io::getFileContent(_webroot + "starting.html");
-      BaseLib::Http::constructHeader(content.size(), "text/html", 503, "Service Unavailable", std::vector<std::string>(), responseHeader);
-      return content;
-    }
-
     bool sessionValid = false;
     {
       auto sessionId = http.getHeader().cookies.find("PHPSESSID");
@@ -2301,7 +2306,7 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
       }
     }
 
-    if (path.compare(0, 10, "node-blue/") == 0 && _nodepink->isStarted()) {
+    if (path.compare(0, 10, "node-blue/") == 0 && _nodeManager->nodeRedRequired()) {
       if (!sessionValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
@@ -2310,6 +2315,12 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
       BaseLib::HelperFunctions::stringReplace(packet, "PUT /node-blue/", "PUT /");
       packet.insert(packet.end(), http.getContent().data(), http.getContent().data() + http.getContentSize());
       try {
+        uint32_t retries = 300;
+        while (_flowsRestarting && !_shuttingDown && retries) {
+          _out.printInfo("Info: Node-PINK is not ready yet. Waiting...");
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          retries--;
+        }
         _nodePinkHttpClient->sendRequest(packet, nodeRedHttp);
       } catch (const BaseLib::HttpClientException &ex) {
         _out.printInfo(std::string("Info: ") + ex.what());
@@ -3427,10 +3438,7 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, std::set<std::string> 
     if (_shuttingDown) return;
     PNodeBlueProcess process = getFreeProcess(flowInfo->maxThreadCount);
     if (!process) {
-      std::string nodeId = "global";
-      std::string topic = "flowStartError";
-      BaseLib::PVariable value = std::make_shared<BaseLib::Variable>(flowInfo->nodeBlueId);
-      GD::rpcClient->broadcastNodeEvent(nodeId, topic, value, false);
+      GD::rpcClient->broadcastNodeEvent("global", "flowStartError", std::make_shared<BaseLib::Variable>(flowInfo->nodeBlueId), false);
 
       _out.printError("Error: Could not get free process. Not executing flow.");
       flowInfo->exitCode = -1;
@@ -3476,6 +3484,8 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, std::set<std::string> 
           _nodeClientIdMap.erase(node);
         }
       }
+
+      GD::rpcClient->broadcastNodeEvent("global", "flowStartError", std::make_shared<BaseLib::Variable>(flowInfo->nodeBlueId), false);
 
       return;
     }

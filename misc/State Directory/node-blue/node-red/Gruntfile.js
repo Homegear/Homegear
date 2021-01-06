@@ -219,7 +219,7 @@ module.exports = function(grunt) {
                         "node_modules/dompurify/dist/purify.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/d3/d3.v3.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/homegear-ws/homegear-ws.js",
-                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/js/select2.min.js",
+                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/js/select2.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/i18next/i18next.min.js",
                         "node_modules/jsonata/jsonata-es5.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/jsonata/formatter.js",
@@ -227,7 +227,7 @@ module.exports = function(grunt) {
                         "packages/node_modules/@node-red/editor-client/src/vendor/ace/ext-language_tools.js",
                     ],
                      "packages/node_modules/@node-red/editor-client/public/vendor/vendor.css": [
-                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/css/select2.min.css"
+                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/css/select2.css"
                          // TODO: resolve relative resource paths in
                          //       bootstrap/FA/jquery
                     ],

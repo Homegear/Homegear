@@ -130,7 +130,7 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "bullseye" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
@@ -142,7 +142,7 @@ if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ]  || [ "$distver" == "bullseye" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -155,7 +155,7 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
@@ -164,7 +164,7 @@ if [ "$distver" == "focal" ]; then
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
 
-if [ "$distver" == "focal" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu focal main" > $rootfs/etc/apt/sources.list.d/php8-src.list
 elif [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php8-src.list

@@ -2090,13 +2090,18 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray &parameters) {
         } else return Flows::Variable::createError(-3, "Unknown payload type.");
         message = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
         message->structValue->emplace("payload", value);
+
+        {
+          std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+          _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+        }
       } else {
         message = parameters->at(2);
-      }
 
-      {
-        std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
-        _fixedInputValues[parameters->at(0)->stringValue][index] = message;
+        {
+          std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
+          _fixedInputValues[parameters->at(0)->stringValue][index] = message;
+        }
       }
 
       Flows::PNodeInfo nodeInfo;

@@ -21,6 +21,7 @@
         },
         "errors": {
              "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Häufigster Grund ist die Überschreitung der maximal erlaubten Knotenzahl. Für weitere Informationen schauen Sie ins Fehlerlog.</p>",
+             "flowStartErrorCrash": "<p>Ein Flowprozess ist abgestürzt. Ihre Flows werden mit ziemlicher Sicherheit nicht funktionieren. Bitte schauen Sie für weitere Details in die Logdateien.</p>",
              "loadCatalogManagementError": "<p>Systemarchitektur konnte nicht ermittelt werden. Ist homegear-management installiert?</p>"
         }
     },

@@ -21,6 +21,7 @@
         },
         "errors": {
              "flowStartError": "<p>Failed to start flow '__flow__'. Most probable cause are too many nodes on that flow. Please see the error log for more details.</p>",
+             "flowStartErrorCrash": "<p>A flow process crashed. Your flows are most probably not working. Please see the log files for more details.</p>",
              "loadCatalogManagementError": "<p>Could not get system architecture. Is homegear-management installed?</p>"
         }
     },

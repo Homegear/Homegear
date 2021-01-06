@@ -4,6 +4,11 @@ require_once("user.php");
 if(!$_SERVER['WEBSOCKET_ENABLED']) die('WebSockets are not enabled on this server in "rpcservers.conf".');
 if($_SERVER['WEBSOCKET_AUTH_TYPE'] != 'session') die('WebSocket authorization type is not set to "session" in "rpcservers.conf".');
 
+if (!\Homegear\Homegear::nodeBlueIsReady()) {
+	header("Location: starting.html");
+	die();
+}
+
 $user = new User();
 if(!$user->checkAuth(true)) die();
 ?>
@@ -20,6 +25,7 @@ if(!$user->checkAuth(true)) die();
 <link rel="mask-icon" href="red/images/node-red-icon-black.svg" color="#8f0000">
 <link rel="stylesheet" href="vendor/jquery/css/base/jquery-ui.min.css">
 <link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
+<link rel="stylesheet" href="vendor/vendor.css">
 <link rel="stylesheet" href="red/style.min.css">
 </head>
 <body spellcheck="false">

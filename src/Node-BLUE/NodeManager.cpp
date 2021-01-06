@@ -381,8 +381,8 @@ BaseLib::PVariable NodeManager::getNodesAddedInfo(const std::string &module) {
     moduleInfoArray->arrayValue->reserve(moduleInfo->nodes.size());
     for (auto &node : moduleInfo->nodes) {
       auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.first));
-      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.second->nodeSet));
+      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.second->type));
       auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
       nodeListEntry->structValue->emplace("types", typesEntry);
@@ -432,8 +432,8 @@ BaseLib::PVariable NodeManager::getNodesRemovedInfo(const std::string &module) {
     moduleInfoArray->arrayValue->reserve(moduleInfo->nodes.size());
     for (auto &node : moduleInfo->nodes) {
       auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.first));
-      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.first));
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.second->nodeSet));
+      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.second->type));
       auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
       nodeListEntry->structValue->emplace("types", typesEntry);
