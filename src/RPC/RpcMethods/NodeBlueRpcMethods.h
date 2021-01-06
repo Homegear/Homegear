@@ -127,11 +127,29 @@ class RPCGetNodeVariable : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RPCNodeBlueIsReady : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCNodeBlueIsReady() {
+    addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>());
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RPCRemoveNodesFromFlow : public BaseLib::Rpc::RpcMethod {
  public:
   RPCRemoveNodesFromFlow() {
     addSignature(BaseLib::VariableType::tBoolean,
                  std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCRestartFlows : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRestartFlows() {
+    addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>());
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;

@@ -61,6 +61,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void restartFlows();
 
+  bool restartFlowsAsync();
+
   void homegearShuttingDown();
 
   void homegearReloading();
@@ -119,7 +121,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodeVariable(std::string nodeId, std::string topic);
 
-  void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
+  void setNodeVariable(const std::string& nodeId, const std::string &topic, const BaseLib::PVariable &value);
 
   void enableNodeEvents();
 

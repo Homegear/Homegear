@@ -646,7 +646,7 @@ void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool cor
       process->invokeFlowFinished(exitCode);
       if (signal != -1 && signal != 15 && !_flowsRestarting && !_shuttingDown) {
         _out.printError("Error: Restarting flows, because client was killed unexpectedly. Signal was: " + std::to_string(signal) + ", exit code was: " + std::to_string(exitCode));
-        GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
+        restartFlowsAsync();
       }
     }
   }
@@ -763,7 +763,7 @@ BaseLib::PVariable NodeBlueServer::getNodeVariable(std::string nodeId, std::stri
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-void NodeBlueServer::setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value) {
+void NodeBlueServer::setNodeVariable(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value) {
   try {
     PNodeBlueClientData clientData;
     int32_t clientId = 0;
@@ -1511,10 +1511,21 @@ void NodeBlueServer::restartFlows() {
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  catch (...) {
-    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
   _flowsRestarting = false;
+}
+
+bool NodeBlueServer::restartFlowsAsync() {
+  try {
+    if (_flowsRestarting) return false;
+    _flowsRestarting = true; //There is a race condition here - but it doesn't matter.
+    _out.printInfo("Info: Restarting flows...");
+    GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
+    return true;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
 }
 
 std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader) {
@@ -1861,8 +1872,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       return deploy(http);
     } else if (path == "node-blue/flows/restart") {
       if (!sessionValid) return "unauthorized";
-      _out.printInfo("Info: Restarting flows...");
-      GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
+      restartFlowsAsync();
       return R"({"result":"success"})";
     } else if (path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty()) {
       if (!sessionValid) return "unauthorized";
@@ -1963,7 +1973,7 @@ std::string NodeBlueServer::deploy(BaseLib::Http &http) {
     BaseLib::HelperFunctions::toLower(md5String);
 
     _out.printInfo("Info: Deploying (3)...");
-    GD::bl->threadManager.start(_maintenanceThread, true, &NodeBlueServer::restartFlows, this);
+    restartFlowsAsync();
 
     auto eventData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     eventData->structValue->emplace("revision", std::make_shared<BaseLib::Variable>(md5String));
@@ -3495,7 +3505,8 @@ BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string &tab, const 
 
     BaseLib::PVariable flowsJson = _jsonDecoder->decode(fileContent);
 
-    auto newFlow = FlowParser::addNodesToFlow(flowsJson, tab, tag, nodes);
+    std::unordered_map<std::string, std::string> nodeIdReplacementMap;
+    auto newFlow = FlowParser::addNodesToFlow(flowsJson, tab, tag, nodes, nodeIdReplacementMap);
     if (newFlow) {
       backupFlows();
 
@@ -3504,7 +3515,23 @@ BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string &tab, const 
       fileContent.clear();
       _jsonEncoder->encode(newFlow, fileContent);
       BaseLib::Io::writeFile(filename, fileContent, fileContent.size());
-      return std::make_shared<BaseLib::Variable>(true);
+
+      { //Notify frontend of changed flow
+        std::vector<char> md5;
+        BaseLib::Security::Hash::md5(fileContent, md5);
+        std::string md5String = BaseLib::HelperFunctions::getHexString(md5);
+        BaseLib::HelperFunctions::toLower(md5String);
+        auto eventData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+        eventData->structValue->emplace("revision", std::make_shared<BaseLib::Variable>(md5String));
+        GD::rpcClient->broadcastNodeEvent("", "notification/runtime-deploy", eventData, false);
+      }
+
+      auto nodeIdReplacementStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      for (auto &entry : nodeIdReplacementMap) {
+        nodeIdReplacementStruct->structValue->emplace(entry.first, std::make_shared<BaseLib::Variable>(entry.second));
+      }
+
+      return nodeIdReplacementStruct;
     } else {
       return std::make_shared<BaseLib::Variable>(false);
     }

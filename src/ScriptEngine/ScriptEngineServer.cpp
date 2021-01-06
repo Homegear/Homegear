@@ -175,7 +175,9 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
   { // Node-BLUE
     _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
     _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
+    _rpcMethods.emplace("nodeBlueIsReady", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeBlueIsReady()));
     _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
+    _rpcMethods.emplace("restartFlows", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRestartFlows()));
   }
 
   { // Buildings

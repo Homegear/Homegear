@@ -244,7 +244,7 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void setInternalMessage(const std::string &nodeId, Flows::PVariable message);
 
-  void setInputValue(const std::string &nodeId, int32_t inputIndex, Flows::PVariable message);
+  void setInputValue(const std::string &nodeType, const std::string &nodeId, int32_t inputIndex, const Flows::PVariable& message);
 
   Flows::PVariable getConfigParameter(const std::string &nodeId, const std::string &name);
 

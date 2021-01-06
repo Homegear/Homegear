@@ -590,7 +590,7 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
             node->input(queueEntry->nodeInfo, queueEntry->targetPort, queueEntry->message);
           }
 
-          setInputValue(queueEntry->nodeInfo->id, queueEntry->targetPort, queueEntry->message);
+          setInputValue(queueEntry->nodeInfo->type, queueEntry->nodeInfo->id, queueEntry->targetPort, queueEntry->message);
         }
       }
       catch (const std::exception &ex) {
@@ -1047,7 +1047,7 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
             nextNode->input(outputNodeInfo, node.port, message);
           }
 
-          setInputValue(outputNodeInfo->id, node.port, message);
+          setInputValue(outputNodeInfo->type, outputNodeInfo->id, node.port, message);
         }
       } else {
         if (queueSize(2) > 1000 && BaseLib::HelperFunctions::getTime() - _lastQueueSize > 1000) {
@@ -1260,7 +1260,7 @@ void NodeBlueClient::setInternalMessage(const std::string &nodeId, Flows::PVaria
   }
 }
 
-void NodeBlueClient::setInputValue(const std::string &nodeId, int32_t inputIndex, Flows::PVariable message) {
+void NodeBlueClient::setInputValue(const std::string &nodeType, const std::string &nodeId, int32_t inputIndex, const Flows::PVariable &message) {
   try {
     std::lock_guard<std::mutex> inputValuesGuard(_inputValuesMutex);
     Flows::PVariable payload = message->structValue->at("payload");
@@ -1278,7 +1278,7 @@ void NodeBlueClient::setInputValue(const std::string &nodeId, int32_t inputIndex
     auto &element = _inputValues[nodeId][inputIndex];
     InputValue inputValue;
     inputValue.time = BaseLib::HelperFunctions::getTime();
-    inputValue.value = payload;
+    inputValue.value = nodeType == "unit-test-helper" ? message : payload;
     element.push_front(std::move(inputValue));
     while (element.size() > 10) element.pop_back();
   }
@@ -1576,6 +1576,22 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
           _nodes.erase(node);
         }
         _nodeManager->unloadNode(node);
+      }
+    }
+    //}}}
+
+    //{{{ Remove non-existant fixed inputs
+    {
+      std::unique_lock<std::mutex> nodesGuard(_nodesMutex, std::defer_lock);
+      std::unique_lock<std::mutex> fixedInputGuard(_fixedInputValuesMutex, std::defer_lock);
+      std::lock(nodesGuard, fixedInputGuard);
+      std::unordered_set<std::string> entriesToRemove;
+      for (auto &entry : _fixedInputValues) {
+        if (_nodes.find(entry.first) == _nodes.end()) entriesToRemove.emplace(entry.first);
+      }
+      nodesGuard.unlock();
+      for (auto &entry : entriesToRemove) {
+        _fixedInputValues.erase(entry);
       }
     }
     //}}}
@@ -2033,7 +2049,7 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray &parameters) {
       std::string indexString = parameters->at(1)->stringValue.substr(10);
       int32_t index = Flows::Math::getNumber(indexString);
 
-      if (parameters->at(2)->arrayValue->size() != 2) {
+      if (parameters->at(2)->arrayValue->size() != 2 && parameters->at(2)->type != Flows::VariableType::tStruct) {
         std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
         auto fixedInputIterator = _fixedInputValues.find(parameters->at(0)->stringValue);
         if (fixedInputIterator != _fixedInputValues.end()) {
@@ -2044,36 +2060,43 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray &parameters) {
         return std::make_shared<Flows::Variable>();
       }
 
-      std::string payloadType = parameters->at(2)->arrayValue->at(0)->stringValue;
-      std::string payload = parameters->at(2)->arrayValue->at(1)->stringValue;
+      Flows::PVariable message;
+      if (parameters->at(2)->arrayValue->size() == 2) {
+        std::string payloadType = parameters->at(2)->arrayValue->at(0)->stringValue;
+        std::string payload = parameters->at(2)->arrayValue->at(1)->stringValue;
 
-      Flows::PVariable value = std::make_shared<Flows::Variable>();
-      if (payloadType == "bool") {
-        value->setType(Flows::VariableType::tBoolean);
-        value->booleanValue = payload == "true";
-      } else if (payloadType == "int") {
-        value->setType(Flows::VariableType::tInteger64);
-        value->integerValue64 = Flows::Math::getNumber64(payload);
-        value->integerValue = (int32_t)value->integerValue64;
-        value->floatValue = value->integerValue64;
-      } else if (payloadType == "float" || payloadType == "num") {
-        value->setType(Flows::VariableType::tFloat);
-        value->floatValue = Flows::Math::getDouble(payload);
-        value->integerValue = value->floatValue;
-        value->integerValue64 = value->floatValue;
-      } else if (payloadType == "string" || payloadType == "str") {
-        value->setType(Flows::VariableType::tString);
-        value->stringValue = payload;
-      } else if (payloadType == "array" || payloadType == "struct") {
-        value = Flows::JsonDecoder::decode(payload);
-      } else if (payloadType == "bin") {
-        value->setType(Flows::VariableType::tBinary);
-        value->binaryValue = BaseLib::HelperFunctions::getUBinary(payload);
-      } else return Flows::Variable::createError(-3, "Unknown payload type.");
+        auto value = std::make_shared<Flows::Variable>();
+        if (payloadType == "bool") {
+          value->setType(Flows::VariableType::tBoolean);
+          value->booleanValue = payload == "true";
+        } else if (payloadType == "int") {
+          value->setType(Flows::VariableType::tInteger64);
+          value->integerValue64 = Flows::Math::getNumber64(payload);
+          value->integerValue = (int32_t)value->integerValue64;
+          value->floatValue = value->integerValue64;
+        } else if (payloadType == "float" || payloadType == "num") {
+          value->setType(Flows::VariableType::tFloat);
+          value->floatValue = Flows::Math::getDouble(payload);
+          value->integerValue = value->floatValue;
+          value->integerValue64 = value->floatValue;
+        } else if (payloadType == "string" || payloadType == "str") {
+          value->setType(Flows::VariableType::tString);
+          value->stringValue = payload;
+        } else if (payloadType == "array" || payloadType == "struct") {
+          value = Flows::JsonDecoder::decode(payload);
+        } else if (payloadType == "bin") {
+          value->setType(Flows::VariableType::tBinary);
+          value->binaryValue = BaseLib::HelperFunctions::getUBinary(payload);
+        } else return Flows::Variable::createError(-3, "Unknown payload type.");
+        message = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+        message->structValue->emplace("payload", value);
+      } else {
+        message = parameters->at(2);
+      }
 
       {
         std::lock_guard<std::mutex> fixedInputGuard(_fixedInputValuesMutex);
-        _fixedInputValues[parameters->at(0)->stringValue][index] = value;
+        _fixedInputValues[parameters->at(0)->stringValue][index] = message;
       }
 
       Flows::PNodeInfo nodeInfo;
@@ -2085,13 +2108,8 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray &parameters) {
 
       Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
       if (nodeInfo && node) {
-        auto message = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
-        message->structValue->emplace("payload", value);
-
-        {
-          std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
-          node->input(nodeInfo, index, message);
-        }
+        std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+        node->input(nodeInfo, index, message);
       }
 
       return std::make_shared<Flows::Variable>();

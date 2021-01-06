@@ -49,16 +49,16 @@ std::string FlowParser::generateRandomId(const std::unordered_set<std::string> &
   return randomString;
 }
 
-BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes) {
+BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes, std::unordered_map<std::string, std::string> &nodeIdMap) {
   if (!flow || flow->arrayValue->empty() || tab.empty() || !nodes || nodes->arrayValue->empty()) return BaseLib::PVariable();
 
-  //Set containing all existing IDs to avoid duplicates.
+  //A set to store all existing IDs to avoid duplicates.
   std::unordered_set<std::string> allIds;
 
   std::string tabId;
   int32_t yOffset = 0;
   int32_t yOffsetNewNodes = -1;
-  std::unordered_map<std::string, std::string> nodeIdMap;
+  nodeIdMap.clear();
   BaseLib::PVariable returnedFlow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
   returnedFlow->arrayValue->reserve(flow->arrayValue->size() + nodes->arrayValue->size());
 
@@ -132,8 +132,6 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
     allIds.emplace(newId);
     nodeIdMap.emplace(idIterator->second->stringValue, newId);
 
-    auto zIterator = flowElement->structValue->find("z");
-    if (zIterator == flowElement->structValue->end()) continue;
     auto yIterator = flowElement->structValue->find("y");
     if (yIterator == flowElement->structValue->end()) continue;
 
@@ -166,9 +164,6 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
     auto newIdIterator = nodeIdMap.find(idIterator->second->stringValue);
     if (newIdIterator == nodeIdMap.end()) continue;
     auto &newId = newIdIterator->second;
-
-    auto zIterator = flowElement->structValue->find("z");
-    if (zIterator == flowElement->structValue->end()) continue;
 
     BaseLib::PVariable newNode = std::make_shared<BaseLib::Variable>();
     *newNode = *flowElement;
