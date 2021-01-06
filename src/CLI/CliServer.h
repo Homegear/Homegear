@@ -70,9 +70,9 @@ class CliServer {
   std::condition_variable _waitConditionVariable;
 
 #ifndef NO_SCRIPTENGINE
-  void scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode);
+  void scriptFinished(const BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode);
 
-  void scriptOutput(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, std::string &output, bool error);
+  void scriptOutput(const BaseLib::ScriptEngine::PScriptInfo &scriptInfo, const std::string &output, bool error);
 #endif
 
   std::string userCommand(std::string &command);

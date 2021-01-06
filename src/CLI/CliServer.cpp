@@ -625,6 +625,12 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
           relativePath = element;
           if (!BaseLib::Io::fileExists(relativePath)) fullPath = GD::bl->settings.scriptPath() + element;
           else fullPath = element;
+          if (!BaseLib::Io::fileExists(fullPath)) {
+            scriptOutput(nullptr, "File not found.\n", true);
+            auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(1));
+            return output;
+          }
         } else {
           scriptArguments << element << " ";
         }
@@ -1044,7 +1050,7 @@ std::string CliServer::peerCommand(uint64_t peerId, std::string &command) {
 }
 
 #ifndef NO_SCRIPTENGINE
-void CliServer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode) {
+void CliServer::scriptFinished(const BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode) {
   try {
     std::unique_lock<std::mutex> waitLock(_waitMutex);
     _scriptFinished = true;
@@ -1056,8 +1062,10 @@ void CliServer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, i
   }
 }
 
-void CliServer::scriptOutput(PScriptInfo &scriptInfo, std::string &output, bool error) {
+void CliServer::scriptOutput(const PScriptInfo &scriptInfo, const std::string &output, bool error) {
   try {
+    //Warning: scriptInfo might be nullptr.
+
     std::string methodName = "cliOutput-" + std::to_string(_clientId);
 
     BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();

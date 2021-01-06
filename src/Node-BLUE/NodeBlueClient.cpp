@@ -1580,7 +1580,7 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
     }
     //}}}
 
-    //{{{ Remove non-existant fixed inputs
+    //{{{ Remove non-existant fixed inputs and input values
     {
       std::unique_lock<std::mutex> nodesGuard(_nodesMutex, std::defer_lock);
       std::unique_lock<std::mutex> fixedInputGuard(_fixedInputValuesMutex, std::defer_lock);
@@ -1592,6 +1592,20 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
       nodesGuard.unlock();
       for (auto &entry : entriesToRemove) {
         _fixedInputValues.erase(entry);
+      }
+    }
+
+    {
+      std::unique_lock<std::mutex> nodesGuard(_nodesMutex, std::defer_lock);
+      std::unique_lock<std::mutex> inputValuesGuard(_inputValuesMutex, std::defer_lock);
+      std::lock(nodesGuard, inputValuesGuard);
+      std::unordered_set<std::string> entriesToRemove;
+      for (auto &entry : _inputValues) {
+        if (_nodes.find(entry.first) == _nodes.end()) entriesToRemove.emplace(entry.first);
+      }
+      nodesGuard.unlock();
+      for (auto &entry : entriesToRemove) {
+        _inputValues.erase(entry);
       }
     }
     //}}}
