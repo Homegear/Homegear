@@ -1200,6 +1200,9 @@ void NodeBlueServer::startFlows() {
       nodeIds[z].emplace(idIterator->second->stringValue);
       flowNodes[z].emplace(idIterator->second->stringValue, element);
       if (typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) subflowNodeIds[z].emplace(idIterator->second->stringValue);
+
+      //Special case which can't be handled in NodeManager. The javascript node should not require Node-RED when installed but only when used. All other Node-RED nodes require Node-RED when installed, even when not used.
+      if (typeIterator->second->stringValue == "javascript") _nodeManager->setNodeRedRequired();
     }
     //}}}
 
@@ -1207,7 +1210,7 @@ void NodeBlueServer::startFlows() {
     for (auto &subflowNodeIdsInner : subflowNodeIds) {
       if (subflowInfos.find(subflowNodeIdsInner.first) != subflowInfos.end()) continue; //Don't process nodes of subflows
 
-      for (auto subflowNodeId : subflowNodeIdsInner.second) {
+      for (const auto& subflowNodeId : subflowNodeIdsInner.second) {
         std::set<std::string> processedSubflows;
 
         std::set<std::string> subsubflows;

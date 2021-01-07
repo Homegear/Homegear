@@ -119,6 +119,7 @@ class NodeManager {
   std::unordered_map<NodeType, uint32_t> getMaxThreadCounts();
 
   bool nodeRedRequired();
+  void setNodeRedRequired();
 
   /**
    * Returns a struct with information about all modules as required by the frontend.

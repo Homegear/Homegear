@@ -224,21 +224,11 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         nodeInfo->codeType = NodeCodeType::simplePhpEncrypted;
       } else if (extension == ".py") {
         nodeInfo->codeType = NodeCodeType::python;
-        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError(R"(Error: It is mandatory for Python nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
-          continue;
-        }
-        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
+        nodeInfo->maxThreadCount = 2;
       } else if (extension == ".hgnpy") {
         nodeInfo->codeType = NodeCodeType::pythonEncrypted;
-        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
-        if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError(R"(Error: It is mandatory for Python nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
-          continue;
-        }
-        nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue + 2;
-      } else if (extension == ".js") {
+        nodeInfo->maxThreadCount = 2;
+      } else if (extension == ".js" && nodeInfo->type != "javascript") {
         _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascript;
 
@@ -483,6 +473,10 @@ std::unordered_map<NodeManager::NodeType, uint32_t> NodeManager::getMaxThreadCou
 
 bool NodeManager::nodeRedRequired() {
   return _nodeRedRequired;
+}
+
+void NodeManager::setNodeRedRequired() {
+  _nodeRedRequired = true;
 }
 
 std::string NodeManager::getFrontendCode() {
