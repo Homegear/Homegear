@@ -626,8 +626,8 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
           if (!BaseLib::Io::fileExists(relativePath)) fullPath = GD::bl->settings.scriptPath() + element;
           else fullPath = element;
           if (!BaseLib::Io::fileExists(fullPath)) {
-            scriptOutput(nullptr, "File not found.\n", true);
             auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            output->structValue->emplace("output", std::make_shared<BaseLib::Variable>("File not found.\n"));
             output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(1));
             return output;
           }
