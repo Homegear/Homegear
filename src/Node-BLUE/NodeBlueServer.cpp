@@ -1202,7 +1202,10 @@ void NodeBlueServer::startFlows() {
       if (typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) subflowNodeIds[z].emplace(idIterator->second->stringValue);
 
       //Special case which can't be handled in NodeManager. The javascript node should not require Node-RED when installed but only when used. All other Node-RED nodes require Node-RED when installed, even when not used.
-      if (typeIterator->second->stringValue == "javascript") _nodeManager->setNodeRedRequired();
+      if (!_nodeManager->nodeRedRequired() && typeIterator->second->stringValue == "javascript") {
+        _nodeManager->setNodeRedRequired();
+        GD::out.printInfo("Info: Enabling Node-RED because at least one javascript node is used.");
+      }
     }
     //}}}
 

@@ -228,8 +228,11 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       } else if (extension == ".hgnpy") {
         nodeInfo->codeType = NodeCodeType::pythonEncrypted;
         nodeInfo->maxThreadCount = 2;
-      } else if (extension == ".js" && nodeInfo->type != "javascript") {
-        _nodeRedRequired = true;
+      } else if (extension == ".js") {
+        if (nodeInfo->type != "javascript") {
+          if (!_nodeRedRequired) GD::out.printInfo("Info: Enabling Node-RED because node " + nodeInfo->type + " requires it. This message is not repeated for other nodes.");
+          _nodeRedRequired = true;
+        }
         nodeInfo->codeType = NodeCodeType::javascript;
 
         std::string htmlContent;
