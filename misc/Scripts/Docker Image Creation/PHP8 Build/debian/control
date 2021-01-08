@@ -11,7 +11,7 @@ Architecture: any
 Section: libdevel
 Priority: optional
 Homepage: https://homegear.eu
-Depends: libxslt1-dev, libedit-dev, libenchant-dev, libqdbm-dev, ${shlibs:Depends}, ${misc:Depends}
+Depends: libxslt1-dev, libedit-dev, libenchant-dev | libenchant-2-dev, libqdbm-dev, ${shlibs:Depends}, ${misc:Depends}
 Description: Provides the PHP 8 library and headers needed to compile Homegear.
  This packet provides the PHP 8 library and header files need to compile
  Homegear.
