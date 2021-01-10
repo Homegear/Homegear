@@ -298,6 +298,12 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable stopNodes(Flows::PArray &parameters);
 
   /**
+   * Executes the method "waitForStop" on all nodes. RPC methods can't be called anymore.
+   * @param parameters
+   */
+  Flows::PVariable waitForNodesStopped(Flows::PArray &parameters);
+
+  /**
    * Stops a flow.
    * @param parameters
    */

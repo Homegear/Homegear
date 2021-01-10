@@ -58,6 +58,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("configNodesStarted", std::bind(&NodeBlueClient::configNodesStarted, this, std::placeholders::_1));
   _localRpcMethods.emplace("startUpComplete", std::bind(&NodeBlueClient::startUpComplete, this, std::placeholders::_1));
   _localRpcMethods.emplace("stopNodes", std::bind(&NodeBlueClient::stopNodes, this, std::placeholders::_1));
+  _localRpcMethods.emplace("waitForNodesStopped", std::bind(&NodeBlueClient::waitForNodesStopped, this, std::placeholders::_1));
   _localRpcMethods.emplace("stopFlow", std::bind(&NodeBlueClient::stopFlow, this, std::placeholders::_1));
   _localRpcMethods.emplace("flowCount", std::bind(&NodeBlueClient::flowCount, this, std::placeholders::_1));
   _localRpcMethods.emplace("nodeOutput", std::bind(&NodeBlueClient::nodeOutput, this, std::placeholders::_1));
@@ -1562,11 +1563,17 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
         nodeObject->setSetInternalMessage(std::function<void(const std::string &, Flows::PVariable)>(std::bind(&NodeBlueClient::setInternalMessage, this, std::placeholders::_1, std::placeholders::_2)));
         nodeObject->setGetConfigParameter(std::function<Flows::PVariable(const std::string &, const std::string &)>(std::bind(&NodeBlueClient::getConfigParameter, this, std::placeholders::_1, std::placeholders::_2)));
 
-        if (!nodeObject->init(node)) {
-          nodeObject.reset();
-          nodesToRemove.emplace(node->id);
-          _out.printError("Error: Could not load node " + node->type + " with ID " + node->id + ". \"init\" failed.");
-          continue;
+        try {
+          if (!nodeObject->init(node)) {
+            nodeObject.reset();
+            nodesToRemove.emplace(node->id);
+            _out.printError("Error: Could not load node " + node->type + " with ID " + node->id + ". \"init\" failed.");
+            continue;
+          }
+        } catch (const std::exception &ex) {
+          _out.printError("Error within init() of node " + node->id + ": " + ex.what());
+        } catch (...) {
+          _out.printError("Error without further information within init() of node " + node->id);
         }
       }
       for (auto &node : nodesToRemove) {
@@ -1648,10 +1655,16 @@ Flows::PVariable NodeBlueClient::startNodes(Flows::PArray &parameters) {
       for (auto &nodeIterator : flow.second->nodes) {
         Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
         if (node) {
-          if (!node->start()) {
-            node.reset();
-            nodesToRemove.emplace(nodeIterator.second->id);
-            _out.printError("Error: Could not load node " + nodeIterator.second->type + " with ID " + nodeIterator.second->id + ". \"start\" failed.");
+          try {
+            if (!node->start()) {
+              node.reset();
+              nodesToRemove.emplace(nodeIterator.second->id);
+              _out.printError("Error: Could not load node " + nodeIterator.second->type + " with ID " + nodeIterator.second->id + ". \"start\" failed.");
+            }
+          } catch (const std::exception &ex) {
+            _out.printError("Error within start() of node " + nodeIterator.second->id + ": " + ex.what());
+          } catch (...) {
+            _out.printError("Error without further information within start() of node " + nodeIterator.second->id);
           }
         }
       }
@@ -1678,7 +1691,14 @@ Flows::PVariable NodeBlueClient::configNodesStarted(Flows::PArray &parameters) {
     for (auto &flow : _flows) {
       for (auto &nodeIterator : flow.second->nodes) {
         Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-        if (node) node->configNodesStarted();
+        try {
+          if (node) node->configNodesStarted();
+        }
+        catch (const std::exception &ex) {
+          _out.printError("Error within configNodesStarted() of node " + nodeIterator.second->id + ": " + ex.what());
+        } catch (...) {
+          _out.printError("Error without further information within configNodesStarted() of node " + nodeIterator.second->id);
+        }
       }
     }
     return std::make_shared<Flows::Variable>();
@@ -1695,7 +1715,14 @@ Flows::PVariable NodeBlueClient::startUpComplete(Flows::PArray &parameters) {
     for (auto &flow : _flows) {
       for (auto &nodeIterator : flow.second->nodes) {
         Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
-        if (node) node->startUpComplete();
+        try {
+          if (node) node->startUpComplete();
+        }
+        catch (const std::exception &ex) {
+          _out.printError("Error within startUpComplete() of node " + nodeIterator.second->id + ": " + ex.what());
+        } catch (...) {
+          _out.printError("Error without further information within startUpComplete() of node " + nodeIterator.second->id);
+        }
       }
     }
     _startUpComplete = true;
@@ -1718,7 +1745,13 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray &parameters) {
         Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
         if (_bl->debugLevel >= 5) _out.printDebug("Debug: Calling stop() on node " + nodeIterator.second->id + "...");
         startTime = BaseLib::HelperFunctions::getTime();
-        if (node) node->stop();
+        try {
+          if (node) node->stop();
+        } catch (const std::exception &ex) {
+          _out.printError("Error within stop() of node " + nodeIterator.second->id + ": " + ex.what());
+        } catch (...) {
+          _out.printError("Error without further information within stop() of node " + nodeIterator.second->id);
+        }
         if (BaseLib::HelperFunctions::getTime() - startTime > 100)
           _out.printWarning(
               "Warning: Stop of node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue
@@ -1727,14 +1760,32 @@ Flows::PVariable NodeBlueClient::stopNodes(Flows::PArray &parameters) {
       }
     }
     _out.printMessage("Call to stop() completed.");
+    return std::make_shared<Flows::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
 
+Flows::PVariable NodeBlueClient::waitForNodesStopped(Flows::PArray &parameters) {
+  try {
+    _shuttingDownOrRestarting = true;
     _out.printMessage("Calling waitForStop()...");
+    std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
+    int64_t startTime = 0;
     for (auto &flow : _flows) {
       for (auto &nodeIterator : flow.second->nodes) {
         Flows::PINode node = _nodeManager->getNode(nodeIterator.second->id);
         if (_bl->debugLevel >= 4) _out.printInfo("Info: Waiting for node " + nodeIterator.second->id + " to stop...");
         startTime = BaseLib::HelperFunctions::getTime();
-        if (node) node->waitForStop();
+        try {
+          if (node) node->waitForStop();
+        } catch (const std::exception &ex) {
+          _out.printError("Error within waitForStop() of node " + nodeIterator.second->id + ": " + ex.what());
+        } catch (...) {
+          _out.printError("Error without further information within waitForStop() of node " + nodeIterator.second->id);
+        }
         if (BaseLib::HelperFunctions::getTime() - startTime > 1500)
           _out.printWarning(
               "Warning: Waiting for stop on node " + nodeIterator.second->id + " of type " + nodeIterator.second->type + " in namespace " + nodeIterator.second->type + " in flow " + nodeIterator.second->info->structValue->at("flow")->stringValue

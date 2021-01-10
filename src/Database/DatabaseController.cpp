@@ -4238,6 +4238,7 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
   data.push_back(std::make_shared<BaseLib::Database::DataColumn>(type));
   uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
   if (result == 0) throw BaseLib::Exception("Error saving peer to database. See previous errors in log for more information.");
+  else if(result > BaseLib::Systems::Peer::kMaximumPeerId) throw BaseLib::Exception("Error: Reached maximum possible peer ID. Please move peers to lower IDs or delete peers.");
   return result;
 }
 
@@ -4490,6 +4491,11 @@ bool DatabaseController::peerExists(uint64_t id) {
 
 bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID) {
   try {
+    if (oldPeerID > BaseLib::Systems::Peer::kMaximumPeerId ||
+        newPeerID > BaseLib::Systems::Peer::kMaximumPeerId) {
+      return false;
+    }
+
     BaseLib::Database::DataRow data;
     data.push_back(std::make_shared<BaseLib::Database::DataColumn>(newPeerID));
     data.push_back(std::make_shared<BaseLib::Database::DataColumn>(oldPeerID));

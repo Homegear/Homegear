@@ -1312,17 +1312,17 @@ void NodeBlueServer::startFlows() {
 
     //{{{ Start Node-RED
     if (!nodeRedFlow->arrayValue->empty() && !hasNoderedFlowsFile) {
-      std::vector<char> flows;
-      _jsonEncoder->encode(nodeRedFlow, flows);
+      std::vector<char> flowsString;
+      _jsonEncoder->encode(nodeRedFlow, flowsString);
 
       {
         std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
-        BaseLib::Io::writeFile(nodeRedFlowsFile, flows, flows.size());
+        BaseLib::Io::writeFile(nodeRedFlowsFile, flowsString, flowsString.size());
       }
     }
     if (_nodeManager->nodeRedRequired()) {
-      _nodepink->start();
       _nodepinkWebsocket->start();
+      _nodepink->start();
     }
     //}}}
 
@@ -1336,23 +1336,32 @@ void NodeBlueServer::startFlows() {
       }
     }
 
+    auto startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Starting nodes.");
     for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "startNodes", parameters, true);
     }
+    auto duration = BaseLib::HelperFunctions::getTime() - startTime;
+    _out.printInfo("Info: Calling start took " + std::to_string(duration) + "ms.");
 
+    startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Calling \"configNodesStarted\".");
     for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "configNodesStarted", parameters, true);
     }
+    duration = BaseLib::HelperFunctions::getTime() - startTime;
+    _out.printInfo("Info: Calling configNodesStarted took " + std::to_string(duration) + "ms.");
 
+    startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Calling \"startUpComplete\".");
     for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "startUpComplete", parameters, true);
     }
+    duration = BaseLib::HelperFunctions::getTime() - startTime;
+    _out.printInfo("Info: Calling startUpComplete took " + std::to_string(duration) + "ms.");
 
     std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
     std::string dataKey;
@@ -1493,10 +1502,22 @@ void NodeBlueServer::stopNodes() {
         clients.push_back(i->second);
       }
     }
+
+    int64_t startTime = BaseLib::HelperFunctions::getTime();
     for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "stopNodes", parameters, true);
     }
+    auto duration = BaseLib::HelperFunctions::getTime() - startTime;
+    _out.printInfo("Info: Calling stop took " + std::to_string(duration) + "ms.");
+
+    startTime = BaseLib::HelperFunctions::getTime();
+    for (auto &client : clients) {
+      BaseLib::PArray parameters(new BaseLib::Array());
+      sendRequest(client, "waitForNodesStopped", parameters, true);
+    }
+    duration = BaseLib::HelperFunctions::getTime() - startTime;
+    _out.printInfo("Info: Calling waitForStop took " + std::to_string(duration) + "ms.");
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2038,8 +2059,8 @@ std::string NodeBlueServer::installNode(BaseLib::Http &http) {
     _nodeManager->fillManagerModuleInfo();
     //Start Node-RED if not started yet
     if (_nodeManager->nodeRedRequired() && !_nodepink->isStarted()) {
-      _nodepink->start();
       _nodepinkWebsocket->start();
+      _nodepink->start();
     }
 
     BaseLib::PVariable moduleInfo;
