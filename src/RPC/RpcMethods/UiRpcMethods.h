@@ -130,6 +130,15 @@ class RpcGetUiElementsWithVariable : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RpcGetUiElementTemplate : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcGetUiElementTemplate() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RpcRequestUiRefresh : public BaseLib::Rpc::RpcMethod {
  public:
   RpcRequestUiRefresh() {

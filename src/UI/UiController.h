@@ -75,6 +75,8 @@ class UiController {
 
   BaseLib::PVariable getUiElementsInCategory(const BaseLib::PRpcClientInfo &clientInfo, uint64_t categoryId, const std::string &language);
 
+  BaseLib::PVariable getUiElementTemplate(const BaseLib::PRpcClientInfo &clientInfo, const std::string &elementId, const std::string &language);
+
   static BaseLib::PVariable requestUiRefresh(const BaseLib::PRpcClientInfo &clientInfo, const std::string &id);
 
   BaseLib::PVariable removeUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId);

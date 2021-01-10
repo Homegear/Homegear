@@ -276,6 +276,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("getUiElement", std::make_shared<RpcMethods::RpcGetUiElement>());
     _rpcMethods.emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
     _rpcMethods.emplace("getUiElementsWithVariable", std::make_shared<RpcMethods::RpcGetUiElementsWithVariable>());
+    _rpcMethods.emplace("getUiElementTemplate", std::make_shared<RpcMethods::RpcGetUiElementTemplate>());
     _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
     _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
     _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
@@ -1321,8 +1322,12 @@ void NodeBlueServer::startFlows() {
       }
     }
     if (_nodeManager->nodeRedRequired()) {
-      _nodepinkWebsocket->start();
-      _nodepink->start();
+      if (_nodepink->isStarted()) {
+        _nodepink->reload();
+      } else {
+        _nodepinkWebsocket->start();
+        _nodepink->start();
+      }
     }
     //}}}
 
@@ -1539,7 +1544,6 @@ void NodeBlueServer::restartFlows() {
       _out.printInfo("Info: Closing connections to Flows clients...");
       closeClientConnections();
     }
-    _nodepink->stop();
     _out.printInfo("Info: Reloading node information...");
     _nodeManager->fillManagerModuleInfo();
     getMaxThreadCounts();

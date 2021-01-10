@@ -62,6 +62,7 @@ class Nodepink {
   bool isStarted();
   void start();
   void stop();
+  void reload();
   BaseLib::PVariable invoke(const std::string &method, const BaseLib::PArray &parameters);
   void nodeInput(const std::string &nodeId, const BaseLib::PVariable &nodeInfo, uint32_t inputIndex, const BaseLib::PVariable &message, bool synchronous);
   void event(const BaseLib::PArray &parameters);

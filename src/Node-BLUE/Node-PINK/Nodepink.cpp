@@ -109,7 +109,7 @@ void Nodepink::stop() {
     _processStartUpComplete = false;
     _stopThread = true;
     if (_pid != -1) {
-      kill(_pid, 15);
+      kill(_pid, SIGTERM);
       for (int32_t i = 0; i < 600; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if (_pid == -1) break;
@@ -117,7 +117,7 @@ void Nodepink::stop() {
     }
     if (_pid != -1) {
       _out.printError("Error: Process " + std::to_string(_pid) + " did not finish within 60 seconds. Killing it.");
-      kill(_pid, 9);
+      kill(_pid, SIGKILL);
       close(_stdIn);
       close(_stdOut);
       close(_stdErr);
@@ -130,6 +130,31 @@ void Nodepink::stop() {
     BaseLib::ProcessManager::unregisterCallbackHandler(_callbackHandlerId);
     _callbackHandlerId = -1;
     _out.printInfo("Node-PINK stopped.");
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Nodepink::reload() {
+  try {
+    if (_pid != -1) {
+      _out.printInfo("Reloading Node-PINK...");
+      _processStartUpComplete = false;
+      kill(_pid, SIGUSR1);
+      std::unique_lock<std::mutex> waitLock(_processStartUpMutex);
+      while (!_processStartUpConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&] {
+        return _stopThread || _startUpError || _processStartUpComplete;
+      })) {
+        _out.printInfo("Waiting for Node-PINK to get ready.");
+      }
+
+      if (_startUpError || _pid == -1) {
+        _out.printError("Error: Node-PINK could not be reloaded.");
+      } else if (_processStartUpComplete) {
+        _out.printInfo("Node-PINK reloaded and is ready (PID: " + std::to_string(_pid) + ").");
+      }
+    }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -275,7 +300,7 @@ void Nodepink::event(const BaseLib::PArray &parameters) {
         }
       } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "frontend-event") {
         GD::rpcClient->broadcastNodeEvent("", parameters->at(2)->structValue->at("topic")->stringValue, parameters->at(2)->structValue->at("data"), parameters->at(2)->structValue->at("retain")->booleanValue);
-      } else if(parameters->size() >= 3 && parameters->at(1)->stringValue == "error") {
+      } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "error") {
         GD::nodeBlueServer->broadcastError(parameters->at(2)->structValue->at("nodeId")->stringValue, parameters->at(2)->structValue->at("level")->integerValue, parameters->at(2)->structValue->at("message"));
       }
     } else if (!_processStartUpComplete) {

@@ -1242,6 +1242,16 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable UiController::getUiElementTemplate(const BaseLib::PRpcClientInfo &clientInfo, const std::string &elementId, const std::string &language) {
+  try {
+    return _descriptions->getUiElement(language, elementId)->getElementInfo();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo &clientInfo, const UiController::PUiElement &uiElement, const BaseLib::DeviceDescription::PHomegearUiElement &rpcElement) {
   try {
     auto families = GD::familyController->getFamilies();
