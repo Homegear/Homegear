@@ -91,7 +91,6 @@ class NodeManager {
     NodeSet nodeSet;
     NodeType type;
     uint32_t maxThreadCount = 0;
-    std::string filename;
     std::string filePrefix;
     std::string fullCodefilePath;
   };

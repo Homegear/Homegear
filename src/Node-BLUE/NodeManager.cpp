@@ -173,26 +173,26 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       auto nodeInfo = std::make_shared<NodeInfo>();
       nodeInfo->type = node.first; //Node type and node set are always the same in Homegear. For Node-RED they can differ (see .js section below)
       nodeInfo->nodeSet = node.first;
-      nodeInfo->filename = node.second->stringValue;
+      auto filename = node.second->stringValue;
+      //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
+      auto dotPosition = filename.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
+      if (dotPosition == std::string::npos) continue;
+      auto extension = filename.substr(dotPosition);
+
       {
-        nodeInfo->filePrefix = nodeInfo->filename;
+        nodeInfo->filePrefix = filename;
         auto pos = nodeInfo->filePrefix.find_last_of('/');
         if (pos != std::string::npos) nodeInfo->filePrefix = nodeInfo->filePrefix.substr(pos + 1);
         pos = nodeInfo->filePrefix.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
         if (pos != std::string::npos) nodeInfo->filePrefix = nodeInfo->filePrefix.substr(0, pos);
       }
-      nodeInfo->fullCodefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(nodeInfo->filename);
+      nodeInfo->fullCodefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(filename);
       auto slashPos = nodeInfo->fullCodefilePath.find_last_of('/');
       if (managerModuleInfo->codeDirectory.empty()) managerModuleInfo->codeDirectory = nodeInfo->fullCodefilePath.substr(0, slashPos + 1);
       if (!BaseLib::Io::fileExists(managerModuleInfo->modulePath + ".compiling") && (nodeInfo->fullCodefilePath.empty() || !BaseLib::Io::fileExists(nodeInfo->fullCodefilePath))) {
-        GD::out.printError("Error: Node file \"" + nodeInfo->filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
+        GD::out.printError("Error: Node file \"" + filename + "\" defined in \"" + packageJsonPath + "\" does not exists.");
         continue;
       }
-
-      //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
-      auto dotPosition = nodeInfo->filename.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
-      if (dotPosition == std::string::npos) continue;
-      auto extension = nodeInfo->filename.substr(dotPosition);
 
       if (extension == ".so") {
         nodeInfo->codeType = NodeCodeType::cpp;
@@ -235,6 +235,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         }
         nodeInfo->codeType = NodeCodeType::javascript;
 
+        //{{{ Get type from HTML file - this is the only way that always works
         std::string htmlContent;
         if (BaseLib::Io::fileExists(managerModuleInfo->codeDirectory + nodeInfo->filePrefix + ".html")) {
           htmlContent = BaseLib::Io::getFileContent(managerModuleInfo->codeDirectory + nodeInfo->filePrefix + ".html");
@@ -260,6 +261,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
             }
           }
         }
+        //}}}
       } else if (extension == ".hgnjs") {
         _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascriptEncrypted;
@@ -499,7 +501,7 @@ std::string NodeManager::getFrontendCode() {
         code.append(content);
       } else {
         for (auto &node : module.second->nodes) {
-          std::string content;
+          content.clear();
           if (BaseLib::Io::fileExists(module.second->codeDirectory + node.second->filePrefix + ".hni")) {
             content = BaseLib::Io::getFileContent(module.second->codeDirectory + node.second->filePrefix + ".hni");
           } else if (BaseLib::Io::fileExists(module.second->codeDirectory + node.second->filePrefix + ".html")) {
@@ -532,14 +534,11 @@ std::string NodeManager::getFrontendCode(const std::string &type) {
     if (nodeInfoIterator == moduleInfoIterator->second->nodes.end()) return "";
     auto node = nodeInfoIterator->second;
 
-    auto extensionPos = node->filename.find('.'); //There might be two points, so we can't search for the last one
-    if (extensionPos == std::string::npos) return "";
-    auto filePrefix = node->filename.substr(0, extensionPos);
     std::string content;
-    if (BaseLib::Io::fileExists(moduleInfoIterator->second->codeDirectory + filePrefix + ".hni")) {
-      content = BaseLib::Io::getFileContent(moduleInfoIterator->second->codeDirectory + filePrefix + ".hni");
-    } else if (BaseLib::Io::fileExists(moduleInfoIterator->second->codeDirectory + filePrefix + ".html")) {
-      content = BaseLib::Io::getFileContent(moduleInfoIterator->second->codeDirectory + filePrefix + ".html");
+    if (BaseLib::Io::fileExists(moduleInfoIterator->second->codeDirectory + node->filePrefix + ".hni")) {
+      content = BaseLib::Io::getFileContent(moduleInfoIterator->second->codeDirectory + node->filePrefix + ".hni");
+    } else if (BaseLib::Io::fileExists(moduleInfoIterator->second->codeDirectory + node->filePrefix + ".html")) {
+      content = BaseLib::Io::getFileContent(moduleInfoIterator->second->codeDirectory + node->filePrefix + ".html");
     }
 
     if (code.size() + content.size() + 1024 > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
