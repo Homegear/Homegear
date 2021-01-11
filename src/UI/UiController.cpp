@@ -1244,7 +1244,9 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
 
 BaseLib::PVariable UiController::getUiElementTemplate(const BaseLib::PRpcClientInfo &clientInfo, const std::string &elementId, const std::string &language) {
   try {
-    return _descriptions->getUiElement(language, elementId)->getElementInfo();
+    auto uiElement = _descriptions->getUiElement(language, elementId);
+    if (uiElement) return uiElement->getElementInfo();
+    else return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
