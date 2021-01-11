@@ -51,7 +51,11 @@ case $1 in
 			# Linking this file uses /usr/bin/node_modules instead of /usr/lib/node_modules
 			ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npx /usr/bin/npx
 		fi
-		if test ! -e /usr/bin/node; then
+		# Update /usr/bin/node of old nightly
+		if [[ -e /usr/bin/node && $(md5sum /usr/bin/node | cut -d " " -f 1) == "bbaf2f551360a9bfbf63ba7721728ed5" ]]; then
+			rm -f /usr/bin/node
+		fi
+		if test ! -e /usr/bin/node || ; then
 			ln -s homegear-node /usr/bin/node
 		fi
 		if test ! -e /usr/bin/node_modules; then

@@ -789,6 +789,10 @@ static void php_homegear_register_variables(zval *track_vars_array) {
       BaseLib::HelperFunctions::toUpper(name);
       php_register_variable_safe((char *)name.c_str(), (char *)i->second.c_str(), i->second.size(), track_vars_array);
     }
+    auto nodeBlueUriPathsExcludedFromLogin = Homegear::GD::bl->settings.nodeBlueUriPathsExcludedFromLogin();
+    if (!nodeBlueUriPathsExcludedFromLogin.empty()) {
+      php_register_variable_safe((char *)"ANONYMOUS_NODE_BLUE_PATHS", (char*)nodeBlueUriPathsExcludedFromLogin.c_str(), nodeBlueUriPathsExcludedFromLogin.size(), track_vars_array);
+    }
     if (scriptInfo->clientInfo) {
       if (scriptInfo->clientInfo->authenticated) {
         php_register_variable_safe((char *)"CLIENT_AUTHENTICATED", (char *)"true", 4, track_vars_array);

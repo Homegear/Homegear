@@ -347,7 +347,7 @@ bool NodeBlueServer::lifetick() {
     {
       std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
       if (!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000) {
-        GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+        _out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
         return false;
       }
     }
@@ -355,7 +355,7 @@ bool NodeBlueServer::lifetick() {
     {
       std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
       if (!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000) {
-        GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+        _out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
         return false;
       }
     }
@@ -377,10 +377,10 @@ bool NodeBlueServer::lifetick() {
     return true;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return false;
 }
@@ -473,14 +473,14 @@ void NodeBlueServer::backupFlows() {
     std::string flowsBackupFile = GD::bl->settings.nodeBlueDataPath() + "flows.json.bak";
     if (BaseLib::Io::fileExists(flowsFile)) {
       if (!checkIntegrity(flowsFile)) {
-        GD::out.printCritical("Critical: Integrity check on flows file failed.");
-        GD::out.printCritical("Critical: Backing up corrupted flows file to: " + flowsFile + ".broken");
+        _out.printCritical("Critical: Integrity check on flows file failed.");
+        _out.printCritical("Critical: Backing up corrupted flows file to: " + flowsFile + ".broken");
         GD::bl->io.copyFile(flowsFile, flowsFile + ".broken");
         BaseLib::Io::deleteFile(flowsFile);
         bool restored = false;
         for (int32_t i = 0; i <= 10000; i++) {
           if (BaseLib::Io::fileExists(flowsBackupFile + std::to_string(i)) && checkIntegrity(flowsBackupFile + std::to_string(i))) {
-            GD::out.printCritical("Critical: Restoring flows file: " + flowsBackupFile + std::to_string(i));
+            _out.printCritical("Critical: Restoring flows file: " + flowsBackupFile + std::to_string(i));
             if (GD::bl->io.copyFile(flowsBackupFile + std::to_string(i), flowsFile)) {
               restored = true;
               break;
@@ -488,28 +488,28 @@ void NodeBlueServer::backupFlows() {
           }
         }
         if (!restored) {
-          GD::out.printCritical("Critical: Could not restore flows file.");
+          _out.printCritical("Critical: Could not restore flows file.");
           return;
         }
       } else {
-        GD::out.printInfo("Info: Backing up flows file...");
+        _out.printInfo("Info: Backing up flows file...");
         if (maxBackups > 1) {
           if (BaseLib::Io::fileExists(flowsBackupFile + std::to_string(maxBackups - 1))) {
             if (!BaseLib::Io::deleteFile(flowsBackupFile + std::to_string(maxBackups - 1))) {
-              GD::out.printError("Error: Cannot delete file: " + flowsBackupFile + std::to_string(maxBackups - 1));
+              _out.printError("Error: Cannot delete file: " + flowsBackupFile + std::to_string(maxBackups - 1));
             }
           }
           for (int32_t i = maxBackups - 2; i >= 0; i--) {
             if (BaseLib::Io::fileExists(flowsBackupFile + std::to_string(i))) {
               if (!BaseLib::Io::moveFile(flowsBackupFile + std::to_string(i), flowsBackupFile + std::to_string(i + 1))) {
-                GD::out.printError("Error: Cannot move file: " + flowsBackupFile + std::to_string(i));
+                _out.printError("Error: Cannot move file: " + flowsBackupFile + std::to_string(i));
               }
             }
           }
         }
         if (maxBackups > 0) {
           if (!GD::bl->io.copyFile(flowsFile, flowsBackupFile + '0')) {
-            GD::out.printError("Error: Cannot copy flows file to: " + flowsBackupFile + '0');
+            _out.printError("Error: Cannot copy flows file to: " + flowsBackupFile + '0');
           }
         }
       }
@@ -543,6 +543,14 @@ bool NodeBlueServer::start() {
       return false;
     }
     _webroot = GD::bl->settings.nodeBluePath() + "www/";
+    _anonymousPaths = BaseLib::HelperFunctions::splitAll(GD::bl->settings.nodeBlueUriPathsExcludedFromLogin(), ',');
+    for (auto &element : _anonymousPaths) {
+      BaseLib::HelperFunctions::trim(element);
+      if (element.empty()) {
+        _anonymousPaths.clear();
+        break;
+      }
+    }
     getMaxThreadCounts();
     uint32_t flowsProcessingThreadCountServer = GD::bl->settings.nodeBlueProcessingThreadCountServer();
     if (flowsProcessingThreadCountServer < 5) flowsProcessingThreadCountServer = 5;
@@ -643,10 +651,8 @@ void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool cor
       if (signal != -1 && signal != 15) {
         _out.printCritical("Critical: Client process with pid " + std::to_string(pid) + " was killed with signal " + std::to_string(signal) + '.');
         GD::rpcClient->broadcastNodeEvent("global", "flowStartError", std::make_shared<BaseLib::Variable>("crash"), false);
-      }
-      else if (exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
+      } else if (exitCode != 0) _out.printError("Error: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
       else _out.printInfo("Info: Client process with pid " + std::to_string(pid) + " exited with code " + std::to_string(exitCode) + '.');
-
 
       if (signal != -1 && signal != 15) exitCode = -32500;
 
@@ -884,7 +890,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
 
     auto subflowInfoIterator = subflowInfos.find(subflowId);
     if (subflowInfoIterator == subflowInfos.end()) {
-      GD::out.printError("Error: Could not find subflow info with for subflow with id " + subflowId);
+      _out.printError("Error: Could not find subflow info with for subflow with id " + subflowId);
       return std::set<std::string>();
     }
 
@@ -1159,13 +1165,13 @@ void NodeBlueServer::startFlows() {
     for (auto &element : *flows->arrayValue) {
       auto idIterator = element->structValue->find("id");
       if (idIterator == element->structValue->end()) {
-        GD::out.printError("Error: Flow element has no id.");
+        _out.printError("Error: Flow element has no id.");
         continue;
       }
 
       auto dIterator = element->structValue->find("d");
       if (dIterator != element->structValue->end() && (dIterator->second->booleanValue || dIterator->second->stringValue == "true")) {
-        GD::out.printDebug("Debug: Ignoring disabled node: " + idIterator->second->stringValue);
+        if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Ignoring disabled node: " + idIterator->second->stringValue);
         continue;
       }
 
@@ -1193,7 +1199,7 @@ void NodeBlueServer::startFlows() {
       element->structValue->emplace("flow", std::make_shared<BaseLib::Variable>(z));
 
       if (allNodeIds.find(idIterator->second->stringValue) != allNodeIds.end()) {
-        GD::out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". At least one of the flows is not working correctly.");
+        _out.printError("Error: Flow element is defined twice: " + idIterator->second->stringValue + ". At least one of the flows is not working correctly.");
         continue;
       }
 
@@ -1205,7 +1211,7 @@ void NodeBlueServer::startFlows() {
       //Special case which can't be handled in NodeManager. The javascript node should not require Node-RED when installed but only when used. All other Node-RED nodes require Node-RED when installed, even when not used.
       if (!_nodeManager->nodeRedRequired() && typeIterator->second->stringValue == "javascript") {
         _nodeManager->setNodeRedRequired();
-        GD::out.printInfo("Info: Enabling Node-RED because at least one javascript node is used.");
+        _out.printInfo("Info: Enabling Node-RED because at least one javascript node is used.");
       }
     }
     //}}}
@@ -1214,7 +1220,7 @@ void NodeBlueServer::startFlows() {
     for (auto &subflowNodeIdsInner : subflowNodeIds) {
       if (subflowInfos.find(subflowNodeIdsInner.first) != subflowInfos.end()) continue; //Don't process nodes of subflows
 
-      for (const auto& subflowNodeId : subflowNodeIdsInner.second) {
+      for (const auto &subflowNodeId : subflowNodeIdsInner.second) {
         std::set<std::string> processedSubflows;
 
         std::set<std::string> subsubflows;
@@ -1288,7 +1294,7 @@ void NodeBlueServer::startFlows() {
             nodeRedFlowNodes->arrayValue->emplace_back(nodeRedNode);
           }
           //}}}
-        } else GD::out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
+        } else _out.printError("Error: Could not determine maximum thread count of node. No key \"type\".");
       }
 
       if (disabledFlows.find(element.first) == disabledFlows.end()) {
@@ -1575,17 +1581,23 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
   return "unauthorized";
 #else
   try {
-    bool sessionValid = false;
-    {
-      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-      if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
-      if (!sessionValid) {
-        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+    bool loginValid = false;
+    for (auto &element : _anonymousPaths) {
+      if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
+        loginValid = true;
+        break;
       }
-      if (!sessionValid) {
+    }
+    if (!loginValid) {
+      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+      if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      if (!loginValid) {
+        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      }
+      if (!loginValid) {
         sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
       }
     }
 
@@ -1625,7 +1637,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       } else contentString = "{\"memory\":{}}";
       responseEncoding = "application/json";
     } else if (path == "node-blue/locales/nodes") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       std::string language = "en-US";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
       for (auto &arg : args) {
@@ -1643,7 +1655,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       contentString = _nodeManager->getFrontendCode(idPair.second);
       responseEncoding = "text/html";
     } else if (path.compare(0, 18, "node-blue/locales/") == 0) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       std::string localePath = _webroot + "static/locales/";
       std::string language = "en-US";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
@@ -1731,7 +1743,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       _jsonEncoder->encode(credentials, contentString);
       responseEncoding = "application/json";
     } else if (path == "node-blue/flows") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       std::string flowsFile = _bl->settings.nodeBlueDataPath() + "flows.json";
       std::vector<char> fileContent;
 
@@ -1756,12 +1768,12 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       _jsonEncoder->encode(responseJson, contentString);
       responseEncoding = "application/json";
     } else if (path == "node-blue/settings" || path == "node-blue/theme" || path == "node-blue/library/flows" || path == "node-blue/debug/view/debug-utils.js") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       path = _webroot + "static/" + path.substr(10);
       if (BaseLib::Io::fileExists(path)) contentString = BaseLib::Io::getFileContent(path);
       responseEncoding = "application/json";
     } else if (path.compare(0, 23, "node-blue/settings/user") == 0) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
 
       auto settingsPath = _bl->settings.nodeBlueDataPath() + "userSettings.json";
       if (BaseLib::Io::fileExists(settingsPath)) contentString = BaseLib::Io::getFileContent(settingsPath);
@@ -1771,7 +1783,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       }
       responseEncoding = "application/json";
     } else if (path == "node-blue/nodes") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       path = _webroot + "static/" + path.substr(10);
 
       if (http.getHeader().fields["accept"] == "text/html") {
@@ -1782,11 +1794,11 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         _jsonEncoder->encode(_nodeManager->getModuleInfo(), contentString);
       }
     } else if (path == "node-blue/icons") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       responseEncoding = "application/json";
       _jsonEncoder->encode(_nodeManager->getIcons(), contentString);
     } else if (path.compare(0, 16, "node-blue/icons/") == 0) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       auto pathPair = BaseLib::HelperFunctions::splitLast(path.substr(16), '/');
       auto iconsDirectory = _nodeManager->getModuleIconsDirectory(pathPair.first);
       std::string newPath = iconsDirectory + pathPair.second;
@@ -1796,7 +1808,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         if (BaseLib::Io::fileExists(newPath)) contentString = BaseLib::Io::getFileContent(newPath);
       }
     } else if (path.compare(0, 30, "node-blue/library/local/flows/") == 0 || path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       std::string libraryPath;
       if (path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) libraryPath = _bl->settings.nodeBlueDataPath() + "examples/";
       else libraryPath = _bl->settings.nodeBlueDataPath() + "library/";
@@ -1834,7 +1846,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         _jsonEncoder->encode(responseJson, contentString);
       }
     } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php") {
-      if (!sessionValid && path != "node-blue/red/images/node-blue.svg") return "unauthorized";
+      if (!loginValid && path != "node-blue/red/images/node-blue.svg" && path != "node-blue/starting.html") return "unauthorized";
       auto webrootPath = _webroot + path.substr(10);
       if (BaseLib::Io::fileExists(webrootPath)) {
         contentString = BaseLib::Io::getFileContent(webrootPath);
@@ -1846,7 +1858,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         responseEncoding = http.getMimeType(ending);
         if (responseEncoding.empty()) responseEncoding = "application/octet-stream";
       } else if (_nodeManager->nodeRedRequired()) {
-        if (!sessionValid) return "unauthorized";
+        if (!loginValid) return "unauthorized";
         BaseLib::Http nodeRedHttp;
         auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
                                                  std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
@@ -1888,37 +1900,43 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
   return "unauthorized";
 #else
   try {
-    bool sessionValid = false;
-    {
-      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-      if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
-      if (!sessionValid) {
-        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+    bool loginValid = false;
+    for (auto &element : _anonymousPaths) {
+      if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
+        loginValid = true;
+        break;
       }
-      if (!sessionValid) {
+    }
+    if (!loginValid) {
+      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+      if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      if (!loginValid) {
+        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      }
+      if (!loginValid) {
         sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
       }
     }
 
     if (path == "node-blue/flows" && http.getHeader().contentType == "application/json" && !http.getContent().empty()) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       responseEncoding = "application/json";
       return deploy(http);
     } else if (path == "node-blue/flows/restart") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       restartFlowsAsync();
       return R"({"result":"success"})";
     } else if (path == "node-blue/nodes" && http.getHeader().contentType == "application/json" && !http.getContent().empty()) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       responseEncoding = "application/json";
       return installNode(http);
     } else if (path == "node-blue/nodes" && http.getHeader().contentType == "multipart/form-data" && !http.getContent().empty()) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       return processNodeUpload(http);
     } else if (path == "node-blue/settings/user") {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
 
       auto settingsPath = _bl->settings.nodeBlueDataPath() + "userSettings.json";
       BaseLib::Io::writeFile(settingsPath, http.getContent(), http.getContentSize());
@@ -1926,7 +1944,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       responseEncoding = "application/json";
       return R"({"result":"success"})";
     } else if (path.compare(0, 30, "node-blue/library/local/flows/") == 0 && !http.getContent().empty()) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       std::string libraryDirectory = _bl->settings.nodeBlueDataPath() + "library/";
       if (!BaseLib::Io::directoryExists(libraryDirectory)) {
         if (!BaseLib::Io::createDirectory(libraryDirectory, S_IRWXU | S_IRWXG)) return "";
@@ -1950,7 +1968,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       responseEncoding = "application/json";
       return R"({"result":"success"})";
     } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php" && _nodeManager->nodeRedRequired()) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
                                                std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
@@ -2140,7 +2158,7 @@ std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
   }
 
   if (contentType != "application/gzip") {
-    GD::out.printWarning("Warning: File upload has unknown content type.");
+    _out.printWarning("Warning: File upload has unknown content type.");
     return R"({"result":"error","error":"Unsupported content type."})";
   }
 
@@ -2229,21 +2247,27 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
   return "unauthorized";
 #else
   try {
-    bool sessionValid = false;
-    {
-      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-      if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
-      if (!sessionValid) {
-        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+    bool loginValid = false;
+    for (auto &element : _anonymousPaths) {
+      if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
+        loginValid = true;
+        break;
       }
-      if (!sessionValid) {
+    }
+    if (!loginValid) {
+      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+      if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      if (!loginValid) {
+        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      }
+      if (!loginValid) {
         sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
       }
     }
 
-    if (!sessionValid) return "unauthorized";
+    if (!loginValid) return "unauthorized";
 
     std::string contentString;
     if (path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18) {
@@ -2323,22 +2347,28 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
   return "unauthorized";
 #else
   try {
-    bool sessionValid = false;
-    {
-      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
-      if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
-      if (!sessionValid) {
-        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+    bool loginValid = false;
+    for (auto &element : _anonymousPaths) {
+      if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
+        loginValid = true;
+        break;
       }
-      if (!sessionValid) {
+    }
+    if (!loginValid) {
+      auto sessionId = http.getHeader().cookies.find("PHPSESSID");
+      if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      if (!loginValid) {
+        sessionId = http.getHeader().cookies.find("PHPSESSIDUI");
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+      }
+      if (!loginValid) {
         sessionId = http.getHeader().cookies.find("PHPSESSIDADMIN");
-        if (sessionId != http.getHeader().cookies.end()) sessionValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
+        if (sessionId != http.getHeader().cookies.end()) loginValid = !GD::scriptEngineServer->checkSessionId(sessionId->second).empty();
       }
     }
 
     if (path.compare(0, 10, "node-blue/") == 0 && _nodeManager->nodeRedRequired()) {
-      if (!sessionValid) return "unauthorized";
+      if (!loginValid) return "unauthorized";
       BaseLib::Http nodeRedHttp;
       auto packet = BaseLib::Http::stripHeader(std::string(http.getRawHeader().begin(), http.getRawHeader().end()),
                                                std::unordered_set<std::string>{"host", "accept-encoding", "referer", "origin"},
@@ -3043,7 +3073,7 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData &clientData, std::ve
       int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, data.data() + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
       if (sentBytes == -1) {
         if (errno == EAGAIN) continue;
-        if (clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+        if (clientData->fileDescriptor->descriptor != -1) _out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
         return BaseLib::Variable::createError(-32500, "Unknown application error.");
       } else if (sentBytes == 0) return BaseLib::Variable::createError(-32500, "Unknown application error.");
       totallySentBytes += sentBytes;
@@ -3279,7 +3309,7 @@ void NodeBlueServer::mainThread() {
 PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount) {
   try {
     if (GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
-      GD::out.printError("Error: Could not get flow process, because maximum number of threads in flow is greater than the number of threads allowed per flow process.");
+      _out.printError("Error: Could not get flow process, because maximum number of threads in flow is greater than the number of threads allowed per flow process.");
       return PNodeBlueProcess();
     }
 

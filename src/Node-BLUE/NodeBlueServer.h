@@ -161,6 +161,7 @@ class NodeBlueServer : public BaseLib::IQueue {
   BaseLib::Output _out;
   std::string _socketPath;
   std::string _webroot;
+  std::vector<std::string> _anonymousPaths;
   std::atomic_bool _shuttingDown{false};
   std::atomic_bool _stopServer{false};
   std::atomic_bool _nodeEventsEnabled{false};

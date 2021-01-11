@@ -10,7 +10,37 @@ if (!\Homegear\Homegear::nodeBlueIsReady()) {
 }
 
 $user = new User();
-if(!$user->checkAuth(true)) die();
+
+//{{{ Check if anonymous login is enabled
+if (!empty($_SERVER['ANONYMOUS_NODE_BLUE_PATHS'])) {
+	$paths = explode(',', $_SERVER['ANONYMOUS_NODE_BLUE_PATHS']);
+	foreach ($paths as $path) {
+		$path = trim($path);
+		if (substr($_SERVER['REQUEST_URI'], 10, strlen($path)) === $path) {
+			if (\Homegear\Homegear::userExists('ui')) $_SESSION['user'] = 'anonymous';
+			else if (\Homegear\Homegear::userExists('ui')) $_SESSION['user'] = 'ui';
+			else if (\Homegear\Homegear::userExists('homegear')) $_SESSION['user'] = 'homegear';
+			else die('Path '.$_SERVER['REQUEST_URI'].' can be accessed anonymously, but a user to access this path is still required. Please create a user with the name "anonymous", "ui" or "homegear" for anonymous access (checked in this order).'); //Unknown user
+			
+			hg_set_user_privileges($_SESSION['user']);
+            if(\Homegear\Homegear::checkServiceAccess("node-blue") !== true) die("Unauthorized.");
+
+			$_SESSION['authorized'] = true;
+
+			if(!array_key_exists('locale', $_SESSION)) {
+	            $settings = hg_get_user_metadata($_SESSION['user']);
+	            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+	        }
+
+			break;
+		}
+	}
+}
+//}}}
+
+if (!$_SESSION["authorized"]) {
+	if(!$user->checkAuth(true)) die("Unauthorized.");
+}
 ?>
 <!DOCTYPE html>
 <html>
