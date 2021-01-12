@@ -2178,8 +2178,20 @@ Flows::PVariable NodeBlueClient::setNodeVariable(Flows::PArray &parameters) {
 
       Flows::PINode node = _nodeManager->getNode(parameters->at(0)->stringValue);
       if (nodeInfo && node) {
-        std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
-        node->input(nodeInfo, index, message);
+        if (_nodeManager->isNodeRedNode(nodeInfo->type)) {
+          auto nodeRedParameters = std::make_shared<Flows::Array>();
+          nodeRedParameters->reserve(5);
+          nodeRedParameters->emplace_back(std::make_shared<Flows::Variable>(node->getId()));
+          nodeRedParameters->emplace_back(nodeInfo->serialize());
+          nodeRedParameters->emplace_back(std::make_shared<Flows::Variable>(index));
+          nodeRedParameters->emplace_back(message);
+          nodeRedParameters->emplace_back(std::make_shared<Flows::Variable>(false));
+          auto result = invoke("nodeRedNodeInput", nodeRedParameters, false);
+          if (result->errorStruct) _out.printError("Error calling \"nodeRedNodeInput\": " + result->structValue->at("faultString")->stringValue);
+        } else {
+          std::lock_guard<std::mutex> nodeInputGuard(node->getInputMutex());
+          node->input(nodeInfo, index, message);
+        }
       }
 
       return std::make_shared<Flows::Variable>();
