@@ -55,7 +55,7 @@ case $1 in
 		if [[ -e /usr/bin/node && $(md5sum /usr/bin/node | cut -d " " -f 1) == "bbaf2f551360a9bfbf63ba7721728ed5" ]]; then
 			rm -f /usr/bin/node
 		fi
-		if test ! -e /usr/bin/node || ; then
+		if test ! -e /usr/bin/node; then
 			ln -s homegear-node /usr/bin/node
 		fi
 		if test ! -e /usr/bin/node_modules; then
