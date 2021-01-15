@@ -292,6 +292,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable nodeEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
+  BaseLib::PVariable nodeBlueVariableEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
   BaseLib::PVariable nodeRedNodeInput(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);

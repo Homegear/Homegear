@@ -2258,6 +2258,7 @@ Flows::PVariable NodeBlueClient::broadcastEvent(Flows::PArray &parameters) {
     {
       std::string eventType;
       if (peerId == 0) eventType = "systemVariableEvent";
+      else if (peerId == 0x50000001) eventType = "nodeBlueVariableEvent";
       else if (channel == -1) eventType = "metadataVariableEvent";
       else eventType = "deviceVariableEvent";
 

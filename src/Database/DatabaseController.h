@@ -222,7 +222,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   std::set<std::string> getAllNodeDataNodes() override;
 
-  BaseLib::PVariable deleteNodeData(std::string &node, std::string &key) override;
+  BaseLib::PVariable deleteNodeData(const std::string &node, const std::string &key) override;
   // }}}
 
   // {{{ Metadata

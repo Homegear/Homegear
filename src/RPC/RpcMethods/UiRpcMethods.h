@@ -157,6 +157,15 @@ class RpcRemoveUiElement : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RpcRemoveNodeUiElements : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcRemoveNodeUiElements() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RpcSetUiElementMetadata : public BaseLib::Rpc::RpcMethod {
  public:
   RpcSetUiElementMetadata() {

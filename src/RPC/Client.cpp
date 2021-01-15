@@ -223,6 +223,7 @@ void Client::broadcastEvent(const std::string &source,
     if (!valueKeys || !values || valueKeys->size() != values->size()) {
       return;
     }
+
     {
       std::lock_guard<std::mutex> lifetickGuard(_lifetick1Mutex);
       _lifetick1.first = BaseLib::HelperFunctions::getTime();
@@ -234,20 +235,17 @@ void Client::broadcastEvent(const std::string &source,
     std::lock_guard<std::mutex> serversGuard(_serversMutex);
     for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin();
          server != _servers.end(); ++server) {
-      if (server->second->removed || (server->second->getServerClientInfo()->sendEventsToRpcServer
-          && (server->second->getServerClientInfo()->closed
-              || !server->second->getServerClientInfo()->socket->connected()))
-          || (server->second->socket && !server->second->socket->connected() && server->second->keepAlive
-              && !server->second->reconnectInfinitely))
+      if (server->second->removed ||
+          (server->second->getServerClientInfo()->sendEventsToRpcServer && (server->second->getServerClientInfo()->closed || !server->second->getServerClientInfo()->socket->connected())) ||
+          (server->second->socket && !server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely))
         continue;
       //At least OpenHAB needs PONG to be send event when initialization is not complete
-      if ((!server->second->initialized && valueKeys->at(0) != "PONG") || (!server->second->knownMethods.empty()
-          && (server->second->knownMethods.find("event") == server->second->knownMethods.end()
-              || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end())))
+      if ((!server->second->initialized && valueKeys->at(0) != "PONG") ||
+          (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() ||
+              server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end())))
         continue;
       if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("event")) continue;
-      if (id > 0 && server->second->subscribePeers
-          && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end())
+      if (id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end())
         continue;
 
       bool checkAcls = server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesDevicesReadSet();
@@ -270,9 +268,12 @@ void Client::broadcastEvent(const std::string &source,
             if (id == 0) {
               if (server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet()) {
                 auto systemVariable = GD::systemVariableController->getInternal(valueKeys->at(i));
-                if (!systemVariable
-                    || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
+                if (!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
                   continue;
+              }
+            } else if (id == 0x50000000 || id == 0x50000001) {
+              if (server->second->getServerClientInfo()->acls->variablesReadSet() && !server->second->getServerClientInfo()->acls->checkNodeBlueVariableReadAccess(valueKeys->at(i), channel)) {
+                continue;
               }
             } else if (!peer || !server->second->getServerClientInfo()->acls->checkVariableReadAccess(peer,
                                                                                                       channel,
@@ -288,8 +289,7 @@ void Client::broadcastEvent(const std::string &source,
           } else parameters->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
           parameters->push_back(std::make_shared<BaseLib::Variable>(valueKeys->at(i)));
           parameters->push_back(values->at(i));
-          server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("event",
-                                                                                                               parameters));
+          server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("event", parameters));
         }
       } else {
         std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
@@ -300,13 +300,14 @@ void Client::broadcastEvent(const std::string &source,
             if (id == 0) {
               if (server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet()) {
                 auto systemVariable = GD::systemVariableController->getInternal(valueKeys->at(i));
-                if (!systemVariable
-                    || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
+                if (!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
                   continue;
               }
-            } else if (!peer || !server->second->getServerClientInfo()->acls->checkVariableReadAccess(peer,
-                                                                                                      channel,
-                                                                                                      valueKeys->at(i)))
+            } else if (id == 0x50000000 || id == 0x50000001) {
+              if (server->second->getServerClientInfo()->acls->variablesReadSet() && !server->second->getServerClientInfo()->acls->checkNodeBlueVariableReadAccess(valueKeys->at(i), channel)) {
+                continue;
+              }
+            } else if (!peer || !server->second->getServerClientInfo()->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i)))
               continue;
           }
 
@@ -329,9 +330,7 @@ void Client::broadcastEvent(const std::string &source,
         }
         parameters->push_back(array);
         //Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-        server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(
-            "system.multicall",
-            parameters));
+        server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("system.multicall", parameters));
       }
     }
 

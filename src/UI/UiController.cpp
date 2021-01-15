@@ -46,6 +46,7 @@ void UiController::load() {
     _uiElements.clear();
     _uiElementsByRoom.clear();
     _uiElementsByCategory.clear();
+    _uiElementsByNode.clear();
     auto rows = GD::bl->db->getUiElements();
     for (auto &row : *rows) {
       auto uiElement = std::make_shared<UiElement>();
@@ -63,6 +64,7 @@ void UiController::load() {
       for (auto categoryId : uiElement->categoryIds) {
         _uiElementsByCategory[categoryId].emplace(uiElement);
       }
+      if (!uiElement->nodeId.empty()) _uiElementsByNode[uiElement->nodeId].emplace(uiElement);
     }
   }
   catch (const std::exception &ex) {
@@ -75,36 +77,36 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
     if (elementId.empty()) return BaseLib::Variable::createError(-1, "elementId is empty.");
     if (data->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "data is not of type Struct.");
 
-    BaseLib::PVariable dataCopy = data;
     BaseLib::PVariable dynamicMetadata = metadata;
     if (!dynamicMetadata || dynamicMetadata->structValue->empty()) {
-      auto metadataIterator = dataCopy->structValue->find("dynamicMetadata");
-      if (metadataIterator != dataCopy->structValue->end()) {
+      auto metadataIterator = data->structValue->find("dynamicMetadata");
+      if (metadataIterator != data->structValue->end()) {
         dynamicMetadata = metadataIterator->second;
-        dataCopy->structValue->erase("dynamicMetadata");
+        data->structValue->erase("dynamicMetadata");
       }
     }
 
     std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
-    auto databaseId = GD::bl->db->addUiElement(elementId, dataCopy, dynamicMetadata);
+    auto databaseId = GD::bl->db->addUiElement(elementId, data, dynamicMetadata);
 
     if (databaseId == 0) return BaseLib::Variable::createError(-1, "Error adding element to database.");
 
     auto uiElement = std::make_shared<UiElement>();
     uiElement->databaseId = databaseId;
     uiElement->elementId = elementId;
-    uiElement->data = dataCopy;
+    uiElement->data = data;
     uiElement->metadata = dynamicMetadata;
 
-    addDataInfo(uiElement, dataCopy);
+    addDataInfo(uiElement, data);
 
     _uiElements.emplace(uiElement->databaseId, uiElement);
     _uiElementsByRoom[uiElement->roomId].emplace(uiElement);
     for (auto categoryId : uiElement->categoryIds) {
       _uiElementsByCategory[categoryId].emplace(uiElement);
     }
+    if (!uiElement->nodeId.empty()) _uiElementsByNode[uiElement->nodeId].emplace(uiElement);
 
-    requestUiRefresh(clientInfo, "");
+    requestUiRefresh("");
 
     return std::make_shared<BaseLib::Variable>(databaseId);
   }
@@ -322,7 +324,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
       for (const auto &roleIdOuter : roleIdsOut) {
         auto outerArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
         outerArray->arrayValue->reserve(roleIdOuter.size());
-        for (const auto& roleId : roleIdOuter) {
+        for (const auto &roleId : roleIdOuter) {
           BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
           requestParameters->arrayValue->reserve(2);
           requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId.first));
@@ -439,7 +441,8 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
                         if (directionIterator->second->integerValue64 == 0) {
                           if (GD::bl->debugLevel >= 5)
                             GD::out.printDebug(
-                                "Debug: Required role (" + std::to_string(roleId.first) + ") of variable " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first
+                                "Debug: Required role (" + std::to_string(roleId.first) + ") of variable " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device "
+                                    + deviceIterator.first
                                     + ". Simple UI element creation is not possible.");
                           wrongDirection = true;
                         }
@@ -693,6 +696,7 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
     uiElement->peerInfo->outputPeers.clear();
     uiElement->roomId = 0;
     uiElement->categoryIds.clear();
+    uiElement->nodeId.clear();
 
     auto dataIterator = data->structValue->find("label");
     if (dataIterator != data->structValue->end()) uiElement->label = dataIterator->second->stringValue;
@@ -787,6 +791,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
         uiElement->categoryIds.emplace((uint64_t)categoryElement->integerValue64);
       }
     }
+
+    dataIterator = data->structValue->find("node");
+    if (dataIterator != data->structValue->end()) uiElement->nodeId = dataIterator->second->stringValue;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -911,11 +918,12 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
         if (!checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
       }
 
-      auto elementInfo = languageIterator->second->getElementInfo();
+      auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("clickCount", std::make_shared<BaseLib::Variable>(uiElementIterator->first));
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
+      if (!uiElement->nodeId.empty()) elementInfo->structValue->emplace("node", std::make_shared<BaseLib::Variable>(uiElement->nodeId));
       auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       categories->arrayValue->reserve(uiElement->categoryIds.size());
       for (auto categoryId : uiElement->categoryIds) {
@@ -1013,10 +1021,11 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
       if (!checkElementAccess(clientInfo, uiElement, languageIterator->second)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     }
 
-    auto elementInfo = languageIterator->second->getElementInfo();
+    auto elementInfo = languageIterator->second->getElementInfo(false);
     elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
     elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
     elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
+    if (!uiElement->nodeId.empty()) elementInfo->structValue->emplace("node", std::make_shared<BaseLib::Variable>(uiElement->nodeId));
     auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     categories->arrayValue->reserve(uiElement->categoryIds.size());
     for (auto categoryId : uiElement->categoryIds) {
@@ -1113,7 +1122,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
 
       if (checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
 
-      auto elementInfo = languageIterator->second->getElementInfo();
+      auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
@@ -1190,14 +1199,14 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
 
       if (checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
 
-      auto elementInfo = languageIterator->second->getElementInfo();
+      auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
       auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       categories->arrayValue->reserve(uiElement->categoryIds.size());
-      for (auto categoryId : uiElement->categoryIds) {
-        categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
+      for (auto elementCategoryId : uiElement->categoryIds) {
+        categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(elementCategoryId));
       }
       elementInfo->structValue->emplace("categories", categories);
 
@@ -1245,7 +1254,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
 BaseLib::PVariable UiController::getUiElementTemplate(const BaseLib::PRpcClientInfo &clientInfo, const std::string &elementId, const std::string &language) {
   try {
     auto uiElement = _descriptions->getUiElement(language, elementId);
-    if (uiElement) return uiElement->getElementInfo();
+    if (uiElement) return uiElement->getElementInfo(true);
     else return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
@@ -1306,7 +1315,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo &clientInfo,
   return false;
 }
 
-BaseLib::PVariable UiController::requestUiRefresh(const BaseLib::PRpcClientInfo &clientInfo, const std::string &id) {
+BaseLib::PVariable UiController::requestUiRefresh(const std::string &id) {
   try {
     GD::rpcClient->broadcastRequestUiRefresh(id);
 
@@ -1318,7 +1327,7 @@ BaseLib::PVariable UiController::requestUiRefresh(const BaseLib::PRpcClientInfo 
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId) {
+BaseLib::PVariable UiController::removeUiElement(uint64_t databaseId) {
   try {
     if (databaseId == 0) return BaseLib::Variable::createError(-1, "databaseId is invalid.");
 
@@ -1352,9 +1361,20 @@ BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo &
       }
     }
 
+    auto nodeIterator = _uiElementsByNode.find(elementIterator->second->nodeId);
+    if (nodeIterator != _uiElementsByNode.end()) {
+      for (auto &nodeUiElement : nodeIterator->second) {
+        if (nodeUiElement.get() == elementIterator->second.get()) {
+          nodeIterator->second.erase(nodeUiElement);
+          break;
+        }
+      }
+      if (nodeIterator->second.empty()) _uiElementsByNode.erase(nodeIterator);
+    }
+
     _uiElements.erase(elementIterator);
 
-    requestUiRefresh(clientInfo, "");
+    requestUiRefresh("");
 
     return std::make_shared<BaseLib::Variable>();
   }
@@ -1381,6 +1401,39 @@ BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientI
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::unordered_map<std::string, std::unordered_set<UiController::PUiElement>> UiController::getAllNodeUiElements() {
+  try {
+    std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+    return _uiElementsByNode;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::unordered_map<std::string, std::unordered_set<UiController::PUiElement>>();
+}
+
+void UiController::removeNodeUiElements(const std::string &nodeId) {
+  try {
+    GD::out.printInfo("Info: Removing UI elements of node " + nodeId + "...");
+    std::unordered_set<PUiElement> uiElements;
+
+    {
+      std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+      auto uiElementsIterator = _uiElementsByNode.find(nodeId);
+      if (uiElementsIterator == _uiElementsByNode.end()) {
+        return;
+      }
+      uiElements = uiElementsIterator->second;
+    }
+
+    for (auto &uiElement : uiElements) {
+      GD::out.printInfo("Removing UI element with database ID " + std::to_string(uiElement->databaseId) + "...");
+      removeUiElement(uiElement->databaseId);
+    }
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 std::unordered_set<uint64_t> UiController::getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string &variableName) {

@@ -2872,7 +2872,7 @@ BaseLib::PVariable DatabaseController::setNodeData(const std::string &node, cons
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::deleteNodeData(std::string &node, std::string &key) {
+BaseLib::PVariable DatabaseController::deleteNodeData(const std::string &node, const std::string &key) {
   try {
     {
       std::lock_guard<std::mutex> dataGuard(_nodeDataMutex);

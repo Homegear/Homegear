@@ -683,7 +683,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
       }
       //}}}
 
-      GD::uiController->requestUiRefresh(clientInfo, "");
+      GD::uiController->requestUiRefresh("");
 
       return std::make_shared<BaseLib::Variable>(true);
     }
@@ -1302,7 +1302,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
     }
     //}}}
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return std::make_shared<BaseLib::Variable>(true);
   }
@@ -1332,7 +1332,7 @@ BaseLib::PVariable RPCAddRoomToStory::invoke(BaseLib::PRpcClientInfo clientInfo,
     auto result = GD::bl->db->addRoomToStory((uint64_t)parameters->at(0)->integerValue64,
                                              (uint64_t)parameters->at(1)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -1902,7 +1902,7 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
                                          parameters->size()
                                              == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -1934,7 +1934,7 @@ BaseLib::PVariable RPCCreateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
                                           parameters->size()
                                               == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -2266,7 +2266,7 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     GD::systemVariableController->removeRoom(roomId);
     GD::bl->db->removeRoomFromStories(roomId);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -2295,7 +2295,7 @@ BaseLib::PVariable RPCDeleteStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     auto result = GD::bl->db->deleteStory(storyId);
     GD::bl->db->removeStoryFromBuildings(storyId);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -5007,39 +5007,15 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean,
-                                                                                                                      BaseLib::VariableType::tBoolean}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tString}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean,
-                                                                                                                      BaseLib::VariableType::tBoolean})
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean,
+                                                                                                                                                     BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString,
+                                                                                                                                                     BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString,
+                                                                                                                                                     BaseLib::VariableType::tBoolean, BaseLib::VariableType::tBoolean})
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
     std::string serialNumber;
@@ -5053,8 +5029,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       int32_t pos = parameters->at(0)->stringValue.find(':');
       if (pos > -1) {
         serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1)
-          channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
       } else serialNumber = parameters->at(0)->stringValue;
       if (parameters->size() >= 3) requestFromDevice = parameters->at(2)->booleanValue;
       if (parameters->size() >= 4) asynchronously = parameters->at(3)->booleanValue;
@@ -5064,9 +5039,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       if (parameters->size() >= 5) asynchronously = parameters->at(4)->booleanValue;
     }
 
-    if (useSerialNumber && checkAcls)
-      return BaseLib::Variable::createError(-32603,
-                                            "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+    if (useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32603, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
     if (!useSerialNumber) {
       if (peerId == 0 && channel < 0) {
@@ -5081,6 +5054,14 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         requestParameters->arrayValue->push_back(parameters->at(2));
         std::string methodName = "getMetadata";
         return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+      } else if (peerId == 0x50000000 || peerId == 0x50000001) {
+        if (!clientInfo->acls->checkNodeBlueVariableReadAccess(parameters->at(2)->stringValue, channel)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+        requestParameters->arrayValue->reserve(2);
+        requestParameters->arrayValue->push_back(parameters->at(2));
+        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>((peerId == 0x50000000 ? "i" : "o") + std::to_string(parameters->at(1)->integerValue)));
+        std::string methodName = "getNodeData";
+        return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
       }
     }
 
@@ -5091,28 +5072,16 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       if (central) {
         if (useSerialNumber) {
           if (central->peerExists(serialNumber))
-            return central->getValue(clientInfo,
-                                     serialNumber,
-                                     channel,
-                                     parameters->at(1)->stringValue,
-                                     requestFromDevice,
-                                     asynchronously);
+            return central->getValue(clientInfo, serialNumber, channel, parameters->at(1)->stringValue, requestFromDevice, asynchronously);
         } else {
           if (!central->peerExists(peerId)) continue;
 
           if (checkAcls) {
             auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
-            if (!peer
-                || !clientInfo->acls->checkVariableReadAccess(peer, channel, parameters->at(2)->stringValue))
-              return BaseLib::Variable::createError(-32603, "Unauthorized.");
+            if (!peer || !clientInfo->acls->checkVariableReadAccess(peer, channel, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
           }
 
-          return central->getValue(clientInfo,
-                                   peerId,
-                                   channel,
-                                   parameters->at(2)->stringValue,
-                                   requestFromDevice,
-                                   asynchronously);
+          return central->getValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
         }
       }
     }
@@ -5289,19 +5258,6 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
     if (!interfaceId.empty() && clientInfo->sendEventsToRpcServer) {
       //Already initialized
       return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
-    }
-
-    if (!url.empty()
-        && GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end()) {
-      //Todo: Remove beginning of 2021
-      GD::out.printWarning(
-          "Warning: Using clientAddressesToReplace is deprecated and will be removed in future versions of Homegear.");
-      std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
-      std::string remoteIP = clientInfo->address;
-      if (remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");
-      GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
-      GD::out.printInfo("Info: Replacing address " + url + " with " + newAddress);
-      url = newAddress;
     }
 
     std::pair<std::string, std::string> server;
@@ -6568,7 +6524,7 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
 
     auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -6659,7 +6615,7 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
                                                  parameters->at(2)->stringValue,
                                                  (uint64_t)parameters->at(3)->integerValue64);
 
-      GD::uiController->requestUiRefresh(clientInfo, "");
+      GD::uiController->requestUiRefresh("");
 
       return std::make_shared<BaseLib::Variable>(result);
     }
@@ -6692,7 +6648,7 @@ BaseLib::PVariable RPCRemoveRoomFromStory::invoke(BaseLib::PRpcClientInfo client
     auto result = GD::bl->db->removeRoomFromStory((uint64_t)parameters->at(0)->integerValue64,
                                                   (uint64_t)parameters->at(1)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -6945,7 +6901,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     auto pos = filename.find_last_of('.');
     if (pos != std::string::npos) ending = filename.substr(pos);
     GD::bl->hf.toLower(ending);
-    if (ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs") {
+    if (ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".php8" || ending == ".hgs") {
 #ifndef NO_SCRIPTENGINE
       internalEngine = true;
 #else
@@ -7733,7 +7689,7 @@ BaseLib::PVariable RPCSetRoleMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
 
     auto result = GD::bl->db->setRoleMetadata((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -8042,16 +7998,13 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       int32_t pos = parameters->at(0)->stringValue.find(':');
       if (pos > -1) {
         serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1)
-          channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
       } else serialNumber = parameters->at(0)->stringValue;
     } else {
       channel = parameters->at(1)->integerValue;
     }
 
-    if (useSerialNumber && checkAcls)
-      return BaseLib::Variable::createError(-32603,
-                                            "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+    if (useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32603, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
     BaseLib::PVariable value;
     if (useSerialNumber && parameters->size() >= 3) value = parameters->at(2);
@@ -8078,30 +8031,29 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         requestParameters->arrayValue->emplace_back(value);
         std::string methodName = "setMetadata";
         return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+      } else if (peerId == 0x50000000 || peerId == 0x50000001) {
+        if (!clientInfo->acls->checkNodeBlueVariableWriteAccess(parameters->at(2)->stringValue, channel)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        auto variables = std::make_shared<std::vector<std::string>>();
+        variables->emplace_back(parameters->at(2)->stringValue);
+        auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
+        values->emplace_back(value);
+        GD::nodeBlueServer->broadcastEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+        return std::make_shared<BaseLib::Variable>();
       }
     }
 
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
-         i != families.end(); ++i) {
+    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
       std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
       if (central) {
         if (useSerialNumber) {
-          if (central->peerExists(serialNumber))
-            return central->setValue(clientInfo,
-                                     serialNumber,
-                                     channel,
-                                     parameters->at(1)->stringValue,
-                                     value,
-                                     wait);
+          if (central->peerExists(serialNumber)) return central->setValue(clientInfo, serialNumber, channel, parameters->at(1)->stringValue, value, wait);
         } else {
           if (!central->peerExists(peerId)) continue;
 
           if (checkAcls) {
             auto peer = central->getPeer(peerId);
-            if (!peer
-                || !clientInfo->acls->checkVariableWriteAccess(peer, channel, parameters->at(2)->stringValue))
-              return BaseLib::Variable::createError(-32603, "Unauthorized.");
+            if (!peer || !clientInfo->acls->checkVariableWriteAccess(peer, channel, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
           }
 
           return central->setValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, value, wait);
@@ -8515,7 +8467,7 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
                                       parameters->at(1),
                                       std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -8557,7 +8509,7 @@ BaseLib::PVariable RPCUpdateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
                                        parameters->at(1),
                                        std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }

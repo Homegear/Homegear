@@ -282,6 +282,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("getUiElementTemplate", std::make_shared<RpcMethods::RpcGetUiElementTemplate>());
     _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
     _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
+    _rpcMethods.emplace("removeNodeUiElements", std::make_shared<RpcMethods::RpcRemoveNodeUiElements>());
     _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
   }
 
@@ -334,6 +335,8 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
                                                                                                                                                             std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeEvent",
                                                                                                                                                   std::bind(&NodeBlueServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeBlueVariableEvent",
+                                                                                                                                                  std::bind(&NodeBlueServer::nodeBlueVariableEvent, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeRedNodeInput",
                                                                                                                                                   std::bind(&NodeBlueServer::nodeRedNodeInput, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("setCredentials",
@@ -1377,10 +1380,19 @@ void NodeBlueServer::startFlows() {
     duration = BaseLib::HelperFunctions::getTime() - startTime;
     _out.printInfo("Info: Calling startUpComplete took " + std::to_string(duration) + "ms.");
 
-    std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
-    std::string dataKey;
-    for (auto nodeId : nodeData) {
-      if (allNodeIds.find(nodeId) == allNodeIds.end() && nodeIds.find(nodeId) == nodeIds.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
+    { //Remove node data of non-existant nodes
+      std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
+      std::string dataKey;
+      for (auto &nodeId : nodeData) {
+        if (allNodeIds.find(nodeId) == allNodeIds.end() && nodeIds.find(nodeId) == nodeIds.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
+      }
+    }
+
+    { //Remove UI elements of non-existant nodes
+      auto nodeUiElements = GD::uiController->getAllNodeUiElements();
+      for (auto &nodeId : nodeUiElements) {
+        if (allNodeIds.find(nodeId.first) == allNodeIds.end() && nodeIds.find(nodeId.first) == nodeIds.end()) GD::uiController->removeNodeUiElements(nodeId.first);
+      }
     }
 
     GD::rpcClient->broadcastNodeEvent("global", "flowsStarted", std::make_shared<BaseLib::Variable>(true), false);
@@ -2448,7 +2460,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
     bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
-    if (id != 0) {
+    if (id != 0 && id != 0x50000001) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
@@ -2468,6 +2480,13 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
           if (_nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
             if (systemVariable && _nodeBlueClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
+              newVariables->push_back(variables->at(i));
+              newValues->push_back(values->at(i));
+            }
+          }
+        } else if (id == 0x50000001) {
+          if (_nodeBlueClientInfo->acls->variablesWriteSet()) { //Yes, this is a write as it is a output from the node, even though it's in broadcast
+            if (_nodeBlueClientInfo->acls->checkNodeBlueVariableWriteAccess(variables->at(i), channel)) {
               newVariables->push_back(variables->at(i));
               newValues->push_back(values->at(i));
             }
@@ -3937,6 +3956,23 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData &clientData, Ba
     _nodeEventCounter++;
 
     GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2), parameters->at(3)->booleanValue);
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::nodeBlueVariableEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 5) return BaseLib::Variable::createError(-1, "Method expects exactly five parameters.");
+
+    auto variables = std::make_shared<std::vector<std::string>>();
+    variables->emplace_back(parameters->at(3)->stringValue);
+    auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
+    values->emplace_back(parameters->at(4));
+    GD::rpcClient->broadcastEvent(parameters->at(0)->stringValue, parameters->at(1)->integerValue64, parameters->at(2)->integerValue, "", variables, values);
     return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
