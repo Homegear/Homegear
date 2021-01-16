@@ -903,10 +903,16 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
       auto &uiElement = uiElementIterator->second;
       auto languageIterator = uiElement->rpcElement.find(language);
       if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
+        auto language2 = language;
+        auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement && language2.size() == 5) {
+          language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+          rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        }
+        if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
         if (!rpcElement) continue;
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
+        uiElement->rpcElement.emplace(language2, rpcElement);
+        languageIterator = uiElement->rpcElement.find(language2);
         if (languageIterator == uiElement->rpcElement.end()) continue;
       }
 
@@ -1006,10 +1012,16 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
 
     auto languageIterator = uiElement->rpcElement.find(language);
     if (languageIterator == uiElement->rpcElement.end()) {
-      auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-      if (!rpcElement) return BaseLib::Variable::createError(-32500, "Unknown application error.");
-      uiElement->rpcElement.emplace(language, rpcElement);
-      languageIterator = uiElement->rpcElement.find(language);
+      auto language2 = language;
+      auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+      if (!rpcElement && language2.size() == 5) {
+        language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+        rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+      }
+      if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
+      if (!rpcElement) return BaseLib::Variable::createError(-1, "No XML file found for UI element.");
+      uiElement->rpcElement.emplace(language2, rpcElement);
+      languageIterator = uiElement->rpcElement.find(language2);
       if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
     }
 
@@ -1113,11 +1125,17 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
     for (auto &uiElement : roomIterator->second) {
       auto languageIterator = uiElement->rpcElement.find(language);
       if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-        if (!rpcElement) continue;
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
-        if (languageIterator == uiElement->rpcElement.end()) continue;
+        auto language2 = language;
+        auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement && language2.size() == 5) {
+          language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+          rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        }
+        if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement) return BaseLib::Variable::createError(-1, "No XML file found for UI element.");
+        uiElement->rpcElement.emplace(language2, rpcElement);
+        languageIterator = uiElement->rpcElement.find(language2);
+        if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
       }
 
       if (checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
@@ -1190,11 +1208,17 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
     for (auto &uiElement : categoryIterator->second) {
       auto languageIterator = uiElement->rpcElement.find(language);
       if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-        if (!rpcElement) continue;
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
-        if (languageIterator == uiElement->rpcElement.end()) continue;
+        auto language2 = language;
+        auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement && language2.size() == 5) {
+          language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+          rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        }
+        if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement) return BaseLib::Variable::createError(-1, "No XML file found for UI element.");
+        uiElement->rpcElement.emplace(language2, rpcElement);
+        languageIterator = uiElement->rpcElement.find(language2);
+        if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
       }
 
       if (checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
@@ -1254,6 +1278,11 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
 BaseLib::PVariable UiController::getUiElementTemplate(const BaseLib::PRpcClientInfo &clientInfo, const std::string &elementId, const std::string &language) {
   try {
     auto uiElement = _descriptions->getUiElement(language, elementId);
+    if (!uiElement && language.size() == 5) {
+      auto languageCodePair = BaseLib::HelperFunctions::splitFirst(language, '-');
+      uiElement = _descriptions->getUiElement(languageCodePair.first, elementId);
+    }
+    if (!uiElement) uiElement = _descriptions->getUiElement("en", elementId);
     if (uiElement) return uiElement->getElementInfo(true);
     else return std::make_shared<BaseLib::Variable>();
   }

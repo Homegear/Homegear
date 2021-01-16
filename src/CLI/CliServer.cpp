@@ -73,7 +73,8 @@ std::string CliServer::userCommand(std::string &command) {
         return stringStream.str();
       }
 
-      auto groups = GD::bl->db->getGroups("en-US");
+      auto groups = GD::bl->db->getGroups("en");
+      if (groups->arrayValue->empty()) groups = GD::bl->db->getGroups("en-US"); //Backwards compatibility
       for (auto &group : *groups->arrayValue) {
         auto nameIterator = group->structValue->find("NAME");
         if (nameIterator == group->structValue->end()) continue;
