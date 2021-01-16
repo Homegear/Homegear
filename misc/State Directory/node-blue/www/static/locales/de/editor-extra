@@ -58,6 +58,7 @@
             "parsers" : "Parser",
             "time" : "Zeit",
             "homegear": "Homegear",
+            "homegear ui": "Homegear-UI",
             "io": "IO",
             "network": "Netzwerk",
             "multimedia": "Multimedia"

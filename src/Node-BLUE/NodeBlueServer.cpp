@@ -1653,7 +1653,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       responseEncoding = "application/json";
     } else if (path == "node-blue/locales/nodes") {
       if (!loginValid) return "unauthorized";
-      std::string language = "en-US";
+      std::string language = "en";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
       for (auto &arg : args) {
         auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
@@ -1672,7 +1672,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
     } else if (path.compare(0, 18, "node-blue/locales/") == 0) {
       if (!loginValid) return "unauthorized";
       std::string localePath = _webroot + "static/locales/";
-      std::string language = "en-US";
+      std::string language = "en";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
       for (auto &arg : args) {
         auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');

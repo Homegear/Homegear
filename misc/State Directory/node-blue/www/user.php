@@ -13,7 +13,7 @@ class User
             $settings = hg_get_user_metadata($_SERVER['SSL_CLIENT_S_DN_CN']);
             $_SESSION['authorized'] = true;
             $_SESSION['user'] = $_SERVER['SSL_CLIENT_S_DN_CN'];
-            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+            if (array_key_exists('locale', $settings)) $_SESSION['locale'] = array($settings['locale']);
         }
      
         if (array_key_exists('CLIENT_AUTHENTICATED', $_SERVER) && $_SERVER['CLIENT_AUTHENTICATED'] == "true" && 
@@ -22,7 +22,7 @@ class User
             $settings = hg_get_user_metadata($_SERVER['CLIENT_VERIFIED_USERNAME']);
             $_SESSION['authorized'] = true;
             $_SESSION['user'] = $_SERVER['CLIENT_VERIFIED_USERNAME'];
-            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+            if (array_key_exists('locale', $settings)) $_SESSION['locale'] = array($settings['locale']);
         }
 
         $authorized = (isset($_SESSION["authorized"]) && $_SESSION["authorized"] === true && isset($_SESSION["user"]));
@@ -37,7 +37,7 @@ class User
         if(!array_key_exists('locale', $_SESSION))
         {
             $settings = hg_get_user_metadata($username);
-            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+            if (array_key_exists('locale', $settings)) $_SESSION['locale'] = array($settings['locale']);
         }
 
         return $authorized;
@@ -52,7 +52,7 @@ class User
             $_SESSION["authorized"] = true;
             $_SESSION["user"] = $username;
             $settings = hg_get_user_metadata($username);
-            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+            if (array_key_exists('locale', $settings)) $_SESSION['locale'] = array($settings['locale']);
             return 0;
         }
         return -1;

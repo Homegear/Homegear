@@ -29,7 +29,7 @@ if (!empty($_SERVER['ANONYMOUS_NODE_BLUE_PATHS'])) {
 
 			if(!array_key_exists('locale', $_SESSION)) {
 	            $settings = hg_get_user_metadata($_SESSION['user']);
-	            $_SESSION['locale'] = array((array_key_exists('locale', $settings) ? $settings['locale'] : 'en-US'));
+	            if (array_key_exists('locale', $settings)) $_SESSION['locale'] = array($settings['locale']);
 	        }
 
 			break;
@@ -64,7 +64,7 @@ if (!$_SESSION["authorized"]) {
 <?php
 if(isset($_SESSION['locale']) && is_array($_SESSION['locale']) && count($_SESSION['locale']) > 0)
 {
-    if(array_search('en-US', $_SESSION['locale']) === false) array_push($_SESSION['locale'], 'en-US');
+    if(array_search('en', $_SESSION['locale']) === false) array_push($_SESSION['locale'], 'en');
     print('var locale = '.json_encode($_SESSION['locale']).';');
 }
 else
