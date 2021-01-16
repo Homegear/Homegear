@@ -65,6 +65,7 @@ if (!$_SESSION["authorized"]) {
 if(isset($_SESSION['locale']) && is_array($_SESSION['locale']) && count($_SESSION['locale']) > 0)
 {
     if(array_search('en', $_SESSION['locale']) === false) array_push($_SESSION['locale'], 'en');
+    if(array_search('en-US', $_SESSION['locale']) === false) array_push($_SESSION['locale'], 'en-US');
     print('var locale = '.json_encode($_SESSION['locale']).';');
 }
 else
