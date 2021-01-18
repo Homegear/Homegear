@@ -725,6 +725,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
             auto nameIterator = peerElement->structValue->find("name");
             if (nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
 
+            auto unitIterator = peerElement->structValue->find("unit");
+            if (unitIterator != peerElement->structValue->end()) variableInfo->unit = unitIterator->second->stringValue;
+
             auto minimumValueIterator = peerElement->structValue->find("minimum");
             if (minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
 
