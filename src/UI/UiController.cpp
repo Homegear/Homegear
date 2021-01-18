@@ -736,6 +736,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
 
             auto maximumValueScaledIterator = peerElement->structValue->find("maximumScaled");
             if (maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
+
+            auto renderingIterator = peerElement->structValue->find("rendering");
+            if (renderingIterator != peerElement->structValue->end()) variableInfo->rendering = renderingIterator->second;
           } else if (peerElement->type == BaseLib::VariableType::tInteger || peerElement->type == BaseLib::VariableType::tInteger64) {
             variableInfo->peerId = (uint64_t)peerElement->integerValue64;
           } else continue;
