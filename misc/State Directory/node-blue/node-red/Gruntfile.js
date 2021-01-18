@@ -6,6 +6,7 @@
  * - Include select2
  * - Don't delete public/icons on clean
  * - Copy node icons to public/icons
+ * - Add Homegear UI icons
  * - Copy translation files
  **/
 
@@ -155,6 +156,7 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/ui/state.js",
                     "packages/node_modules/@node-red/editor-client/src/js/nodes.js",
                     "packages/node_modules/@node-red/editor-client/src/js/font-awesome.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/homegear-ui-icons.js",
                     "packages/node_modules/@node-red/editor-client/src/js/history.js",
                     "packages/node_modules/@node-red/editor-client/src/js/validators.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/utils.js",
