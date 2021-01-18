@@ -41,12 +41,14 @@ class UiController {
   struct UiElement {
     uint64_t databaseId = 0;
     std::string elementId;
+    BaseLib::PVariable icons;
     std::string label;
     BaseLib::PVariable data;
     BaseLib::PVariable metadata;
     uint64_t roomId = 0;
     std::unordered_set<uint64_t> categoryIds;
     std::string nodeId;
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t, BaseLib::PVariable>> renderingInfo;
     BaseLib::DeviceDescription::UiElements::PUiPeerInfo peerInfo = std::make_shared<BaseLib::DeviceDescription::UiElements::UiPeerInfo>();
     std::unordered_map<std::string, BaseLib::DeviceDescription::PHomegearUiElement> rpcElement;
   };

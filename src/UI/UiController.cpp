@@ -701,6 +701,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
     auto dataIterator = data->structValue->find("label");
     if (dataIterator != data->structValue->end()) uiElement->label = dataIterator->second->stringValue;
 
+    dataIterator = data->structValue->find("icons");
+    if (dataIterator != data->structValue->end()) uiElement->icons = dataIterator->second;
+
     dataIterator = data->structValue->find("inputPeers");
     if (dataIterator != data->structValue->end()) {
       uiElement->peerInfo->inputPeers.reserve(dataIterator->second->arrayValue->size());
@@ -927,6 +930,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
       auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("clickCount", std::make_shared<BaseLib::Variable>(uiElementIterator->first));
+      if (uiElement->icons) (*elementInfo->structValue)["icons"] = uiElement->icons;
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
       if (!uiElement->nodeId.empty()) elementInfo->structValue->emplace("node", std::make_shared<BaseLib::Variable>(uiElement->nodeId));
@@ -1035,6 +1039,7 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
 
     auto elementInfo = languageIterator->second->getElementInfo(false);
     elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+    if (uiElement->icons) (*elementInfo->structValue)["icons"] = uiElement->icons;
     elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
     elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
     if (!uiElement->nodeId.empty()) elementInfo->structValue->emplace("node", std::make_shared<BaseLib::Variable>(uiElement->nodeId));
