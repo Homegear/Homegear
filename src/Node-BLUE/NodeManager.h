@@ -103,7 +103,7 @@ class NodeManager {
     std::string codeDirectory;
     bool local = true;
     std::string modulePath;
-    std::unordered_map<NodeType, PNodeInfo> nodes;
+    std::map<NodeType, PNodeInfo> nodes; //Nodes are displayed in the frontend in this order, so we need an ordered map
     std::unordered_map<std::string, PNodeInfo> nodesByFilePrefix;
   };
   typedef std::shared_ptr<ManagerModuleInfo> PManagerModuleInfo;
@@ -201,7 +201,7 @@ class NodeManager {
 
   std::mutex _nodesMutex;
   std::unordered_map<NodeId, Flows::PINode> _nodes;
-  std::unordered_map<ModuleName, PManagerModuleInfo> _managerModuleInfo;
+  std::map<ModuleName, PManagerModuleInfo> _managerModuleInfo; //Modules are displayed in the frontend in this order, so we need an ordered map
   std::unordered_map<NodeType, PManagerModuleInfo> _managerModuleInfoByNodeType;
   /**
    * This map is just a shortcut for faster access as node info is accessed a lot.
