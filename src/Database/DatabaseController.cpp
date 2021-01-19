@@ -415,7 +415,9 @@ bool DatabaseController::convertDatabase() {
     int64_t versionId = result->at(0).at(0)->intValue;
     std::string version = result->at(0).at(3)->textValue;
 
-    if (version == "0.7.12") return false; //Up to date
+    static const std::string kCurrentVersion("0.8.0");
+
+    if (version == kCurrentVersion) return false; //Up to date
     /*if(version == "0.0.7")
 		{
 			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
@@ -821,8 +823,45 @@ bool DatabaseController::convertDatabase() {
 
       version = "0.7.12";
     }
+    if (version == "0.7.12") {
+      GD::out.printMessage("Converting database from version " + version + " to version 0.8.0...");
 
-    if (version != "0.7.12") {
+      data.clear();
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("Base.doorHandle"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("Base.doorContact"));
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+      data.at(0)->textValue = "Base.heatingSliderModeWindowhandle";
+      data.at(1)->textValue = "Base.heatingIsStateSliderModeWindowContact";
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+      data.at(0)->textValue = "Base.heatingSliderModeWindowhandle";
+      data.at(1)->textValue = "Base.heatingIsStateSliderModeWindow";
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+      data.at(0)->textValue = "Base.heatingSliderModeWindowhandle";
+      data.at(1)->textValue = "Base.heatingIsStateSliderModeWindowHandle";
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+      data.at(0)->textValue = "Base.heatingSliderMode";
+      data.at(1)->textValue = "Base.heatingIsStateSliderMode";
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+      data.at(0)->textValue = "Base.heatingTemperature";
+      data.at(1)->textValue = "Base.heatingIsState";
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+      data.at(0)->textValue = "Base.windowHandle";
+      data.at(1)->textValue = "Base.windowContact";
+      _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data);
+
+      data.clear();
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+      //Don't forget to set new version in initializeDatabase!!!
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.0"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+      _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+      version = "0.8.0";
+    }
+
+    if (version != kCurrentVersion) {
       GD::out.printCritical("Critical: Unknown database version: " + version);
       return true; //Don't know, what to do
     }

@@ -297,7 +297,7 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.heatingIsStateSliderModeWindow",
+                    "element": "Base.heatingSliderModeWindowhandle",
                     "roleIdsIn": [
                         [
                             201001
@@ -328,7 +328,7 @@
                     ]
                 },
                 {
-                    "element": "Base.heatingIsStateSliderMode",
+                    "element": "Base.heatingSliderMode",
                     "roleIdsIn": [
                         [
                             201001
@@ -469,7 +469,7 @@
         },
         "ui": {
             "simpleCreationInfo": {
-                "element": "Base.doorContact",
+                "element": "Base.doorHandle",
                 "roleIdsIn": [
                     [
                         301001
@@ -491,7 +491,7 @@
         },
         "ui": {
             "simpleCreationInfo": {
-                "element": "Base.windowContact",
+                "element": "Base.windowHandle",
                 "roleIdsIn": [
                     [
                         301002

@@ -115,9 +115,7 @@ case $1 in
 
 			cd /var/lib/homegear/node-blue/node-red
 			rm -Rf /var/lib/homegear/node-blue/node-red/node_modules
-			export NODE_ENV=production
-			export NODE_OPTIONS=--max-old-space-size=512
-			npm install --no-audit --no-update-notifier --unsafe-perm --no-fund --production --color false 2>/dev/null
+			NODE_OPTIONS=--max-old-space-size=512 npm install --no-audit --no-update-notifier --unsafe-perm --no-fund --production --color false 2>/dev/null
 		fi
 
 		# {{{ Move old Node-BLUE data path to new one
