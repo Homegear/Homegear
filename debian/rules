@@ -67,8 +67,7 @@ override_dh_auto_install:
 
 	# {{{ Install Node-RED modules
 	rm -Rf $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/node-red/node_modules
-	cd $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/node-red/
-	NODE_OPTIONS=--max-old-space-size=512 npm install --no-audit --no-update-notifier --unsafe-perm --no-fund --production
+	cd $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/node-red/ && NODE_OPTIONS=--max-old-space-size=512 npm install --no-audit --no-update-notifier --unsafe-perm --no-fund --production
 	# }}}
 
 	# {{{ Remove links again
