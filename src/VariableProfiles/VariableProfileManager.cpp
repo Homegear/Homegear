@@ -272,6 +272,15 @@ bool VariableProfileManager::setValue(const BaseLib::PRpcClientInfo &clientInfo,
         GD::out.printWarning("Warning: Error metadata variable \"" + variable + "\" of profile " + std::to_string(profileId) + ": " + result->structValue->at("faultString")->stringValue);
         return false;
       }
+    } else if (peerId == 0x50000000 || peerId == 0x50000001) { //Node-BLUE variable
+      if (!clientInfo->acls->checkNodeBlueVariableWriteAccess(variable, channel)) return false;
+      auto variables = std::make_shared<std::vector<std::string>>();
+      variables->emplace_back(variable);
+      auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
+      values->emplace_back(value);
+      GD::nodeBlueServer->broadcastEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+      variableEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+      return true;
     } else //Device variable
     {
       auto families = GD::familyController->getFamilies();

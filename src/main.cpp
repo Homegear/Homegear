@@ -109,23 +109,30 @@ void bindRPCServers() {
   }
 }
 
-void startRPCServers() {
+void initRPCServers() {
   for (int32_t i = 0; i < GD::serverInfo.count(); i++) {
     BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
-    std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
+    std::string info = "Initializing RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
     if (settings->ssl) info += ", SSL enabled";
     else GD::bl->rpcPort = static_cast<uint32_t>(settings->port);
     if (settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
     info += "...";
     GD::out.printInfo(info);
     if (!GD::rpcServers[i]) GD::rpcServers[i] = std::make_shared<Rpc::RpcServer>();
-    GD::rpcServers[i]->start(settings);
   }
   if (GD::rpcServers.empty()) {
     GD::out.printCritical("Critical: No RPC servers are running. Terminating Homegear.");
     exitHomegear(1);
   }
+}
 
+void startRPCServers() {
+  for (int32_t i = 0; i < GD::serverInfo.count(); i++) {
+    BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
+    std::string info = "Starting RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
+    if (settings->ssl) info += ", SSL enabled";
+    GD::rpcServers[i]->start(settings);
+  }
 }
 
 void stopRPCServers(bool dispose) {
@@ -243,6 +250,7 @@ void reloadHomegear() {
       loadSettings();
       GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
       GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+      initRPCServers();
       startRPCServers();
       GD::mqtt->loadSettings();
       if (GD::mqtt->enabled()) {
@@ -855,13 +863,7 @@ void startUp() {
     GD::out.printInfo("Initializing RPC client...");
     GD::rpcClient->init();
 
-    startRPCServers();
-
-    GD::mqtt->loadSettings(); //Needs database to be available
-    if (GD::mqtt->enabled()) {
-      GD::out.printInfo("Starting MQTT client...");
-      GD::mqtt->start();
-    }
+    initRPCServers();
 
     GD::out.printInfo("Start listening for packets...");
     GD::familyController->physicalInterfaceStartListening();
@@ -883,6 +885,14 @@ void startUp() {
 
     GD::out.printInfo("Starting variable profile manager...");
     GD::variableProfileManager->load();
+
+    startRPCServers(); //Required variable profile manager and Node-BLUE to be started, otherwise client might connect and get wrong RPC call results from both.
+
+    GD::mqtt->loadSettings(); //Requires RPC servers to be started.
+    if (GD::mqtt->enabled()) {
+      GD::out.printInfo("Starting MQTT client...");
+      GD::mqtt->start();
+    }
 
     BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
     GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);

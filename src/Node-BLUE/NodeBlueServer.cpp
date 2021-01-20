@@ -3972,6 +3972,7 @@ BaseLib::PVariable NodeBlueServer::nodeBlueVariableEvent(PNodeBlueClientData &cl
     variables->emplace_back(parameters->at(3)->stringValue);
     auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
     values->emplace_back(parameters->at(4));
+    GD::variableProfileManager->variableEvent(parameters->at(0)->stringValue, parameters->at(1)->integerValue64, parameters->at(2)->integerValue, variables, values);
     GD::rpcClient->broadcastEvent(parameters->at(0)->stringValue, parameters->at(1)->integerValue64, parameters->at(2)->integerValue, "", variables, values);
     return std::make_shared<BaseLib::Variable>();
   }

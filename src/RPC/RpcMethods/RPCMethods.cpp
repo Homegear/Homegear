@@ -8038,6 +8038,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
         values->emplace_back(value);
         GD::nodeBlueServer->broadcastEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+        GD::variableProfileManager->variableEvent(parameters->at(0)->stringValue, peerId, channel, variables, values);
         return std::make_shared<BaseLib::Variable>();
       }
     }
