@@ -71,7 +71,7 @@ override_dh_auto_install:
 	# }}}
 
 	# {{{ Remove link to homegear-node again, so it can be recreated correctly when installing Homegear
-	LINKPATH=$(readlink -f /usr/bin/node); if [[ $(LINKPATH,0,7) == "/build/" ]]; then rm -f /usr/bin/node; fi
+	if [ $(echo $(readlink -f /usr/bin/node) | grep -c build) -eq 1 ]; then rm -f /usr/bin/node; fi
 	# }}}
 
 override_dh_strip:
