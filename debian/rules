@@ -71,7 +71,7 @@ override_dh_auto_install:
 	# }}}
 
 	# {{{ Remove link to homegear-node again, so it can be recreated correctly when installing Homegear
-	if [[ $(readlink -f /usr/bin/node) == "$(CURDIR)/debian/homegear/usr/bin/homegear-node" ]]; then rm -f /usr/bin/node; fi
+	PACKAGEDIR=$(CURDIR); if [[ $(readlink -f /usr/bin/node) == "$PACKAGEDIR/debian/homegear/usr/bin/homegear-node" ]]; then rm -f /usr/bin/node; fi
 	# }}}
 
 override_dh_strip:
