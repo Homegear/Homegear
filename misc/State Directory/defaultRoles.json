@@ -579,12 +579,9 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.shadingButtonsPositionSlats",
+                    "element": "Base.shadingButtonsPosition",
                     "roleIdsIn": [
                         [
-                            501001,
-                            501003,
-                            501002
                         ],
                         [
                             501004
@@ -790,6 +787,26 @@
         },
         "ui": {
             "simpleCreationInfo": [
+                {
+                    "element": "Base.shadingAnwingButtonsPosition",
+                    "roleIdsIn": [
+                        [
+                        ],
+                        [
+                            502004
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            502001,
+                            502003,
+                            502002
+                        ],
+                        [
+                            502004
+                        ]
+                    ]
+                },
                 {
                     "element": "Base.shadingAwningButtonsPositionWindalarm",
                     "roleIdsIn": [
