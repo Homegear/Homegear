@@ -26,7 +26,7 @@
         }
     ],
     "dependencies": {
-        "@homegear/homegear-nodejs": "1.0.6",
+        "@homegear/homegear-nodejs": "1.0.7",
         "ajv": "6.12.6",
         "async-mutex": "0.2.6",
         "basic-auth": "2.0.1",

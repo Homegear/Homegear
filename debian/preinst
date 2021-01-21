@@ -5,11 +5,11 @@ case "$1" in
         ;;
 
     upgrade|abort-upgrade)
-    	service homegear stop
-		mv /var/lib/homegear/flows /var/lib/homegear/node-blue 2>/dev/null
-		rm -Rf /var/lib/homegear/node-blue/node-red/*
-    	rm -f /usr/share/homegear/firmware/GetFirmwareUpdates.sh
-    	rm -f /usr/share/homegear/modules/mod_miscellaneous.so
+        service homegear stop
+        mv /var/lib/homegear/flows /var/lib/homegear/node-blue 2>/dev/null
+        rm -Rf /var/lib/homegear/node-blue/node-red/*
+        rm -f /usr/share/homegear/firmware/GetFirmwareUpdates.sh
+        rm -f /usr/share/homegear/modules/mod_miscellaneous.so
         ;;
 esac
 

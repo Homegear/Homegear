@@ -79,9 +79,9 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastGlobalVariableEvent(std::string &variable, BaseLib::PVariable &value);
 
-  void broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable& deviceDescriptions);
+  void broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions);
 
-  void broadcastDeleteDevices(const BaseLib::PVariable& deviceInfo);
+  void broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo);
 
   void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
@@ -95,7 +95,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
 
-  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId);
 
   std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
@@ -105,7 +105,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-  void nodeOutput(const std::string& nodeId, uint32_t index, const BaseLib::PVariable& message, bool synchronous);
+  void nodeOutput(const std::string &nodeId, uint32_t index, const BaseLib::PVariable &message, bool synchronous);
 
   BaseLib::PVariable addNodesToFlow(const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes);
 
@@ -119,9 +119,9 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodeCredentials(const std::string &nodeId);
 
-  BaseLib::PVariable getNodeVariable(std::string nodeId, std::string topic);
+  BaseLib::PVariable getNodeVariable(const std::string& nodeId, const std::string& topic);
 
-  void setNodeVariable(const std::string& nodeId, const std::string &topic, const BaseLib::PVariable &value);
+  void setNodeVariable(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
 
   void enableNodeEvents();
 
@@ -156,6 +156,11 @@ class NodeBlueServer : public BaseLib::IQueue {
     // {{{ Response
     std::vector<char> packet;
     // }}}
+  };
+
+  struct NodeRoutingInfo {
+    int32_t clientId = -1;
+    NodeManager::NodeCodeType nodeCodeType = NodeManager::NodeCodeType::undefined;
   };
 
   BaseLib::Output _out;
@@ -197,7 +202,7 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
   std::mutex _nodeClientIdMapMutex;
-  std::map<std::string, int32_t> _nodeClientIdMap;
+  std::map<std::string, NodeRoutingInfo> _nodeClientIdMap;
   std::mutex _flowClientIdMapMutex;
   std::map<std::string, int32_t> _flowClientIdMap;
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
@@ -230,7 +235,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable send(PNodeBlueClientData &clientData, std::vector<char> &data);
 
-  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, std::string methodName, const BaseLib::PArray &parameters, bool wait);
+  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, const std::string& methodName, const BaseLib::PArray &parameters, bool wait);
 
   void sendResponse(PNodeBlueClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
@@ -240,13 +245,13 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void closeClientConnections();
 
-  void closeClientConnection(const PNodeBlueClientData& client);
+  void closeClientConnection(const PNodeBlueClientData &client);
 
   PNodeBlueProcess getFreeProcess(uint32_t maxThreadCount);
 
   void getMaxThreadCounts();
 
-  bool checkIntegrity(std::string flowsFile);
+  bool checkIntegrity(const std::string& flowsFile);
 
   void backupFlows();
 
@@ -258,10 +263,9 @@ class NodeBlueServer : public BaseLib::IQueue {
                                        std::unordered_map<std::string, BaseLib::PVariable> &subflowInfos,
                                        std::unordered_map<std::string, BaseLib::PVariable> &flowNodes,
                                        std::unordered_map<std::string, BaseLib::PVariable> &subflowNodes,
-                                       std::set<std::string> &flowNodeIds,
                                        std::set<std::string> &allNodeIds);
 
-  void startFlow(PFlowInfoServer &flowInfo, std::set<std::string> &nodes);
+  void startFlow(PFlowInfoServer &flowInfo, const std::unordered_map<std::string, BaseLib::PVariable> &flowNodes);
 
   void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
@@ -271,7 +275,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   std::string installNode(BaseLib::Http &http);
 
-  std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
+  static std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
 
   // {{{ RPC methods
   BaseLib::PVariable registerFlowsClient(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);

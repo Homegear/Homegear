@@ -54,10 +54,10 @@ void SimplePhpNode::input(const Flows::PNodeInfo &nodeInfo, uint32_t index, cons
     parameters->push_back(message);
 
     Flows::PVariable result = invoke("executePhpNode", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 

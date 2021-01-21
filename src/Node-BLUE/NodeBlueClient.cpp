@@ -716,7 +716,7 @@ Flows::PVariable NodeBlueClient::invoke(const std::string &methodName, Flows::PA
 Flows::PVariable NodeBlueClient::invokeNodeMethod(const std::string &nodeId, const std::string &methodName, Flows::PArray parameters, bool wait) {
   try {
     Flows::PINode node = _nodeManager->getNode(nodeId);
-    if (node) return node->invokeLocal(methodName, parameters);
+    if (node && !_nodeManager->isNodeRedNode(node->getType())) return node->invokeLocal(methodName, parameters);
 
     Flows::PArray parametersArray = std::make_shared<Flows::Array>();
     parametersArray->reserve(4);

@@ -53,7 +53,7 @@ bool StatefulPhpNode::init(const Flows::PNodeInfo &nodeInfo) {
 
   Flows::PVariable result = invoke("executePhpNode", parameters);
   if (result->errorStruct) {
-    GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
+    _out->printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
     return false;
   }
 
@@ -67,7 +67,7 @@ bool StatefulPhpNode::init(const Flows::PNodeInfo &nodeInfo) {
 
   result = invoke("executePhpNodeMethod", parameters);
   if (result->errorStruct) {
-    GD::out.printError("Error calling init: " + result->structValue->at("faultString")->stringValue);
+    _out->printError("Error calling init: " + result->structValue->at("faultString")->stringValue);
     return false;
   }
 
@@ -84,7 +84,7 @@ bool StatefulPhpNode::start() {
 
   Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
   if (result->errorStruct) {
-    GD::out.printError("Error calling start: " + result->structValue->at("faultString")->stringValue);
+    _out->printError("Error calling start: " + result->structValue->at("faultString")->stringValue);
     return false;
   }
 
@@ -100,7 +100,7 @@ void StatefulPhpNode::stop() {
   parameters->push_back(innerParameters);
 
   Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-  if (result->errorStruct) GD::out.printError("Error calling stop: " + result->structValue->at("faultString")->stringValue);
+  if (result->errorStruct) _out->printError("Error calling stop: " + result->structValue->at("faultString")->stringValue);
 }
 
 void StatefulPhpNode::waitForStop() {
@@ -112,7 +112,7 @@ void StatefulPhpNode::waitForStop() {
   parameters->push_back(innerParameters);
 
   Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-  if (result->errorStruct) GD::out.printError("Error calling waitForStop: " + result->structValue->at("faultString")->stringValue);
+  if (result->errorStruct) _out->printError("Error calling waitForStop: " + result->structValue->at("faultString")->stringValue);
 }
 
 void StatefulPhpNode::configNodesStarted() {
@@ -125,10 +125,10 @@ void StatefulPhpNode::configNodesStarted() {
     parameters->push_back(innerParameters);
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling configNodesStarted: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling configNodesStarted: " + result->structValue->at("faultString")->stringValue);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -142,10 +142,10 @@ void StatefulPhpNode::startUpComplete() {
     parameters->push_back(innerParameters);
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling startUpComplete: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling startUpComplete: " + result->structValue->at("faultString")->stringValue);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -164,10 +164,10 @@ void StatefulPhpNode::variableEvent(const std::string &source, uint64_t peerId, 
     parameters->push_back(innerParameters);
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling variableEvent: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling variableEvent: " + result->structValue->at("faultString")->stringValue);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -184,10 +184,10 @@ void StatefulPhpNode::setNodeVariable(const std::string &variable, const Flows::
     parameters->push_back(innerParameters);
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling setNodeVariable: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling setNodeVariable: " + result->structValue->at("faultString")->stringValue);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -202,11 +202,11 @@ Flows::PVariable StatefulPhpNode::getConfigParameterIncoming(const std::string &
     parameters->push_back(innerParameters);
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling getConfigParameterIncoming: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling getConfigParameterIncoming: " + result->structValue->at("faultString")->stringValue);
     return result;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return std::make_shared<Flows::Variable>();
 }
@@ -225,10 +225,10 @@ void StatefulPhpNode::input(const Flows::PNodeInfo &nodeInfo, uint32_t index, co
     parameters->push_back(innerParameters);
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling input: " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling input: " + result->structValue->at("faultString")->stringValue);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -241,11 +241,11 @@ Flows::PVariable StatefulPhpNode::invokeLocal(const std::string &methodName, con
     parameters->push_back(std::make_shared<Flows::Variable>(innerParameters));
 
     Flows::PVariable result = invoke("executePhpNodeMethod", parameters);
-    if (result->errorStruct) GD::out.printError("Error calling " + methodName + ": " + result->structValue->at("faultString")->stringValue);
+    if (result->errorStruct) _out->printError("Error calling " + methodName + ": " + result->structValue->at("faultString")->stringValue);
     return result;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return Flows::Variable::createError(-32601, "Requested method not found.");
 }

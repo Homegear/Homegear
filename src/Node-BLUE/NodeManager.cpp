@@ -552,6 +552,18 @@ std::string NodeManager::getFrontendCode(const std::string &type) {
   return std::string();
 }
 
+NodeManager::NodeCodeType NodeManager::getNodeCodeType(const std::string &type) {
+  try {
+    auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
+    if (nodeInfoIterator == _nodeInfoByNodeType.end()) return NodeCodeType::undefined;
+
+    return nodeInfoIterator->second->codeType;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return NodeCodeType::undefined;
+}
+
 bool NodeManager::isNodeRedNode(const std::string &type) {
   try {
     auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
