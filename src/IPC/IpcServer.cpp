@@ -1092,7 +1092,9 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
       return response->finished || clientData->closed || _stopServer;
     })) {
       i++;
-      if (i == 300) {
+      if (i > 60 && (i % 60 == 0)) {
+        _out.printWarning("Warning: IPC client with ID " + std::to_string(clientData->id) + " (Process ID: " + std::to_string(clientData->pid) + ") is still executing RPC method \"." + methodName + "\" after " + std::to_string(i) + " seconds.");
+      } else if (i == 3600) {
         _out.printError("Error: IPC client with ID " + std::to_string(clientData->id) + " is not responding... Closing connection.");
         closeClientConnection(clientData);
         break;

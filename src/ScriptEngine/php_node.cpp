@@ -491,7 +491,6 @@ void php_node_startup() {
   zend_class_entry homegearNodeBaseCe{};
   INIT_CLASS_ENTRY(homegearNodeBaseCe, "HomegearNodeBase", homegear_node_base_methods);
   homegear_node_base_class_entry = zend_register_internal_class(&homegearNodeBaseCe);
-  zend_declare_class_constant_stringl(homegear_node_base_class_entry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
 }
 
 bool php_init_node(PScriptInfo scriptInfo, zend_class_entry *homegearNodeClassEntry, zval *homegearNodeObject) {
@@ -502,6 +501,8 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry *homegearNodeClassEn
       zend_string *className = zend_string_init("HomegearNode", sizeof("HomegearNode") - 1, 0);
       homegearNodeClassEntry = zend_lookup_class(className);
       zend_string_release(className);
+      zend_declare_class_constant_stringl(homegearNodeClassEntry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
+      zend_declare_class_constant_stringl(homegearNodeClassEntry, "FLOW_ID", sizeof("FLOW_ID") - 1, SEG(flowId).c_str(), SEG(flowId).size());
     }
 
     if (!homegearNodeClassEntry) {
