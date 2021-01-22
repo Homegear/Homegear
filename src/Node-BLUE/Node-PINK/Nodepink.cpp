@@ -49,6 +49,10 @@ Nodepink::Nodepink() {
   _nodeBlueClientInfo->user = "SYSTEM (4)";
 }
 
+Nodepink::~Nodepink() {
+  stop();
+}
+
 void Nodepink::sigchildHandler(pid_t pid, int exitCode, int signal, bool coreDumped) {
   try {
     if (pid == _pid) {
@@ -75,6 +79,7 @@ bool Nodepink::isStarted() {
 void Nodepink::start() {
   try {
     _out.printInfo("Starting Node-PINK...");
+    _disposed = false;
     _callbackHandlerId = BaseLib::ProcessManager::registerCallbackHandler(std::function<void(pid_t pid, int exitCode, int signal, bool coreDumped)>(std::bind(&Nodepink::sigchildHandler,
                                                                                                                                                               this,
                                                                                                                                                               std::placeholders::_1,
@@ -85,9 +90,12 @@ void Nodepink::start() {
     startProgram();
 
     std::unique_lock<std::mutex> waitLock(_processStartUpMutex);
+    uint32_t i = 0;
     while (!_processStartUpConditionVariable.wait_for(waitLock, std::chrono::milliseconds(10000), [&] {
       return _stopThread || _startUpError || _processStartUpComplete;
     })) {
+      i++;
+      if (i == 3) break;
       _out.printInfo("Waiting for Node-PINK to get ready.");
     }
 
@@ -104,8 +112,9 @@ void Nodepink::start() {
 
 void Nodepink::stop() {
   try {
-    if (!_processStartUpComplete && _pid == -1) return;
+    if (_disposed) return;
     _out.printInfo("Stopping Node-PINK...");
+    _disposed = true;
     _processStartUpComplete = false;
     _stopThread = true;
     if (_pid != -1) {
@@ -125,6 +134,7 @@ void Nodepink::stop() {
       _stdOut = -1;
       _stdErr = -1;
     }
+    _pid = -1;
     if (_execThread.joinable()) _execThread.join();
     if (_errorThread.joinable()) _errorThread.join();
     BaseLib::ProcessManager::unregisterCallbackHandler(_callbackHandlerId);

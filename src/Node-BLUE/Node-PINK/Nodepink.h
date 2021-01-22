@@ -44,6 +44,7 @@ class Nodepink {
   std::condition_variable _processStartUpConditionVariable;
   std::atomic_bool _processStartUpComplete{false};
   int32_t _callbackHandlerId = -1;
+  std::atomic_bool _disposed{true};
   std::atomic_bool _stopThread{false};
   std::thread _execThread;
   std::thread _errorThread;
@@ -58,6 +59,7 @@ class Nodepink {
   void startProgram();
  public:
   Nodepink();
+  ~Nodepink();
 
   bool isStarted();
   void start();
