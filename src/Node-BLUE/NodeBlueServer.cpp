@@ -750,6 +750,10 @@ BaseLib::PVariable NodeBlueServer::getNodeCredentials(const std::string &nodeId)
   return _nodeBlueCredentials->getCredentials(nodeId, true);
 }
 
+BaseLib::PVariable NodeBlueServer::setNodeCredentials(const std::string &nodeId, const BaseLib::PVariable &credentials) {
+  return _nodeBlueCredentials->setCredentials(nodeId, credentials);
+}
+
 BaseLib::PVariable NodeBlueServer::getNodeCredentialTypes(const std::string &nodeId) {
   std::string type;
   {

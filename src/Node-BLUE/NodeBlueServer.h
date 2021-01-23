@@ -119,6 +119,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodeCredentials(const std::string &nodeId);
 
+  BaseLib::PVariable setNodeCredentials(const std::string &nodeId, const BaseLib::PVariable &credentials);
+
   BaseLib::PVariable getNodeCredentialTypes(const std::string &nodeId);
 
   void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
