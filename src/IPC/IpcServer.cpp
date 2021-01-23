@@ -348,14 +348,14 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
                                                                                                                                                                          std::placeholders::_1,
                                                                                                                                                                          std::placeholders::_2,
                                                                                                                                                                          std::placeholders::_3)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("getNoderedCredentials",
-                                                                                                                                                               std::bind(&IpcServer::getNoderedCredentials,
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("getNodeCredentials",
+                                                                                                                                                               std::bind(&IpcServer::getNodeCredentials,
                                                                                                                                                                          this,
                                                                                                                                                                          std::placeholders::_1,
                                                                                                                                                                          std::placeholders::_2,
                                                                                                                                                                          std::placeholders::_3)));
-  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("setNoderedCredentialTypes",
-                                                                                                                                                               std::bind(&IpcServer::setNoderedCredentialTypes,
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("setNodeCredentialTypes",
+                                                                                                                                                               std::bind(&IpcServer::setNodeCredentialTypes,
                                                                                                                                                                          this,
                                                                                                                                                                          std::placeholders::_1,
                                                                                                                                                                          std::placeholders::_2,
@@ -1555,7 +1555,7 @@ BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData &clientData, int32_t
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable IpcServer::getNoderedCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+BaseLib::PVariable IpcServer::getNodeCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
 
@@ -1570,7 +1570,7 @@ BaseLib::PVariable IpcServer::getNoderedCredentials(PIpcClientData &clientData, 
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable IpcServer::setNoderedCredentialTypes(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+BaseLib::PVariable IpcServer::setNodeCredentialTypes(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
     if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");

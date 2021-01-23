@@ -166,9 +166,9 @@ class IpcServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getClientId(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable getNoderedCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+  BaseLib::PVariable getNodeCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable setNoderedCredentialTypes(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+  BaseLib::PVariable setNodeCredentialTypes(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable registerRpcMethod(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
