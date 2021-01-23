@@ -341,6 +341,8 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
                                                                                                                                                   std::bind(&NodeBlueServer::nodeRedNodeInput, this, std::placeholders::_1, std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("setCredentials",
                                                                                                                                                   std::bind(&NodeBlueServer::setCredentials, this, std::placeholders::_1, std::placeholders::_2)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("setCredentialTypes",
+                                                                                                                                                  std::bind(&NodeBlueServer::setCredentialTypes, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 NodeBlueServer::~NodeBlueServer() {
@@ -686,10 +688,10 @@ void NodeBlueServer::nodeOutput(const std::string &nodeId, uint32_t index, const
     PNodeBlueClientData clientData;
     int32_t clientId = 0;
     {
-      std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-      auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) return;
-      clientId = nodeClientIdIterator->second.clientId;
+      std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+      auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
+      if (nodeInfoIterator == _nodeInfoMap.end()) return;
+      clientId = nodeInfoIterator->second.clientId;
     }
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
@@ -745,7 +747,22 @@ BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs() {
 }
 
 BaseLib::PVariable NodeBlueServer::getNodeCredentials(const std::string &nodeId) {
-  return _nodeBlueCredentials->getCredentials(nodeId);
+  return _nodeBlueCredentials->getCredentials(nodeId, true);
+}
+
+BaseLib::PVariable NodeBlueServer::getNodeCredentialTypes(const std::string &nodeId) {
+  std::string type;
+  {
+    std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMapMutex);
+    auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
+    if (nodeInfoIterator == _nodeInfoMap.end()) return std::make_shared<BaseLib::Variable>();
+    type = nodeInfoIterator->second.type;
+  }
+  return _nodeManager->getNodeCredentialTypes(type);
+}
+
+void NodeBlueServer::setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes) {
+  _nodeManager->registerCredentialTypes(type, credentialTypes);
 }
 
 BaseLib::PVariable NodeBlueServer::getNodeVariable(const std::string &nodeId, const std::string &topic) {
@@ -754,16 +771,16 @@ BaseLib::PVariable NodeBlueServer::getNodeVariable(const std::string &nodeId, co
     int32_t clientId = 0;
     bool isFlow = false;
     {
-      std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-      auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) {
+      std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMapMutex);
+      auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
+      if (nodeInfoIterator == _nodeInfoMap.end()) {
         std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
         auto flowClientIdIterator = _flowClientIdMap.find(nodeId);
         if (flowClientIdIterator == _flowClientIdMap.end()) return std::make_shared<BaseLib::Variable>();
         isFlow = true;
         clientId = flowClientIdIterator->second;
       } else {
-        clientId = nodeClientIdIterator->second.clientId;
+        clientId = nodeInfoIterator->second.clientId;
       }
     }
     {
@@ -794,16 +811,16 @@ void NodeBlueServer::setNodeVariable(const std::string &nodeId, const std::strin
     int32_t clientId = 0;
     bool isFlow = false;
     {
-      std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-      auto nodeClientIdIterator = _nodeClientIdMap.find(nodeId);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) {
+      std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+      auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
+      if (nodeInfoIterator == _nodeInfoMap.end()) {
         std::lock_guard<std::mutex> flowClientIdMapGuard(_flowClientIdMapMutex);
         auto flowClientIdIterator = _flowClientIdMap.find(nodeId);
         if (flowClientIdIterator == _flowClientIdMap.end()) return;
         isFlow = true;
         clientId = flowClientIdIterator->second;
       } else {
-        clientId = nodeClientIdIterator->second.clientId;
+        clientId = nodeInfoIterator->second.clientId;
       }
     }
     {
@@ -1426,8 +1443,8 @@ void NodeBlueServer::sendShutdown() {
       i++;
     }
 
-    std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-    _nodeClientIdMap.clear();
+    std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+    _nodeInfoMap.clear();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1462,8 +1479,8 @@ bool NodeBlueServer::sendReset() {
       }
     }
 
-    std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-    _nodeClientIdMap.clear();
+    std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+    _nodeInfoMap.clear();
 
     return true;
   }
@@ -1754,7 +1771,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
     } else if (path.compare(0, 22, "node-blue/credentials/") == 0 && path.size() > 22) {
       auto id = path.substr(2);
       auto idPair = BaseLib::HelperFunctions::splitLast(id, '/');
-      auto credentials = _nodeBlueCredentials->getCredentials(idPair.second);
+      auto credentials = _nodeBlueCredentials->getCredentials(idPair.second, false);
       _jsonEncoder->encode(credentials, contentString);
       responseEncoding = "application/json";
     } else if (path == "node-blue/flows") {
@@ -3538,9 +3555,10 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, const std::unordered_m
     PNodeBlueClientData clientData = process->getClientData();
 
     {
-      std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+      std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
       for (auto &node : flowNodes) {
-        _nodeClientIdMap.emplace(node.first, NodeRoutingInfo{clientData->id, _nodeManager->getNodeCodeType(node.second->structValue->at("type")->stringValue)});
+        auto type = node.second->structValue->at("type")->stringValue;
+        _nodeInfoMap.emplace(node.first, NodeServerInfo{clientData->id, type, _nodeManager->getNodeCodeType(type)});
       }
     }
 
@@ -3561,9 +3579,9 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, const std::unordered_m
       process->unregisterFlow(flowInfo->id);
 
       {
-        std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
+        std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
         for (auto &node : flowNodes) {
-          _nodeClientIdMap.erase(node.first);
+          _nodeInfoMap.erase(node.first);
         }
       }
 
@@ -3699,10 +3717,10 @@ BaseLib::PVariable NodeBlueServer::executePhpNodeBaseMethod(BaseLib::PArray &par
     PNodeBlueClientData clientData;
     int32_t clientId = 0;
     {
-      std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-      auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (2).");
-      clientId = nodeClientIdIterator->second.clientId;
+      std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+      auto nodeInfoIterator = _nodeInfoMap.find(parameters->at(0)->stringValue);
+      if (nodeInfoIterator == _nodeInfoMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (2).");
+      clientId = nodeInfoIterator->second.clientId;
     }
 
     {
@@ -3888,7 +3906,7 @@ BaseLib::PVariable NodeBlueServer::getCredentials(PNodeBlueClientData &clientDat
   try {
     if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
 
-    return _nodeBlueCredentials->getCredentials(parameters->at(0)->stringValue);
+    return _nodeBlueCredentials->getCredentials(parameters->at(0)->stringValue, true);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3901,21 +3919,21 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData &clientD
     if (parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects exactly four parameters.");
 
     PNodeBlueClientData nodeClientData;
-    NodeRoutingInfo nodeRoutingInfo;
+    NodeServerInfo nodeInfo;
     {
-      std::lock_guard<std::mutex> nodeClientIdMapGuard(_nodeClientIdMapMutex);
-      auto nodeClientIdIterator = _nodeClientIdMap.find(parameters->at(0)->stringValue);
-      if (nodeClientIdIterator == _nodeClientIdMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (1).");
-      nodeRoutingInfo = nodeClientIdIterator->second;
+      std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+      auto nodeInfoIterator = _nodeInfoMap.find(parameters->at(0)->stringValue);
+      if (nodeInfoIterator == _nodeInfoMap.end()) return BaseLib::Variable::createError(-1, "Node is unknown in Node-BLUE server (1).");
+      nodeInfo = nodeInfoIterator->second;
     }
 
-    if (nodeRoutingInfo.nodeCodeType == NodeManager::NodeCodeType::javascript || nodeRoutingInfo.nodeCodeType == NodeManager::NodeCodeType::javascriptEncrypted) {
+    if (nodeInfo.nodeCodeType == NodeManager::NodeCodeType::javascript || nodeInfo.nodeCodeType == NodeManager::NodeCodeType::javascriptEncrypted) {
       return _nodepink->invoke("invokeNodeMethod", parameters);
     }
 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      auto clientIterator = _clients.find(nodeRoutingInfo.clientId);
+      auto clientIterator = _clients.find(nodeInfo.clientId);
       if (clientIterator == _clients.end()) return BaseLib::Variable::createError(-32501, "Node process not found.");
       nodeClientData = clientIterator->second;
     }
@@ -4003,6 +4021,20 @@ BaseLib::PVariable NodeBlueServer::setCredentials(PNodeBlueClientData &clientDat
     if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
 
     return _nodeBlueCredentials->setCredentials(parameters->at(0)->stringValue, parameters->at(1));
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable NodeBlueServer::setCredentialTypes(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
+
+    _nodeManager->registerCredentialTypes(parameters->at(0)->stringValue, parameters->at(1));
+
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

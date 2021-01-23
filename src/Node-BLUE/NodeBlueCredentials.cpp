@@ -78,20 +78,52 @@ void NodeBlueCredentials::processFlowCredentials(BaseLib::PVariable &flowsJson) 
   }
 }
 
-BaseLib::PVariable NodeBlueCredentials::getCredentials(const std::string &nodeId) {
+BaseLib::PVariable NodeBlueCredentials::getCredentials(const std::string &nodeId, bool returnPasswords) {
   try {
-    auto nodeData = GD::bl->db->getNodeData(nodeId, "credentials");
-    if (!nodeData || nodeData->stringValue.empty()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    BaseLib::PVariable credentials;
 
-    auto dataPair = BaseLib::HelperFunctions::splitFirst(nodeData->stringValue, '.');
+    {
+      auto nodeData = GD::bl->db->getNodeData(nodeId, "credentials");
+      if (!nodeData || nodeData->stringValue.empty()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
-    BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
-    aes.setKey(_credentialKey);
-    aes.setIv(BaseLib::HelperFunctions::getUBinary(dataPair.first));
-    std::vector<char> plaintext;
-    aes.decrypt(plaintext, BaseLib::HelperFunctions::getBinary(dataPair.second));
+      auto dataPair = BaseLib::HelperFunctions::splitFirst(nodeData->stringValue, '.');
 
-    return BaseLib::Rpc::JsonDecoder::decode(plaintext);
+      BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
+      aes.setKey(_credentialKey);
+      aes.setIv(BaseLib::HelperFunctions::getUBinary(dataPair.first));
+      std::vector<char> plaintext;
+      aes.decrypt(plaintext, BaseLib::HelperFunctions::getBinary(dataPair.second));
+
+      credentials = BaseLib::Rpc::JsonDecoder::decode(plaintext);
+    }
+
+    if (returnPasswords) return credentials;
+
+    BaseLib::PVariable credentialTypes = GD::nodeBlueServer->getNodeCredentialTypes(nodeId);
+
+    std::unordered_set<std::string> elementsToInsert;
+    for (auto &credential : *credentials->structValue) {
+      auto typeIterator = credentialTypes->structValue->find(credential.first);
+      if (typeIterator == credentialTypes->structValue->end()) {
+        if ((bool)(*credential.second)) elementsToInsert.emplace("has_" + credential.first);
+        credential.second = std::make_shared<BaseLib::Variable>("");
+      } else if (typeIterator->second->type == BaseLib::VariableType::tStruct) {
+        auto typeIterator2 = typeIterator->second->structValue->find("type");
+        if (typeIterator2 == typeIterator->second->structValue->end() || typeIterator2->second->stringValue != "text") {
+          if ((bool)(*credential.second)) elementsToInsert.emplace("has_" + credential.first);
+          credential.second = std::make_shared<BaseLib::Variable>("");
+        }
+      } else if (typeIterator->second->stringValue != "text") {
+        if ((bool)(*credential.second)) elementsToInsert.emplace("has_" + credential.first);
+        credential.second = std::make_shared<BaseLib::Variable>("");
+      }
+    }
+
+    for (auto &element : elementsToInsert) {
+      credentials->structValue->emplace(element, std::make_shared<BaseLib::Variable>(true));
+    }
+
+    return credentials;
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
@@ -100,8 +132,13 @@ BaseLib::PVariable NodeBlueCredentials::getCredentials(const std::string &nodeId
 
 BaseLib::PVariable NodeBlueCredentials::setCredentials(const std::string &nodeId, const BaseLib::PVariable &credentials) {
   try {
+    auto mergedCredentials = getCredentials(nodeId, true);
+    for (auto &element : *credentials->structValue) {
+      (*mergedCredentials->structValue)[element.first] = element.second;
+    }
+
     std::string credentialString;
-    BaseLib::Rpc::JsonEncoder::encode(credentials, credentialString);
+    BaseLib::Rpc::JsonEncoder::encode(mergedCredentials, credentialString);
     std::vector<uint8_t> plaintext(credentialString.begin(), credentialString.end());
 
     BaseLib::Security::Gcrypt aes(GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_GCM, GCRY_CIPHER_SECURE);
@@ -117,9 +154,7 @@ BaseLib::PVariable NodeBlueCredentials::setCredentials(const std::string &nodeId
     aes.encrypt(ciphertext, plaintext);
 
     auto nodeData = std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getHexString(iv) + "." + BaseLib::HelperFunctions::getHexString(ciphertext));
-    GD::bl->db->setNodeData(nodeId, "credentials", nodeData);
-
-    return std::make_shared<BaseLib::Variable>();
+    return GD::bl->db->setNodeData(nodeId, "credentials", nodeData);
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }

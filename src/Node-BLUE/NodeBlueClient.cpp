@@ -1157,6 +1157,13 @@ void NodeBlueClient::setNodeData(const std::string &nodeId, const std::string &k
       parameters->push_back(value);
 
       invoke("setCredentials", parameters, true);
+    } else if (key == "credentialTypes") {
+      Flows::PArray parameters = std::make_shared<Flows::Array>();
+      parameters->reserve(2);
+      parameters->push_back(std::make_shared<Flows::Variable>(nodeId));
+      parameters->push_back(value);
+
+      invoke("setCredentialTypes", parameters, true);
     } else {
       Flows::PArray parameters = std::make_shared<Flows::Array>();
       parameters->reserve(3);

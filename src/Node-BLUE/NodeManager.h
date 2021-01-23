@@ -93,6 +93,7 @@ class NodeManager {
     uint32_t maxThreadCount = 0;
     std::string filePrefix;
     std::string fullCodefilePath;
+    BaseLib::PVariable credentialTypes;
   };
   typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
@@ -164,7 +165,11 @@ class NodeManager {
 
   bool isNodeRedNode(const std::string &type);
 
+  BaseLib::PVariable getNodeCredentialTypes(const std::string &type);
+
   std::string getNodeLocales(std::string &language);
+
+  void registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
 
   /**
    * Loads a node. The node needs to be in Homegear's node path.

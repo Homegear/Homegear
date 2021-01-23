@@ -119,6 +119,10 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodeCredentials(const std::string &nodeId);
 
+  BaseLib::PVariable getNodeCredentialTypes(const std::string &nodeId);
+
+  void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
+
   BaseLib::PVariable getNodeVariable(const std::string& nodeId, const std::string& topic);
 
   void setNodeVariable(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
@@ -158,8 +162,9 @@ class NodeBlueServer : public BaseLib::IQueue {
     // }}}
   };
 
-  struct NodeRoutingInfo {
+  struct NodeServerInfo {
     int32_t clientId = -1;
+    std::string type;
     NodeManager::NodeCodeType nodeCodeType = NodeManager::NodeCodeType::undefined;
   };
 
@@ -201,8 +206,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::map<std::string, uint32_t> _maxThreadCounts;
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-  std::mutex _nodeClientIdMapMutex;
-  std::map<std::string, NodeRoutingInfo> _nodeClientIdMap;
+  std::mutex _nodeInfoMapMutex;
+  std::map<std::string, NodeServerInfo> _nodeInfoMap;
   std::mutex _flowClientIdMapMutex;
   std::map<std::string, int32_t> _flowClientIdMap;
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
@@ -301,6 +306,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   BaseLib::PVariable nodeRedNodeInput(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setCredentialTypes(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
   // }}}
 };
 

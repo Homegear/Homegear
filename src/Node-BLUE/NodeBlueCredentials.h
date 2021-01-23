@@ -59,14 +59,16 @@ class NodeBlueCredentials {
    * Reads credentials from database, decrypts it and returns it as a Struct.
    *
    * @param nodeId The node to get credentials for.
+   * @param returnPasswords Set to true to return decrypted passwords as well.
    * @return The decrypted credentials as a Struct. On error an empty Struct is returned so there is no need to check for a nullptr.
    */
-  BaseLib::PVariable getCredentials(const std::string &nodeId);
+  BaseLib::PVariable getCredentials(const std::string &nodeId, bool returnPasswords);
 
   /**
    * Encrypts credentials and writes them to database database.
    *
    * @param nodeId The node to set credentials for.
+   * @param credentials The Struct containing the credentials.
    * @return Returns void on success.
    */
   BaseLib::PVariable setCredentials(const std::string &nodeId, const BaseLib::PVariable &credentials);

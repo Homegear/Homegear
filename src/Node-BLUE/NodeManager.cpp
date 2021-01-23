@@ -178,6 +178,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       auto dotPosition = filename.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
       if (dotPosition == std::string::npos) continue;
       auto extension = filename.substr(dotPosition);
+      auto codefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
 
       {
         nodeInfo->filePrefix = filename;
@@ -186,7 +187,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         pos = nodeInfo->filePrefix.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
         if (pos != std::string::npos) nodeInfo->filePrefix = nodeInfo->filePrefix.substr(0, pos);
       }
-      nodeInfo->fullCodefilePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append(filename);
+      nodeInfo->fullCodefilePath = codefilePath + filename;
       auto slashPos = nodeInfo->fullCodefilePath.find_last_of('/');
       if (managerModuleInfo->codeDirectory.empty()) managerModuleInfo->codeDirectory = nodeInfo->fullCodefilePath.substr(0, slashPos + 1);
       if (!BaseLib::Io::fileExists(managerModuleInfo->modulePath + ".compiling") && (nodeInfo->fullCodefilePath.empty() || !BaseLib::Io::fileExists(nodeInfo->fullCodefilePath))) {
@@ -274,6 +275,11 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       if (_managerModuleInfoByNodeType.find(node.first) != _managerModuleInfoByNodeType.end()) {
         GD::out.printError("Error: Node type \"" + node.first + "\" is used more than once. That is not allowed.");
         continue;
+      }
+
+      if (BaseLib::Io::fileExists(codefilePath + nodeInfo->filePrefix + ".cred.json")) {
+        auto credentialTypesString = BaseLib::Io::getFileContent(codefilePath + nodeInfo->filePrefix + ".cred.json");
+        nodeInfo->credentialTypes = BaseLib::Rpc::JsonDecoder::decode(credentialTypesString);
       }
 
       managerModuleInfo->nodes.emplace(nodeInfo->type, nodeInfo);
@@ -574,6 +580,36 @@ bool NodeManager::isNodeRedNode(const std::string &type) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
+}
+
+BaseLib::PVariable NodeManager::getNodeCredentialTypes(const std::string &type) {
+  try {
+    auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
+    if (nodeInfoIterator == _nodeInfoByNodeType.end()) return std::make_shared<BaseLib::Variable>();
+
+    if (nodeInfoIterator->second->credentialTypes) return nodeInfoIterator->second->credentialTypes;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::make_shared<BaseLib::Variable>();
+}
+
+void NodeManager::registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes) {
+  try {
+    auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
+    if (nodeInfoIterator == _nodeInfoByNodeType.end()) {
+      GD::out.printWarning("Warning: Could not register credential types. Node type " + type + " is unknown.");
+      return;
+    }
+
+    if (!nodeInfoIterator->second->credentialTypes) nodeInfoIterator->second->credentialTypes = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    for (auto &element : *credentialTypes->structValue) {
+      //Only inserts elements when non-existant
+      nodeInfoIterator->second->credentialTypes->structValue->emplace(element.first, element.second);
+    }
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 BaseLib::PVariable NodeManager::getIcons() {
