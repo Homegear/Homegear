@@ -2737,9 +2737,12 @@ static PHP_MINIT_FUNCTION(homegear) {
   zend_declare_class_constant_stringl(homegear_class_entry, "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, Homegear::GD::bl->settings.scriptPath().c_str(), Homegear::GD::bl->settings.scriptPath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "MODULE_PATH", sizeof("MODULE_PATH") - 1, Homegear::GD::bl->settings.modulePath().c_str(), Homegear::GD::bl->settings.modulePath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "DATA_PATH", sizeof("DATA_PATH") - 1, Homegear::GD::bl->settings.dataPath().c_str(), Homegear::GD::bl->settings.dataPath().size());
+  zend_declare_class_constant_stringl(homegear_class_entry, "WRITEABLE_DATA_PATH", sizeof("WRITEABLE_DATA_PATH") - 1, Homegear::GD::bl->settings.writeableDataPath().c_str(), Homegear::GD::bl->settings.writeableDataPath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, Homegear::GD::bl->settings.socketPath().c_str(), Homegear::GD::bl->settings.socketPath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, Homegear::GD::bl->settings.logfilePath().c_str(), Homegear::GD::bl->settings.logfilePath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, Homegear::GD::bl->settings.workingDirectory().c_str(), Homegear::GD::bl->settings.workingDirectory().size());
+  zend_declare_class_constant_stringl(homegear_class_entry, "NODE_BLUE_PATH", sizeof("NODE_BLUE_PATH") - 1, Homegear::GD::bl->settings.nodeBluePath().c_str(), Homegear::GD::bl->settings.nodeBluePath().size());
+  zend_declare_class_constant_stringl(homegear_class_entry, "NODE_BLUE_DATA_PATH", sizeof("NODE_BLUE_DATA_PATH") - 1, Homegear::GD::bl->settings.nodeBlueDataPath().c_str(), Homegear::GD::bl->settings.nodeBlueDataPath().size());
 
   zend_class_entry homegearGpioCe{};
   INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);
