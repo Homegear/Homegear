@@ -83,6 +83,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("broadcastUiNotificationCreated", std::bind(&NodeBlueClient::broadcastUiNotificationCreated, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastUiNotificationRemoved", std::bind(&NodeBlueClient::broadcastUiNotificationRemoved, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastUiNotificationAction", std::bind(&NodeBlueClient::broadcastUiNotificationAction, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastRawPacketEvent", std::bind(&NodeBlueClient::broadcastRawPacketEvent, this, std::placeholders::_1));
 }
 
 NodeBlueClient::~NodeBlueClient() {
@@ -2541,6 +2542,24 @@ Flows::PVariable NodeBlueClient::broadcastUiNotificationAction(Flows::PArray &pa
     for (const auto &nodeId : _homegearEventSubscriptions) {
       Flows::PINode node = _nodeManager->getNode(nodeId);
       if (node) node->homegearEvent("uiNotificationAction", parameters);
+    }
+
+    return std::make_shared<Flows::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::broadcastRawPacketEvent(Flows::PArray &parameters) {
+  try {
+    if (parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+    std::lock_guard<std::mutex> eventsGuard(_homegearEventSubscriptionsMutex);
+    for (const auto &nodeId : _homegearEventSubscriptions) {
+      Flows::PINode node = _nodeManager->getNode(nodeId);
+      if (node) node->homegearEvent("rawPacketEvent", parameters);
     }
 
     return std::make_shared<Flows::Variable>();

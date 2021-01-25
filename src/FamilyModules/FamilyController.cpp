@@ -711,6 +711,7 @@ void FamilyController::physicalInterfaceStartListening() {
   try {
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
     for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
+      i->second->physicalInterfaces()->setRawPacketEvent(std::function<void(int32_t, const std::string &, const BaseLib::PVariable &)>(std::bind(&FamilyController::rawPacketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
       i->second->physicalInterfaces()->startListening();
     }
   }
@@ -787,6 +788,15 @@ BaseLib::PVariable FamilyController::listFamilies(int32_t familyId) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void FamilyController::rawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet) {
+  try {
+    if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastRawPacketEvent(familyId, interfaceId, packet);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

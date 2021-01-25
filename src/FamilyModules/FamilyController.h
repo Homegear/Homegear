@@ -198,6 +198,8 @@ class FamilyController : public BaseLib::Systems::IFamilyEventSink {
   FamilyController(const FamilyController &);
 
   FamilyController &operator=(const FamilyController &);
+
+  void rawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet);
 };
 
 }

@@ -3009,6 +3009,38 @@ void NodeBlueServer::broadcastUiNotificationAction(uint64_t uiNotificationId, co
   }
 }
 
+void NodeBlueServer::broadcastRawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("rawPacketEvent")) return;
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(3);
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(familyId));
+      parameters->emplace_back(std::make_shared<BaseLib::Variable>(interfaceId));
+      parameters->emplace_back(packet);
+
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastRawPacketEvent", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastRawPacketEvent\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
 void NodeBlueServer::closeClientConnection(const PNodeBlueClientData &client) {
   try {
     if (!client) return;

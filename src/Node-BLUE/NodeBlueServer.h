@@ -97,6 +97,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId);
 
+  void broadcastRawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet);
+
   std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
   std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);

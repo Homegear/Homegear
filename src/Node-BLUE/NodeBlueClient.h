@@ -359,6 +359,8 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable broadcastUiNotificationRemoved(Flows::PArray &parameters);
 
   Flows::PVariable broadcastUiNotificationAction(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastRawPacketEvent(Flows::PArray &parameters);
   // }}}
 };
 
