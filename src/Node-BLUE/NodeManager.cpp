@@ -196,6 +196,11 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         continue;
       }
 
+      if (BaseLib::Io::fileExists(codefilePath + nodeInfo->filePrefix + ".cred.json")) {
+        auto credentialTypesString = BaseLib::Io::getFileContent(codefilePath + nodeInfo->filePrefix + ".cred.json");
+        nodeInfo->credentialTypes = BaseLib::Rpc::JsonDecoder::decode(credentialTypesString);
+      }
+
       if (extension == ".so") {
         nodeInfo->codeType = NodeCodeType::cpp;
         auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
@@ -246,8 +251,16 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         }
         if (!htmlContent.empty()) {
           auto registerPos = htmlContent.find("RED.nodes.registerType(");
-          registerPos += sizeof("RED.nodes.registerType(") - 1;
-          if (registerPos != std::string::npos) {
+          while (registerPos != std::string::npos) {
+            auto nodeInfoNode = std::make_shared<NodeInfo>();
+            nodeInfoNode->isUiNode = nodeInfo->isUiNode;
+            nodeInfoNode->filePrefix = nodeInfo->filePrefix;
+            nodeInfoNode->codeType = nodeInfo->codeType;
+            nodeInfoNode->credentialTypes = nodeInfo->credentialTypes;
+            nodeInfoNode->nodeSet = nodeInfo->nodeSet;
+            nodeInfoNode->fullCodefilePath = nodeInfo->fullCodefilePath;
+
+            registerPos += sizeof("RED.nodes.registerType(") - 1;
             bool doubleQuote = false;
             auto startPos = htmlContent.find('\'', registerPos);
             auto startPos2 = htmlContent.find('"', registerPos);
@@ -258,12 +271,25 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
             if (startPos != std::string::npos) {
               auto endPos = doubleQuote ? htmlContent.find('"', startPos + 1) : htmlContent.find('\'', startPos + 1);
               if (endPos != std::string::npos) {
-                nodeInfo->type = htmlContent.substr(startPos + 1, endPos - startPos - 1);
+                nodeInfoNode->type = htmlContent.substr(startPos + 1, endPos - startPos - 1);
+
+                if (_managerModuleInfoByNodeType.find(nodeInfoNode->type) != _managerModuleInfoByNodeType.end()) {
+                  GD::out.printError("Error: Node type \"" + nodeInfoNode->type + "\" is used more than once. That is not allowed.");
+                } else {
+                  managerModuleInfo->nodes.emplace(nodeInfoNode->type, nodeInfoNode);
+                  managerModuleInfo->nodesByFilePrefix.emplace(nodeInfoNode->filePrefix, nodeInfoNode);
+                  _managerModuleInfoByNodeType.emplace(nodeInfoNode->type, managerModuleInfo);
+                  _nodeInfoByNodeType.emplace(nodeInfoNode->type, nodeInfoNode);
+                }
               }
             }
+
+            registerPos = htmlContent.find("RED.nodes.registerType(", registerPos);
           }
         }
         //}}}
+
+        continue;
       } else if (extension == ".hgnjs") {
         _nodeRedRequired = true;
         nodeInfo->codeType = NodeCodeType::javascriptEncrypted;
@@ -276,11 +302,6 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       if (_managerModuleInfoByNodeType.find(node.first) != _managerModuleInfoByNodeType.end()) {
         GD::out.printError("Error: Node type \"" + node.first + "\" is used more than once. That is not allowed.");
         continue;
-      }
-
-      if (BaseLib::Io::fileExists(codefilePath + nodeInfo->filePrefix + ".cred.json")) {
-        auto credentialTypesString = BaseLib::Io::getFileContent(codefilePath + nodeInfo->filePrefix + ".cred.json");
-        nodeInfo->credentialTypes = BaseLib::Rpc::JsonDecoder::decode(credentialTypesString);
       }
 
       managerModuleInfo->nodes.emplace(nodeInfo->type, nodeInfo);
