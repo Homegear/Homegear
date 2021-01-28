@@ -717,7 +717,7 @@ std::string NodeManager::getNodeLocales(std::string &language) {
         std::string path = localePath + file;
         try {
           if (file.size() < 11) continue;
-          if (file.compare(file.size() - 10, 10, ".help.html") != 0) continue;
+          if (file.compare(file.size() - 10, 10, ".html") != 0 && file.compare(file.size() - 10, 10, ".help.html") != 0) continue;
           auto type = file.substr(0, file.size() - 10);
           std::string help = BaseLib::Io::getFileContent(path);
 
