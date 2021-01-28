@@ -94,6 +94,7 @@ class NodeManager {
     std::string filePrefix;
     std::string fullCodefilePath;
     BaseLib::PVariable credentialTypes;
+    bool isUiNode = false;
   };
   typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
@@ -164,6 +165,8 @@ class NodeManager {
   NodeCodeType getNodeCodeType(const std::string &type);
 
   bool isNodeRedNode(const std::string &type);
+
+  bool isUiNode(const std::string &type);
 
   BaseLib::PVariable getNodeCredentialTypes(const std::string &type);
 

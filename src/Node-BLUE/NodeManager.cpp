@@ -173,6 +173,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
       auto nodeInfo = std::make_shared<NodeInfo>();
       nodeInfo->type = node.first; //Node type and node set are always the same in Homegear. For Node-RED they can differ (see .js section below)
       nodeInfo->nodeSet = node.first;
+      nodeInfo->isUiNode = (directory == "ui/");
       auto filename = node.second->stringValue;
       //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
       auto dotPosition = filename.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
@@ -576,6 +577,18 @@ bool NodeManager::isNodeRedNode(const std::string &type) {
     if (nodeInfoIterator == _nodeInfoByNodeType.end()) return false;
 
     return (nodeInfoIterator->second->codeType == NodeCodeType::javascript || nodeInfoIterator->second->codeType == NodeCodeType::javascriptEncrypted);
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
+}
+
+bool NodeManager::isUiNode(const std::string &type) {
+  try {
+    auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
+    if (nodeInfoIterator == _nodeInfoByNodeType.end()) return false;
+
+    return nodeInfoIterator->second->isUiNode;
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }

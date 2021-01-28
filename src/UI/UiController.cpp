@@ -1443,6 +1443,19 @@ BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientI
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable UiController::uiElementExists(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId) {
+  try {
+    std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+    auto elementIterator = _uiElements.find(databaseId);
+
+    return std::make_shared<BaseLib::Variable>(elementIterator != _uiElements.end());
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 std::unordered_map<std::string, std::unordered_set<UiController::PUiElement>> UiController::getAllNodeUiElements() {
   try {
     std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);

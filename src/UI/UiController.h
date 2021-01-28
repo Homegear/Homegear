@@ -89,6 +89,8 @@ class UiController {
   BaseLib::PVariable removeUiElement(uint64_t databaseId);
 
   BaseLib::PVariable setUiElementMetadata(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId, const BaseLib::PVariable &metadata);
+
+  BaseLib::PVariable uiElementExists(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId);
  protected:
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::DeviceDescription::UiElements> _descriptions;

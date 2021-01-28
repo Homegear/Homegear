@@ -276,6 +276,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
     _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
     _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
+    _rpcMethods.emplace("uiElementExists", std::make_shared<RpcMethods::RpcUiElementExists>());
   }
 
   { // UI notification

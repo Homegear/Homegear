@@ -176,6 +176,16 @@ class RpcSetUiElementMetadata : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RpcUiElementExists : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcUiElementExists() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 }
 
 #endif //HOMEGEAR_UIRPCMETHODS_H

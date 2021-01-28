@@ -284,6 +284,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
     _rpcMethods.emplace("removeNodeUiElements", std::make_shared<RpcMethods::RpcRemoveNodeUiElements>());
     _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
+    _rpcMethods.emplace("uiElementExists", std::make_shared<RpcMethods::RpcUiElementExists>());
   }
 
   { // UI notification
@@ -1197,12 +1198,6 @@ void NodeBlueServer::startFlows() {
         continue;
       }
 
-      auto dIterator = element->structValue->find("d");
-      if (dIterator != element->structValue->end() && (dIterator->second->booleanValue || dIterator->second->stringValue == "true")) {
-        if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Ignoring disabled node: " + idIterator->second->stringValue);
-        continue;
-      }
-
       auto typeIterator = element->structValue->find("type");
       if (typeIterator == element->structValue->end()) continue;
       else if (typeIterator->second->stringValue == "comment") continue;
@@ -1213,6 +1208,19 @@ void NodeBlueServer::startFlows() {
       } else if (typeIterator->second->stringValue == "tab") {
         auto disabledIterator = element->structValue->find("disabled");
         if (disabledIterator != element->structValue->end() && disabledIterator->second->booleanValue) disabledFlows.emplace(idIterator->second->stringValue);
+        continue;
+      }
+
+      auto dIterator = element->structValue->find("d");
+      if (dIterator != element->structValue->end() && (dIterator->second->booleanValue || dIterator->second->stringValue == "true")) {
+        if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Ignoring disabled node: " + idIterator->second->stringValue);
+
+        if (_nodeManager->isUiNode(typeIterator->second->stringValue)) {
+          _out.printInfo("Info: Deleting UI element of disabled node " + idIterator->second->stringValue);
+          auto uiElementId = GD::bl->db->getNodeData(idIterator->second->stringValue, "uiElementId");
+          if (!uiElementId->errorStruct && uiElementId->integerValue64 != 0) GD::uiController->removeUiElement((uint64_t)uiElementId->integerValue64);
+        }
+
         continue;
       }
 

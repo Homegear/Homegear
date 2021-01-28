@@ -376,5 +376,21 @@ BaseLib::PVariable RpcSetUiElementMetadata::invoke(BaseLib::PRpcClientInfo clien
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RpcUiElementExists::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64})}));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setUiElementMetadata"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    return GD::uiController->uiElementExists(clientInfo, (uint64_t)parameters->at(0)->integerValue64);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 }
 }
