@@ -119,7 +119,7 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
 BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PVariable &uiInfo, const BaseLib::PVariable &variable, uint64_t roomId, BaseLib::PVariable &inputPeers, BaseLib::PVariable &outputPeers) {
   try {
     std::list<std::list<uint64_t>> roleIdsIn;
-    std::list<std::list<std::pair<uint64_t, BaseLib::PVariable>>> roleIdsOut;
+    std::list < std::list < std::pair < uint64_t, BaseLib::PVariable>>> roleIdsOut;
 
     { //Get required role Ids
       auto roleIdsInIterator = uiInfo->structValue->find("roleIdsIn");
@@ -847,23 +847,61 @@ void UiController::addVariableInfo(const BaseLib::PRpcClientInfo &clientInfo, co
         continue;
       }
 
-      auto typeIterator = description->structValue->find("TYPE");
-      if (typeIterator != description->structValue->end()) variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
+      BaseLib::VariableType type = BaseLib::VariableType::tVoid;
 
-      auto minimumValueIterator = variable->structValue->find("minimumValue");
-      auto maximumValueIterator = variable->structValue->find("maximumValue");
-      if (minimumValueIterator == variable->structValue->end() || maximumValueIterator == variable->structValue->end()) {
-        if (minimumValueIterator == variable->structValue->end()) {
-          auto minimumValueIterator2 = description->structValue->find("MIN");
-          if (minimumValueIterator2 != description->structValue->end()) {
-            variable->structValue->emplace("minimumValue", minimumValueIterator2->second);
+      auto typeIterator = description->structValue->find("TYPE");
+      if (typeIterator != description->structValue->end()) {
+        auto &stringType = typeIterator->second->stringValue;
+        variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(stringType)));
+
+        if (stringType == "INTEGER") type = BaseLib::VariableType::tInteger;
+        else if (stringType == "INTEGER64") type = BaseLib::VariableType::tInteger64;
+        else if (stringType == "FLOAT") type = BaseLib::VariableType::tFloat;
+      }
+
+      if (type != BaseLib::VariableType::tVoid) {
+        auto propertiesIterator = variable->structValue->find("properties");
+        if (propertiesIterator == variable->structValue->end()) {
+          auto result = variable->structValue->emplace("properties", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+          if (!result.second) continue;
+          propertiesIterator = result.first;
+        }
+
+        auto minimumValueIterator2 = description->structValue->find("MIN");
+        if (minimumValueIterator2 != description->structValue->end()) {
+          bool replaceMinimumValue = false;
+          if (type == BaseLib::VariableType::tInteger) replaceMinimumValue = (minimumValueIterator2->second->integerValue != -2147483648);
+          else if (type == BaseLib::VariableType::tInteger64) replaceMinimumValue = (minimumValueIterator2->second->integerValue64 != (-9223372036854775807ll - 1));
+          else if (type == BaseLib::VariableType::tFloat) replaceMinimumValue = (minimumValueIterator2->second->floatValue != -3.40282347e+38f);
+
+          if (replaceMinimumValue) {
+            auto minimumIterator = propertiesIterator->second->structValue->find("minimum");
+            if (minimumIterator == propertiesIterator->second->structValue->end()) {
+              auto result = propertiesIterator->second->structValue->emplace("minimum", std::make_shared<BaseLib::Variable>(type));
+              if (!result.second) continue;
+              minimumIterator = result.first;
+            }
+
+            minimumIterator->second = minimumValueIterator2->second;
           }
         }
 
-        if (maximumValueIterator == variable->structValue->end()) {
-          auto maximumValueIterator2 = description->structValue->find("MAX");
-          if (maximumValueIterator2 != description->structValue->end()) {
-            variable->structValue->emplace("maximumValue", maximumValueIterator2->second);
+        auto maximumValueIterator2 = description->structValue->find("MAX");
+        if (maximumValueIterator2 != description->structValue->end()) {
+          bool replaceMaximumValue = false;
+          if (type == BaseLib::VariableType::tInteger) replaceMaximumValue = (maximumValueIterator2->second->integerValue != 2147483647);
+          else if (type == BaseLib::VariableType::tInteger64) replaceMaximumValue = (maximumValueIterator2->second->integerValue64 != (-9223372036854775807ll));
+          else if (type == BaseLib::VariableType::tFloat) replaceMaximumValue = (maximumValueIterator2->second->floatValue != 3.40282347e+38f);
+
+          if (replaceMaximumValue) {
+            auto maximumIterator = propertiesIterator->second->structValue->find("maximum");
+            if (maximumIterator == propertiesIterator->second->structValue->end()) {
+              auto result = propertiesIterator->second->structValue->emplace("maximum", std::make_shared<BaseLib::Variable>(type));
+              if (!result.second) continue;
+              maximumIterator = result.first;
+            }
+
+            maximumIterator->second = maximumValueIterator2->second;
           }
         }
       }
@@ -1463,7 +1501,7 @@ std::unordered_map<std::string, std::unordered_set<UiController::PUiElement>> Ui
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::unordered_map<std::string, std::unordered_set<UiController::PUiElement>>();
+  return std::unordered_map < std::string, std::unordered_set < UiController::PUiElement >> ();
 }
 
 void UiController::removeNodeUiElements(const std::string &nodeId) {
