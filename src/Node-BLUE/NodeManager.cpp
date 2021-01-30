@@ -693,7 +693,7 @@ BaseLib::PVariable NodeManager::getExamples(const std::string &relativeExamplesP
 
       responseJson->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>("node-blue"));
       for (auto &module : _managerModuleInfo) {
-        auto examplesPath = module.second->codeDirectory + "examples/";
+        auto examplesPath = module.second->modulePath + "examples/";
         if (!BaseLib::Io::directoryExists(examplesPath)) continue;
         responseJson->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(module.first));
       }
@@ -713,7 +713,7 @@ BaseLib::PVariable NodeManager::getExamples(const std::string &relativeExamplesP
         auto moduleIterator = _managerModuleInfo.find(modulePair.first);
         if (moduleIterator == _managerModuleInfo.end()) return responseJson;
 
-        examplesPath = moduleIterator->second->codeDirectory + "examples/" + modulePair.second;
+        examplesPath = moduleIterator->second->modulePath + "examples/" + modulePair.second;
       }
 
       bool isDirectory = false;
