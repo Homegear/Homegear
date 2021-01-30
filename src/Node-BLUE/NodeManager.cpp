@@ -722,6 +722,9 @@ BaseLib::PVariable NodeManager::getExamples(const std::string &relativeExamplesP
       if (!isDirectory) {
         responseJson->type = BaseLib::VariableType::tString;
         responseJson->stringValue = BaseLib::Io::getFileContent(examplesPath);
+
+        BaseLib::HelperFunctions::stringReplace(responseJson->stringValue, "\"type\": \"inject\"", "\"type\": \"constant\"");
+        BaseLib::HelperFunctions::stringReplace(responseJson->stringValue, "\"type\":\"inject\"", "\"type\":\"constant\"");
       } else {
         auto directories = BaseLib::Io::getDirectories(examplesPath);
         auto files = BaseLib::Io::getFiles(examplesPath, false);
