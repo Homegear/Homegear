@@ -153,6 +153,12 @@ class NodeManager {
   BaseLib::PVariable getIcons();
 
   /**
+   * Returns examples for the specified path.
+   * When examplesPath is a file, a String is returned. When it is a directory, an Array is returned.
+   */
+  BaseLib::PVariable getExamples(const std::string &relativeExamplesPath);
+
+  /**
    * Returns the content of all *.hni files.
    */
   std::string getFrontendCode();

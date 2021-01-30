@@ -683,6 +683,70 @@ BaseLib::PVariable NodeManager::getIcons() {
   return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 }
 
+BaseLib::PVariable NodeManager::getExamples(const std::string &relativeExamplesPath) {
+  try {
+    if (relativeExamplesPath == "") {
+      std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+
+      auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+      responseJson->arrayValue->reserve(_managerModuleInfo.size() + 1);
+
+      responseJson->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>("node-blue"));
+      for (auto &module : _managerModuleInfo) {
+        auto examplesPath = module.second->codeDirectory + "examples/";
+        if (!BaseLib::Io::directoryExists(examplesPath)) continue;
+        responseJson->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(module.first));
+      }
+
+      return responseJson;
+    }
+    else {
+      auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+
+      std::string examplesPath;
+      if (relativeExamplesPath.compare(0, 10, "node-blue/") == 0) {
+        examplesPath = GD::bl->settings.nodeBlueDataPath() + "examples/" + relativeExamplesPath;
+      } else {
+        auto modulePair = BaseLib::HelperFunctions::splitFirst(relativeExamplesPath, '/');
+
+        std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+        auto moduleIterator = _managerModuleInfo.find(modulePair.first);
+        if (moduleIterator == _managerModuleInfo.end()) return responseJson;
+
+        examplesPath = moduleIterator->second->codeDirectory + "examples/" + modulePair.second;
+      }
+
+      bool isDirectory = false;
+      if (BaseLib::Io::isDirectory(examplesPath, isDirectory) == -1) return responseJson;
+
+      if (!isDirectory) {
+        responseJson->type = BaseLib::VariableType::tString;
+        responseJson->stringValue = BaseLib::Io::getFileContent(examplesPath);
+      } else {
+        auto directories = BaseLib::Io::getDirectories(examplesPath);
+        auto files = BaseLib::Io::getFiles(examplesPath, false);
+
+        responseJson->arrayValue->reserve(directories.size() + files.size());
+
+        for (auto &directory : directories) {
+          responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
+        }
+
+        for (auto &file : files) {
+          auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+          fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
+          responseJson->arrayValue->push_back(fileEntry);
+        }
+      }
+
+      return responseJson;
+    }
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+}
+
 std::string NodeManager::getNodeLocales(std::string &language) {
   try {
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);

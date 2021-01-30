@@ -1853,41 +1853,48 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       }
     } else if (path.compare(0, 30, "node-blue/library/local/flows/") == 0 || path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) {
       if (!loginValid) return "unauthorized";
-      std::string libraryPath;
-      if (path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) libraryPath = _bl->settings.nodeBlueDataPath() + "examples/";
-      else libraryPath = _bl->settings.nodeBlueDataPath() + "library/";
 
-      if (!BaseLib::Io::directoryExists(libraryPath)) {
-        if (!BaseLib::Io::createDirectory(libraryPath, S_IRWXU | S_IRWXG)) return "";
-      }
-      if (path.compare(0, 30, "node-blue/library/local/flows/") == 0 && path.size() > 30) libraryPath += path.substr(30);
-      else if (path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0 && path.size() > 35) libraryPath += path.substr(35);
+      responseEncoding = "application/json";
 
-      bool isDirectory = false;
-      if (BaseLib::Io::isDirectory(libraryPath, isDirectory) == -1) return "";
-
-      if (!isDirectory) {
-        contentString = BaseLib::Io::getFileContent(libraryPath);
-      } else {
-        responseEncoding = "application/json";
-
-        auto directories = BaseLib::Io::getDirectories(libraryPath);
-        auto files = BaseLib::Io::getFiles(libraryPath, false);
-
-        auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-        responseJson->arrayValue->reserve(directories.size() + files.size());
-
-        for (auto &directory : directories) {
-          responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
+      if (path.compare(0, 30, "node-blue/library/local/flows/") == 0) {
+        auto libraryPath = _bl->settings.nodeBlueDataPath() + "library/";
+        if (!BaseLib::Io::directoryExists(libraryPath)) {
+          if (!BaseLib::Io::createDirectory(libraryPath, S_IRWXU | S_IRWXG)) return "";
         }
+        if (path.size() > 30) libraryPath += path.substr(30);
 
-        for (auto &file : files) {
-          auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-          fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
-          responseJson->arrayValue->push_back(fileEntry);
+        bool isDirectory = false;
+        if (BaseLib::Io::isDirectory(libraryPath, isDirectory) == -1) return "";
+
+        if (!isDirectory) {
+          contentString = BaseLib::Io::getFileContent(libraryPath);
+        } else {
+          auto directories = BaseLib::Io::getDirectories(libraryPath);
+          auto files = BaseLib::Io::getFiles(libraryPath, false);
+
+          auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+          responseJson->arrayValue->reserve(directories.size() + files.size());
+
+          for (auto &directory : directories) {
+            responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
+          }
+
+          for (auto &file : files) {
+            auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
+            responseJson->arrayValue->push_back(fileEntry);
+          }
+
+          _jsonEncoder->encode(responseJson, contentString);
         }
+      } else if (path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) {
+        std::string libraryPath;
+        if (path.size() > 35) libraryPath = path.substr(35);
 
-        _jsonEncoder->encode(responseJson, contentString);
+        auto responseJson = _nodeManager->getExamples(libraryPath);
+
+        if (responseJson->type == BaseLib::VariableType::tString) contentString = std::move(responseJson->stringValue);
+        else _jsonEncoder->encode(responseJson, contentString);
       }
     } else if (path.compare(0, 10, "node-blue/") == 0 && path != "node-blue/index.php" && path != "node-blue/signin.php") {
       if (!loginValid && path != "node-blue/red/images/node-blue.svg" && path != "node-blue/starting.html") return "unauthorized";
