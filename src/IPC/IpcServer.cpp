@@ -133,7 +133,6 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("listKnownDeviceTypes", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListKnownDeviceTypes()));
   _rpcMethods.emplace("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams()));
   _rpcMethods.emplace("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel()));
-  _rpcMethods.emplace("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCNodeOutput()));
   _rpcMethods.emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
   _rpcMethods.emplace("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing()));
   _rpcMethods.emplace("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset()));
@@ -171,6 +170,9 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
     _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
     _rpcMethods.emplace("nodeBlueIsReady", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeBlueIsReady()));
+    _rpcMethods.emplace("nodeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeEvent()));
+    _rpcMethods.emplace("nodeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeLog()));
+    _rpcMethods.emplace("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeOutput()));
     _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
     _rpcMethods.emplace("restartFlows", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRestartFlows()));
   }

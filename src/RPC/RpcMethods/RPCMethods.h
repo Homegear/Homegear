@@ -1271,20 +1271,6 @@ class RPCLogLevel : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCNodeOutput : public BaseLib::Rpc::RpcMethod {
- public:
-  RPCNodeOutput() {
-    addSignature(BaseLib::VariableType::tVoid,
-                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
-                                                    BaseLib::VariableType::tVariant});
-    addSignature(BaseLib::VariableType::tVoid,
-                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
-                                                    BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
-  }
-
-  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
-};
-
 class RPCPeerExists : public BaseLib::Rpc::RpcMethod {
  public:
   RPCPeerExists() {

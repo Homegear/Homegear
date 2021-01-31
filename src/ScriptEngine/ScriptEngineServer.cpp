@@ -176,6 +176,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
     _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
     _rpcMethods.emplace("nodeBlueIsReady", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeBlueIsReady()));
+    _rpcMethods.emplace("nodeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeEvent()));
+    _rpcMethods.emplace("nodeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeLog()));
     _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
     _rpcMethods.emplace("restartFlows", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRestartFlows()));
   }
@@ -359,7 +361,6 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
   //}}}
 
   //{{{ Node-BLUE
-  _localRpcMethods.emplace("nodeEvent", std::bind(&ScriptEngineServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   _localRpcMethods.emplace("nodeOutput", std::bind(&ScriptEngineServer::nodeOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&ScriptEngineServer::executePhpNodeBaseMethod, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   //}}}
@@ -2865,23 +2866,6 @@ BaseLib::PVariable ScriptEngineServer::getTrialStartTime(PScriptEngineClientData
 // }}}
 
 // {{{ Flows
-BaseLib::PVariable ScriptEngineServer::nodeEvent(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
-  try {
-    if (parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");
-
-    GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2), parameters->at(3)->booleanValue);
-
-    return std::make_shared<BaseLib::Variable>();
-  }
-  catch (const std::exception &ex) {
-    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
 BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");

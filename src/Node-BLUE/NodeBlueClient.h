@@ -316,6 +316,8 @@ class NodeBlueClient : public BaseLib::IQueue {
    */
   Flows::PVariable flowCount(Flows::PArray &parameters);
 
+  Flows::PVariable nodeLog(Flows::PArray &parameters);
+
   Flows::PVariable nodeOutput(Flows::PArray &parameters);
 
   Flows::PVariable invokeExternalNodeMethod(Flows::PArray &parameters);

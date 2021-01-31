@@ -61,6 +61,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("waitForNodesStopped", std::bind(&NodeBlueClient::waitForNodesStopped, this, std::placeholders::_1));
   _localRpcMethods.emplace("stopFlow", std::bind(&NodeBlueClient::stopFlow, this, std::placeholders::_1));
   _localRpcMethods.emplace("flowCount", std::bind(&NodeBlueClient::flowCount, this, std::placeholders::_1));
+  _localRpcMethods.emplace("nodeLog", std::bind(&NodeBlueClient::nodeLog, this, std::placeholders::_1));
   _localRpcMethods.emplace("nodeOutput", std::bind(&NodeBlueClient::nodeOutput, this, std::placeholders::_1));
   _localRpcMethods.emplace("invokeNodeMethod", std::bind(&NodeBlueClient::invokeExternalNodeMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&NodeBlueClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
@@ -1856,6 +1857,19 @@ Flows::PVariable NodeBlueClient::flowCount(Flows::PArray &parameters) {
   try {
     std::lock_guard<std::mutex> flowsGuard(_flowsMutex);
     return std::make_shared<Flows::Variable>(_flows.size());
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::nodeLog(Flows::PArray &parameters) {
+  try {
+    if (parameters->size() != 3) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+    log(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+    return std::make_shared<Flows::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

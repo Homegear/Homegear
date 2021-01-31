@@ -684,6 +684,38 @@ void NodeBlueServer::processKilled(pid_t pid, int exitCode, int signal, bool cor
   }
 }
 
+void NodeBlueServer::nodeLog(const std::string &nodeId, uint32_t logLevel, const std::string &message) {
+  try {
+    PNodeBlueClientData clientData;
+    int32_t clientId = 0;
+    {
+      std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
+      auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
+      if (nodeInfoIterator == _nodeInfoMap.end()) return;
+      clientId = nodeInfoIterator->second.clientId;
+    }
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      auto clientIterator = _clients.find(clientId);
+      if (clientIterator == _clients.end()) return;
+      clientData = clientIterator->second;
+    }
+
+    BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
+    parameters->reserve(3);
+    parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
+    parameters->push_back(std::make_shared<BaseLib::Variable>(logLevel));
+    parameters->push_back(std::make_shared<BaseLib::Variable>(message));
+    sendRequest(clientData, "nodeLog", parameters, false);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
 void NodeBlueServer::nodeOutput(const std::string &nodeId, uint32_t index, const BaseLib::PVariable &message, bool synchronous) {
   try {
     PNodeBlueClientData clientData;

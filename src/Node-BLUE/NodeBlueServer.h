@@ -107,6 +107,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
+  void nodeLog(const std::string &nodeId, uint32_t logLevel, const std::string &message);
+
   void nodeOutput(const std::string &nodeId, uint32_t index, const BaseLib::PVariable &message, bool synchronous);
 
   BaseLib::PVariable addNodesToFlow(const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes);

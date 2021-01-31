@@ -294,6 +294,71 @@ BaseLib::PVariable RPCNodeBlueIsReady::invoke(BaseLib::PRpcClientInfo clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCNodeEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("nodeEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    ParameterError::Enum error = checkParameters(parameters,
+                                                 std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant}),
+                                                                                                  std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant,
+                                                                                                                                      BaseLib::VariableType::tBoolean})}));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    GD::rpcClient->broadcastNodeEvent(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : true);
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCNodeLog::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("nodeLog")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})}));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (GD::nodeBlueServer) GD::nodeBlueServer->nodeLog(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2)->stringValue);
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("nodeOutput")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant}),
+                                                                                                              std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant,
+                                                                                                                                                  BaseLib::VariableType::tBoolean})}));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (GD::nodeBlueServer) GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue, parameters->at(1)->integerValue, parameters->at(2), parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCRemoveNodesFromFlow::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({

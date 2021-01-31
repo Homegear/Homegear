@@ -136,6 +136,35 @@ class RPCNodeBlueIsReady : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RPCNodeEvent : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCNodeEvent() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCNodeLog : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCNodeLog() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCNodeOutput : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCNodeOutput() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RPCRemoveNodesFromFlow : public BaseLib::Rpc::RpcMethod {
  public:
   RPCRemoveNodesFromFlow() {

@@ -212,7 +212,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("listKnownDeviceTypes", std::make_shared<RPCListKnownDeviceTypes>());
   _rpcMethods->emplace("listTeams", std::make_shared<RPCListTeams>());
   _rpcMethods->emplace("logLevel", std::make_shared<RPCLogLevel>());
-  _rpcMethods->emplace("nodeOutput", std::make_shared<RPCNodeOutput>());
   _rpcMethods->emplace("peerExists", std::make_shared<RPCPeerExists>());
   _rpcMethods->emplace("ping", std::make_shared<RPCPing>());
   _rpcMethods->emplace("putParamset", std::make_shared<RPCPutParamset>());
@@ -264,6 +263,9 @@ RpcServer::RpcServer() {
   { //Node-BLUE
     _rpcMethods->emplace("addNodesToFlow", std::make_shared<RpcMethods::RPCAddNodesToFlow>());
     _rpcMethods->emplace("flowHasTag", std::make_shared<RpcMethods::RPCFlowHasTag>());
+    _rpcMethods->emplace("nodeEvent", std::make_shared<RpcMethods::RPCNodeEvent>());
+    _rpcMethods->emplace("nodeLog", std::make_shared<RpcMethods::RPCNodeLog>());
+    _rpcMethods->emplace("nodeOutput", std::make_shared<RpcMethods::RPCNodeOutput>());
     _rpcMethods->emplace("removeNodesFromFlow", std::make_shared<RpcMethods::RPCRemoveNodesFromFlow>());
   }
 
