@@ -887,10 +887,11 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
     std::vector<char> data;
     if (responseType == PacketType::Enum::xmlResponse) {
       _xmlRpcEncoder->encodeResponse(variable, data);
+      std::string header = getHttpResponseHeader("text/xml", data.size() + 23, !keepAlive);
+      header.append("<?xml version=\"1.0\"?>");
+      data.reserve(data.size() + header.size() + 2);
       data.push_back('\r');
       data.push_back('\n');
-      std::string header = getHttpResponseHeader("text/xml", data.size() + 21, !keepAlive);
-      header.append("<?xml version=\"1.0\"?>");
       data.insert(data.begin(), header.begin(), header.end());
       if (GD::bl->debugLevel >= 5) {
         _out.printDebug("Response packet: " + std::string(data.data(), data.size()));
@@ -902,9 +903,10 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
       }
     } else if (responseType == PacketType::Enum::jsonResponse) {
       _jsonEncoder->encodeResponse(variable, messageId, data);
+      std::string header = getHttpResponseHeader("application/json", data.size() + 2, !keepAlive);
+      data.reserve(data.size() + header.size() + 2);
       data.push_back('\r');
       data.push_back('\n');
-      std::string header = getHttpResponseHeader("application/json", data.size(), !keepAlive);
       data.insert(data.begin(), header.begin(), header.end());
       if (GD::bl->debugLevel >= 5) {
         _out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
@@ -1002,7 +1004,7 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
   try {
     if (_stopped || GD::bl->shuttingDown) return;
 
-    if (methodName == "setClientType" && parameters->size() > 0) {
+    if (methodName == "setClientType" && !parameters->empty()) {
       if (parameters->at(0)->integerValue == 1) {
         _out.printInfo("Info: Type of client " + std::to_string(client->id) + " set to addon.");
         client->addon = true;
@@ -1650,8 +1652,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 } else if (http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer)) {
                   if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by RPC server.");
                   if (http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{')
-                    packetType = packetType
-                                     == PacketType::xmlRequest ? PacketType::jsonRequest : PacketType::jsonResponse;
+                    packetType = (packetType == PacketType::xmlRequest || packetType == PacketType::jsonRequest) ? PacketType::jsonRequest : PacketType::jsonResponse;
                   packetReceived(client,
                                  http.getContent(),
                                  packetType,
@@ -1659,9 +1660,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 }
                 http.reset();
                 if (client->socketDescriptor->descriptor == -1) {
-                  if (GD::bl->debugLevel >= 5)
-                    _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id)
-                                        + " closed.");
+                  if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+                  if (processedBytes < bytesRead) _out.printInfo("Info: " + std::to_string(bytesRead - processedBytes) + " bytes are not processed, because connection to client number " + std::to_string(client->socketDescriptor->id) + " was closed.");
                   break;
                 }
               }
@@ -1742,7 +1742,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
       }
       FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
     }
-    if (!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) {
+    if (!select(nfds, &readFileDescriptor, nullptr, nullptr, &timeout)) {
       if (GD::bl->hf.getTime() - _lastGargabeCollection > 60000
           || _clients.size() > GD::bl->settings.rpcServerMaxConnections() * 100 / 112)
         collectGarbage();
