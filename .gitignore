@@ -77,6 +77,9 @@ stamp-h?
 *.l[ao]
 *~
 
+#npm
+package-lock.json
+
 #CLion
 cmake*           
 .idea
