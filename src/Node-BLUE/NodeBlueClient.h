@@ -73,22 +73,29 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() {}
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
 
     QueueEntry(std::string &methodName, Flows::PArray parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->methodName = methodName;
       this->parameters = parameters;
     }
 
-    QueueEntry(std::vector<char> &packet) { this->packet = packet; }
+    QueueEntry(std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->packet = packet;
+    }
 
     QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->nodeInfo = nodeInfo;
       this->targetPort = targetPort;
       this->message = message;
     }
 
-    virtual ~QueueEntry() {}
+    int64_t time = 0;
 
     //{{{ Request
     std::string methodName;
@@ -138,6 +145,8 @@ class NodeBlueClient : public BaseLib::IQueue {
   std::atomic<int64_t> _lastQueueSize;
   std::mutex _eventFlowIdMutex;
   std::string _eventFlowId;
+  std::atomic_int _lastQueueSlowErrorCounter{0};
+  std::atomic<int64_t> _lastQueueSlowError{0};
 
   std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
   std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;

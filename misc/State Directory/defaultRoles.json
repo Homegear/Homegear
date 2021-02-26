@@ -1693,5 +1693,17 @@
                 ]
             }
         }
+    },
+    {
+        "id": "70.00.15",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - VOC",
+            "de-DE": "Wetter - VOC"
+        }
+
     }
 ]

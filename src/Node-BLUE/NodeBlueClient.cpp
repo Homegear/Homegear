@@ -465,6 +465,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
     queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
     if (!queueEntry) return;
 
+    if (BaseLib::HelperFunctions::getTime() - queueEntry->time > 2000) {
+      _lastQueueSlowErrorCounter++;
+      if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+        _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+        _lastQueueSlowErrorCounter = 0;
+        _out.printWarning(
+            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
+                + std::to_string(_lastQueueSlowErrorCounter));
+      }
+    }
+
     if (index == 0) //IPC request
     {
       _processingThreadCount1++;
