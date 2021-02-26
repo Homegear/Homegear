@@ -141,21 +141,24 @@ class NodeBlueServer : public BaseLib::IQueue {
  private:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() = default;
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
 
-    QueueEntry(PNodeBlueClientData clientData, std::vector<char> &packet) {
-      this->clientData = std::move(clientData);
+    QueueEntry(const PNodeBlueClientData &clientData, const std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->clientData = clientData;
       this->packet = packet;
     }
 
-    QueueEntry(PNodeBlueClientData clientData, std::string methodName, BaseLib::PArray parameters) {
-      this->clientData = std::move(clientData);
-      this->methodName = std::move(methodName);
-      this->parameters = std::move(parameters);
+    QueueEntry(const PNodeBlueClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->clientData = clientData;
+      this->methodName = methodName;
+      this->parameters = parameters;
     }
 
-    ~QueueEntry() override = default;
-
+    int64_t time = 0;
     PNodeBlueClientData clientData;
 
     // {{{ Request
@@ -219,8 +222,16 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
   std::unique_ptr<BaseLib::HttpClient> _nodePinkHttpClient;
 
+<<<<<<< HEAD
   std::atomic<int64_t> _lastNodeEvent{0};
   std::atomic<uint32_t> _nodeEventCounter{0};
+=======
+  std::atomic<int64_t> _lastQueueSlowError{0};
+  std::atomic_int _lastQueueSlowErrorCounter{0};
+
+  std::atomic<int64_t> _lastNodeEvent;
+  std::atomic<uint32_t> _nodeEventCounter;
+>>>>>>> feature-queue-slow-logging
 
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;

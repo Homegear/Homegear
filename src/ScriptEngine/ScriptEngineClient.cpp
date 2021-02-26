@@ -345,6 +345,17 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
     if (!queueEntry) return;
 
+    if (BaseLib::HelperFunctions::getTime() - queueEntry->time > 2000) {
+      _lastQueueSlowErrorCounter++;
+      if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+        _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+        _lastQueueSlowErrorCounter = 0;
+        _out.printWarning(
+            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
+                + std::to_string(_lastQueueSlowErrorCounter));
+      }
+    }
+
     if (index == 0) //Request
     {
       _processingThreadCount1++;
@@ -364,7 +375,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
         if (GD::bl->debugLevel >= 5) {
           _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
-          for (const auto& parameter : *queueEntry->parameters) {
+          for (const auto &parameter : *queueEntry->parameters) {
             parameter->print(true, false);
           }
         }
@@ -830,7 +841,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         zendHandle.handle.stream.handle = nullptr;
         zendHandle.handle.stream.closer = nullptr;
         memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
-        zendHandle.handle.stream.mmap.buf = (char*) scriptInfo->script.c_str(); //String is not modified
+        zendHandle.handle.stream.mmap.buf = (char *)scriptInfo->script.c_str(); //String is not modified
         zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
         zendHandle.filename = scriptInfo->fullPath.c_str();
         zendHandle.opened_path = nullptr;
@@ -1042,9 +1053,9 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo) {
         int callResult = 0;
 
         zend_try
-            {
-              callResult = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
-            }
+        {
+          callResult = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
+        }
         zend_end_try();
 
         if (callResult != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
@@ -1229,9 +1240,9 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
     ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 
     zend_try
-        {
-          call_user_function(EG(function_table), nullptr, &function, &returnValue, 0, nullptr);
-        }
+    {
+      call_user_function(EG(function_table), nullptr, &function, &returnValue, 0, nullptr);
+    }
     zend_end_try();
 
     zval_ptr_dtor(&function);

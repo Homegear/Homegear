@@ -44,6 +44,7 @@
 #include <thread>
 #include <mutex>
 #include <string>
+#include <utility>
 
 namespace Homegear::NodeBlue {
 
@@ -71,22 +72,29 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() = default;
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
 
-    QueueEntry(std::string &methodName, Flows::PArray parameters) {
+    QueueEntry(const std::string &methodName, const Flows::PArray &parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->methodName = methodName;
       this->parameters = parameters;
     }
 
-    explicit QueueEntry(std::vector<char> &packet) { this->packet = packet; }
-
-    QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) {
-      this->nodeInfo = std::move(nodeInfo);
-      this->targetPort = targetPort;
-      this->message = std::move(message);
+    explicit QueueEntry(std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->packet = packet;
     }
 
-    ~QueueEntry() override {}
+    QueueEntry(const Flows::PNodeInfo &nodeInfo, uint32_t targetPort, const Flows::PVariable &message) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->nodeInfo = nodeInfo;
+      this->targetPort = targetPort;
+      this->message = message;
+    }
+
+    int64_t time = 0;
 
     //{{{ Request
     std::string methodName;
@@ -143,6 +151,8 @@ class NodeBlueClient : public BaseLib::IQueue {
   std::atomic<int64_t> _lastQueueSize{0};
   std::mutex _eventFlowIdMutex;
   std::string _eventFlowId;
+  std::atomic_int _lastQueueSlowErrorCounter{0};
+  std::atomic<int64_t> _lastQueueSlowError{0};
 
   std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
   std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
