@@ -222,16 +222,11 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
   std::unique_ptr<BaseLib::HttpClient> _nodePinkHttpClient;
 
-<<<<<<< HEAD
   std::atomic<int64_t> _lastNodeEvent{0};
   std::atomic<uint32_t> _nodeEventCounter{0};
-=======
+
   std::atomic<int64_t> _lastQueueSlowError{0};
   std::atomic_int _lastQueueSlowErrorCounter{0};
-
-  std::atomic<int64_t> _lastNodeEvent;
-  std::atomic<uint32_t> _nodeEventCounter;
->>>>>>> feature-queue-slow-logging
 
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
