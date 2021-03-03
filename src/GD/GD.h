@@ -34,7 +34,6 @@
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"
-#include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
 #include "../FamilyModules/FamilyController.h"
 #include "../FamilyModules/FamilyServer.h"
@@ -53,59 +52,49 @@
 #include <string>
 #include <memory>
 
-namespace Homegear
-{
+namespace Homegear {
 
 class UPnP;
-
 class Mqtt;
 
-class GD
-{
-public:
-	static std::unique_ptr<BaseLib::SharedObjects> bl;
-	static BaseLib::Output out;
-	static const std::string baseLibVersion;
-    static const std::string nodeLibVersion;
-    static const std::string ipcLibVersion;
-	static std::string runAsUser;
-	static std::string runAsGroup;
-	static std::string configPath;
-	static std::string pidfilePath;
-	static std::string workingDirectory;
-	static std::string executablePath;
-	static std::string executableFile;
-	static int64_t startingTime;
-	static std::unique_ptr<FamilyController> familyController;
-	static std::unique_ptr<FamilyServer> familyServer;
-	static std::unique_ptr<LicensingController> licensingController;
-	//We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
-	static std::map<int32_t, std::shared_ptr<Rpc::RpcServer>> rpcServers;
-	static std::unique_ptr<Rpc::Client> rpcClient;
+class GD {
+ public:
+  GD() = delete;
+
+  static std::unique_ptr<BaseLib::SharedObjects> bl;
+  static BaseLib::Output out;
+  static const std::string baseLibVersion;
+  static const std::string nodeLibVersion;
+  static const std::string ipcLibVersion;
+  static std::string runAsUser;
+  static std::string runAsGroup;
+  static std::string configPath;
+  static std::string pidfilePath;
+  static std::string workingDirectory;
+  static std::string executablePath;
+  static std::string executableFile;
+  static int64_t startingTime;
+  static std::unique_ptr<FamilyController> familyController;
+  static std::unique_ptr<FamilyServer> familyServer;
+  static std::unique_ptr<LicensingController> licensingController;
+  //We can work with rpcServers without Mutex, because elements are never deleted and iterators are not invalidated upon insertion of new elements.
+  static std::map<int32_t, std::shared_ptr<Rpc::RpcServer>> rpcServers;
+  static std::unique_ptr<Rpc::Client> rpcClient;
 #ifndef NO_SCRIPTENGINE
-	static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
+  static std::unique_ptr<ScriptEngine::ScriptEngineServer> scriptEngineServer;
 #endif
-	static std::unique_ptr<IpcServer> ipcServer;
-	static std::unique_ptr<NodeBlue::NodeBlueServer> nodeBlueServer;
-	static BaseLib::Rpc::ServerInfo serverInfo;
-	static Rpc::ClientSettings clientSettings;
-	static int32_t rpcLogLevel;
-	static std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> licensingModules;
-	static std::unique_ptr<UPnP> uPnP;
-	static std::unique_ptr<Mqtt> mqtt;
-	static std::unique_ptr<UiController> uiController;
-	static std::unique_ptr<VariableProfileManager> variableProfileManager;
-    static std::unique_ptr<SystemVariableController> systemVariableController;
-	static std::unique_ptr<IpcLogger> ipcLogger;
-#ifdef EVENTHANDLER
-	static std::unique_ptr<EventHandler> eventHandler;
-#endif
-
-	virtual ~GD() {}
-
-private:
-	//Non public constructor
-	GD();
+  static std::unique_ptr<IpcServer> ipcServer;
+  static std::unique_ptr<NodeBlue::NodeBlueServer> nodeBlueServer;
+  static BaseLib::Rpc::ServerInfo serverInfo;
+  static Rpc::ClientSettings clientSettings;
+  static int32_t rpcLogLevel;
+  static std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>> licensingModules;
+  static std::unique_ptr<UPnP> uPnP;
+  static std::unique_ptr<Mqtt> mqtt;
+  static std::unique_ptr<UiController> uiController;
+  static std::unique_ptr<VariableProfileManager> variableProfileManager;
+  static std::unique_ptr<SystemVariableController> systemVariableController;
+  static std::unique_ptr<IpcLogger> ipcLogger;
 };
 
 }

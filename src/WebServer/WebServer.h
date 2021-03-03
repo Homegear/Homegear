@@ -33,45 +33,44 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace WebServer
-{
+namespace WebServer {
 
-class WebServer : public BaseLib::IEventsEx
-{
-public:
-	WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info>& serverInfo);
+class WebServer : public BaseLib::IEventsEx {
+ public:
+  WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> &serverInfo);
 
-	virtual ~WebServer();
+  virtual ~WebServer();
 
-	void get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime = 0);
+  void get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime = 0);
 
-	void post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
-    void delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http& http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
-	void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content);
+  void delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
-	void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char>& content, std::vector<std::string>& additionalHeaders);
+  void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char> &content);
 
-	void registerSendHeadersHook(std::string& moduleName, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>& callback);
+  void getError(int32_t code, const std::string& codeDescription, const std::string& longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders);
 
-protected:
-private:
-	BaseLib::Output _out;
-	BaseLib::Rpc::PServerInfo _serverInfo;
-	BaseLib::Http _http;
+  void registerSendHeadersHook(std::string &moduleName, std::function<void(BaseLib::Http &http, BaseLib::PVariable &headers)> &callback);
 
-	std::mutex _sendHeaderHookMutex;
-	std::map<std::string, std::function<void(BaseLib::Http& http, BaseLib::PVariable& headers)>> _sendHeaderHooks;
+ protected:
+ private:
+  BaseLib::Output _out;
+  BaseLib::Rpc::PServerInfo _serverInfo;
+  BaseLib::Http _http;
 
-	void send(std::shared_ptr<BaseLib::TcpSocket>& socket, std::vector<char>& data);
+  std::mutex _sendHeaderHookMutex;
+  std::map<std::string, std::function<void(BaseLib::Http &http, BaseLib::PVariable &headers)>> _sendHeaderHooks;
 
-	void sendHeaders(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, BaseLib::PVariable& headers);
+  void send(std::shared_ptr<BaseLib::TcpSocket> &socket, std::vector<char> &data);
 
-	void sendOutput(BaseLib::ScriptEngine::PScriptInfo& scriptInfo, std::string& output, bool error);
+  void sendHeaders(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, BaseLib::PVariable &headers);
+
+  void sendOutput(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, std::string &output, bool error);
 };
 
 }

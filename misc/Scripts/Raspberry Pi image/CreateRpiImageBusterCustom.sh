@@ -22,6 +22,7 @@ mkdir -p /var/lib/homegear/db
 chown -R homegear:homegear /var/lib/homegear
 
 sed -i "/^exit 0/d" /lib/systemd/scripts/setup-tmpfs.sh
+sed -i "s/modprobe zram num_devices=2/modprobe zram num_devices=3/g" /lib/systemd/scripts/setup-tmpfs.sh
 cat >> "/lib/systemd/scripts/setup-tmpfs.sh" <<'EOG'
 
 # Homegear
@@ -30,6 +31,16 @@ mkfs.ext4 /dev/zram2
 mount /dev/zram2 /var/lib/homegear/db
 chmod 770 /var/lib/homegear/db
 chown homegear:homegear /var/lib/homegear/db
+
+mkdir /var/log/homegear
+mkdir /var/log/homegear-dc-connector
+mkdir /var/log/homegear-influxdb
+mkdir /var/log/homegear-webssh
+mkdir /var/log/homegear-management
+chown homegear:homegear /var/log/homegear*
+
+touch /var/log/mosquitto.log
+chown mosquitto:mosquitto /var/log/mosquitto.log
 
 mkdir -p /var/tmp/homegear
 chown homegear:homegear /var/tmp/homegear
@@ -160,6 +171,10 @@ TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
 apt-get -y dist-upgrade | dialog --title "System update (2/2)" --progressbox "Updating system..." $TTY_Y $TTY_X
 
+# Create Homegear data directory before installing Homegear so it can be detected in Homegear's postinst script.
+mkdir -p /data/homegear-data
+chown homegear:homegear /data/homegear-data
+
 TTY_X=$(($(stty size | awk '{print $2}')-6))
 TTY_Y=$(($(stty size | awk '{print $1}')-6))
 apt-get -y install homegear homegear-management homegear-webssh homegear-adminui homegear-nodes-core homegear-nodes-extra homegear-homematicbidcos homegear-homematicwired homegear-insteon homegear-max homegear-philipshue homegear-sonos homegear-kodi homegear-ipcam homegear-beckhoff homegear-knx homegear-enocean homegear-intertechno homegear-ccu homegear-zwave homegear-nanoleaf | dialog --title "System setup" --progressbox "Installing Homegear..." $TTY_Y $TTY_X
@@ -169,8 +184,6 @@ if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     apt-get -y -f install  | dialog --title "System setup" --progressbox "Installing dependencies..." $TTY_Y $TTY_X
 fi
 
-mkdir -p /data/homegear-data
-chown homegear:homegear /data/homegear-data
 sed -i 's/debugLevel = 4/debugLevel = 3/g' /etc/homegear/main.conf
 sed -i 's/tempPath = \/var\/lib\/homegear\/tmp/tempPath = \/var\/tmp\/homegear/g' /etc/homegear/main.conf
 sed -i 's/# databasePath =/databasePath = \/var\/lib\/homegear\/db/g' /etc/homegear/main.conf
@@ -183,6 +196,11 @@ sed -i 's/databaseWALJournal = true/databaseWALJournal = false/g' /etc/homegear/
 sed -i 's/databaseSynchronous = true/databaseSynchronous = false/g' /etc/homegear/main.conf
 
 sed -i 's/session.save_path = "\/var\/lib\/homegear\/tmp\/php"/session.save_path = "\/var\/tmp\/homegear\/php"/g' /etc/homegear/php.ini
+
+mkdir -p /data/homegear-data/node-blue/node-red
+cp /var/lib/homegear/node-blue/data/node-red/settings.js /data/homegear-data/node-blue/node-red/
+chown -R homegear:homegear /data/homegear-data
+sed -i 's/\/var\/lib\/homegear\/node-blue\/data\/node-red/\/data\/homegear-data\/node-blue\/node-red/g' /data/homegear-data/node-blue/node-red/settings.js
 
 echo "" >> /etc/homegear/homegear-start.sh
 echo "# Delete backuped db.sql." >> /etc/homegear/homegear-start.sh

@@ -35,230 +35,293 @@
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
 #include "NodeManager.h"
+#include "NodeBlueCredentials.h"
+#include "Node-PINK/Nodepink.h"
+#include "Node-PINK/NodepinkWebsocket.h"
 
 #include <queue>
+#include <utility>
 
-namespace Homegear
-{
+namespace Homegear::NodeBlue {
 
-namespace NodeBlue
-{
+class NodeBlueServer : public BaseLib::IQueue {
+ public:
+  NodeBlueServer();
 
-class NodeBlueServer : public BaseLib::IQueue
-{
-public:
-	NodeBlueServer();
+  ~NodeBlueServer() override;
 
-	virtual ~NodeBlueServer();
+  std::shared_ptr<Nodepink> getNodered() { return _nodepink; }
+  std::shared_ptr<NodepinkWebsocket> getNoderedWebsocket() { return _nodepinkWebsocket; }
 
-    bool lifetick();
+  bool lifetick();
 
-	bool start();
+  bool start();
 
-	void stop();
+  void stop();
 
-	void restartFlows();
+  void restartFlows();
 
-	void homegearShuttingDown();
+  bool restartFlowsAsync();
 
-	void homegearReloading();
+  void homegearShuttingDown();
 
-	void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
+  void homegearReloading();
 
-	uint32_t flowCount();
+  void processKilled(pid_t pid, int exitCode, int signal, bool coreDumped);
 
-	void broadcastEvent(std::string& source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>>& variables, BaseLib::PArray& values);
+  uint32_t flowCount();
 
-	void broadcastFlowVariableEvent(std::string& flowId, std::string& variable, BaseLib::PVariable& value);
+  bool isReady();
 
-	void broadcastGlobalVariableEvent(std::string& variable, BaseLib::PVariable& value);
+  void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
-	void broadcastNewDevices(std::vector<uint64_t>& ids, BaseLib::PVariable deviceDescriptions);
+  void broadcastFlowVariableEvent(std::string &flowId, std::string &variable, BaseLib::PVariable &value);
 
-	void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
+  void broadcastGlobalVariableEvent(std::string &variable, BaseLib::PVariable &value);
 
-	void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+  void broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions);
 
-    void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
+  void broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo);
 
-	std::string handleGet(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+  void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
 
-	std::string handlePost(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+  void broadcastStatus(const std::string &nodeId, const BaseLib::PVariable &status);
 
-    std::string handleDelete(std::string& path, BaseLib::Http& http, std::string& responseEncoding);
+  void broadcastError(const std::string &nodeId, int32_t level, const BaseLib::PVariable &error);
 
-	void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
+  void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
-	BaseLib::PVariable addNodesToFlow(const std::string& tab, const std::string& tag, const BaseLib::PVariable& nodes);
+  void broadcastUiNotificationCreated(uint64_t uiNotificationId);
 
-    BaseLib::PVariable removeNodesFromFlow(const std::string& tab, const std::string& tag);
+  void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
 
-    BaseLib::PVariable flowHasTag(const std::string& tab, const std::string& tag);
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId);
 
-	BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray& parameters);
+  void broadcastRawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet);
 
-	BaseLib::PVariable getNodesWithFixedInputs();
+  std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-	BaseLib::PVariable getNodeVariable(std::string nodeId, std::string topic);
+  std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-	void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
+  std::string handlePut(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-	void enableNodeEvents();
+  std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-	void disableNodeEvents();
+  void nodeLog(const std::string &nodeId, uint32_t logLevel, const std::string &message);
 
-private:
-	class QueueEntry : public BaseLib::IQueueEntry
-	{
-	public:
-		QueueEntry() {}
+  void nodeOutput(const std::string &nodeId, uint32_t index, const BaseLib::PVariable &message, bool synchronous);
 
-		QueueEntry(PNodeBlueClientData clientData, std::vector<char>& packet)
-		{
-			this->clientData = clientData;
-			this->packet = packet;
-		}
+  BaseLib::PVariable addNodesToFlow(const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes);
 
-		QueueEntry(PNodeBlueClientData clientData, std::string methodName, BaseLib::PArray parameters)
-		{
-			this->clientData = clientData;
-			this->methodName = methodName;
-			this->parameters = parameters;
-		}
+  BaseLib::PVariable removeNodesFromFlow(const std::string &tab, const std::string &tag);
 
-		virtual ~QueueEntry() {}
+  BaseLib::PVariable flowHasTag(const std::string &tab, const std::string &tag);
 
-		PNodeBlueClientData clientData;
+  BaseLib::PVariable executePhpNodeBaseMethod(BaseLib::PArray &parameters);
 
-		// {{{ Request
-		std::string methodName;
-		BaseLib::PArray parameters;
-		// }}}
+  BaseLib::PVariable getNodesWithFixedInputs();
 
-		// {{{ Response
-		std::vector<char> packet;
-		// }}}
-	};
+  BaseLib::PVariable getNodeCredentials(const std::string &nodeId);
 
-	BaseLib::Output _out;
-	std::string _socketPath;
-	std::string _webroot;
-	std::atomic_bool _shuttingDown;
-	std::atomic_bool _stopServer;
-	std::atomic_bool _nodeEventsEnabled;
-	std::thread _mainThread;
-	std::thread _maintenanceThread;
-	int32_t _backlog = 100;
-	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-	std::atomic<int32_t> _processCallbackHandlerId{-1};
-	std::mutex _processRequestMutex;
-	std::mutex _newProcessMutex;
-	std::mutex _processMutex;
-	std::map<pid_t, PNodeBlueProcess> _processes;
-	std::mutex _currentFlowIdMutex;
-	int32_t _currentFlowId = 0;
-	std::mutex _stateMutex;
-	std::map<int32_t, PNodeBlueClientData> _clients;
-	int32_t _currentClientId = 0;
-	int64_t _lastGarbageCollection = 0;
-	std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
-	std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
-	std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData& clientData, BaseLib::PArray& parameters)>> _localRpcMethods;
-	std::mutex _packetIdMutex;
-	int32_t _currentPacketId = 0;
-	std::atomic_bool _flowsRestarting;
-	std::mutex _restartFlowsMutex;
-	std::mutex _flowsPostMutex;
-	std::mutex _flowsFileMutex;
-	std::mutex _nodesInstallMutex;
-	std::map<std::string, uint32_t> _maxThreadCounts;
-	std::vector<NodeManager::PNodeInfo> _nodeInfo;
-	std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
-	std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-	std::mutex _nodeClientIdMapMutex;
-	std::map<std::string, int32_t> _nodeClientIdMap;
-	std::mutex _flowClientIdMapMutex;
-	std::map<std::string, int32_t> _flowClientIdMap;
+  BaseLib::PVariable setNodeCredentials(const std::string &nodeId, const BaseLib::PVariable &credentials);
 
-	std::atomic<int64_t> _lastNodeEvent;
-	std::atomic<uint32_t> _nodeEventCounter;
+  BaseLib::PVariable getNodeCredentialTypes(const std::string &nodeId);
 
-	std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
-	std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+  void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
 
-    std::mutex _lifetick1Mutex;
-    std::pair<int64_t, bool> _lifetick1;
-    std::mutex _lifetick2Mutex;
-    std::pair<int64_t, bool> _lifetick2;
+  BaseLib::PVariable getNodeVariable(const std::string& nodeId, const std::string& topic);
 
-	// {{{ Debugging / Valgrinding
-	pid_t _manualClientCurrentProcessId = 1;
-	std::mutex _unconnectedProcessesMutex;
-	std::queue<pid_t> _unconnectedProcesses;
-	// }}}
+  void setNodeVariable(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
 
-	void collectGarbage();
+  void enableNodeEvents();
 
-	bool getFileDescriptor(bool deleteOldSocket = false);
+  void disableNodeEvents();
 
-	void mainThread();
+  void frontendNodeEventLog(const std::string &message);
+ private:
+  class QueueEntry : public BaseLib::IQueueEntry {
+   public:
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
+
+    QueueEntry(const PNodeBlueClientData &clientData, const std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->clientData = clientData;
+      this->packet = packet;
+    }
+
+    QueueEntry(const PNodeBlueClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->clientData = clientData;
+      this->methodName = methodName;
+      this->parameters = parameters;
+    }
+
+    int64_t time = 0;
+    PNodeBlueClientData clientData;
+
+    // {{{ Request
+    std::string methodName;
+    BaseLib::PArray parameters;
+    // }}}
+
+    // {{{ Response
+    std::vector<char> packet;
+    // }}}
+  };
+
+  struct NodeServerInfo {
+    int32_t clientId = -1;
+    std::string type;
+    NodeManager::NodeCodeType nodeCodeType = NodeManager::NodeCodeType::undefined;
+  };
+
+  BaseLib::Output _out;
+  std::string _socketPath;
+  std::string _webroot;
+  std::vector<std::string> _anonymousPaths;
+  std::atomic_bool _shuttingDown{false};
+  std::atomic_bool _stopServer{false};
+  std::atomic_bool _nodeEventsEnabled{false};
+  std::thread _mainThread;
+  std::thread _maintenanceThread;
+  int32_t _backlog = 100;
+  std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
+  std::atomic<int32_t> _processCallbackHandlerId{-1};
+  std::mutex _processRequestMutex;
+  std::mutex _newProcessMutex;
+  std::mutex _processMutex;
+  std::map<pid_t, PNodeBlueProcess> _processes;
+  std::mutex _currentFlowIdMutex;
+  int32_t _currentFlowId = 0;
+  std::mutex _stateMutex;
+  std::shared_ptr<Nodepink> _nodepink;
+  std::shared_ptr<NodepinkWebsocket> _nodepinkWebsocket;
+  std::map<int32_t, PNodeBlueClientData> _clients;
+  int32_t _currentClientId = 0;
+  int64_t _lastGarbageCollection = 0;
+  std::shared_ptr<BaseLib::RpcClientInfo> _nodeBlueClientInfo;
+  std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
+  std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>> _localRpcMethods;
+  std::mutex _packetIdMutex;
+  int32_t _currentPacketId = 0;
+  std::atomic_bool _flowsRestarting{false};
+  std::mutex _restartFlowsMutex;
+  std::mutex _flowsPostMutex;
+  std::mutex _flowsFileMutex;
+  std::mutex _nodesInstallMutex;
+  std::unique_ptr<NodeManager> _nodeManager;
+  std::map<std::string, uint32_t> _maxThreadCounts;
+  std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
+  std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+  std::mutex _nodeInfoMapMutex;
+  std::map<std::string, NodeServerInfo> _nodeInfoMap;
+  std::mutex _flowClientIdMapMutex;
+  std::map<std::string, int32_t> _flowClientIdMap;
+  std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
+  std::unique_ptr<BaseLib::HttpClient> _nodePinkHttpClient;
 
-	void readClient(PNodeBlueClientData& clientData);
+  std::atomic<int64_t> _lastNodeEvent{0};
+  std::atomic<uint32_t> _nodeEventCounter{0};
 
-	BaseLib::PVariable send(PNodeBlueClientData& clientData, std::vector<char>& data);
+  std::atomic<int64_t> _lastQueueSlowError{0};
+  std::atomic_int _lastQueueSlowErrorCounter{0};
 
-	BaseLib::PVariable sendRequest(PNodeBlueClientData& clientData, std::string methodName, const BaseLib::PArray& parameters, bool wait);
+  std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+  std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-	void sendResponse(PNodeBlueClientData& clientData, BaseLib::PVariable& scriptId, BaseLib::PVariable& packetId, BaseLib::PVariable& variable);
+  std::mutex _lifetick1Mutex;
+  std::pair<int64_t, bool> _lifetick1;
+  std::mutex _lifetick2Mutex;
+  std::pair<int64_t, bool> _lifetick2;
 
-	void sendShutdown();
+  // {{{ Debugging / Valgrinding
+  pid_t _manualClientCurrentProcessId = 1;
+  std::mutex _unconnectedProcessesMutex;
+  std::queue<pid_t> _unconnectedProcesses;
+  // }}}
 
-	bool sendReset();
+  void collectGarbage();
 
-	void closeClientConnections();
+  bool getFileDescriptor(bool deleteOldSocket = false);
 
-	void closeClientConnection(PNodeBlueClientData client);
+  void mainThread();
 
-	PNodeBlueProcess getFreeProcess(uint32_t maxThreadCount);
+  void readClient(PNodeBlueClientData &clientData);
 
-	void getMaxThreadCounts();
+  BaseLib::PVariable send(PNodeBlueClientData &clientData, std::vector<char> &data);
 
-	bool checkIntegrity(std::string flowsFile);
+  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, const std::string& methodName, const BaseLib::PArray &parameters, bool wait);
 
-	void backupFlows();
+  void sendResponse(PNodeBlueClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
-	void startFlows();
+  void sendShutdown();
 
-	void stopNodes();
+  bool sendReset();
 
-	std::set<std::string> insertSubflows(BaseLib::PVariable& subflowNode, std::unordered_map<std::string, BaseLib::PVariable>& subflowInfos, std::unordered_map<std::string, BaseLib::PVariable>& flowNodes, std::unordered_map<std::string, BaseLib::PVariable>& subflowNodes, std::set<std::string>& flowNodeIds, std::set<std::string>& allNodeIds);
+  void closeClientConnections();
 
-	void startFlow(PFlowInfoServer& flowInfo, std::set<std::string>& nodes);
+  void closeClientConnection(const PNodeBlueClientData &client);
 
-	void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry>& entry);
+  PNodeBlueProcess getFreeProcess(uint32_t maxThreadCount);
 
-	std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable& variable);
+  void getMaxThreadCounts();
 
-	void frontendNodeEventLog(const std::string& message);
+  bool checkIntegrity(const std::string& flowsFile);
 
-	// {{{ RPC methods
-	BaseLib::PVariable registerFlowsClient(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+  void backupFlows();
 
-	BaseLib::PVariable executePhpNode(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+  void startFlows();
 
-	BaseLib::PVariable executePhpNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+  void stopNodes();
 
-	BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+  std::set<std::string> insertSubflows(BaseLib::PVariable &subflowNode,
+                                       std::unordered_map<std::string, BaseLib::PVariable> &subflowInfos,
+                                       std::unordered_map<std::string, BaseLib::PVariable> &flowNodes,
+                                       std::unordered_map<std::string, BaseLib::PVariable> &subflowNodes,
+                                       std::set<std::string> &allNodeIds);
 
-    BaseLib::PVariable invokeIpcProcessMethod(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+  void startFlow(PFlowInfoServer &flowInfo, const std::unordered_map<std::string, BaseLib::PVariable> &flowNodes);
 
-	BaseLib::PVariable nodeEvent(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
-    BaseLib::PVariable frontendEventLog(PNodeBlueClientData& clientData, BaseLib::PArray& parameters);
-	// }}}
+  std::string processNodeUpload(BaseLib::Http &http);
+
+  std::string deploy(BaseLib::Http &http);
+
+  std::string installNode(BaseLib::Http &http);
+
+  static std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
+
+  // {{{ RPC methods
+  BaseLib::PVariable registerFlowsClient(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable errorEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable executePhpNode(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable executePhpNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable invokeIpcProcessMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable nodeEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable nodeBlueVariableEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable nodeRedNodeInput(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setCredentialTypes(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+  // }}}
 };
-
-}
 
 }
 

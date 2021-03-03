@@ -70,7 +70,8 @@ esac
 AC_CHECK_LIB([mysqlclient], [mysql_init], [AM_CONDITIONAL(HAVE_MYSQLCLIENT, true)], [AM_CONDITIONAL(HAVE_MYSQLCLIENT, false)])
 AC_CHECK_HEADERS([curl/curl.h], [AM_CONDITIONAL(HAVE_CURL_HEADERS, true)], [AM_CONDITIONAL(HAVE_CURL_HEADERS, false)])
 AC_CHECK_LIB([curl], [curl_easy_send], [AM_CONDITIONAL(HAVE_CURL, true)], [AM_CONDITIONAL(HAVE_CURL, false)])
-AC_CHECK_HEADERS([php7-homegear/main/php_config.h], [AM_CONDITIONAL(HAVE_PHP_HEADERS, true)], [AM_CONDITIONAL(HAVE_PHP_HEADERS, false)])
+AC_CHECK_HEADERS([php8-homegear/main/php_config.h], [AM_CONDITIONAL(HAVE_PHP_HEADERS, true)], [AM_CONDITIONAL(HAVE_PHP_HEADERS, false)])
+AC_CHECK_HEADERS([enchant-2/enchant.h], [AM_CONDITIONAL(HAVE_ENCHANT2_HEADERS, true)], [AM_CONDITIONAL(HAVE_ENCHANT2_HEADERS, false)])
 
 AC_DEFINE_UNQUOTED([LIBHOMEGEARNODE_VERSION], [`./getVersionNodeLib.sh`], [Define libhomegear-node version])
 AC_DEFINE_UNQUOTED([LIBHOMEGEARIPC_VERSION], [`./getVersionIpcLib.sh`], [Define libhomegear-ipc version])
@@ -87,19 +88,12 @@ AS_IF([test "x$with_scriptengine" = "xno"], [
 	AM_CONDITIONAL(WITH_SCRIPTENGINE, true)
 	])
 
-AC_ARG_WITH([eventhandler], [AS_HELP_STRING([--without-eventhandler], [Compile without event handler])], [with_eventhandler=no], [])
-AS_IF([test "x$with_eventhandler" != "xno"], [
-	AM_CONDITIONAL(WITH_EVENTHANDLER, true)
-	], [
-	AM_CONDITIONAL(WITH_EVENTHANDLER, false)
-	])
-
-AC_ARG_WITH([ccu2], [AS_HELP_STRING([--with-ccu2], [Compile for CCU2])], [with_ccu2=yes], [])
-AS_IF([test "x$with_ccu2" = "xyes"], [
-	AM_CONDITIONAL(WITH_CCU2, true)
-	], [
-	AM_CONDITIONAL(WITH_CCU2, false)
-	])
+AC_ARG_WITH([nodejs], [AS_HELP_STRING([--without-nodejs], [Compile without Node.js])], [with_nodejs=no], [])
+AS_IF([test "x$with_nodejs" = "xno"], [
+    AM_CONDITIONAL(WITH_NODEJS, false)
+    ], [
+    AM_CONDITIONAL(WITH_NODEJS, true)
+    ])
 
 #AC_ARG_WITH([curl], [AS_HELP_STRING([--with-curl], [Use this option when PHP is compiled with --with-curl.])], [with_openssl=yes], [])
 #AS_IF([test "x$with_openssl" = "xyes"], [

@@ -35,65 +35,61 @@
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-struct FlowFinishedInfo
-{
-	bool finished = false;
+struct FlowFinishedInfo {
+  bool finished = false;
 };
 typedef std::shared_ptr<FlowFinishedInfo> PFlowFinishedInfo;
 
-class NodeBlueProcess
-{
-private:
-	pid_t _pid = 0;
-	std::mutex _flowsMutex;
-	std::map<int32_t, PFlowInfoServer> _flows;
-	std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
-	PNodeBlueClientData _clientData;
-	std::atomic_bool _exited{false};
-	std::atomic_uint _nodeThreadCount;
-public:
-	NodeBlueProcess();
+class NodeBlueProcess {
+ private:
+  pid_t _pid = 0;
+  std::mutex _flowsMutex;
+  std::map<int32_t, PFlowInfoServer> _flows;
+  std::map<int32_t, PFlowFinishedInfo> _flowFinishedInfo;
+  PNodeBlueClientData _clientData;
+  std::atomic_bool _exited{false};
+  std::atomic_uint _nodeThreadCount;
+ public:
+  NodeBlueProcess();
 
-	virtual ~NodeBlueProcess();
+  virtual ~NodeBlueProcess();
 
-	std::atomic<int64_t> lastExecution;
-	std::condition_variable requestConditionVariable;
+  std::atomic<int64_t> lastExecution;
+  std::condition_variable requestConditionVariable;
 
-	pid_t getPid() { return _pid; }
+  pid_t getPid() { return _pid; }
 
-	void setPid(pid_t value) { _pid = value; }
+  void setPid(pid_t value) { _pid = value; }
 
-	PNodeBlueClientData& getClientData() { return _clientData; }
+  PNodeBlueClientData &getClientData() { return _clientData; }
 
-	bool getExited() { return _exited; }
+  bool getExited() { return _exited; }
 
-	void setExited(bool value) { _exited = value; }
+  void setExited(bool value) { _exited = value; }
 
-	void setClientData(PNodeBlueClientData& value) { _clientData = value; }
+  void setClientData(PNodeBlueClientData &value) { _clientData = value; }
 
-	void invokeFlowFinished(int32_t exitCode);
+  void invokeFlowFinished(int32_t exitCode);
 
-	void invokeFlowFinished(int32_t id, int32_t exitCode);
+  void invokeFlowFinished(int32_t id, int32_t exitCode);
 
-	uint32_t flowCount();
+  uint32_t flowCount();
 
-	void reset();
+  void reset();
 
-	uint32_t nodeThreadCount();
+  uint32_t nodeThreadCount();
 
-	PFlowInfoServer getFlow(int32_t id);
+  PFlowInfoServer getFlow(int32_t id);
 
-	PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
+  PFlowFinishedInfo getFlowFinishedInfo(int32_t id);
 
-	void registerFlow(int32_t id, PFlowInfoServer& flowInfo);
+  void registerFlow(int32_t id, PFlowInfoServer &flowInfo);
 
-	void unregisterFlow(int32_t id);
+  void unregisterFlow(int32_t id);
 };
 
 typedef std::shared_ptr<NodeBlueProcess> PNodeBlueProcess;

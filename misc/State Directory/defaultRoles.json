@@ -76,26 +76,11 @@
                     ]
                 }
             ],
-            "icon": "light_on_1",
             "roleProfileValues": {
                 "type": "select",
                 "options": {
                     "true": "an",
                     "false": "aus"
-                }
-            },
-            "label": {
-                "en-US": "Lighting",
-                "de-DE": "Beleuchtung"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "aus",
-                    "1": "an"
-                },
-                "en-US": {
-                    "0": "off",
-                    "1": "on"
                 }
             }
         }
@@ -145,28 +130,11 @@
                     ]
                 }
             ],
-            "icon": "light_dim_1",
-            "aggregationType": 1,
-            "l2_status": false,
             "roleProfileValues": {
                 "type": "select",
                 "options": {
                     "true": "an",
                     "false": "aus"
-                }
-            },
-            "label": {
-                "en-US": "Lighting - brightness",
-                "de-DE": "Beleuchtung - Helligkeit"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "aus",
-                    "100": "an"
-                },
-                "en-US": {
-                    "0": "off",
-                    "100": "on"
                 }
             }
         }
@@ -251,41 +219,6 @@
         "translations": {
             "en-US": "heating",
             "de-DE": "Heizung"
-        },
-        "ui": {
-            "icon": "heater_1",
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "0": "Frostschutz",
-                    "1": "Komfort",
-                    "2": "Spar"
-                }
-            },
-            "label": {
-                "en-US": "Heating",
-                "de-DE": "Heizung"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "Frostschutz",
-                    "1": "Komfort",
-                    "2": "Spar"
-                },
-                "en-US": {
-                    "0": "Frost protection",
-                    "1": "Comfort",
-                    "2": "Eco"
-                }
-            },
-            "rolesInclude": [
-                {
-                    "aggregationType": 2,
-                    "roles": [
-                        201003
-                    ]
-                }
-            ]
         }
     },
     {
@@ -296,16 +229,6 @@
         "translations": {
             "en-US": "heating - current temperature",
             "de-DE": "Heizung - Ist-Temperatur"
-        },
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Ist"
-                },
-                "en-US": {
-                    "0": "Current"
-                }
-            }
         }
     },
     {
@@ -374,7 +297,7 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.heatingIsStateSliderModeWindow",
+                    "element": "Base.heatingSliderModeWindowhandle",
                     "roleIdsIn": [
                         [
                             201001
@@ -405,7 +328,7 @@
                     ]
                 },
                 {
-                    "element": "Base.heatingIsStateSliderMode",
+                    "element": "Base.heatingSliderMode",
                     "roleIdsIn": [
                         [
                             201001
@@ -429,15 +352,7 @@
                         ]
                     ]
                 }
-            ],
-            "translations": {
-                "de-DE": {
-                    "0": "Soll"
-                },
-                "en-US": {
-                    "0": "Setpoint"
-                }
-            }
+            ]
         }
     },
     {
@@ -450,15 +365,11 @@
             "de-DE": "Heizung - Temperaturmodus"
         },
         "ui": {
-            "translations": {
-                "de-DE": {
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
                     "0": "Frostschutz",
                     "1": "Komfort",
-                    "2": "Spar"
-                },
-                "en-US": {
-                    "0": "Frost",
-                    "1": "Comfort",
                     "2": "Spar"
                 }
             }
@@ -472,16 +383,6 @@
         "translations": {
             "en-US": "heating - comfort temperature",
             "de-DE": "Heizung - Komforttemperatur"
-        },
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Komfort"
-                },
-                "en-US": {
-                    "0": "Comfort"
-                }
-            }
         }
     },
     {
@@ -492,16 +393,6 @@
         "translations": {
             "en-US": "heating - eco temperature",
             "de-DE": "Heizung - Absenktemperatur"
-        },
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Spar"
-                },
-                "en-US": {
-                    "0": "Spar"
-                }
-            }
         }
     },
     {
@@ -512,16 +403,6 @@
         "translations": {
             "en-US": "heating - frost protection temperature",
             "de-DE": "Heizung - Frostschutztemperatur"
-        },
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Frostschutz"
-                },
-                "en-US": {
-                    "0": "Frost"
-                }
-            }
         }
     },
     {
@@ -551,23 +432,13 @@
                     ]
                 ]
             },
-            "icon": "ventilator_2",
-            "label": {
-                "en-US": "Ventilation",
-                "de-DE": "Lüftung"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "Stufe 1",
-                    "1": "Stufe 2",
-                    "2": "Stufe 3",
-                    "3": "Stufe 4"
-                },
-                "en-US": {
-                    "0": "Level 1",
-                    "1": "Level 2",
-                    "2": "Level 3",
-                    "3": "Level 4"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "1": "Level 1",
+                    "2": "Level 2",
+                    "3": "Level 3",
+                    "4": "Level 4"
                 }
             }
         }
@@ -598,24 +469,13 @@
         },
         "ui": {
             "simpleCreationInfo": {
-                "element": "Base.doorContact",
+                "element": "Base.doorHandle",
                 "roleIdsIn": [
                     [
                         301001
                     ]
                 ],
                 "roleIdsOut": []
-            },
-            "icon": "door_open_2",
-            "translations": {
-                "de-DE": {
-                    "0": "geöffnet",
-                    "1": "geschlossen"
-                },
-                "en-US": {
-                    "0": "opened",
-                    "1": "closed"
-                }
             }
         }
     },
@@ -631,28 +491,13 @@
         },
         "ui": {
             "simpleCreationInfo": {
-                "element": "Base.windowContact",
+                "element": "Base.windowHandle",
                 "roleIdsIn": [
                     [
                         301002
                     ]
                 ],
                 "roleIdsOut": []
-            },
-            "icon": "window_1",
-            "label": {
-                "en-US": "Windows",
-                "de-DE": "Fenster"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "geöffnet",
-                    "1": "geschlossen"
-                },
-                "en-US": {
-                    "0": "opened",
-                    "1": "closed"
-                }
             }
         }
     },
@@ -675,21 +520,6 @@
                     ]
                 ],
                 "roleIdsOut": []
-            },
-            "icon": "door-handle_1",
-            "label": {
-                "en-US": "Doors",
-                "de-DE": "Türen"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "unverriegelt",
-                    "1": "verriegelt"
-                },
-                "en-US": {
-                    "0": "unlocked",
-                    "1": "locked"
-                }
             }
         }
     },
@@ -724,26 +554,11 @@
                     ]
                 ]
             },
-            "icon": "socket_1",
             "roleProfileValues": {
                 "type": "select",
                 "options": {
                     "true": "an",
                     "false": "aus"
-                }
-            },
-            "label": {
-                "en-US": "Sockets",
-                "de-DE": "Steckdosen"
-            },
-            "translations": {
-                "de-DE": {
-                    "0": "aus",
-                    "1": "an"
-                },
-                "en-US": {
-                    "0": "off",
-                    "1": "on"
                 }
             }
         }
@@ -764,12 +579,9 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.shadingButtonsPositionSlats",
+                    "element": "Base.shadingButtonsPosition",
                     "roleIdsIn": [
                         [
-                            501001,
-                            501003,
-                            501002
                         ],
                         [
                             501004
@@ -802,7 +614,7 @@
                     ]
                 },
                 {
-                    "element": "shadingButtonsSingleStepButtonsUpDownPositionPositionSlatsWindalarm",
+                    "element": "Base.shadingButtonsSingleStepPositionPositionSlatsWindalarm",
                     "roleIdsIn": [
                         [],
                         [
@@ -843,43 +655,6 @@
                         []
                     ]
                 }
-            ],
-            "icon": "blind_1",
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "einfahren",
-                    "false": "ausfahren"
-                }
-            },
-            "label": {
-                "en-US": "Shading",
-                "de-DE": "Beschattung"
-            },
-            "translations": {
-                "de-DE": {
-                    "falseCount": "eingefahren",
-                    "trueCount": "ausgefahren"
-                },
-                "en-US": {
-                    "falseCount": "retracted",
-                    "trueCount": "extended"
-                }
-            },
-            "rolesInclude": [
-                {
-                    "aggregationType": 2,
-                    "roles": [
-                        501001,
-                        501002
-                    ]
-                },
-                {
-                    "aggregationType": 1,
-                    "roles": [
-                        501004
-                    ]
-                }
             ]
         }
     },
@@ -895,12 +670,10 @@
         },
         "uiRef": 501000,
         "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Hoch"
-                },
-                "en-US": {
-                    "0": "Up"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "einfahren"
                 }
             }
         }
@@ -917,12 +690,10 @@
         },
         "uiRef": 501000,
         "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Runter"
-                },
-                "en-US": {
-                    "0": "Down"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "false": "ausfahren"
                 }
             }
         }
@@ -937,17 +708,7 @@
             "en-US": "shading - blind - stop",
             "de-DE": "Beschattung - Stopp"
         },
-        "uiRef": 501000,
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Stopp"
-                },
-                "en-US": {
-                    "0": "Stop"
-                }
-            }
-        }
+        "uiRef": 501000
     },
     {
         "id": 501004,
@@ -959,7 +720,16 @@
             "en-US": "shading - blind - position",
             "de-DE": "Beschattung - Position"
         },
-        "uiRef": 501000
+        "uiRef": 501000,
+        "ui": {
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "0": "einfahren",
+                    "100": "ausfahren"
+                }
+            }
+        }
     },
     {
         "id": 501005,
@@ -971,19 +741,7 @@
             "en-US": "shading - blind - up and down",
             "de-DE": "Beschattung - hoch und runter"
         },
-        "uiRef": 501000,
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Hoch",
-                    "1": "Runter"
-                },
-                "en-US": {
-                    "0": "Up",
-                    "1": "Down"
-                }
-            }
-        }
+        "uiRef": 501000
     },
     {
         "id": 501006,
@@ -995,19 +753,7 @@
             "en-US": "shading - blind - step",
             "de-DE": "Beschattung - Stufe"
         },
-        "uiRef": 501000,
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Hoch",
-                    "1": "Runter"
-                },
-                "en-US": {
-                    "0": "Up",
-                    "1": "Down"
-                }
-            }
-        }
+        "uiRef": 501000
     },
     {
         "id": 501007,
@@ -1042,12 +788,9 @@
         "ui": {
             "simpleCreationInfo": [
                 {
-                    "element": "Base.shadingButtonsPositionSlats",
+                    "element": "Base.shadingAnwingButtonsPosition",
                     "roleIdsIn": [
                         [
-                            502001,
-                            502003,
-                            502002
                         ],
                         [
                             502004
@@ -1065,43 +808,64 @@
                     ]
                 },
                 {
-                    "element": "Base.shadingButtonsUpDown",
+                    "element": "Base.shadingAwningButtonsPositionWindalarm",
                     "roleIdsIn": [
+                        [],
                         [
-                            502001
+                            502004
+                        ],
+                        [
+                            502008
                         ]
                     ],
                     "roleIdsOut": [
                         [
-                            502001
-                        ]
+                            {
+                                "id": 502005,
+                                "value": false
+                            },
+                            {
+                                "id": 502006,
+                                "value": false
+                            },
+                            {
+                                "id": 502005,
+                                "value": true
+                            }
+                        ],
+                        [
+                            502004
+                        ],
+                        []
                     ]
-                }
-            ],
-            "icon": "awning_1",
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "ausfahren",
-                    "false": "einfahren"
-                }
-            },
-            "translations": {
-                "de-DE": {
-                    "falseCount": "eingefahren",
-                    "trueCount": "ausgefahren"
                 },
-                "en-US": {
-                    "falseCount": "retracted",
-                    "trueCount": "extended"
-                }
-            },
-            "rolesInclude": [
                 {
-                    "aggregationType": 1,
-                    "roles": [
-                        502004
-                    ]
+                 "element": "Base.shadingAwningButtonsPosition",
+                    "roleIdsIn": [
+                        [],
+                        [
+                            502004
+                        ]
+                    ],
+                    "roleIdsOut": [
+                        [
+                            {
+                                "id": 502005,
+                                "value": false
+                            },
+                            {
+                                "id": 502006,
+                                "value": false
+                            },
+                            {
+                                "id": 502005,
+                                "value": true
+                            },
+                            [
+                                502004
+                            ]
+                        ]
+                    ] 
                 }
             ]
         }
@@ -1118,12 +882,10 @@
         },
         "uiRef": 502000,
         "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "einfahren"
-                },
-                "en-US": {
-                    "0": "retract"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "false": "einfahren"
                 }
             }
         }
@@ -1140,12 +902,10 @@
         },
         "uiRef": 502000,
         "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "ausfahren"
-                },
-                "en-US": {
-                    "0": "extend"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "ausfahren"
                 }
             }
         }
@@ -1160,17 +920,7 @@
             "en-US": "shading - awning - stop",
             "de-DE": "Beschattung - Markise - Stopp"
         },
-        "uiRef": 502000,
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Stopp"
-                },
-                "en-US": {
-                    "0": "Stop"
-                }
-            }
-        }
+        "uiRef": 502000
     },
     {
         "id": 502004,
@@ -1181,6 +931,63 @@
         "translations": {
             "en-US": "shading - awning - position",
             "de-DE": "Beschattung - Markise - Position"
+        },
+        "uiRef": 502000,
+        "ui": {
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "0": "einfahren",
+                    "100": "ausfahren"
+                }
+            }
+        }
+    },
+      {
+        "id": 502005,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - awning - retract and extend",
+            "de-DE": "Beschattung - Markise - einfahren und ausfahren"
+        },
+        "uiRef": 502000
+    },
+    {
+        "id": 502006,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - awning - step",
+            "de-DE": "Beschattung - Markise - Stufe"
+        },
+        "uiRef": 502000
+    },
+    {
+        "id": 502007,
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "shading - slats - position",
+            "de-DE": "Beschattung - Markise - Lamellenposition"
+        },
+        "uiRef": 502000
+    },
+    {
+        "id": 502008,
+        "types": [
+            "bool",
+            "int"
+        ],
+        "translations": {
+            "en-US": "shading - awning - windalert",
+            "de-DE": "Beschattung - Markise - Windalarm"
         },
         "uiRef": 502000
     },
@@ -1207,33 +1014,6 @@
                         ]
                     ]
                 }
-            ],
-            "icon": "window_2",
-            "l2_status": false,
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "schließen",
-                    "false": "öffnen"
-                }
-            },
-            "translations": {
-                "de-DE": {
-                    "falseCount": "geöffnet",
-                    "trueCount": "geschlossen"
-                },
-                "en-US": {
-                    "falseCount": "open",
-                    "trueCount": "closed"
-                }
-            },
-            "rolesInclude": [
-                {
-                    "aggregationType": 1,
-                    "roles": [
-                        600001
-                    ]
-                }
             ]
         }
     },
@@ -1249,12 +1029,10 @@
         },
         "uiRef": 600000,
         "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Hoch"
-                },
-                "en-US": {
-                    "0": "Up"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "false": "öffnen"
                 }
             }
         }
@@ -1271,12 +1049,10 @@
         },
         "uiRef": 600000,
         "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Runter"
-                },
-                "en-US": {
-                    "0": "Down"
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "true": "schließen"
                 }
             }
         }
@@ -1291,17 +1067,7 @@
             "en-US": "window - stop",
             "de-DE": "Fenster - Stopp"
         },
-        "uiRef": 600000,
-        "ui": {
-            "translations": {
-                "de-DE": {
-                    "0": "Stopp"
-                },
-                "en-US": {
-                    "0": "Stop"
-                }
-            }
-        }
+        "uiRef": 600000
     },
     {
         "id": 600004,
@@ -1313,7 +1079,16 @@
             "en-US": "window - position",
             "de-DE": "Fenster - Position"
         },
-        "uiRef": 600000
+        "uiRef": 600000,
+        "ui": {
+            "roleProfileValues": {
+                "type": "select",
+                "options": {
+                    "false": "öffnen",
+                    "true": "schließen"
+                }
+            }
+        }
     },
     {
         "id": "70.00.00",
@@ -1676,5 +1451,17 @@
                 ]
             }
         }
+    },
+    {
+        "id": "70.00.15",
+        "types": [
+            "int",
+            "float"
+        ],
+        "translations": {
+            "en-US": "weather - VOC",
+            "de-DE": "Wetter - VOC"
+        }
+
     }
 ]

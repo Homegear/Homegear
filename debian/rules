@@ -41,7 +41,6 @@ override_dh_auto_install:
 	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 
 	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear
-	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/data
 	mkdir $(CURDIR)/debian/homegear/var/lib/homegear/phpinclude
 	cp -R $(CURDIR)/misc/State\ Directory/* $(CURDIR)/debian/homegear/var/lib/homegear
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear
@@ -55,6 +54,25 @@ override_dh_auto_install:
 	chown -R root:root $(CURDIR)/debian/homegear/usr/share/homegear
 	find $(CURDIR)/debian/homegear/usr/share/homegear -type d -exec chmod 555 {} \;
 	find $(CURDIR)/debian/homegear/usr/share/homegear -type f -exec chmod 444 {} \;
+
+	# {{{ Create Node.js links to be able to run npm in this script
+	# Linking this file uses /usr/bin/node_modules instead of /usr/lib/node_modules
+	if test ! -e /usr/bin/npm; then ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npm /usr/bin/npm; fi
+	# Linking this file uses /usr/bin/node_modules instead of /usr/lib/node_modules
+	if test ! -e /usr/bin/npx; then ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npx /usr/bin/npx; fi
+	if test ! -e /usr/bin/node; then ln -s $(CURDIR)/debian/homegear/usr/bin/homegear-node /usr/bin/node; fi
+	# This works and doesn't bite with the real Node.js if installled.
+	if test ! -e /usr/bin/node_modules; then ln -s /usr/share/homegear/nodejs/lib/node_modules /usr/bin/node_modules; fi
+	# }}}
+
+	# {{{ Install Node-RED modules
+	rm -Rf $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/node-red/node_modules
+	cd $(CURDIR)/debian/homegear/var/lib/homegear/node-blue/node-red/ && NODE_OPTIONS=--max-old-space-size=512 npm install --no-audit --no-update-notifier --unsafe-perm --no-fund --production
+	# }}}
+
+	# {{{ Remove link to homegear-node again, so it can be recreated correctly when installing Homegear
+	echo `readlink -f /usr/bin/node` | grep -q build && rm -f /usr/bin/node
+	# }}}
 
 override_dh_strip:
 	dh_strip --dbg-package=homegear

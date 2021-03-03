@@ -37,2086 +37,1830 @@
 #include <memory>
 #include <cstdlib>
 
-namespace Homegear
-{
-
-namespace Rpc
-{
+namespace Homegear::Rpc {
 
 class RpcServer;
 
-class RPCDevTest : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDevTest()
-    {
-        setHelp("Test method for development.");
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
-    }
+class RPCDevTest : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDevTest() {
+    setHelp("Test method for development.");
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSystemGetCapabilities : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSystemGetCapabilities()
-    {
-        setHelp("Lists server's RPC capabilities.");
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
-    }
+class RPCSystemGetCapabilities : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSystemGetCapabilities() {
+    setHelp("Lists server's RPC capabilities.");
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSystemListMethods : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSystemListMethods()
-    {
-        setHelp("Lists all RPC methods.");
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCSystemMethodHelp : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSystemMethodHelp()
-    {
-        setHelp("Returns a description of a RPC method.");
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCSystemMethodSignature : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSystemMethodSignature()
-    {
-        setHelp("Returns the method's signature.");
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCSystemMulticall : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSystemMulticall()
-    {
-        setHelp("Calls multiple RPC methods at once to reduce traffic.");
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAbortEventReset : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAbortEventReset()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAcknowledgeGlobalServiceMessage : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAcknowledgeGlobalServiceMessage()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCActivateLinkParamset : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCActivateLinkParamset()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
-
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddCategoryToChannel : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddCategoryToChannel()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddCategoryToDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddCategoryToDevice()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddRoleToVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddRoleToVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tStruct});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddCategoryToSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddCategoryToSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddCategoryToVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddCategoryToVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddDevice()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddChannelToRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddChannelToRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddDeviceToRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddDeviceToRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddEvent : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddEvent()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddLink : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddLink()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddRoleToSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddRoleToSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddRoomToStory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddRoomToStory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddSystemVariableToRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddSystemVariableToRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAddVariableToRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAddVariableToRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCAggregateRoles : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCAggregateRoles()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray, BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+class RPCSystemListMethods : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSystemListMethods() {
+    setHelp("Lists all RPC methods.");
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCSystemMethodHelp : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSystemMethodHelp() {
+    setHelp("Returns a description of a RPC method.");
+    addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCSystemMethodSignature : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSystemMethodSignature() {
+    setHelp("Returns the method's signature.");
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
-
-class RPCCheckServiceAccess : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCheckServiceAccess()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCopyConfig : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCopyConfig()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCClientServerInitialized : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCClientServerInitialized()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCreateCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCreateCategory()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCreateDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCreateDevice()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCreateRole : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCreateRole()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCreateRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCreateRoom()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCCreateStory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCCreateStory()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteCategory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteDevice()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+
+class RPCSystemMulticall : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSystemMulticall() {
+    setHelp("Calls multiple RPC methods at once to reduce traffic.");
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCDeleteRole : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteRole()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteStory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteStory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteNodeData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteNodeData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCDeleteSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+class RPCAcknowledgeGlobalServiceMessage : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAcknowledgeGlobalServiceMessage() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCDeleteUserData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCDeleteUserData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCActivateLinkParamset : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCActivateLinkParamset() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tBoolean});
+
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCEnableEvent : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCEnableEvent()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-    }
+class RPCAddCategoryToChannel : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddCategoryToChannel() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddCategoryToDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddCategoryToDevice() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddRoleToVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddRoleToVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean,
+                                                    BaseLib::VariableType::tStruct});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddCategoryToSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddCategoryToSystemVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddCategoryToVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddCategoryToVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddDevice() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddChannelToRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddChannelToRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddDeviceToRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddDeviceToRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddLink : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddLink() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddRoleToSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddRoleToSystemVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddRoomToStory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddRoomToStory() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddSystemVariableToRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddSystemVariableToRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddVariableToRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddVariableToRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAggregateRoles : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAggregateRoles() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray,
+                                                    BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray,
+                                                    BaseLib::VariableType::tStruct, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCheckServiceAccess : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCheckServiceAccess() {
+    addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCopyConfig : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCopyConfig() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCClientServerInitialized : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCClientServerInitialized() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCreateCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCreateCategory() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCreateDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCreateDevice() {
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCreateRole : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCreateRole() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCreateRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCreateRoom() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCCreateStory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCCreateStory() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCExecuteMiscellaneousDeviceMethod : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCExecuteMiscellaneousDeviceMethod()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCDeleteData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-class RPCFamilyExists : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCFamilyExists()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCDeleteCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteCategory() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCForceConfigUpdate : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCForceConfigUpdate()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCDeleteDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteDevice() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetAllMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAllMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCDeleteRole : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteRole() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetAllScripts : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAllScripts()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-    }
+class RPCDeleteRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteRoom() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetAllConfig : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAllConfig()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCDeleteStory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteStory() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetAllValues : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAllValues()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
-    }
+class RPCDeleteMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteMetadata() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetAllSystemVariables : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetAllSystemVariables()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
-    }
+class RPCDeleteNodeData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteNodeData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetCategories : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetCategories()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCDeleteSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteSystemVariable() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetCategoryMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetCategoryMetadata()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCDeleteUserData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCDeleteUserData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetChannelsInCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetChannelsInCategory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCExecuteMiscellaneousDeviceMethod : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCExecuteMiscellaneousDeviceMethod() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetChannelsInRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetChannelsInRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCFamilyExists : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCFamilyExists() {
+    addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetConfigParameter : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetConfigParameter()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCForceConfigUpdate : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCForceConfigUpdate() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCGetAllMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetAllMetadata() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetDeviceDescription : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetDeviceDescription()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetAllScripts : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetAllScripts() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetDeviceInfo : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetDeviceInfo()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray});
-    }
+class RPCGetAllConfig : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetAllConfig() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetDevicesInCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetDevicesInCategory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetAllValues : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetAllValues() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetDevicesInRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetDevicesInRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetAllSystemVariables : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetAllSystemVariables() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetEvent : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetEvent()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetCategories : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetCategories() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetLastEvents : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetLastEvents()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger});
-    }
+class RPCGetCategoryMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetCategoryMetadata() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetInstallMode : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetInstallMode()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetChannelsInCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetChannelsInCategory() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetKeyMismatchDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetKeyMismatchDevice()
-    {
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
-    }
+class RPCGetChannelsInRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetChannelsInRoom() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetLinkInfo : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetLinkInfo()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetConfigParameter : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetConfigParameter() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetLinkPeers : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetLinkPeers()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetLinks : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetLinks()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetDeviceDescription : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetDeviceDescription() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCGetDeviceInfo : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetDeviceInfo() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetName : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetName()
-    {
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetDevicesInCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetDevicesInCategory() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetNodeData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetNodeData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCGetDevicesInRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetDevicesInRoom() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetFlowData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetFlowData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCGetLastEvents : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetLastEvents() {
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetGlobalData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetGlobalData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetInstallMode : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetInstallMode() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetNodeEvents : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetNodeEvents()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
-    }
+class RPCGetInstanceId : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetInstanceId() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetNodesWithFixedInputs : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetNodesWithFixedInputs()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-    }
+class RPCGetKeyMismatchDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetKeyMismatchDevice() {
+    addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetNodeVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetNodeVariable()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCGetLinkInfo : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetLinkInfo() {
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetPairingInfo : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetPairingInfo()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetLinkPeers : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetLinkPeers() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetPairingState : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetPairingState()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetLinks : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetLinks() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetParamsetDescription : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetParamsetDescription()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCGetMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetMetadata() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetParamsetId : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetParamsetId()
-    {
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetName : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetName() {
+    addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tString,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetParamset : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetParamset()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetPairingInfo : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetPairingInfo() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetPeerId : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetPeerId()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCGetPairingState : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetPairingState() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRoles : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRoles()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetParamsetDescription : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetParamsetDescription() {
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRolesInDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRolesInDevice()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetParamsetId : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetParamsetId() {
+    addSignature(BaseLib::VariableType::tString,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tString,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tString,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRolesInRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRolesInRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetParamset : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetParamset() {
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRoleMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRoleMetadata()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetPeerId : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetPeerId() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRoomMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRoomMetadata()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetRoles : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRoles() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRooms : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRooms()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetRolesInDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRolesInDevice() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetRoomsInStory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetRoomsInStory()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetRolesInRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRolesInRoom() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetServiceMessages : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetServiceMessages()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
-    }
+class RPCGetRoleMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRoleMetadata() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetSniffedDevices : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetSniffedDevices()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetRoomMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRoomMetadata() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetStories : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetStories()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetRooms : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRooms() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetStoryMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetStoryMetadata()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetRoomsInStory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetRoomsInStory() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetServiceMessages : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetServiceMessages() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetSystemVariableFlags : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetSystemVariableFlags()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCGetSniffedDevices : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetSniffedDevices() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetSystemVariablesInCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetSystemVariablesInCategory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetStories : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetStories() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetSystemVariablesInRole : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetSystemVariablesInRole()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetStoryMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetStoryMetadata() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetSystemVariablesInRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetSystemVariablesInRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetSystemVariable() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetUpdateStatus : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetUpdateStatus()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
-    }
+class RPCGetSystemVariableFlags : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetSystemVariableFlags() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetUserData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetUserData()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCGetSystemVariablesInCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetSystemVariablesInCategory() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetUserMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetUserMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
-    }
+class RPCGetSystemVariablesInRole : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetSystemVariablesInRole() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetVariablesInCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetVariablesInCategory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetSystemVariablesInRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetSystemVariablesInRoom() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetVariablesInRole : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetVariablesInRole()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCGetUpdateStatus : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetUpdateStatus() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetVariablesInRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetVariablesInRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCGetUserData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetUserData() {
+    addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetValue : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetValue()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tBoolean});
-    }
+class RPCGetUserMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetUserMetadata() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetVariableDescription : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetVariableDescription()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCGetVariablesInCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetVariablesInCategory() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCGetVersion : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCGetVersion()
-    {
-        addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{});
-    }
+class RPCGetVariablesInRole : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetVariablesInRole() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCInit : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCInit()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCGetVariablesInRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetVariablesInRoom() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    virtual ~RPCInit();
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-
-private:
-    bool _disposing = false;
-    std::mutex _initServerThreadMutex;
-    std::thread _initServerThread;
-    const std::unordered_set<std::string> _reservedIds{"homegear", "scriptEngine", "ipcServer", "nodeBlue", "mqtt"};
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCInvokeFamilyMethod : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCInvokeFamilyMethod()
-    {
-        addSignature(BaseLib::VariableType::tVariant, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-    }
+class RPCGetValue : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetValue() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tBoolean, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean,
+                                                    BaseLib::VariableType::tBoolean});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCLifetick : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCLifetick()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>());
-    }
+class RPCGetVariableDescription : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetVariableDescription() {
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCListBidcosInterfaces : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListBidcosInterfaces()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-    }
+class RPCGetVersion : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetVersion() {
+    addSignature(BaseLib::VariableType::tString, std::vector<BaseLib::VariableType>{});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCListClientServers : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListClientServers()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-    }
+class RPCInit : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCInit() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
+  virtual ~RPCInit();
 
-class RPCListDevices : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListDevices()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray, BaseLib::VariableType::tInteger}));
-    }
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+ private:
+  bool _disposing = false;
+  std::mutex _initServerThreadMutex;
+  std::thread _initServerThread;
+  const std::unordered_set<std::string> _reservedIds{"homegear", "scriptEngine", "ipcServer", "nodeBlue", "mqtt"};
 };
 
-class RPCListEvents : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListEvents()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}));
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}));
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}));
-    }
+class RPCInvokeFamilyMethod : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCInvokeFamilyMethod() {
+    addSignature(BaseLib::VariableType::tVariant,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCListFamilies : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListFamilies()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}));
-    }
+class RPCLifetick : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCLifetick() {
+    addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCListInterfaces : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListInterfaces()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCListBidcosInterfaces : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListBidcosInterfaces() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCListKnownDeviceTypes : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListKnownDeviceTypes()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean}));
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
-    }
+class RPCListClientServers : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListClientServers() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCListTeams : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCListTeams()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
-    }
+class RPCListDevices : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListDevices() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray,
+                                                     BaseLib::VariableType::tInteger}));
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCLogLevel : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCLogLevel()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
-    }
+class RPCListFamilies : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListFamilies() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}));
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCNodeOutput : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCNodeOutput()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
-    }
+class RPCListInterfaces : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListInterfaces() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
-
-class RPCPeerExists : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCPeerExists()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger64});
 
-    }
+class RPCListKnownDeviceTypes : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListKnownDeviceTypes() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean}));
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tArray}));
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean,
+                                                     BaseLib::VariableType::tArray}));
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCPing : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCPing()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+class RPCListTeams : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCListTeams() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
+  }
 
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
-
-class RPCPutParamset : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCPutParamset()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
 
-    }
+class RPCLogLevel : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCLogLevel() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveCategoryFromChannel : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveCategoryFromChannel()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
+class RPCPeerExists : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCPeerExists() {
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger64});
 
-class RPCRemoveCategoryFromDevice : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveCategoryFromDevice()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveCategoryFromSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveCategoryFromSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCPing : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCPing() {
+    addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
-
-class RPCRemoveCategoryFromVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveCategoryFromVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveChannelFromRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveChannelFromRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCPutParamset : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCPutParamset() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tStruct});
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
-};
+  }
 
-class RPCRemoveDeviceFromRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveDeviceFromRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
-
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveEvent : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveEvent()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCRemoveCategoryFromChannel : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveCategoryFromChannel() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveLink : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveLink()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveCategoryFromDevice : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveCategoryFromDevice() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveRoleFromSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveRoleFromSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveCategoryFromSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveCategoryFromSystemVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveRoleFromVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveRoleFromVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveCategoryFromVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveCategoryFromVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveRoomFromStory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveRoomFromStory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveChannelFromRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveChannelFromRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveSystemVariableFromRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveSystemVariableFromRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveDeviceFromRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveDeviceFromRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRemoveVariableFromRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRemoveVariableFromRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCRemoveLink : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveLink() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCReportValueUsage : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCReportValueUsage()
-    {
-        addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger}));
-    }
+class RPCRemoveRoleFromSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveRoleFromSystemVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRssiInfo : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRssiInfo()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
-    }
+class RPCRemoveRoleFromVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveRoleFromVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCRunScript : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCRunScript()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-    }
+class RPCRemoveRoomFromStory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveRoomFromStory() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSearchDevices : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSearchDevices()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCRemoveSystemVariableFromRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveSystemVariableFromRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSearchInterfaces : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSearchInterfaces()
-    {
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
-    }
+class RPCRemoveVariableFromRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveVariableFromRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetCategoryMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetCategoryMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-    }
+class RPCReportValueUsage : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCReportValueUsage() {
+    addSignature(BaseLib::VariableType::tArray,
+                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                     BaseLib::VariableType::tInteger}));
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetGlobalServiceMessage : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetGlobalServiceMessage()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tArray, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
-    }
+class RPCRssiInfo : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRssiInfo() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>());
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetLinkInfo : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetLinkInfo()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-    }
+class RPCRunScript : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRunScript() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tBoolean});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSearchDevices : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSearchDevices() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetData()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSearchInterfaces : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSearchInterfaces() {
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>());
+    addSignature(BaseLib::VariableType::tInteger, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tVariant});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetId : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetId()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCSetCategoryMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetCategoryMetadata() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetInstallMode : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetInstallMode()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-    }
+class RPCSetGlobalServiceMessage : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetGlobalServiceMessage() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tArray,
+                                                    BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetInterface : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetInterface()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCSetLinkInfo : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetLinkInfo() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetLanguage : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetLanguage()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCSetMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetMetadata() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetName : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetName()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCSetData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetData() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetNodeData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetNodeData()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSetId : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetId() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetFlowData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetFlowData()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSetInstallMode : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetInstallMode() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean,
+                                                    BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean,
+                                                    BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetGlobalData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetGlobalData()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSetInterface : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetInterface() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetNodeVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetNodeVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSetLanguage : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetLanguage() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetRoleMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetRoleMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-    }
+class RPCSetName : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetName() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetRoomMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetRoomMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-    }
+class RPCSetRoleMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetRoleMetadata() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetStoryMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetStoryMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-    }
+class RPCSetRoomMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetRoomMetadata() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetSystemVariable : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetSystemVariable()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
-    }
+class RPCSetStoryMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetStoryMetadata() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetTeam : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetTeam()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
-    }
+class RPCSetSystemVariable : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetSystemVariable() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tVariant,
+                                                    BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetUserData : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetUserData()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-    }
+class RPCSetTeam : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetTeam() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetUserMetadata : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetUserMetadata()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
-    }
+class RPCSetUserData : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetUserData() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSetValue : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSetValue()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
-    }
+class RPCSetUserMetadata : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetUserMetadata() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCStartSniffing : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCStartSniffing()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCSetValue : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetValue() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tVariant,
+                                                    BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tVariant});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCStopSniffing : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCStopSniffing()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-    }
+class RPCStartSniffing : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCStartSniffing() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCSubscribePeers : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCSubscribePeers()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-    }
+class RPCStopSniffing : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCStopSniffing() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCTriggerEvent : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCTriggerEvent()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RPCSubscribePeers : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSubscribePeers() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCTriggerRpcEvent : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCTriggerRpcEvent()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-    }
+class RPCTriggerRpcEvent : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCTriggerRpcEvent() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCUnsubscribePeers : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUnsubscribePeers()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
-    }
+class RPCUnsubscribePeers : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUnsubscribePeers() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCUpdateCategory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUpdateCategory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RPCUpdateCategory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUpdateCategory() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct,
+                                                    BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCUpdateFirmware : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUpdateFirmware()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
-    }
+class RPCUpdateFirmware : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUpdateFirmware() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tArray});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCUpdateRole : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUpdateRole()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RPCUpdateRole : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUpdateRole() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct,
+                                                    BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCUpdateRoom : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUpdateRoom()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RPCUpdateRoom : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUpdateRoom() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct,
+                                                    BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCUpdateStory : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCUpdateStory()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RPCUpdateStory : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCUpdateStory() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tStruct,
+                                                    BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RPCWriteLog : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RPCWriteLog()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tVoid, BaseLib::VariableType::tString});
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tVoid, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
-    }
+class RPCWriteLog : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCWriteLog() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tVoid, BaseLib::VariableType::tString});
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tVoid, BaseLib::VariableType::tString,
+                                                    BaseLib::VariableType::tInteger});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters);
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
-
-}
 
 }
 #endif

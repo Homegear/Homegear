@@ -34,32 +34,29 @@
 #include "NodeBlueResponseServer.h"
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace NodeBlue
-{
+namespace NodeBlue {
 
-class NodeBlueClientData
-{
-public:
-	NodeBlueClientData();
+class NodeBlueClientData {
+ public:
+  NodeBlueClientData();
 
-	NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
+  NodeBlueClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor);
 
-	virtual ~NodeBlueClientData();
+  virtual ~NodeBlueClientData();
 
-	int32_t id = 0;
-	pid_t pid = 0;
-	bool closed = false;
-	std::vector<char> buffer;
-	std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
-	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-	std::mutex sendMutex;
-	std::mutex waitMutex;
-	std::mutex rpcResponsesMutex;
-	std::map<int32_t, PNodeBlueResponseServer> rpcResponses;
-	std::condition_variable requestConditionVariable;
+  int32_t id = 0;
+  pid_t pid = 0;
+  bool closed = false;
+  std::vector<char> buffer;
+  std::unique_ptr<BaseLib::Rpc::BinaryRpc> binaryRpc;
+  std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+  std::mutex sendMutex;
+  std::mutex waitMutex;
+  std::mutex rpcResponsesMutex;
+  std::map<int32_t, PNodeBlueResponseServer> rpcResponses;
+  std::condition_variable requestConditionVariable;
 };
 
 typedef std::shared_ptr<NodeBlueClientData> PNodeBlueClientData;

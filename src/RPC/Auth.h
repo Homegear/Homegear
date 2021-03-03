@@ -39,60 +39,72 @@
 #include <vector>
 #include <homegear-base/Security/Acls.h>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace Rpc
-{
+namespace Rpc {
 
-class AuthException : public BaseLib::Exception
-{
-public:
-	AuthException(std::string message) : BaseLib::Exception(message) {}
+class AuthException : public BaseLib::Exception {
+ public:
+  explicit AuthException(const std::string& message) : BaseLib::Exception(message) {}
 };
 
-class Auth
-{
-public:
-	Auth(std::unordered_set<uint64_t>& validGroups);
+class Auth {
+ public:
+  explicit Auth(std::unordered_set<uint64_t> &validGroups);
 
-	virtual ~Auth() {}
+  virtual ~Auth() = default;
 
-	bool authenticated() { return _authenticated; }
+  bool authenticated() { return _authenticated; }
 
-	void setAuthenticated(bool value) { _authenticated = value; }
+  void setAuthenticated(bool value) { _authenticated = value; }
 
-	bool validUser(std::string& userName);
+  bool validUser(std::string &userName);
 
-	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, std::shared_ptr<BaseLib::Rpc::RpcHeader>& binaryHeader, std::string& userName, BaseLib::Security::PAcls& acls);
+  bool basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+                   std::shared_ptr<BaseLib::Rpc::RpcHeader> &binaryHeader,
+                   std::string &userName,
+                   BaseLib::Security::PAcls &acls);
 
-	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::Http& httpPacket, std::string& userName, BaseLib::Security::PAcls& acls);
+  bool basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+                   BaseLib::Http &httpPacket,
+                   std::string &userName,
+                   BaseLib::Security::PAcls &acls);
 
-	bool basicServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
+  bool basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+                   BaseLib::WebSocket &webSocket,
+                   std::string &userName,
+                   BaseLib::Security::PAcls &acls);
 
-	bool sessionServer(std::shared_ptr<BaseLib::TcpSocket>& socket, BaseLib::WebSocket& webSocket, std::string& userName, BaseLib::Security::PAcls& acls);
+  bool sessionServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+                     BaseLib::WebSocket &webSocket,
+                     std::string &userName,
+                     BaseLib::Security::PAcls &acls);
 
-	bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor>& socketDescriptor, std::string& userName, std::string& dn, BaseLib::Security::PAcls& acls, std::string& error);
+  bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor> &socketDescriptor,
+                         std::string &userName,
+                         std::string &dn,
+                         BaseLib::Security::PAcls &acls,
+                         std::string &error);
 
-	void sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, bool binary);
+  void sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, bool binary);
 
-	void sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket>& socket);
+  void sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket> &socket);
 
-	void sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket>& socket, std::string reason);
+  void sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, std::string reason);
 
-protected:
-	std::atomic_bool _authenticated;
-	std::string _hostname;
-	std::string _basicAuthHTTPHeader;
-	std::vector<char> _basicUnauthBinaryHeader;
-	std::vector<char> _basicUnauthHTTPHeader;
-	std::unordered_set<uint64_t> _validGroups;
-	std::string _userName;
-	std::string _password;
-	std::pair<std::string, std::string> _basicAuthString;
-	BaseLib::Http _http;
-	std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-	std::shared_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
+ protected:
+  std::atomic_bool _authenticated;
+  std::string _hostname;
+  std::string _basicAuthHTTPHeader;
+  std::vector<char> _basicUnauthBinaryHeader;
+  std::vector<char> _basicUnauthHTTPHeader;
+  std::unordered_set<uint64_t> _validGroups;
+  std::string _userName;
+  std::string _password;
+  std::pair<std::string, std::string> _basicAuthString;
+  BaseLib::Http _http;
+  std::shared_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+  std::shared_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
 };
 
 }

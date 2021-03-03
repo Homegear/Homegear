@@ -1,1 +1,1 @@
-ace.define("ace/snippets/jsonata",["require","exports","module"],function(n,t,e){"use strict";var s="";for(var a in jsonata.functions)jsonata.functions.hasOwnProperty(a)&&(s+="# "+a+"\nsnippet "+a+"\n\t"+jsonata.getFunctionSnippet(a)+"\n");t.snippetText=s,t.scope="jsonata"});
+ace.define("ace/snippets/jsonata",["require","exports","module"],function(n,t,e){"use strict";var s,a="";for(s in jsonata.functions)jsonata.functions.hasOwnProperty(s)&&(a+="# "+s+"\nsnippet "+s+"\n\t"+jsonata.getFunctionSnippet(s)+"\n");t.snippetText=a,t.scope="jsonata"});

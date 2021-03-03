@@ -33,16 +33,13 @@
 
 #include <string>
 
-namespace Homegear
-{
+namespace Homegear {
 
-namespace ScriptEngine
-{
+namespace ScriptEngine {
 
-struct CacheInfo
-{
-    int32_t lastModified;
-    std::string script;
+struct CacheInfo {
+  int32_t lastModified;
+  std::string script;
 };
 
 }

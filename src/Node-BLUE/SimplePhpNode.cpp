@@ -34,38 +34,31 @@
 
 #include "../GD/GD.h"
 
-namespace Homegear
-{
+namespace Homegear {
 
-SimplePhpNode::SimplePhpNode(std::string path, std::string nodeNamespace, std::string type, const std::atomic_bool* frontendConnected)
-		: INode(path, nodeNamespace, type, frontendConnected)
-{
+SimplePhpNode::SimplePhpNode(const std::string &path, const std::string &type, const std::atomic_bool *frontendConnected)
+    : INode(path, type, frontendConnected) {
 }
 
-SimplePhpNode::~SimplePhpNode()
-{
-}
+SimplePhpNode::~SimplePhpNode() = default;
 
-void SimplePhpNode::input(Flows::PNodeInfo nodeInfo, uint32_t index, Flows::PVariable message)
-{
-	try
-	{
-		if(!_nodeInfo) _nodeInfo = nodeInfo->serialize();
+void SimplePhpNode::input(const Flows::PNodeInfo &nodeInfo, uint32_t index, const Flows::PVariable &message) {
+  try {
+    if (!_nodeInfo) _nodeInfo = nodeInfo->serialize();
 
-		Flows::PArray parameters = std::make_shared<Flows::Array>();
-		parameters->reserve(4);
-		parameters->push_back(_nodeInfo);
-		parameters->push_back(std::make_shared<Flows::Variable>(_path));
-		parameters->push_back(std::make_shared<Flows::Variable>(index));
-		parameters->push_back(message);
+    Flows::PArray parameters = std::make_shared<Flows::Array>();
+    parameters->reserve(4);
+    parameters->push_back(_nodeInfo);
+    parameters->push_back(std::make_shared<Flows::Variable>(_path));
+    parameters->push_back(std::make_shared<Flows::Variable>(index));
+    parameters->push_back(message);
 
-		Flows::PVariable result = invoke("executePhpNode", parameters);
-		if(result->errorStruct) GD::out.printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+    Flows::PVariable result = invoke("executePhpNode", parameters);
+    if (result->errorStruct) _out->printError("Error calling executePhpNode: " + result->structValue->at("faultString")->stringValue);
+  }
+  catch (const std::exception &ex) {
+    _out->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

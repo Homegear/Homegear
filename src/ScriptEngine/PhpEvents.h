@@ -35,94 +35,95 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
+#include <utility>
 
-class PhpEvents
-{
+namespace Homegear {
 
-public:
-    enum class EventDataType
-    {
-        undefined,
-        event,
-        newDevices,
-        deleteDevices,
-        updateDevice,
-        variableProfileStateChanged
-    };
+class PhpEvents {
 
-    class EventData
-    {
-    public:
-        std::string source;
-        EventDataType type = EventDataType::undefined;
-        uint64_t id = 0;
-        int32_t channel = -1;
-        int32_t hint = -1;
-        std::string variable;
-        BaseLib::PVariable value;
-    };
+ public:
+  enum class EventDataType {
+    undefined,
+    event,
+    newDevices,
+    deleteDevices,
+    updateDevice,
+    variableProfileStateChanged,
+    uiNotificationCreated,
+    uiNotificationRemoved,
+    uiNotificationAction
+  };
 
-    static std::mutex eventsMapMutex;
-    static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
+  class EventData {
+   public:
+    std::string source;
+    EventDataType type = EventDataType::undefined;
+    uint64_t id = 0;
+    int32_t channel = -1;
+    int32_t hint = -1;
+    std::string variable;
+    BaseLib::PVariable value;
+  };
 
-    PhpEvents(std::string& token, std::function<void(std::string output, bool error)>& outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& rpcCallback);
+  static std::mutex eventsMapMutex;
+  static std::map<int32_t, std::shared_ptr<PhpEvents>> eventsMap;
 
-    virtual ~PhpEvents();
+  PhpEvents(std::string &token, std::function<void(std::string output, bool error)> &outputCallback, std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> &rpcCallback);
 
-    void stop();
+  virtual ~PhpEvents();
 
-    bool enqueue(std::shared_ptr<EventData>& entry);
+  void stop();
 
-    std::shared_ptr<EventData> poll(int32_t timeout = -1);
+  bool enqueue(std::shared_ptr<EventData> &entry);
 
-    void addPeer(uint64_t peerId, int32_t channel, std::string& variable);
+  std::shared_ptr<EventData> poll(int32_t timeout = -1);
 
-    void removePeer(uint64_t peerId, int32_t channel, std::string& variable);
+  void addPeer(uint64_t peerId, int32_t channel, std::string &variable);
 
-    bool peerSubscribed(uint64_t peerId, int32_t channel, std::string& variable);
+  void removePeer(uint64_t peerId, int32_t channel, std::string &variable);
 
-    void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
+  bool peerSubscribed(uint64_t peerId, int32_t channel, std::string &variable);
 
-    int32_t getLogLevel() { return _logLevel; }
+  void setLogLevel(int32_t logLevel) { _logLevel = logLevel; }
 
-    void setPeerId(uint64_t peerId) { _peerId = peerId; }
+  int32_t getLogLevel() const { return _logLevel; }
 
-    uint64_t getPeerId() { return _peerId; }
+  void setPeerId(uint64_t peerId) { _peerId = peerId; }
 
-    void setNodeId(std::string nodeId) { _nodeId = nodeId; }
+  uint64_t getPeerId() const { return _peerId; }
 
-    std::string getNodeId() { return _nodeId; }
+  void setNodeId(std::string nodeId) { _nodeId = std::move(nodeId); }
 
-    std::function<void(std::string output, bool error)>& getOutputCallback() { return _outputCallback; };
+  std::string getNodeId() { return _nodeId; }
 
-    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)>& getRpcCallback() { return _rpcCallback; };
+  std::function<void(std::string output, bool error)> &getOutputCallback() { return _outputCallback; };
 
-    std::string& getToken() { return _token; }
+  std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> &getRpcCallback() { return _rpcCallback; };
 
-private:
-    std::function<void(std::string output, bool error)> _outputCallback;
-    std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
-    std::string _token;
+  std::string &getToken() { return _token; }
 
-    // {{{ Data exchange - we are abusing the events object here for data exchange between main thread and sub threads.
-    uint64_t _peerId = 0;
-    std::string _nodeId;
-    int32_t _logLevel = -1;
-    // }}}
+ private:
+  std::function<void(std::string output, bool error)> _outputCallback;
+  std::function<BaseLib::PVariable(std::string methodName, BaseLib::PVariable parameters, bool wait)> _rpcCallback;
+  std::string _token;
 
-    std::atomic_bool _stopProcessing;
-    static const int32_t _bufferSize = 1000;
-    std::mutex _queueMutex;
-    int32_t _bufferHead = 0;
-    int32_t _bufferTail = 0;
-    std::atomic_int _bufferCount;
-    std::mutex _bufferMutex;
-    std::shared_ptr<EventData> _buffer[_bufferSize];
-    std::condition_variable _processingConditionVariable;
-    std::mutex _peersMutex;
-    std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
+  // {{{ Data exchange - we are abusing the events object here for data exchange between main thread and sub threads.
+  uint64_t _peerId = 0;
+  std::string _nodeId;
+  int32_t _logLevel = -1;
+  // }}}
+
+  std::atomic_bool _stopProcessing;
+  static const int32_t _bufferSize = 1000;
+  std::mutex _queueMutex;
+  int32_t _bufferHead = 0;
+  int32_t _bufferTail = 0;
+  std::atomic_int _bufferCount;
+  std::mutex _bufferMutex;
+  std::shared_ptr<EventData> _buffer[_bufferSize];
+  std::condition_variable _processingConditionVariable;
+  std::mutex _peersMutex;
+  std::map<uint64_t, std::map<int32_t, std::set<std::string>>> _peers;
 };
 
 }

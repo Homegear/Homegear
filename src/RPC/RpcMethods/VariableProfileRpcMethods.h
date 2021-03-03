@@ -34,78 +34,67 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear
-{
-namespace RpcMethods
-{
+namespace Homegear::RpcMethods {
 
-class RpcActivateVariableProfile : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcActivateVariableProfile()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
-    }
+class RpcActivateVariableProfile : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcActivateVariableProfile() {
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RpcAddVariableProfile : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcAddVariableProfile()
-    {
-        addSignature(BaseLib::VariableType::tInteger64, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RpcAddVariableProfile : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcAddVariableProfile() {
+    addSignature(BaseLib::VariableType::tInteger64,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RpcDeleteVariableProfile : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcDeleteVariableProfile()
-    {
-        addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
-    }
+class RpcDeleteVariableProfile : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcDeleteVariableProfile() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RpcGetAllVariableProfiles : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcGetAllVariableProfiles()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
-    }
+class RpcGetAllVariableProfiles : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcGetAllVariableProfiles() {
+    addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RpcGetVariableProfile : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcGetVariableProfile()
-    {
-        addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
-    }
+class RpcGetVariableProfile : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcGetVariableProfile() {
+    addSignature(BaseLib::VariableType::tStruct,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tString});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-class RpcUpdateVariableProfile : public BaseLib::Rpc::RpcMethod
-{
-public:
-    RpcUpdateVariableProfile()
-    {
-        addSignature(BaseLib::VariableType::tBoolean, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tStruct, BaseLib::VariableType::tStruct});
-    }
+class RpcUpdateVariableProfile : public BaseLib::Rpc::RpcMethod {
+ public:
+  RpcUpdateVariableProfile() {
+    addSignature(BaseLib::VariableType::tBoolean,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger64, BaseLib::VariableType::tStruct,
+                                                    BaseLib::VariableType::tStruct});
+  }
 
-    BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-}
 }
 
 #endif //HOMEGEAR_VARIABLEPROFILERPCMETHODS_H

@@ -30,116 +30,92 @@
 #include "SocketPeer.h"
 #include "../GD/GD.h"
 
-namespace Homegear
-{
-std::shared_ptr<BaseLib::Systems::ICentral> SocketPeer::getCentral()
-{
-    //Todo: Implement
-    return std::shared_ptr<BaseLib::Systems::ICentral>();
+namespace Homegear {
+std::shared_ptr<BaseLib::Systems::ICentral> SocketPeer::getCentral() {
+  //Todo: Implement
+  return std::shared_ptr<BaseLib::Systems::ICentral>();
 }
 
-bool SocketPeer::wireless()
-{
-    //Todo: Implement
-    return false;
+bool SocketPeer::wireless() {
+  //Todo: Implement
+  return false;
 }
 
-SocketPeer::SocketPeer(uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl.get(), parentID, eventHandler)
-{
-    init();
+SocketPeer::SocketPeer(uint32_t parentID, IPeerEventSink *eventHandler) : BaseLib::Systems::Peer(GD::bl.get(), parentID, eventHandler) {
+  init();
 }
 
-SocketPeer::SocketPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl.get(), id, address, serialNumber, parentID, eventHandler)
-{
-    init();
+SocketPeer::SocketPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink *eventHandler) : BaseLib::Systems::Peer(GD::bl.get(), id, address, serialNumber, parentID, eventHandler) {
+  init();
 }
 
-SocketPeer::~SocketPeer()
-{
-    try
-    {
-        dispose();
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+SocketPeer::~SocketPeer() {
+  try {
+    dispose();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void SocketPeer::init()
-{
-    try
-    {
+void SocketPeer::init() {
+  try {
 
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void SocketPeer::dispose()
-{
-    if(_disposing) return;
-    Peer::dispose();
+void SocketPeer::dispose() {
+  if (_disposing) return;
+  Peer::dispose();
 }
 
-void SocketPeer::homegearStarted()
-{
-    try
-    {
-        Peer::homegearStarted();
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void SocketPeer::homegearStarted() {
+  try {
+    Peer::homegearStarted();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-void SocketPeer::homegearShuttingDown()
-{
-    try
-    {
-        _shuttingDown = true;
-        Peer::homegearShuttingDown();
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
+void SocketPeer::homegearShuttingDown() {
+  try {
+    _shuttingDown = true;
+    Peer::homegearShuttingDown();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
-std::string SocketPeer::handleCliCommand(std::string command)
-{
-    //Todo: Implement
-    return "";
+std::string SocketPeer::handleCliCommand(std::string command) {
+  //Todo: Implement
+  return "";
 }
 
-std::string SocketPeer::getPhysicalInterfaceId()
-{
-    return _physicalInterfaceId;
+std::string SocketPeer::getPhysicalInterfaceId() {
+  return _physicalInterfaceId;
 }
 
-bool SocketPeer::load(BaseLib::Systems::ICentral* central)
-{
-    //Todo: Implement
-    return false;
+bool SocketPeer::load(BaseLib::Systems::ICentral *central) {
+  //Todo: Implement
+  return false;
 }
 
-PParameterGroup SocketPeer::getParameterSet(int32_t channel, ParameterGroup::Type::Enum type)
-{
-    try
-    {
-        PFunction rpcChannel = _rpcDevice->functions.at(channel);
-        if(type == ParameterGroup::Type::Enum::variables) return rpcChannel->variables;
-        else if(type == ParameterGroup::Type::Enum::config) return rpcChannel->configParameters;
-        else if(type == ParameterGroup::Type::Enum::link) return rpcChannel->linkParameters;
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    return PParameterGroup();
+PParameterGroup SocketPeer::getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) {
+  try {
+    PFunction rpcChannel = _rpcDevice->functions.at(channel);
+    if (type == ParameterGroup::Type::Enum::variables) return rpcChannel->variables;
+    else if (type == ParameterGroup::Type::Enum::config) return rpcChannel->configParameters;
+    else if (type == ParameterGroup::Type::Enum::link) return rpcChannel->linkParameters;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return PParameterGroup();
 }
 
 }

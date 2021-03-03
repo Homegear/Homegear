@@ -33,61 +33,58 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace Homegear
-{
-namespace NodeBlue
-{
+namespace Homegear {
+namespace NodeBlue {
 
-class FlowParser
-{
-public:
-    static const size_t nodeHeight;
-    static const size_t nodeConnectorHeight;
+class FlowParser {
+ public:
+  static const size_t nodeHeight;
+  static const size_t nodeConnectorHeight;
 
-    FlowParser() = delete;
+  FlowParser() = delete;
 
-    /**
-     * Generates a random ID as used in nodes or flows.
-     * @param existingIds Optional set with existing IDs. The method makes sure the new ID is not one of the existing ones.
-     *
-     * @return The generated random ID.
-     */
-    static std::string generateRandomId(const std::unordered_set<std::string>& existingIds = std::unordered_set<std::string>());
+  /**
+   * Generates a random ID as used in nodes or flows.
+   * @param existingIds Optional set with existing IDs. The method makes sure the new ID is not one of the existing ones.
+   *
+   * @return The generated random ID.
+   */
+  static std::string generateRandomId(const std::unordered_set<std::string> &existingIds = std::unordered_set<std::string>());
 
-    /**
-     * Adds nodes to a flow.
-     *
-     * @param flow The flow to add the nodes to.
-     * @param tab The tab to add the nodes to. If the tab doesn't exist, it is created.
-     * @param tag A tag that is added to the nodes added by this method. If specified, all nodes with this tag are deleted before the new nodes are added.
-     * @param nodes The nodes to add.
-     * @return Returns the flow with the new nodes on success or a null pointer when there is no change.
-     */
-    static BaseLib::PVariable addNodesToFlow(const BaseLib::PVariable& flow, const std::string& tab, const std::string& tag, const BaseLib::PVariable& nodes);
+  /**
+   * Adds nodes to a flow.
+   *
+   * @param flow The flow to add the nodes to.
+   * @param tab The tab to add the nodes to. If the tab doesn't exist, it is created.
+   * @param tag A tag that is added to the nodes added by this method. If specified, all nodes with this tag are deleted before the new nodes are added.
+   * @param nodes The nodes to add.
+   * @param[out] nodeIdMap The replacement map with the node IDs generated for the passed nodes.
+   * @return Returns the flow with the new nodes on success or a null pointer when there is no change.
+   */
+  static BaseLib::PVariable addNodesToFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes, std::unordered_map<std::string, std::string> &nodeIdMap);
 
-    /**
-     * Removes tagged nodes from a flow
-     *
-     * @param flow The flow to remove the nodes from.
-     * @param tab The tab where to search for "tag".
-     * @param tag The tag to remove.
-     * @return Returns the flow with the nodes removed on success or a null pointer when there is no change.
-     */
-    static BaseLib::PVariable removeNodesFromFlow(const BaseLib::PVariable& flow, const std::string& tab, const std::string& tag);
+  /**
+   * Removes tagged nodes from a flow
+   *
+   * @param flow The flow to remove the nodes from.
+   * @param tab The tab where to search for "tag".
+   * @param tag The tag to remove.
+   * @return Returns the flow with the nodes removed on success or a null pointer when there is no change.
+   */
+  static BaseLib::PVariable removeNodesFromFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag);
 
-    /**
-     * Checks if a flow contains nodes with the specified tag.
-     *
-     * @param flow The flow to search for nodes with "tag"
-     * @param tab The tab to seach the nodes in.
-     * @param tag The tag to search for.
-     * @return Returns true when at least one node with tag was found and false otherwise.
-     */
-    static bool flowHasTag(const BaseLib::PVariable& flow, const std::string& tab, const std::string& tag);
+  /**
+   * Checks if a flow contains nodes with the specified tag.
+   *
+   * @param flow The flow to search for nodes with "tag"
+   * @param tab The tab to seach the nodes in.
+   * @param tag The tag to search for.
+   * @return Returns true when at least one node with tag was found and false otherwise.
+   */
+  static bool flowHasTag(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag);
 };
 
 }
 }
-
 
 #endif //HOMEGEAR_FLOWPARSER_H

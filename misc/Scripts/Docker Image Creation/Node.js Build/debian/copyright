@@ -1,0 +1,7 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: nodejs-homegear
+Upstream-Contact: Dr. Sathya Laufer <s.laufer@homegear.email>
+
+Files: *
+Copyright: Joyent, Inc. and other Node contributors.
+License: MIT

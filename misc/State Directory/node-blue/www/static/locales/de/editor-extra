@@ -1,6 +1,10 @@
 {
+    "event": {
+        "connectingHomegear": "Verbinde mit Homegear"
+    },
     "menu": {
         "label": {
+            "restartNodeBlue": "Node-BLUE neustarten",
             "powered": "Powered by Node-RED",
             "nodebluewebsite": "Node-BLUE website"
         }
@@ -8,14 +12,28 @@
     "notification": {
         "info": "<strong>Info</strong>: __message__",
         "infoMessages": {
-            "flowsStarted": "Flows wurden (neu)gestartet."
+            "flowsRestarting": "Flows werden neugestartet. Bitte warten...",
+            "flowsStarted": "Flows wurden neugestartet."
         },
         "warnings": {
+            "restartRequired" : "Es wurden Knoten aktualisiert. Zum laden der aktualisieren Verisonen klicken Sie bitte auf den Menüeintrag \"Node-BLUE neustarten\".",
             "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
         },
         "errors": {
              "flowStartError": "<p>Fehler beim Start von Flow '__flow__'. Häufigster Grund ist die Überschreitung der maximal erlaubten Knotenzahl. Für weitere Informationen schauen Sie ins Fehlerlog.</p>",
+             "flowStartErrorCrash": "<p>Ein Flowprozess ist abgestürzt. Ihre Flows werden mit ziemlicher Sicherheit nicht funktionieren. Bitte schauen Sie für weitere Details in die Logdateien.</p>",
              "loadCatalogManagementError": "<p>Systemarchitektur konnte nicht ermittelt werden. Ist homegear-management installiert?</p>"
+        }
+    },
+    "deploy" : {
+        "deploy": "Implementieren",
+        "deployFailed" : "Implementierung fehlgeschlagen: __message__",
+        "confirm" : {
+            "button" : {
+                "confirm" : "Implementierung bestätigen",
+                "overwrite": "Ignorieren & implementieren"
+            },
+            "confirm" : "Sind Sie sicher, dass Sie implementieren möchten?"
         }
     },
     "editor" : {
@@ -40,8 +58,10 @@
             "parsers" : "Parser",
             "time" : "Zeit",
             "homegear": "Homegear",
+            "homegear ui": "Homegear-UI",
             "io": "IO",
-            "network": "Netzwerk"
+            "network": "Netzwerk",
+            "multimedia": "Multimedia"
         },
         "editor": {
             "times": {
