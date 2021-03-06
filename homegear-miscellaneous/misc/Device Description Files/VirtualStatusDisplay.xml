@@ -76,6 +76,21 @@
 					<operationType>store</operationType>
 				</physicalNone>
 			</parameter>
+			<parameter id="RSSI_PEER">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<casts>
+						<rpcBinary />
+					</casts>
+				</properties>
+				<logicalInteger>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
 		    <parameter id="UNREACH">
 		       <properties>
 		         <readable>true</readable>
@@ -447,6 +462,34 @@
 					<writeable>true</writeable>
 				</properties>
 				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="LAST_DATA">
+				<properties>
+		         <readable>true</readable>
+		         <writeable>true</writeable>
+					<addonWriteable>true</addonWriteable>
+					<unit>s</unit>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="BATTERY">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger/>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
