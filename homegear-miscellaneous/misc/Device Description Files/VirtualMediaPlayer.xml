@@ -44,7 +44,9 @@
 				<properties>
 					<service>true</service>
 				</properties>
-				<logicalBoolean/>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
