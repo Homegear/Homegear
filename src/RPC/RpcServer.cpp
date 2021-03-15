@@ -406,8 +406,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
       _out.printError("Error: Settings is nullptr.");
       return;
     }
-    if (!_info->familyServer && !_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer
-        && !_info->restServer) {
+    if (!_info->familyServer && !_info->webServer && !_info->rpcServer && !_info->restServer) {
       GD::out.printWarning("Warning: Not starting server as no server types are specified.");
       return;
     }
@@ -436,7 +435,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
           "Warning: SSL is not enabled for this RPC server. It is strongly recommended to disable all unencrypted RPC servers when the connected clients support it.");
     }
 
-    if ((_info->xmlrpcServer || _info->jsonrpcServer || _info->restServer)
+    if ((_info->rpcServer || _info->restServer)
         && _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none && _info->interface != "::1"
         && _info->interface != "127.0.0.1") {
       _out.printWarning(
@@ -1351,7 +1350,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
       if (binaryRpc.processingStarted()
           || (!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted()
               && !strncmp(buffer.data(), "Bin", 3))) {
-        if (!_info->xmlrpcServer) continue;
+        if (!_info->rpcServer) continue;
 
         try {
           processedBytes = 0;
@@ -1621,16 +1620,9 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by REST server.");
                   _restServer->process(client, http, client->socket);
                 } else if (_info->webServer && (
-                    !_info->xmlrpcServer ||
+                    !_info->rpcServer ||
                         (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
-                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
-                        http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
-                        http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
-                        http.getHeader().path.compare(0, 7, "/admin/") == 0
-                ) && (
-                    !_info->jsonrpcServer ||
-                        (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
-                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
+                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml" && http.getHeader().contentType != "application/json") ||
                         http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                         http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                         http.getHeader().path.compare(0, 7, "/admin/") == 0
@@ -1649,7 +1641,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   if (http.getHeader().connection & BaseLib::Http::Connection::Enum::close)
                     closeClientConnection(client);
                   client->lastReceivedPacket = BaseLib::HelperFunctions::getTime();
-                } else if (http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer)) {
+                } else if (http.getContentSize() > 0 && _info->rpcServer) {
                   if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by RPC server.");
                   if (http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{')
                     packetType = (packetType == PacketType::xmlRequest || packetType == PacketType::jsonRequest) ? PacketType::jsonRequest : PacketType::jsonResponse;

@@ -261,7 +261,7 @@ rm -Rf /PHPBuild/lib*
 cd /PHPBuild
 apt-get update
 apt-get source php8.0
-rm php8*.tar.xz
+rm php8*.tar.*
 rm php8*.dsc
 cd php8*
 cd ext
