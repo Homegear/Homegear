@@ -1182,7 +1182,13 @@ uint64_t DatabaseController::createUiNotification(const BaseLib::PVariable &noti
     //    .
     //    .
     //    .
-    //  }
+    //  },
+    //  "overlayContent": {
+    //    "en-US": "Content",
+    //    .
+    //    .
+    //    .
+    //  },
     //  "modalTitle": {
     //    "en-US": "My Modal",
     //    .
@@ -1234,6 +1240,18 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
     auto notification = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 
     auto contentIterator = notification->structValue->find("title");
+    if (contentIterator != notification->structValue->end()) {
+      auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+      if (languageIterator != contentIterator->second->structValue->end()) {
+        contentIterator->second->stringValue = languageIterator->second->stringValue;
+      }
+      contentIterator->second->type = BaseLib::VariableType::tString;
+    }
+
+    contentIterator = notification->structValue->find("overlayContent");
     if (contentIterator != notification->structValue->end()) {
       auto languageIterator = contentIterator->second->structValue->find(languageCode);
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
@@ -1308,6 +1326,18 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
       notification->structValue->emplace("id", std::make_shared<BaseLib::Variable>(id));
 
       auto contentIterator = notification->structValue->find("title");
+      if (contentIterator != notification->structValue->end()) {
+        auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
+        if (languageIterator != contentIterator->second->structValue->end()) {
+          contentIterator->second->stringValue = languageIterator->second->stringValue;
+        }
+        contentIterator->second->type = BaseLib::VariableType::tString;
+      }
+
+      contentIterator = notification->structValue->find("overlayContent");
       if (contentIterator != notification->structValue->end()) {
         auto languageIterator = contentIterator->second->structValue->find(languageCode);
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
@@ -4310,7 +4340,7 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
   data.push_back(std::make_shared<BaseLib::Database::DataColumn>(type));
   uint64_t result = _db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?, ?)", data);
   if (result == 0) throw BaseLib::Exception("Error saving peer to database. See previous errors in log for more information.");
-  else if(result > BaseLib::Systems::Peer::kMaximumPeerId) throw BaseLib::Exception("Error: Reached maximum possible peer ID. Please move peers to lower IDs or delete peers.");
+  else if (result > BaseLib::Systems::Peer::kMaximumPeerId) throw BaseLib::Exception("Error: Reached maximum possible peer ID. Please move peers to lower IDs or delete peers.");
   return result;
 }
 
