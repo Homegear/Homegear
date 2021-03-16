@@ -363,6 +363,17 @@
 					<operationType>store</operationType>
 				</physicalNone>
 			</parameter>
+			<parameter id="DATA_MISC">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
 		</variables>
 	</parameterGroups>
 </homegearDevice>
