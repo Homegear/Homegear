@@ -29,7 +29,9 @@
 				<properties>
 					<service>true</service>
 				</properties>
-				<logicalBoolean/>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -120,6 +122,17 @@
 					</casts>
 				</properties>
 				<logicalInteger/>
+				<physicalNone>
+					<operationType>store</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="DATA_MISC">
+				<properties>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalString/>
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
