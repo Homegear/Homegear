@@ -1559,6 +1559,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   auto headerIterator = header.fields.find("ibs-userid");
                   if (headerIterator != header.fields.end()) {
                     auto userMapIterator = cloudUserMap.find(headerIterator->second);
+                    if (userMapIterator == cloudUserMap.end()) userMapIterator = cloudUserMap.find("*");
                     if (userMapIterator != cloudUserMap.end()) {
                       if (client->acls->fromUser(userMapIterator->second)) {
                         client->user = userMapIterator->second;
