@@ -558,6 +558,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
       stringStream << "reloadroles (rrl)    Delete all roles and recreate them from \"defaultRoles.json\"." << std::endl;
       stringStream << "threads              Prints current thread count" << std::endl;
+      stringStream << "slavemode (sm)       Enables slave mode when in a master/slave installation" << std::endl;
 #ifndef NO_SCRIPTENGINE
       stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
       stringStream << "runcommand (rc)      Executes a PHP command" << std::endl;
@@ -565,8 +566,9 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
 #endif
       if (GD::bl->settings.enableNodeBlue()) {
-        stringStream << "flowcount (fc)     Restarts the number of currently running flows" << std::endl;
+        stringStream << "flowcount (fc)       Returns the number of currently running flows" << std::endl;
         stringStream << "flowsrestart (fr)    Restarts all flows" << std::endl;
+        stringStream << "flowsstop (ft)       Stops all flows" << std::endl;
       }
       stringStream << "users [COMMAND]      Execute user commands. Type \"users help\" for more information."
                    << std::endl;
@@ -761,6 +763,18 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "Flows restarted." << std::endl;
 
       return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "flowsstop", "ft", "", 0, arguments, showHelp)) {
+      if (showHelp) {
+        stringStream << "Description: This command stops all flows." << std::endl;
+        stringStream << "Usage: flowsstop" << std::endl << std::endl;
+        return std::make_shared<BaseLib::Variable>(stringStream.str());
+      }
+
+      if (GD::nodeBlueServer) GD::nodeBlueServer->stopFlows();
+
+      stringStream << "Flows stopped." << std::endl;
+
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
     } else if (BaseLib::HelperFunctions::checkCliCommand(command, "reloadroles", "rrl", "", 0, arguments, showHelp)) {
       if (showHelp) {
         stringStream
@@ -944,7 +958,31 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
                    << "Maximum thread count since start: " << GD::bl->threadManager.getMaxRegisteredThreadCount()
                    << std::endl;
       return std::make_shared<BaseLib::Variable>(stringStream.str());
-    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "lifetick", "lt", "", 2, arguments, showHelp)) {
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "slavemode", "sm", "", 1, arguments, showHelp)) {
+      if (showHelp) {
+        stringStream << "Description: This command enables or disables slave mode when running in a master/slave installation." << std::endl;
+        stringStream << "             Executing this command stops all Node-BLUE flows and sets a flag, that slave mode is enabled." << std::endl;
+        stringStream << "             This flag can be used within device families to disable device communication." << std::endl;
+        stringStream << "Usage: slavemode ENABLE" << std::endl << std::endl;
+        stringStream << "Parameters:" << std::endl;
+        stringStream << "  ENABLE: \"true\" to enable and \"false\" to disable slave mode." << std::endl;
+        return std::make_shared<BaseLib::Variable>(stringStream.str());
+      }
+
+      bool enable = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(arguments.at(0))) == "true";
+      if (enable && !GD::bl->slaveMode) {
+        GD::bl->slaveMode = true;
+        if (GD::nodeBlueServer) GD::nodeBlueServer->stopFlows();
+        stringStream << "Slave mode enabled." << std::endl;
+      } else if (!enable && GD::bl->slaveMode) {
+        GD::bl->slaveMode = false;
+        if (GD::nodeBlueServer) GD::nodeBlueServer->restartFlows();
+        stringStream << "Slave mode disabled." << std::endl;
+      } else {
+        stringStream << "Slave mode unchanged." << std::endl;
+      }
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "lifetick", "lt", "", 0, arguments, showHelp)) {
       int32_t exitCode = 0;
       try {
         if (!GD::rpcClient->lifetick()) {

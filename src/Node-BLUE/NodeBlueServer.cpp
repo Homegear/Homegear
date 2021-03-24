@@ -1638,6 +1638,24 @@ void NodeBlueServer::restartFlows() {
   _flowsRestarting = false;
 }
 
+void NodeBlueServer::stopFlows() {
+  try {
+    std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+    stopNodes();
+    bool result = sendReset();
+    if (!result) {
+      _out.printInfo("Info: Stopping Flows...");
+      sendShutdown();
+      _out.printInfo("Info: Closing connections to Flows clients...");
+      closeClientConnections();
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  _flowsRestarting = false;
+}
+
 bool NodeBlueServer::restartFlowsAsync() {
   try {
     if (_flowsRestarting) return false;

@@ -63,6 +63,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   bool restartFlowsAsync();
 
+  void stopFlows();
+
   void homegearShuttingDown();
 
   void homegearReloading();
