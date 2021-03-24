@@ -562,7 +562,6 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
         catch (const std::exception &ex) {
           _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         }
-
       }
     }
     //}}}

@@ -63,6 +63,7 @@ override_dh_auto_install:
 	if test ! -e /usr/bin/node; then ln -s $(CURDIR)/debian/homegear/usr/bin/homegear-node /usr/bin/node; fi
 	# This works and doesn't bite with the real Node.js if installled.
 	if test ! -e /usr/bin/node_modules; then ln -s /usr/share/homegear/nodejs/lib/node_modules /usr/bin/node_modules; fi
+	ln -s /usr/share/homegear/nodejs/lib/node_modules $(CURDIR)/debian/homegear/usr/bin/node_modules
 	# }}}
 
 	# {{{ Install Node-RED modules
