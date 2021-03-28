@@ -118,7 +118,32 @@ set(SOURCE_FILES
         src/main.cpp
         src/IpcLogger.cpp
         src/IpcLogger.h
-        src/Database/SystemVariableController.cpp src/Database/SystemVariableController.h src/VariableProfiles/VariableProfileManager.cpp src/VariableProfiles/VariableProfileManager.h src/RPC/RpcMethods/VariableProfileRpcMethods.cpp src/RPC/RpcMethods/VariableProfileRpcMethods.h src/RPC/RpcMethods/UiRpcMethods.cpp src/RPC/RpcMethods/UiRpcMethods.h src/RPC/RpcMethods/BuildingRpcMethods.cpp src/RPC/RpcMethods/BuildingRpcMethods.h src/Node-BLUE/FlowParser.cpp src/Node-BLUE/FlowParser.h src/RPC/RpcMethods/NodeBlueRpcMethods.cpp src/RPC/RpcMethods/NodeBlueRpcMethods.h src/RPC/RpcMethods/UiNotificationsRpcMethods.cpp src/RPC/RpcMethods/UiNotificationsRpcMethods.h src/Node-BLUE/NodeBlueCredentials.cpp src/Node-BLUE/NodeBlueCredentials.h src/Node-BLUE/Node-PINK/Nodepink.cpp src/Node-BLUE/Node-PINK/Nodepink.h src/Node-BLUE/NodeRedNode.cpp src/Node-BLUE/NodeRedNode.h src/Node-BLUE/Node-PINK/NodepinkWebsocket.cpp src/Node-BLUE/Node-PINK/NodepinkWebsocket.h)
+        src/Database/SystemVariableController.cpp
+        src/Database/SystemVariableController.h
+        src/VariableProfiles/VariableProfileManager.cpp
+        src/VariableProfiles/VariableProfileManager.h
+        src/RPC/RpcMethods/VariableProfileRpcMethods.cpp
+        src/RPC/RpcMethods/VariableProfileRpcMethods.h
+        src/RPC/RpcMethods/UiRpcMethods.cpp
+        src/RPC/RpcMethods/UiRpcMethods.h
+        src/RPC/RpcMethods/BuildingRpcMethods.cpp
+        src/RPC/RpcMethods/BuildingRpcMethods.h
+        src/Node-BLUE/FlowParser.cpp
+        src/Node-BLUE/FlowParser.h
+        src/RPC/RpcMethods/NodeBlueRpcMethods.cpp
+        src/RPC/RpcMethods/NodeBlueRpcMethods.h
+        src/RPC/RpcMethods/UiNotificationsRpcMethods.cpp
+        src/RPC/RpcMethods/UiNotificationsRpcMethods.h
+        src/Node-BLUE/NodeBlueCredentials.cpp
+        src/Node-BLUE/NodeBlueCredentials.h
+        src/Node-BLUE/Node-PINK/Nodepink.cpp
+        src/Node-BLUE/Node-PINK/Nodepink.h
+        src/Node-BLUE/NodeRedNode.cpp
+        src/Node-BLUE/NodeRedNode.h
+        src/Node-BLUE/Node-PINK/NodepinkWebsocket.cpp
+        src/Node-BLUE/Node-PINK/NodepinkWebsocket.h
+        src/RPC/RpcMethods/MaintenanceRpcMethods.cpp
+        src/RPC/RpcMethods/MaintenanceRpcMethods.h)
 
 set(SOURCE_FILES_NODE
         src/Nodejs/Nodejs.cpp

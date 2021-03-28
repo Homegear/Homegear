@@ -38,15 +38,13 @@
 #include "../RPC/RpcMethods/UiNotificationsRpcMethods.h"
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
+#include "../RPC/RpcMethods/MaintenanceRpcMethods.h"
 
 namespace Homegear {
 
 IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _out.init(GD::bl.get());
   _out.setPrefix("IPC Server: ");
-
-  _shuttingDown = false;
-  _stopServer = false;
 
   _lifetick1.first = 0;
   _lifetick1.second = true;
@@ -308,6 +306,11 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetVariableProfile>()));
   _rpcMethods.emplace("updateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcUpdateVariableProfile>()));
   //}}}
+
+  { // Maintenance
+    _rpcMethods.emplace("enableMaintenanceMode", std::make_shared<RpcMethods::RpcEnableMaintenanceMode>());
+    _rpcMethods.emplace("disableMaintenanceMode", std::make_shared<RpcMethods::RpcDisableMaintenanceMode>());
+  }
 
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("getHomegearPid",
                                                                                                                                                                std::bind(&IpcServer::getHomegearPid,

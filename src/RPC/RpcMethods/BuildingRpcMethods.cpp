@@ -31,8 +31,7 @@
 #include "BuildingRpcMethods.h"
 #include "../../GD/GD.h"
 
-namespace Homegear {
-namespace RpcMethods {
+namespace Homegear::RpcMethods {
 
 BaseLib::PVariable RPCAddStoryToBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
@@ -292,5 +291,4 @@ BaseLib::PVariable RPCUpdateBuilding::invoke(BaseLib::PRpcClientInfo clientInfo,
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-}
 }

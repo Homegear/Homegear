@@ -590,11 +590,11 @@ void startUp() {
     if (databasePath.empty()) databasePath = GD::bl->settings.dataPath();
     std::string databaseBackupPath = GD::bl->settings.databaseBackupPath();
     if (databaseBackupPath.empty()) databaseBackupPath = GD::bl->settings.dataPath();
-    GD::bl->db->open(databasePath, "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
+    GD::bl->db->open(databasePath, "db.sql", GD::bl->settings.maintenanceDatabasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, GD::bl->settings.maintenanceDatabaseBackupPath(), "db.sql.bak");
     if (!GD::bl->db->isOpen()) exitHomegear(1);
 
     GD::out.printInfo("Initializing database...");
-    if (GD::bl->db->convertDatabase()) exitHomegear(0);
+    if (GD::bl->db->convertDatabase(databasePath, "db.sql", GD::bl->settings.maintenanceDatabasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, GD::bl->settings.maintenanceDatabaseBackupPath(), "db.sql.bak")) exitHomegear(0);
     GD::bl->db->initializeDatabase();
 
     {

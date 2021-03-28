@@ -116,8 +116,8 @@ class IpcServer : public BaseLib::IQueue {
 
   BaseLib::Output _out;
   std::string _socketPath;
-  std::atomic_bool _shuttingDown;
-  std::atomic_bool _stopServer;
+  std::atomic_bool _shuttingDown{false};
+  std::atomic_bool _stopServer{false};
   std::thread _mainThread;
   int32_t _backlog = 100;
   std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
