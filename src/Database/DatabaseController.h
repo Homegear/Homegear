@@ -63,7 +63,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   void init() override;
 
   // {{{ General
-  void open(const std::string &databasePath, const std::string &databaseFilename, const std::string &maintenanceDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath, const std::string &maintenanceBackupPath, const std::string &backupFilename) override;
+  void open(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath, const std::string &factoryBackupPath, const std::string &backupFilename) override;
 
   void hotBackup() override;
 
@@ -71,7 +71,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   void initializeDatabase() override;
 
-  bool convertDatabase(const std::string &databasePath, const std::string &databaseFilename, const std::string &maintenanceDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath, const std::string &maintenanceBackupPath, const std::string &backupFilename) override;
+  bool convertDatabase(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath, const std::string &factoryBackupPath, const std::string &backupFilename) override;
 
   bool enableMaintenanceMode() override;
 

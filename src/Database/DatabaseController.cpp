@@ -68,14 +68,14 @@ void DatabaseController::init() {
 //General
 void DatabaseController::open(const std::string &databasePath,
                               const std::string &databaseFilename,
-                              const std::string &maintenanceDatabasePath,
+                              const std::string &factoryDatabasePath,
                               bool databaseSynchronous,
                               bool databaseMemoryJournal,
                               bool databaseWALJournal,
                               const std::string &backupPath,
-                              const std::string &maintenanceBackupPath,
+                              const std::string &factoryBackupPath,
                               const std::string &backupFilename) {
-  _db.init(databasePath, databaseFilename, maintenanceDatabasePath, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPath, maintenanceBackupPath, backupFilename);
+  _db.init(databasePath, databaseFilename, factoryDatabasePath, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPath, factoryBackupPath, backupFilename);
 }
 
 void DatabaseController::hotBackup() {
@@ -410,28 +410,28 @@ void DatabaseController::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
 bool DatabaseController::convertDatabase(const std::string &databasePath,
                                          const std::string &databaseFilename,
-                                         const std::string &maintenanceDatabasePath,
+                                         const std::string &factoryDatabasePath,
                                          bool databaseSynchronous,
                                          bool databaseMemoryJournal,
                                          bool databaseWALJournal,
                                          const std::string &backupPath,
-                                         const std::string &maintenanceBackupPath,
+                                         const std::string &factoryBackupPath,
                                          const std::string &backupFilename) {
   try {
     for (int32_t i = 0; i < 2; i++) {
-      if (i == 1 && maintenanceDatabasePath.empty()) break;
-      bool maintenanceDatabase = (i != 0);
+      if (i == 1 && factoryDatabasePath.empty()) break;
+      bool factoryDatabase = (i != 0);
       std::string backupPathCopy = backupPath;
       if (backupPathCopy.empty()) backupPathCopy = databasePath;
       BaseLib::Database::DataRow data;
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string("table")));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string("homegearVariables")));
-      std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data, maintenanceDatabase);
+      std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data, factoryDatabase);
       //Cannot proceed, because table homegearVariables does not exist
       if (rows->empty()) return false;
       data.clear();
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
-      std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data, maintenanceDatabase);
+      std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data, factoryDatabase);
       if (result->empty()) return false; //Handled in initializeDatabase
       int64_t versionId = result->at(0).at(0)->intValue;
       std::string version = result->at(0).at(3)->textValue;
@@ -488,11 +488,11 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
               exit(0);
           }
           else*/
-      _db.init(databasePath, databaseFilename, maintenanceDatabasePath, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPathCopy + backupFilename + ".0.6.0.old");
+      _db.init(databasePath, databaseFilename, factoryDatabasePath, databaseSynchronous, databaseMemoryJournal, databaseWALJournal, backupPathCopy + backupFilename + ".0.6.0.old");
       if (version == "0.3.1") {
         GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");
 
-        _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16", maintenanceDatabase);
+        _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -501,14 +501,14 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.4.3"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.4.3";
       }
       if (version == "0.4.3") {
         GD::out.printMessage("Converting database from version " + version + " to version 0.5.0...");
 
-        _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16", maintenanceDatabase);
+        _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -517,20 +517,20 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.5.0"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.5.0";
       }
       if (version == "0.5.0") {
         GD::out.printMessage("Converting database from version " + version + " to version 0.5.1...");
 
-        _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15", maintenanceDatabase);
+        _db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15", factoryDatabase);
 
-        _db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)", maintenanceDatabase);
-        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)", maintenanceDatabase);
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)", factoryDatabase);
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)", factoryDatabase);
 
-        _db.executeCommand("UPDATE peerVariables SET variableIndex=1001 WHERE variableIndex=0", maintenanceDatabase);
-        _db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3", maintenanceDatabase);
+        _db.executeCommand("UPDATE peerVariables SET variableIndex=1001 WHERE variableIndex=0", factoryDatabase);
+        _db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -539,17 +539,17 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.5.1"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.5.1";
       }
       if (version == "0.5.1") {
         GD::out.printMessage("Converting database from version " + version + " to version 0.6.0...");
 
-        _db.executeCommand("DELETE FROM devices WHERE deviceType!=4294967293 AND deviceType!=4278190077", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE peers ADD COLUMN type INTEGER NOT NULL DEFAULT 0", maintenanceDatabase);
-        _db.executeCommand("DROP INDEX IF EXISTS peersIndex", maintenanceDatabase);
-        _db.executeCommand("CREATE INDEX peersIndex ON peers (peerID, parent, address, serialNumber, type)", maintenanceDatabase);
+        _db.executeCommand("DELETE FROM devices WHERE deviceType!=4294967293 AND deviceType!=4278190077", factoryDatabase);
+        _db.executeCommand("ALTER TABLE peers ADD COLUMN type INTEGER NOT NULL DEFAULT 0", factoryDatabase);
+        _db.executeCommand("DROP INDEX IF EXISTS peersIndex", factoryDatabase);
+        _db.executeCommand("CREATE INDEX peersIndex ON peers (peerID, parent, address, serialNumber, type)", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -558,14 +558,14 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.6.0"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.6.0";
       }
       if (version == "0.6.0") {
         GD::out.printMessage("Converting database from version " + version + " to version 0.6.1...");
 
-        _db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077", maintenanceDatabase);
+        _db.executeCommand("UPDATE devices SET deviceType=4294967293 WHERE deviceType=4278190077", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -574,7 +574,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.6.1"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.6.1";
       }
@@ -590,8 +590,8 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         std::vector<char> metadataBlob;
         _rpcEncoder->encodeResponse(metadata, metadataBlob);
 
-        _db.executeCommand("ALTER TABLE users ADD COLUMN groups BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(groupBlob) + "'", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE users ADD COLUMN groups BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(groupBlob) + "'", factoryDatabase);
+        _db.executeCommand("ALTER TABLE users ADD COLUMN metadata BLOB NOT NULL DEFAULT x'" + BaseLib::HelperFunctions::getHexString(metadataBlob) + "'", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -600,7 +600,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.0"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.0";
       }
@@ -616,24 +616,24 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         std::vector<char> metadataBlob;
         _rpcEncoder->encodeResponse(metadata, metadataBlob);
 
-        _db.executeCommand("ALTER TABLE rooms ADD COLUMN metadata BLOB", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE categories ADD COLUMN metadata BLOB", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE parameters ADD COLUMN room INTEGER", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE parameters ADD COLUMN categories TEXT", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE rooms ADD COLUMN metadata BLOB", factoryDatabase);
+        _db.executeCommand("ALTER TABLE categories ADD COLUMN metadata BLOB", factoryDatabase);
+        _db.executeCommand("ALTER TABLE parameters ADD COLUMN room INTEGER", factoryDatabase);
+        _db.executeCommand("ALTER TABLE parameters ADD COLUMN categories TEXT", factoryDatabase);
 
-        _db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables2 (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)", maintenanceDatabase);
-        std::shared_ptr<BaseLib::Database::DataTable> systemVariablesRows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables", maintenanceDatabase);
+        _db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables2 (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)", factoryDatabase);
+        std::shared_ptr<BaseLib::Database::DataTable> systemVariablesRows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables", factoryDatabase);
         for (auto &i : *systemVariablesRows) {
           if (i.second.size() < 2) continue;
           data.clear();
           data.push_back(i.second.at(0));
           data.push_back(i.second.at(1));
-          _db.executeCommand("INSERT OR REPLACE INTO systemVariables2(variableID, serializedObject) VALUES(?, ?)", data, maintenanceDatabase);
+          _db.executeCommand("INSERT OR REPLACE INTO systemVariables2(variableID, serializedObject) VALUES(?, ?)", data, factoryDatabase);
         }
-        _db.executeCommand("DROP INDEX systemVariablesIndex", maintenanceDatabase);
-        _db.executeCommand("DROP TABLE systemVariables", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE systemVariables2 RENAME TO systemVariables", maintenanceDatabase);
-        _db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)", maintenanceDatabase);
+        _db.executeCommand("DROP INDEX systemVariablesIndex", factoryDatabase);
+        _db.executeCommand("DROP TABLE systemVariables", factoryDatabase);
+        _db.executeCommand("ALTER TABLE systemVariables2 RENAME TO systemVariables", factoryDatabase);
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON systemVariables (variableID)", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -642,19 +642,19 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.1"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.1";
       }
       if (version == "0.7.1" || version == "0.7.2") {
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.3...");
 
-        _db.executeCommand("DROP INDEX serviceMessagesIndex", maintenanceDatabase);
-        _db.executeCommand("DROP TABLE serviceMessages", maintenanceDatabase);
+        _db.executeCommand("DROP INDEX serviceMessagesIndex", factoryDatabase);
+        _db.executeCommand("DROP TABLE serviceMessages", factoryDatabase);
         _db.executeCommand(
             "CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, timestamp INTEGER, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)",
-            maintenanceDatabase);
-        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)", maintenanceDatabase);
+            factoryDatabase);
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, peerID, variableIndex, timestamp)", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -663,7 +663,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.3"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.3";
       }
@@ -699,7 +699,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.4"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.4";
       }
@@ -707,7 +707,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.5...");
 
         data.clear();
-        _db.executeWriteCommand("DELETE FROM serviceMessages", data, maintenanceDatabase);
+        _db.executeWriteCommand("DELETE FROM serviceMessages", data, factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -716,7 +716,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.5"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.5";
       }
@@ -724,8 +724,8 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.6...");
 
         data.clear();
-        _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex1 INTEGER", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex2 INTEGER", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex1 INTEGER", factoryDatabase);
+        _db.executeCommand("ALTER TABLE users ADD COLUMN keyIndex2 INTEGER", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -734,7 +734,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.6"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.6";
       }
@@ -742,12 +742,12 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.7...");
 
         data.clear();
-        _db.executeCommand("DROP INDEX serviceMessagesIndex", maintenanceDatabase);
-        _db.executeCommand("DROP TABLE serviceMessages", maintenanceDatabase);
+        _db.executeCommand("DROP INDEX serviceMessagesIndex", factoryDatabase);
+        _db.executeCommand("DROP TABLE serviceMessages", factoryDatabase);
         _db.executeCommand(
             "CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, peerID INTEGER NOT NULL, messageID INTEGER NOT NULL, messageSubID TEXT, timestamp INTEGER, integerValue INTEGER, message TEXT, variables BLOB, binaryData BLOB)",
-            maintenanceDatabase);
-        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp)", maintenanceDatabase);
+            factoryDatabase);
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp)", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -756,7 +756,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.7"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.7";
       }
@@ -764,7 +764,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.8...");
 
         data.clear();
-        _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN flags INTEGER", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN flags INTEGER", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -773,7 +773,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.8"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.8";
       }
@@ -781,7 +781,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.9...");
 
         data.clear();
-        _db.executeCommand("ALTER TABLE parameters ADD COLUMN roles TEXT", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE parameters ADD COLUMN roles TEXT", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -790,7 +790,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.9"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.9";
       }
@@ -798,8 +798,8 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.10...");
 
         data.clear();
-        _db.executeCommand("ALTER TABLE parameters ADD COLUMN specialType INTEGER", maintenanceDatabase);
-        _db.executeCommand("ALTER TABLE parameters ADD COLUMN metadata BLOB", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE parameters ADD COLUMN specialType INTEGER", factoryDatabase);
+        _db.executeCommand("ALTER TABLE parameters ADD COLUMN metadata BLOB", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -808,7 +808,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.10"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.10";
       }
@@ -816,7 +816,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.11...");
 
         data.clear();
-        _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN roles TEXT", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE systemVariables ADD COLUMN roles TEXT", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -825,7 +825,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.11"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.11";
       }
@@ -833,7 +833,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         GD::out.printMessage("Converting database from version " + version + " to version 0.7.12...");
 
         data.clear();
-        _db.executeCommand("ALTER TABLE uiElements ADD COLUMN metadata BLOB", maintenanceDatabase);
+        _db.executeCommand("ALTER TABLE uiElements ADD COLUMN metadata BLOB", factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -842,7 +842,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.7.12"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.7.12";
       }
@@ -852,25 +852,25 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("Base.doorHandle"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("Base.doorContact"));
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
         data.at(0)->textValue = "Base.heatingSliderModeWindowhandle";
         data.at(1)->textValue = "Base.heatingIsStateSliderModeWindowContact";
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
         data.at(0)->textValue = "Base.heatingSliderModeWindowhandle";
         data.at(1)->textValue = "Base.heatingIsStateSliderModeWindow";
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
         data.at(0)->textValue = "Base.heatingSliderModeWindowhandle";
         data.at(1)->textValue = "Base.heatingIsStateSliderModeWindowHandle";
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
         data.at(0)->textValue = "Base.heatingSliderMode";
         data.at(1)->textValue = "Base.heatingIsStateSliderMode";
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
         data.at(0)->textValue = "Base.heatingTemperature";
         data.at(1)->textValue = "Base.heatingIsState";
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
         data.at(0)->textValue = "Base.windowHandle";
         data.at(1)->textValue = "Base.windowContact";
-        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, maintenanceDatabase);
+        _db.executeWriteCommand("UPDATE uiElements SET element=? WHERE element=?", data, factoryDatabase);
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
@@ -879,7 +879,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         //Don't forget to set new version in initializeDatabase!!!
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.0"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, maintenanceDatabase);
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.8.0";
       }
@@ -915,9 +915,10 @@ bool DatabaseController::enableMaintenanceMode() {
 
 bool DatabaseController::disableMaintenanceMode() {
   try {
+    if (!GD::bl->maintenanceMode) return false;
     GD::bl->maintenanceMode = false;
-
-    return _db.disableMaintenanceMode();
+    bool result = _db.disableMaintenanceMode();
+    return result;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

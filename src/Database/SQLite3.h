@@ -42,17 +42,17 @@ namespace Homegear {
 class SQLite3 {
  public:
   SQLite3();
-  SQLite3(const std::string &databasePath, const std::string &databaseFilename, const std::string &maintenanceDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal);
+  SQLite3(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal);
   virtual ~SQLite3();
   void dispose();
-  void init(const std::string &databasePath, const std::string &databaseFilename, const std::string &maintenanceDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath = "", const std::string &maintenanceDatabaseBackupPath = "", const std::string &backupFilename = "");
-  void hotBackup(bool maintenanceDatabase);
+  void init(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath = "", const std::string &factoryDatabaseBackupPath = "", const std::string &backupFilename = "");
+  void hotBackup(bool factoryDatabase);
   bool enableMaintenanceMode();
   bool disableMaintenanceMode();
-  uint64_t executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>& command, bool maintenanceDatabase);
-  uint64_t executeWriteCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape, bool maintenanceDatabase);
-  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(const std::string& command, bool maintenanceDatabase);
-  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape, bool maintenanceDatabase);
+  uint64_t executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>>& command, bool factoryDatabase);
+  uint64_t executeWriteCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape, bool factoryDatabase);
+  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(const std::string& command, bool factoryDatabase);
+  std::shared_ptr<BaseLib::Database::DataTable> executeCommand(const std::string& command, BaseLib::Database::DataRow &dataToEscape, bool factoryDatabase);
   bool isOpen() { return _database != nullptr; }
   /*void benchmark1();
   void benchmark2();
@@ -62,22 +62,22 @@ class SQLite3 {
  private:
   std::string _databasePath;
   std::string _databaseFilename;
-  std::string _maintenanceDatabasePath;
+  std::string _factoryDatabasePath;
   std::string _backupPath;
-  std::string _maintenanceDatabaseBackupPath;
+  std::string _factoryDatabaseBackupPath;
   std::string _backupFilename;
   bool _databaseSynchronous = true;
   bool _databaseMemoryJournal = false;
   bool _databaseWALJournal = true;
   sqlite3 *_database = nullptr;
-  sqlite3 *_maintenanceDatabase = nullptr;
+  sqlite3 *_factoryDatabase = nullptr;
   std::mutex _databaseMutex;
 
   bool checkIntegrity(const std::string &databasePath);
   void openDatabase(bool lockMutex);
-  void openMaintenanceDatabase(bool lockMutex);
+  void openFactoryDatabase(bool lockMutex);
   void closeDatabase(bool lockMutex);
-  void closeMaintenanceDatabase(bool lockMutex);
+  void closeFactoryDatabase(bool lockMutex);
   void getDataRows(sqlite3_stmt *statement, std::shared_ptr<BaseLib::Database::DataTable> &dataRows);
   static bool bindData(sqlite3_stmt *statement, BaseLib::Database::DataRow &dataToEscape);
 };

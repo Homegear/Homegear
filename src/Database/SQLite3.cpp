@@ -37,16 +37,16 @@ namespace Homegear {
 
 SQLite3::SQLite3() = default;
 
-SQLite3::SQLite3(const std::string &databasePath, const std::string &databaseFilename, const std::string &maintenanceDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3() {
+SQLite3::SQLite3(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal) : SQLite3() {
   if (databasePath.empty()) return;
   _databaseSynchronous = databaseSynchronous;
   _databaseMemoryJournal = databaseMemoryJournal;
   _databaseWALJournal = databaseWALJournal;
   _databasePath = databasePath;
-  _maintenanceDatabasePath = maintenanceDatabasePath;
-  if (_maintenanceDatabasePath == _databasePath) {
-    GD::out.printError("Error: Maintenance database path is the same as database path. This is not allowed. Disabling maintenance database.");
-    _maintenanceDatabasePath = "";
+  _factoryDatabasePath = factoryDatabasePath;
+  if (_factoryDatabasePath == _databasePath) {
+    GD::out.printError("Error: Factory database path is the same as database path. This is not allowed. Disabling factory database.");
+    _factoryDatabasePath = "";
   }
   _databaseFilename = databaseFilename;
   _backupPath = "";
@@ -56,29 +56,29 @@ SQLite3::SQLite3(const std::string &databasePath, const std::string &databaseFil
 
 void SQLite3::init(const std::string &databasePath,
                    const std::string &databaseFilename,
-                   const std::string &maintenanceDatabasePath,
+                   const std::string &factoryDatabasePath,
                    bool databaseSynchronous,
                    bool databaseMemoryJournal,
                    bool databaseWALJournal,
                    const std::string &backupPath,
-                   const std::string &maintenanceDatabaseBackupPath,
+                   const std::string &factoryDatabaseBackupPath,
                    const std::string &backupFilename) {
   if (databasePath.empty()) return;
   _databaseSynchronous = databaseSynchronous;
   _databaseMemoryJournal = databaseMemoryJournal;
   _databaseWALJournal = databaseWALJournal;
   _databasePath = databasePath;
-  _maintenanceDatabasePath = maintenanceDatabasePath;
-  if (_maintenanceDatabasePath == _databasePath) {
-    GD::out.printError("Error: Maintenance database path is the same as database path. This is not allowed. Disabling maintenance database.");
-    _maintenanceDatabasePath = "";
+  _factoryDatabasePath = factoryDatabasePath;
+  if (_factoryDatabasePath == _databasePath) {
+    GD::out.printError("Error: Factory database path is the same as database path. This is not allowed. Disabling factory database.");
+    _factoryDatabasePath = "";
   }
   _databaseFilename = databaseFilename;
   _backupPath = backupPath;
-  _maintenanceDatabaseBackupPath = maintenanceDatabaseBackupPath;
-  if (_maintenanceDatabaseBackupPath == _backupPath) {
-    GD::out.printError("Error: Maintenance database backup path is the same as database backup path. This is not allowed. Disabling backup of maintenance database.");
-    _maintenanceDatabaseBackupPath = "";
+  _factoryDatabaseBackupPath = factoryDatabaseBackupPath;
+  if (_factoryDatabaseBackupPath == _backupPath) {
+    GD::out.printError("Error: Factory database backup path is the same as database backup path. This is not allowed. Disabling backup of factory database.");
+    _factoryDatabaseBackupPath = "";
   }
   _backupFilename = backupFilename;
   hotBackup(false);
@@ -91,22 +91,22 @@ SQLite3::~SQLite3() {
 
 void SQLite3::dispose() {
   closeDatabase(true);
-  closeMaintenanceDatabase(true);
+  closeFactoryDatabase(true);
 }
 
-void SQLite3::hotBackup(bool maintenanceDatabase) {
+void SQLite3::hotBackup(bool factoryDatabase) {
   try {
     std::string databasePath;
     std::string backupPath;
-    if (maintenanceDatabase) {
-      if (_maintenanceDatabasePath.empty() || _maintenanceDatabaseBackupPath.empty() || _databaseFilename.empty()) {
+    if (factoryDatabase) {
+      if (_factoryDatabasePath.empty() || _factoryDatabaseBackupPath.empty() || _databaseFilename.empty()) {
         return;
       }
-      databasePath = _maintenanceDatabasePath;
-      backupPath = _maintenanceDatabaseBackupPath;
+      databasePath = _factoryDatabasePath;
+      backupPath = _factoryDatabaseBackupPath;
     } else {
       if (_databasePath.empty() || _databaseFilename.empty()) {
-        GD::out.printError(std::string("Error: Can't backup ") + (maintenanceDatabase ? "maintenance " : "") + "database: databasePath or databaseFilename is empty.");
+        GD::out.printError(std::string("Error: Can't backup ") + (factoryDatabase ? "factory " : "") + "database: databasePath or databaseFilename is empty.");
         return;
       }
       databasePath = _databasePath;
@@ -114,23 +114,23 @@ void SQLite3::hotBackup(bool maintenanceDatabase) {
     }
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
     bool databaseWasOpen = false;
-    if (maintenanceDatabase) {
-      if (_maintenanceDatabase) databaseWasOpen = true;
-      closeMaintenanceDatabase(false);
+    if (factoryDatabase) {
+      if (_factoryDatabase) databaseWasOpen = true;
+      closeFactoryDatabase(false);
     } else {
       if (_database) databaseWasOpen = true;
       closeDatabase(false);
     }
     if (BaseLib::Io::fileExists(databasePath + _databaseFilename)) {
       if (!checkIntegrity(databasePath + _databaseFilename)) {
-        GD::out.printCritical(std::string("Critical: Integrity check on ") + (maintenanceDatabase ? "maintenance " : "") + "database failed.");
+        GD::out.printCritical(std::string("Critical: Integrity check on ") + (factoryDatabase ? "factory " : "") + "database failed.");
         if (!backupPath.empty() && !_backupFilename.empty()) {
-          GD::out.printCritical(std::string("Critical: Backing up corrupted ") + (maintenanceDatabase ? "maintenance " : "") + "database file to: " + backupPath + _databaseFilename + ".broken");
+          GD::out.printCritical(std::string("Critical: Backing up corrupted ") + (factoryDatabase ? "factory " : "") + "database file to: " + backupPath + _databaseFilename + ".broken");
           GD::bl->io.copyFile(databasePath + _databaseFilename, backupPath + _databaseFilename + ".broken");
           bool restored = false;
           for (int32_t i = 0; i <= 10000; i++) {
             if (BaseLib::Io::fileExists(backupPath + _backupFilename + std::to_string(i)) && checkIntegrity(backupPath + _backupFilename + std::to_string(i))) {
-              GD::out.printCritical(std::string("Critical: Restoring ") + (maintenanceDatabase ? "maintenance " : "") + "database file: " + backupPath + _backupFilename + std::to_string(i));
+              GD::out.printCritical(std::string("Critical: Restoring ") + (factoryDatabase ? "factory " : "") + "database file: " + backupPath + _backupFilename + std::to_string(i));
               if (GD::bl->io.copyFile(backupPath + _backupFilename + std::to_string(i), databasePath + _databaseFilename)) {
                 restored = true;
                 break;
@@ -138,13 +138,13 @@ void SQLite3::hotBackup(bool maintenanceDatabase) {
             }
           }
           if (!restored) {
-            GD::out.printCritical(std::string("Critical: Could not restore ") + (maintenanceDatabase ? "maintenance " : "") + "database.");
+            GD::out.printCritical(std::string("Critical: Could not restore ") + (factoryDatabase ? "factory " : "") + "database.");
             return;
           }
         } else return;
       } else {
         if (!backupPath.empty() && !_backupFilename.empty()) {
-          GD::out.printInfo(std::string("Info: Backing up ") + (maintenanceDatabase ? "maintenance " : "") + "database...");
+          GD::out.printInfo(std::string("Info: Backing up ") + (factoryDatabase ? "factory " : "") + "database...");
           if (GD::bl->settings.databaseMaxBackups() > 1) {
             if (BaseLib::Io::fileExists(backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1))) {
               if (!BaseLib::Io::deleteFile(backupPath + _backupFilename + std::to_string(GD::bl->settings.databaseMaxBackups() - 1))) {
@@ -164,11 +164,11 @@ void SQLite3::hotBackup(bool maintenanceDatabase) {
               GD::out.printError("Error: Cannot copy file: " + backupPath + _backupFilename + '0');
             }
           }
-        } else GD::out.printError(std::string("Error: Can't backup ") + (maintenanceDatabase ? "maintenance " : "") + "database: backupPath or _backupFilename is empty.");
+        } else GD::out.printError(std::string("Error: Can't backup ") + (factoryDatabase ? "factory " : "") + "database: backupPath or _backupFilename is empty.");
       }
     } else {
-      if (maintenanceDatabase) {
-        GD::out.printWarning("Warning: No maintenance database found.");
+      if (factoryDatabase) {
+        GD::out.printWarning("Warning: No factory database found.");
       } else {
         GD::out.printWarning("Warning: No database found. Trying to restore backup.");
         if (!backupPath.empty() && !_backupFilename.empty()) {
@@ -188,8 +188,8 @@ void SQLite3::hotBackup(bool maintenanceDatabase) {
       }
     }
     if (databaseWasOpen) {
-      if (maintenanceDatabase) {
-        openMaintenanceDatabase(false);
+      if (factoryDatabase) {
+        openFactoryDatabase(false);
       } else {
         openDatabase(false);
       }
@@ -204,8 +204,9 @@ bool SQLite3::enableMaintenanceMode() {
   try {
     GD::out.printInfo("Enabling maintenance mode...");
     hotBackup(true);
-    openMaintenanceDatabase(true);
-    return _maintenanceDatabase;
+    openFactoryDatabase(true);
+    BaseLib::Io::writeFile(_factoryDatabasePath + "dirty", std::to_string(BaseLib::HelperFunctions::getTimeSeconds()));
+    return _factoryDatabase;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -216,29 +217,30 @@ bool SQLite3::enableMaintenanceMode() {
 bool SQLite3::disableMaintenanceMode() {
   try {
     GD::out.printInfo("Disabling maintenance mode...");
-    if (!_maintenanceDatabase) return false;
-    closeMaintenanceDatabase(true);
-    if (!checkIntegrity(_maintenanceDatabasePath + _databaseFilename)) {
-      GD::out.printCritical("Critical: Integrity check on maintenance database failed.");
-      if (!_maintenanceDatabaseBackupPath.empty() && !_backupFilename.empty()) {
-        GD::out.printCritical("Critical: Backing up corrupted maintenance database file to: " + _maintenanceDatabaseBackupPath + _databaseFilename + ".broken");
-        GD::bl->io.copyFile(_maintenanceDatabasePath + _databaseFilename, _maintenanceDatabaseBackupPath + _databaseFilename + ".broken");
+    if (!_factoryDatabase) return false;
+    closeFactoryDatabase(true);
+    if (!checkIntegrity(_factoryDatabasePath + _databaseFilename)) {
+      GD::out.printCritical("Critical: Integrity check on factory database failed.");
+      if (!_factoryDatabaseBackupPath.empty() && !_backupFilename.empty()) {
+        GD::out.printCritical("Critical: Backing up corrupted factory database file to: " + _factoryDatabaseBackupPath + _databaseFilename + ".broken");
+        GD::bl->io.copyFile(_factoryDatabasePath + _databaseFilename, _factoryDatabaseBackupPath + _databaseFilename + ".broken");
         bool restored = false;
         for (int32_t i = 0; i <= 10000; i++) {
-          if (BaseLib::Io::fileExists(_maintenanceDatabaseBackupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_maintenanceDatabaseBackupPath + _backupFilename + std::to_string(i))) {
-            GD::out.printCritical("Critical: Restoring maintenance database file: " + _maintenanceDatabaseBackupPath + _backupFilename + std::to_string(i));
-            if (GD::bl->io.copyFile(_maintenanceDatabaseBackupPath + _backupFilename + std::to_string(i), _maintenanceDatabasePath + _databaseFilename)) {
+          if (BaseLib::Io::fileExists(_factoryDatabaseBackupPath + _backupFilename + std::to_string(i)) && checkIntegrity(_factoryDatabaseBackupPath + _backupFilename + std::to_string(i))) {
+            GD::out.printCritical("Critical: Restoring factory database file: " + _factoryDatabaseBackupPath + _backupFilename + std::to_string(i));
+            if (GD::bl->io.copyFile(_factoryDatabaseBackupPath + _backupFilename + std::to_string(i), _factoryDatabasePath + _databaseFilename)) {
               restored = true;
               break;
             }
           }
         }
         if (!restored) {
-          GD::out.printCritical("Critical: Could not restore maintenance database.");
+          GD::out.printCritical("Critical: Could not restore factory database.");
           return false;
         }
       } else return false;
     }
+    BaseLib::Io::writeFile(_factoryDatabasePath + "dirty", "1");
     return true;
   }
   catch (const std::exception &ex) {
@@ -354,23 +356,23 @@ void SQLite3::openDatabase(bool lockMutex) {
   }
 }
 
-void SQLite3::openMaintenanceDatabase(bool lockMutex) {
+void SQLite3::openFactoryDatabase(bool lockMutex) {
   try {
     std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
     if (lockMutex) databaseGuard.lock();
     char *errorMessage = nullptr;
-    std::string fullDatabasePath = _maintenanceDatabasePath + _databaseFilename;
-    int result = sqlite3_open(fullDatabasePath.c_str(), &_maintenanceDatabase);
-    if (result || !_maintenanceDatabase) {
-      GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_maintenanceDatabase)));
-      if (_maintenanceDatabase) sqlite3_close(_maintenanceDatabase);
-      _maintenanceDatabase = nullptr;
+    std::string fullDatabasePath = _factoryDatabasePath + _databaseFilename;
+    int result = sqlite3_open(fullDatabasePath.c_str(), &_factoryDatabase);
+    if (result || !_factoryDatabase) {
+      GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_factoryDatabase)));
+      if (_factoryDatabase) sqlite3_close(_factoryDatabase);
+      _factoryDatabase = nullptr;
       return;
     }
-    sqlite3_extended_result_codes(_maintenanceDatabase, 1);
+    sqlite3_extended_result_codes(_factoryDatabase, 1);
 
     if (!_databaseSynchronous) {
-      sqlite3_exec(_maintenanceDatabase, "PRAGMA synchronous=OFF", nullptr, nullptr, &errorMessage);
+      sqlite3_exec(_factoryDatabase, "PRAGMA synchronous=OFF", nullptr, nullptr, &errorMessage);
       if (errorMessage) {
         GD::out.printError("Can't execute \"PRAGMA synchronous=OFF\": " + std::string(errorMessage));
         sqlite3_free(errorMessage);
@@ -379,20 +381,20 @@ void SQLite3::openMaintenanceDatabase(bool lockMutex) {
 
     //Reset to default journal mode, because WAL stays active.
     //Also I'm not sure if VACUUM works with journal_mode=WAL.
-    sqlite3_exec(_maintenanceDatabase, "PRAGMA journal_mode=DELETE", nullptr, nullptr, &errorMessage);
+    sqlite3_exec(_factoryDatabase, "PRAGMA journal_mode=DELETE", nullptr, nullptr, &errorMessage);
     if (errorMessage) {
       GD::out.printError("Can't execute \"PRAGMA journal_mode=DELETE\": " + std::string(errorMessage));
       sqlite3_free(errorMessage);
     }
 
-    sqlite3_exec(_maintenanceDatabase, "VACUUM", nullptr, nullptr, &errorMessage);
+    sqlite3_exec(_factoryDatabase, "VACUUM", nullptr, nullptr, &errorMessage);
     if (errorMessage) {
       GD::out.printWarning("Warning: Can't execute \"VACUUM\": " + std::string(errorMessage));
       sqlite3_free(errorMessage);
     }
 
     if (_databaseMemoryJournal) {
-      sqlite3_exec(_maintenanceDatabase, "PRAGMA journal_mode=MEMORY", nullptr, nullptr, &errorMessage);
+      sqlite3_exec(_factoryDatabase, "PRAGMA journal_mode=MEMORY", nullptr, nullptr, &errorMessage);
       if (errorMessage) {
         GD::out.printError("Can't execute \"PRAGMA journal_mode=MEMORY\": " + std::string(errorMessage));
         sqlite3_free(errorMessage);
@@ -400,7 +402,7 @@ void SQLite3::openMaintenanceDatabase(bool lockMutex) {
     }
 
     if (_databaseWALJournal) {
-      sqlite3_exec(_maintenanceDatabase, "PRAGMA journal_mode=WAL", nullptr, nullptr, &errorMessage);
+      sqlite3_exec(_factoryDatabase, "PRAGMA journal_mode=WAL", nullptr, nullptr, &errorMessage);
       if (errorMessage) {
         GD::out.printError("Can't execute \"PRAGMA journal_mode=WAL\": " + std::string(errorMessage));
         sqlite3_free(errorMessage);
@@ -446,31 +448,31 @@ void SQLite3::closeDatabase(bool lockMutex) {
   }
 }
 
-void SQLite3::closeMaintenanceDatabase(bool lockMutex) {
+void SQLite3::closeFactoryDatabase(bool lockMutex) {
   try {
-    if (!_maintenanceDatabase) return;
+    if (!_factoryDatabase) return;
     std::unique_lock<std::mutex> databaseGuard(_databaseMutex, std::defer_lock);
     if (lockMutex) databaseGuard.lock();
-    GD::out.printInfo("Closing maintenance database...");
+    GD::out.printInfo("Closing factory database...");
     char *errorMessage = nullptr;
-    sqlite3_exec(_maintenanceDatabase, "COMMIT", nullptr, nullptr, &errorMessage); //Release all savepoints
+    sqlite3_exec(_factoryDatabase, "COMMIT", nullptr, nullptr, &errorMessage); //Release all savepoints
     if (errorMessage) {
       //Normally error is: No transaction is active, so no real error
       GD::out.printDebug("Debug: Can't execute \"COMMIT\": " + std::string(errorMessage));
       sqlite3_free(errorMessage);
     }
-    sqlite3_exec(_maintenanceDatabase, "PRAGMA synchronous = FULL", nullptr, nullptr, &errorMessage);
+    sqlite3_exec(_factoryDatabase, "PRAGMA synchronous = FULL", nullptr, nullptr, &errorMessage);
     if (errorMessage) {
       GD::out.printError("Error: Can't execute \"PRAGMA synchronous = FULL\": " + std::string(errorMessage));
       sqlite3_free(errorMessage);
     }
-    sqlite3_exec(_maintenanceDatabase, "PRAGMA journal_mode = DELETE", nullptr, nullptr, &errorMessage);
+    sqlite3_exec(_factoryDatabase, "PRAGMA journal_mode = DELETE", nullptr, nullptr, &errorMessage);
     if (errorMessage) {
       GD::out.printError("Error: Can't execute \"PRAGMA journal_mode = DELETE\": " + std::string(errorMessage));
       sqlite3_free(errorMessage);
     }
-    sqlite3_close(_maintenanceDatabase);
-    _maintenanceDatabase = nullptr;
+    sqlite3_close(_factoryDatabase);
+    _factoryDatabase = nullptr;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -547,7 +549,7 @@ bool SQLite3::bindData(sqlite3_stmt *statement, BaseLib::Database::DataRow &data
   return true;
 }
 
-uint64_t SQLite3::executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> &command, bool maintenanceDatabase) {
+uint64_t SQLite3::executeWriteCommand(const std::shared_ptr<std::pair<std::string, BaseLib::Database::DataRow>> &command, bool factoryDatabase) {
   try {
     if (!command) return 0;
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -555,9 +557,9 @@ uint64_t SQLite3::executeWriteCommand(const std::shared_ptr<std::pair<std::strin
       GD::out.printError("Error: Could not write to database. No database handle.");
       return 0;
     }
-    if (maintenanceDatabase && !_maintenanceDatabase) return 0;
+    if (factoryDatabase && !_factoryDatabase) return 0;
 
-    auto database = maintenanceDatabase ? _maintenanceDatabase : _database;
+    auto database = factoryDatabase ? _factoryDatabase : _database;
 
     sqlite3_stmt *statement = nullptr;
     int32_t result = sqlite3_prepare_v2(database, command->first.c_str(), -1, &statement, nullptr);
@@ -594,16 +596,16 @@ uint64_t SQLite3::executeWriteCommand(const std::shared_ptr<std::pair<std::strin
   return 0;
 }
 
-uint64_t SQLite3::executeWriteCommand(const std::string &command, BaseLib::Database::DataRow &dataToEscape, bool maintenanceDatabase) {
+uint64_t SQLite3::executeWriteCommand(const std::string &command, BaseLib::Database::DataRow &dataToEscape, bool factoryDatabase) {
   try {
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
     if (!_database) {
       GD::out.printError("Error: Could not write to database. No database handle.");
       return 0;
     }
-    if (maintenanceDatabase && !_maintenanceDatabase) return 0;
+    if (factoryDatabase && !_factoryDatabase) return 0;
 
-    auto database = maintenanceDatabase ? _maintenanceDatabase : _database;
+    auto database = factoryDatabase ? _factoryDatabase : _database;
 
     sqlite3_stmt *statement = nullptr;
     int32_t result = sqlite3_prepare_v2(database, command.c_str(), -1, &statement, nullptr);
@@ -640,7 +642,7 @@ uint64_t SQLite3::executeWriteCommand(const std::string &command, BaseLib::Datab
   return 0;
 }
 
-std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string &command, BaseLib::Database::DataRow &dataToEscape, bool maintenanceDatabase) {
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string &command, BaseLib::Database::DataRow &dataToEscape, bool factoryDatabase) {
   auto dataRows = std::make_shared<BaseLib::Database::DataTable>();
   try {
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -648,9 +650,9 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std:
       GD::out.printError("Error: Could not write to database. No database handle.");
       return dataRows;
     }
-    if (maintenanceDatabase && !_maintenanceDatabase) return dataRows;
+    if (factoryDatabase && !_factoryDatabase) return dataRows;
 
-    auto database = maintenanceDatabase ? _maintenanceDatabase : _database;
+    auto database = factoryDatabase ? _factoryDatabase : _database;
 
     sqlite3_stmt *statement = nullptr;
     int32_t result = sqlite3_prepare_v2(database, command.c_str(), -1, &statement, nullptr);
@@ -681,7 +683,7 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std:
   return dataRows;
 }
 
-std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string &command, bool maintenanceDatabase) {
+std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std::string &command, bool factoryDatabase) {
   auto dataRows = std::make_shared<BaseLib::Database::DataTable>();
   try {
     std::lock_guard<std::mutex> databaseGuard(_databaseMutex);
@@ -689,9 +691,9 @@ std::shared_ptr<BaseLib::Database::DataTable> SQLite3::executeCommand(const std:
       GD::out.printError("Error: Could not write to database. No database handle.");
       return dataRows;
     }
-    if (maintenanceDatabase && !_maintenanceDatabase) return dataRows;
+    if (factoryDatabase && !_factoryDatabase) return dataRows;
 
-    auto database = maintenanceDatabase ? _maintenanceDatabase : _database;
+    auto database = factoryDatabase ? _factoryDatabase : _database;
 
     sqlite3_stmt *statement = nullptr;
     int32_t result = sqlite3_prepare_v2(database, command.c_str(), -1, &statement, nullptr);
