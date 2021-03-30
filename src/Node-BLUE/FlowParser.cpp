@@ -50,7 +50,7 @@ std::string FlowParser::generateRandomId(const std::unordered_set<std::string> &
 }
 
 BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes, std::unordered_map<std::string, std::string> &nodeIdMap) {
-  if (!flow || flow->arrayValue->empty() || tab.empty() || !nodes || nodes->arrayValue->empty()) return BaseLib::PVariable();
+  if (!flow || tab.empty() || !nodes || nodes->arrayValue->empty()) return BaseLib::PVariable();
 
   //A set to store all existing IDs to avoid duplicates.
   std::unordered_set<std::string> allIds;
@@ -142,21 +142,21 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
   yOffsetNewNodes -= nodeHeight;
 
   //{{{ Create tab, if it doesn't exist.
+  BaseLib::PVariable newTab;
   if (tabId.empty()) {
     tabId = generateRandomId(allIds);
     allIds.emplace(tabId);
 
-    auto tabStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-    tabStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(tabId));
-    tabStruct->structValue->emplace("label", std::make_shared<BaseLib::Variable>(tab));
-    tabStruct->structValue->emplace("namespace", std::make_shared<BaseLib::Variable>("tab"));
-    tabStruct->structValue->emplace("type", std::make_shared<BaseLib::Variable>("tab"));
-
-    returnedFlow->arrayValue->emplace_back(tabStruct);
+    auto newTab = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    newTab->structValue->emplace("id", std::make_shared<BaseLib::Variable>(tabId));
+    newTab->structValue->emplace("label", std::make_shared<BaseLib::Variable>(tab));
+    newTab->structValue->emplace("namespace", std::make_shared<BaseLib::Variable>("tab"));
+    newTab->structValue->emplace("type", std::make_shared<BaseLib::Variable>("tab"));
   }
   //}}}
 
   //{{{ Add nodes to tab
+  bool nodesAddedToTab = false;
   for (auto &flowElement : *nodes->arrayValue) {
     auto idIterator = flowElement->structValue->find("id");
     if (idIterator == flowElement->structValue->end()) continue;
@@ -203,8 +203,8 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
 
     newNode->structValue->emplace("id", std::make_shared<BaseLib::Variable>(newId));
     newNode->structValue->emplace("homegearTag", std::make_shared<BaseLib::Variable>(tag));
-    newNode->structValue->emplace("x", std::make_shared<BaseLib::Variable>(xPos));
-    newNode->structValue->emplace("y", std::make_shared<BaseLib::Variable>(yPos));
+    if (!global) newNode->structValue->emplace("x", std::make_shared<BaseLib::Variable>(xPos));
+    if (!global) newNode->structValue->emplace("y", std::make_shared<BaseLib::Variable>(yPos));
     if (!global) newNode->structValue->emplace("z", std::make_shared<BaseLib::Variable>(tabId));
 
     auto wiresIterator = newNode->structValue->find("wires");
@@ -222,8 +222,11 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
     }
 
     returnedFlow->arrayValue->emplace_back(std::move(newNode));
+    if (!global) nodesAddedToTab = true;
   }
   //}}}
+
+  if (nodesAddedToTab && newTab) returnedFlow->arrayValue->emplace_back(newTab);
 
   return returnedFlow;
 }

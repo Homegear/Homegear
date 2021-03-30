@@ -3726,7 +3726,7 @@ BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string &tab, const 
       std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
       if (BaseLib::Io::fileExists(flowsFile)) fileContent = BaseLib::Io::getBinaryFileContent(flowsFile);
       else {
-        std::string tempString = R"([{"id":")" + FlowParser::generateRandomId() + R"(","label":"Flow 1","type":"tab"}])";
+        std::string tempString = R"([])";
         fileContent.insert(fileContent.end(), tempString.begin(), tempString.end());
       }
     }
