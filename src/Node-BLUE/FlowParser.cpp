@@ -170,9 +170,11 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
 
     int32_t xPos = 0;
     int32_t yPos = 0;
+    bool global = false;
 
     auto xIterator = flowElement->structValue->find("x");
     auto yIterator = flowElement->structValue->find("y");
+    auto zIterator = flowElement->structValue->find("z");
 
     if (xIterator != flowElement->structValue->end()) {
       xPos = xIterator->second->integerValue;
@@ -180,6 +182,10 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
 
     if (yIterator != flowElement->structValue->end()) {
       yPos = yOffset + (yIterator->second->integerValue - yOffsetNewNodes);
+    }
+
+    if (zIterator != flowElement->structValue->end() && zIterator->second->stringValue == "g") {
+      global = true;
     }
 
     newNode->structValue->erase("id");
@@ -199,7 +205,7 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
     newNode->structValue->emplace("homegearTag", std::make_shared<BaseLib::Variable>(tag));
     newNode->structValue->emplace("x", std::make_shared<BaseLib::Variable>(xPos));
     newNode->structValue->emplace("y", std::make_shared<BaseLib::Variable>(yPos));
-    newNode->structValue->emplace("z", std::make_shared<BaseLib::Variable>(tabId));
+    if (!global) newNode->structValue->emplace("z", std::make_shared<BaseLib::Variable>(tabId));
 
     auto wiresIterator = newNode->structValue->find("wires");
     if (wiresIterator != newNode->structValue->end()) {
