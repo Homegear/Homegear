@@ -1307,11 +1307,14 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
 
     if (rows->empty()) return BaseLib::Variable::createError(-1, "Unknown UI notification.");
 
+    auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+
     auto notification = _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
 
     auto contentIterator = notification->structValue->find("title");
     if (contentIterator != notification->structValue->end()) {
       auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1324,6 +1327,7 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
     contentIterator = notification->structValue->find("overlayContent");
     if (contentIterator != notification->structValue->end()) {
       auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1336,6 +1340,7 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
     contentIterator = notification->structValue->find("modalTitle");
     if (contentIterator != notification->structValue->end()) {
       auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1348,6 +1353,7 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
     contentIterator = notification->structValue->find("modalContent");
     if (contentIterator != notification->structValue->end()) {
       auto languageIterator = contentIterator->second->structValue->find(languageCode);
+      if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
       if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1363,6 +1369,7 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
         auto labelIterator = button->structValue->find("label");
         if (labelIterator != button->structValue->end()) {
           auto languageIterator = labelIterator->second->structValue->find(languageCode);
+          if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find(shortLanguageCode);
           if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find("en");
           if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find("en-US");
           if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->begin();
@@ -1386,6 +1393,8 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
   try {
     auto rows = _db.executeCommand("SELECT id, data FROM uiNotifications", false);
 
+    auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+
     auto notifications = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     notifications->arrayValue->reserve(rows->size());
 
@@ -1398,6 +1407,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
       auto contentIterator = notification->structValue->find("title");
       if (contentIterator != notification->structValue->end()) {
         auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1410,6 +1420,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
       contentIterator = notification->structValue->find("overlayContent");
       if (contentIterator != notification->structValue->end()) {
         auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1422,6 +1433,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
       contentIterator = notification->structValue->find("modalTitle");
       if (contentIterator != notification->structValue->end()) {
         auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1434,6 +1446,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
       contentIterator = notification->structValue->find("modalContent");
       if (contentIterator != notification->structValue->end()) {
         auto languageIterator = contentIterator->second->structValue->find(languageCode);
+        if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find(shortLanguageCode);
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->find("en-US");
         if (languageIterator == contentIterator->second->structValue->end()) languageIterator = contentIterator->second->structValue->begin();
@@ -1449,6 +1462,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
           auto labelIterator = button->structValue->find("label");
           if (labelIterator != button->structValue->end()) {
             auto languageIterator = labelIterator->second->structValue->find(languageCode);
+            if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find(shortLanguageCode);
             if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find("en");
             if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->find("en-US");
             if (languageIterator == labelIterator->second->structValue->end()) languageIterator = labelIterator->second->structValue->begin();
@@ -1641,13 +1655,18 @@ BaseLib::PVariable DatabaseController::getBuildings(std::string languageCode) {
         auto translationIterator = translations->structValue->find(languageCode);
         if (translationIterator != translations->structValue->end()) building->structValue->emplace("NAME", translationIterator->second);
         else {
-          translationIterator = translations->structValue->find("en");
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
           if (translationIterator != translations->structValue->end()) building->structValue->emplace("NAME", translationIterator->second);
           else {
-            translationIterator = translations->structValue->find("en-US");
+            translationIterator = translations->structValue->find("en");
             if (translationIterator != translations->structValue->end()) building->structValue->emplace("NAME", translationIterator->second);
-            else if (!translations->structValue->empty()) building->structValue->emplace("NAME", translations->structValue->begin()->second);
-            else building->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            else {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) building->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) building->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else building->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
           }
         }
       }
@@ -2003,13 +2022,18 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode) {
         auto translationIterator = translations->structValue->find(languageCode);
         if (translationIterator != translations->structValue->end()) story->structValue->emplace("NAME", translationIterator->second);
         else {
-          translationIterator = translations->structValue->find("en");
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
           if (translationIterator != translations->structValue->end()) story->structValue->emplace("NAME", translationIterator->second);
           else {
-            translationIterator = translations->structValue->find("en-US");
+            translationIterator = translations->structValue->find("en");
             if (translationIterator != translations->structValue->end()) story->structValue->emplace("NAME", translationIterator->second);
-            else if (!translations->structValue->empty()) story->structValue->emplace("NAME", translations->structValue->begin()->second);
-            else story->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            else {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) story->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) story->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else story->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
           }
         }
       }
@@ -2272,13 +2296,18 @@ std::string DatabaseController::getRoomName(BaseLib::PRpcClientInfo clientInfo, 
     auto translationsIterator = translations->structValue->find(language);
     if (translationsIterator != translations->structValue->end()) return translationsIterator->second->stringValue;
     else {
-      translationsIterator = translations->structValue->find("en");
+      auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+      translationsIterator = translations->structValue->find(shortLanguageCode);
       if (translationsIterator != translations->structValue->end()) return translationsIterator->second->stringValue;
       else {
-        translationsIterator = translations->structValue->find("en-US");
+        translationsIterator = translations->structValue->find("en");
         if (translationsIterator != translations->structValue->end()) return translationsIterator->second->stringValue;
-        else if (!translations->structValue->empty()) return translations->structValue->begin()->second->stringValue;
-        else return "";
+        else {
+          translationsIterator = translations->structValue->find("en-US");
+          if (translationsIterator != translations->structValue->end()) return translationsIterator->second->stringValue;
+          else if (!translations->structValue->empty()) return translations->structValue->begin()->second->stringValue;
+          else return "";
+        }
       }
     }
   }
@@ -2326,13 +2355,18 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
         auto translationIterator = translations->structValue->find(languageCode);
         if (translationIterator != translations->structValue->end()) room->structValue->emplace("NAME", translationIterator->second);
         else {
-          translationIterator = translations->structValue->find("en");
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
           if (translationIterator != translations->structValue->end()) room->structValue->emplace("NAME", translationIterator->second);
-          {
-            translationIterator = translations->structValue->find("en-US");
+          else {
+            translationIterator = translations->structValue->find("en");
             if (translationIterator != translations->structValue->end()) room->structValue->emplace("NAME", translationIterator->second);
-            else if (!translations->structValue->empty()) room->structValue->emplace("NAME", translations->structValue->begin()->second);
-            else room->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) room->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) room->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else room->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
           }
         }
       }
@@ -2502,13 +2536,18 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
         auto translationIterator = translations->structValue->find(languageCode);
         if (translationIterator != translations->structValue->end()) category->structValue->emplace("NAME", translationIterator->second);
         else {
-          translationIterator = translations->structValue->find("en");
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
           if (translationIterator != translations->structValue->end()) category->structValue->emplace("NAME", translationIterator->second);
-          {
-            translationIterator = translations->structValue->find("en-US");
+          else {
+            translationIterator = translations->structValue->find("en");
             if (translationIterator != translations->structValue->end()) category->structValue->emplace("NAME", translationIterator->second);
-            else if (!translations->structValue->empty()) category->structValue->emplace("NAME", translations->structValue->begin()->second);
-            else category->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) category->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) category->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else category->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
           }
         }
       }
@@ -2822,13 +2861,18 @@ BaseLib::PVariable DatabaseController::getRoles(BaseLib::PRpcClientInfo clientIn
         auto translationIterator = translations->structValue->find(languageCode);
         if (translationIterator != translations->structValue->end()) role->structValue->emplace("NAME", translationIterator->second);
         else {
-          translationIterator = translations->structValue->find("en");
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
           if (translationIterator != translations->structValue->end()) role->structValue->emplace("NAME", translationIterator->second);
-          {
-            translationIterator = translations->structValue->find("en-US");
+          else {
+            translationIterator = translations->structValue->find("en");
             if (translationIterator != translations->structValue->end()) role->structValue->emplace("NAME", translationIterator->second);
-            else if (!translations->structValue->empty()) role->structValue->emplace("NAME", translations->structValue->begin()->second);
-            else role->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) role->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) role->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else role->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
           }
         }
       }
@@ -4074,13 +4118,18 @@ BaseLib::PVariable DatabaseController::getGroup(uint64_t groupId, std::string la
       auto translationIterator = translations->structValue->find(languageCode);
       if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
       else {
-        translationIterator = translations->structValue->find("en");
+        auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+        translationIterator = translations->structValue->find(shortLanguageCode);
         if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
-        {
-          translationIterator = translations->structValue->find("en-US");
+        else {
+          translationIterator = translations->structValue->find("en");
           if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
-          else if (!translations->structValue->empty()) group->structValue->emplace("NAME", translations->structValue->begin()->second);
-          else group->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+          {
+            translationIterator = translations->structValue->find("en-US");
+            if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
+            else if (!translations->structValue->empty()) group->structValue->emplace("NAME", translations->structValue->begin()->second);
+            else group->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+          }
         }
       }
     }
@@ -4116,13 +4165,18 @@ BaseLib::PVariable DatabaseController::getGroups(std::string languageCode) {
         auto translationIterator = translations->structValue->find(languageCode);
         if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
         else {
-          translationIterator = translations->structValue->find("en");
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
           if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
-          {
-            translationIterator = translations->structValue->find("en-US");
+          else {
+            translationIterator = translations->structValue->find("en");
             if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
-            else if (!translations->structValue->empty()) group->structValue->emplace("NAME", translations->structValue->begin()->second);
-            else group->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) group->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) group->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else group->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
           }
         }
       }
