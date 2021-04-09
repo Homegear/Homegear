@@ -147,7 +147,7 @@ BaseLib::PVariable FlowParser::addNodesToFlow(const BaseLib::PVariable &flow, co
     tabId = generateRandomId(allIds);
     allIds.emplace(tabId);
 
-    auto newTab = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    newTab = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     newTab->structValue->emplace("id", std::make_shared<BaseLib::Variable>(tabId));
     newTab->structValue->emplace("label", std::make_shared<BaseLib::Variable>(tab));
     newTab->structValue->emplace("namespace", std::make_shared<BaseLib::Variable>("tab"));
