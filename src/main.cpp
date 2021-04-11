@@ -53,6 +53,7 @@
 #include <malloc.h>
 
 #include <cmath>
+#include <memory>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -708,7 +709,7 @@ void startUp() {
     GD::licensingController->loadModules();
 
     GD::out.printInfo("Initializing system variable controller...");
-    GD::systemVariableController.reset(new SystemVariableController());
+    GD::systemVariableController = std::make_unique<SystemVariableController>();
 
     GD::familyController->init();
     GD::familyController->loadModules();
@@ -909,7 +910,7 @@ void startUp() {
           GD::out.printMessage("All physical interfaces are connected now.");
           break;
         }
-        if (i == 299) GD::out.printError("Error: At least one physical interface is not connected.");
+        if (i == GD::bl->settings.maxWaitForPhysicalInterfaces() - 1) GD::out.printError("Error: At least one physical interface is not connected.");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
     }

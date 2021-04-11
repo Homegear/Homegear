@@ -24,16 +24,16 @@ case $1 in
 		chown homegear:homegear /var/lib/homegear
 		chmod 750 /var/lib/homegear
 
-		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION && test ! -e /var/lib/homegear/scripts/HM-XMLRPC-Client; then
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION && test ! -e /var/lib/homegear/scripts/HG-JSONRPC-Client; then
 			rm -Rf /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
 			mkdir /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
-			wget -P /tmp/HomegearScriptsDir/ https://homegear.eu/downloads/Homegear_PHP_XMLRPC_Client.zip
+			wget -P /tmp/HomegearScriptsDir/ https://homegear.eu/downloads/Homegear_PHP_JSONRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
-			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
+			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_JSONRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
-			rm /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
+			rm /tmp/HomegearScriptsDir/Homegear_PHP_JSONRPC_Client.zip
 			mkdir -p /var/lib/homegear/scripts
 			[ $? -ne 0 ] && exit 1
 			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts
