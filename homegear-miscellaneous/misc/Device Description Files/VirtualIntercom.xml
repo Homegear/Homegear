@@ -1,0 +1,266 @@
+<homegearDevice version="1">
+	<supportedDevices>
+		<device id="Intercom">
+			<description>Intercom</description>
+			<typeNumber>0xFDFD</typeNumber>
+		</device>
+	</supportedDevices>
+	<runProgram>
+		<startType>permanent</startType>
+		<script2>
+<![CDATA[<?php
+use parallel\{Channel,Runtime,Events,Events\Event};
+
+$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
+{
+	$hg = new \Homegear\Homegear();
+
+	if($hg->registerThread($scriptId) === false)
+	{
+		$hg->log(2, 'Could not register thread.');
+		return false;
+	}
+
+	$hg->subscribePeer($peerId);
+
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->setBlocking(false);
+
+	while(true)
+	{
+		$result = $hg->pollEvent();
+		if($result)
+		{
+			if($result['TYPE'] == 'event' && $result['PEERID'] == $peerId)
+			{
+				if($result['VARIABLE'] == 'UPDATE_CONFIG')
+				{
+		                        $hg->log(2, '########### UPDATE_CONFIG');
+					$userMetadata = $hg->getUserMetadata('homegear');
+
+					$setting = $userMetadata['interface']['intercom']['ringVolume']['status'] ?? 70;
+					$oldValue = $hg->getValue($peerId, 1, 'RINGTONE_VOLUME');
+					if ($setting !== $oldValue) $hg->setValue($peerId, 1, 'RINGTONE_VOLUME', $setting);
+
+					$setting = $userMetadata['interface']['intercom']['mute']['status'] ?? false;
+					$oldValue = $hg->getValue($peerId, 1, 'MUTE_BELL');
+					if ($setting !== $oldValue) $hg->setValue($peerId, 1, 'MUTE_BELL', $setting);
+
+					$setting = $userMetadata['interface']['intercom']['micVolume']['status'] ?? 100;
+					$oldValue = $hg->getValue($peerId, 1, 'MICROPHONE_LEVEL');
+					if ($setting !== $oldValue) $hg->setValue($peerId, 1, 'MICROPHONE_LEVEL', $setting);
+
+					$setting = $userMetadata['interface']['intercom']['outstationVolume']['status'] ?? 100;
+					$oldValue = $hg->getValue($peerId, 1, 'SPEAKER_VOLUME');
+					if ($setting !== $oldValue) $hg->setValue($peerId, 1, 'SPEAKER_VOLUME', $setting);
+
+					$setting = $userMetadata['interface']['highlight'] ?? '#fca340';
+					$oldValue = $hg->getValue($peerId, 1, 'HIGHLIGHT_COLOR');
+					if ($setting !== $oldValue) $hg->setValue($peerId, 1, 'HIGHLIGHT_COLOR', $setting);
+				}
+				else if($result['VARIABLE'] == 'SPEAKER_VOLUME')
+				{
+					$userMetadata = $hg->getUserMetadata('homegear');
+					$userMetadata['interface']['intercom']['outstationVolume']['status'] = $result['VALUE'];
+					$hg->setUserMetadata('homegear', $userMetadata);
+				}
+			}
+		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event && $event->source == 'eventHomegearChannelPeer'.$peerId)
+			{
+				$events->addChannel($homegearChannel);
+				if($event->type == Event\Type::Read)
+				{
+					if(is_array($event->value) && count($event->value) > 0)
+					{
+						if($event->value['name'] == 'stop') return true; //Stop
+					}
+				}
+				else if($event->type == Event\Type::Close) return true; //Stop
+			}
+		}
+		while($event);
+	}
+};
+
+class HomegearDevice extends HomegearDeviceBase
+{
+	private $hg = NULL;
+	private $peerId = NULL;
+	private $eventRuntime = NULL;
+	private $eventFuture = NULL;
+	private $eventHomegearChannel = NULL; //Channel to pass Homegear events to event thread
+
+	public function __construct()
+	{
+		$this->hg = new \Homegear\Homegear();
+	}
+
+	public function __destruct()
+	{
+		$this->stop();
+		$this->waitForStop();
+	}
+
+	public function init($peerId) : bool
+	{
+		$this->peerId = $peerId;
+		return true;
+	}
+
+	public function start() : bool
+	{
+		$this->eventRuntime = new Runtime();
+
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+
+		global $eventThread;
+		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel]);
+
+		return true;
+	}
+
+	public function stop()
+	{
+		if($this->eventHomegearChannel) $this->eventHomegearChannel->send(['name' => 'stop', 'value' => true]);
+	}
+
+	public function waitForStop()
+	{
+		if($this->eventFuture)
+		{
+			$this->eventFuture->value();
+			$this->eventFuture = NULL;
+		}		
+
+		if($this->eventHomegearChannel)
+		{
+			$this->eventHomegearChannel->close();
+			$this->eventHomegearChannel = NULL;
+		}
+
+
+		if($this->eventRuntime)
+		{
+			$this->eventRuntime->close();
+			$this->eventRuntime = NULL;
+		}
+	}
+}
+]]>
+		</script2>
+	</runProgram>
+	<properties/>
+	<functions>
+		<function channel="0" type="" channelCount="1">
+			<properties/>
+			<configParameters>custom_ch0_master</configParameters>
+		</function>
+		<function channel="1" type="Intercom" channelCount="1">
+			<properties/>
+			<configParameters>config</configParameters>
+			<variables>custom_ch1_values</variables>
+		</function>
+	</functions>
+	<packets/>
+	<parameterGroups>
+		<configParameters id="config"/>
+		<configParameters id="custom_ch0_master"/>
+		<variables id="custom_ch1_values">
+			<parameter id="UPDATE_CONFIG">
+				<properties>
+					<readable>false</readable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalAction/>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="MUTE_BELL">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="RINGTONE_VOLUME">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="SPEAKER_VOLUME">
+				<properties>
+					<writeable>true</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="MICROPHONE_LEVEL">
+				<properties>
+					<writeable>false</writeable>
+					<addonWriteable>true</addonWriteable>
+					<casts>
+						<rpcBinary/>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger>
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="HIGHLIGHT_COLOR">
+                                <properties>
+                                        <writeable>false</writeable>
+                                        <addonWriteable>true</addonWriteable>
+                                        <casts>
+                                                <rpcBinary/>
+                                        </casts>
+                                </properties>
+                                <logicalString/>
+                                <physicalInteger>
+                                        <operationType>store</operationType>
+                                </physicalInteger>
+                        </parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>
