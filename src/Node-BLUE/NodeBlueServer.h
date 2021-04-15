@@ -109,6 +109,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
+  BaseLib::PVariable getVariablesInRole(BaseLib::PRpcClientInfo clientInfo, uint64_t roleId, uint64_t peerId = 0);
+
   void nodeLog(const std::string &nodeId, uint32_t logLevel, const std::string &message);
 
   void nodeOutput(const std::string &nodeId, uint32_t index, const BaseLib::PVariable &message, bool synchronous);
@@ -177,6 +179,7 @@ class NodeBlueServer : public BaseLib::IQueue {
     int32_t clientId = -1;
     std::string type;
     NodeManager::NodeCodeType nodeCodeType = NodeManager::NodeCodeType::undefined;
+    std::unordered_map<uint32_t, uint32_t> outputRoles;
   };
 
   BaseLib::Output _out;
@@ -318,6 +321,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   BaseLib::PVariable nodeBlueVariableEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable nodeRedNodeInput(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable registerUiNodeRoles(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 

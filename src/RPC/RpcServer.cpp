@@ -966,10 +966,12 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
     }
 
     if (GD::bl->debugLevel >= 4) {
-      _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
-      for (std::vector<BaseLib::PVariable>::iterator i = parameters->arrayValue->begin();
-           i != parameters->arrayValue->end(); ++i) {
-        (*i)->print(true, false);
+      if (methodName != "getMetadata") {
+        _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
+        for (std::vector<BaseLib::PVariable>::iterator i = parameters->arrayValue->begin();
+             i != parameters->arrayValue->end(); ++i) {
+          (*i)->print(true, false);
+        }
       }
     }
     BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(clientInfo, parameters->arrayValue);

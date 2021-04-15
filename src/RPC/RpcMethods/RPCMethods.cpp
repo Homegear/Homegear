@@ -4832,6 +4832,13 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
       }
     }
 
+    if (parameters->size() == 1) {
+      auto variables = GD::nodeBlueServer->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64);
+      result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+    } else if (parameters->size() == 2 && (parameters->at(1)->integerValue == 0x50000000 || parameters->at(1)->integerValue == 0x50000001)) {
+      return GD::nodeBlueServer->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue);
+    }
+
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
     for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
          i != families.end(); ++i) {
