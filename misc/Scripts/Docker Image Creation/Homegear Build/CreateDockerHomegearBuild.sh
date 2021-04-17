@@ -219,7 +219,9 @@ function createPackage {
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
 	[ $? -ne 0 ] && exit 1
-	./bootstrap
+	if [ -f ./bootstrap ]; then
+	  ./bootstrap
+	fi
 	[ $? -ne 0 ] && exit 1
 	cd ..
 	if [ "$distribution" == "Debian" ]; then
@@ -239,7 +241,7 @@ function createPackage {
 
   * See https://github.com/Homegear/${1}/issues?q=is%3Aissue+is%3Aclosed
 
- -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
+ -- Dr. Sathya Laufer <s.laufer@homegear.email>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
@@ -614,6 +616,13 @@ if [[ -n $2 ]]; then
 	[ $? -ne 0 ] && exit 1
 	rm ${1}.zip
 	mv ibs-ssh-${1}* ibs-ssh-${1}
+
+	wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv doorctrl-${1}* doorctrl-${1}
 fi
 
 createPackage libhomegear-base $1 libhomegear-base 0
@@ -723,6 +732,7 @@ if [[ -n $2 ]]; then
 	createPackage mellonbot $1 mellonbot 1
 	createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
 	createPackage ibs-ssh $1 ibs-ssh 1
+	createPackage doorctrl $1 doorctrl 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -740,7 +750,7 @@ cd /build
 
 if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb || test ! -f doorctrl_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
@@ -823,6 +833,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 mellonbot
 	cleanUp2 homegear-cloudconnect
 	cleanUp2 ibs-ssh
+	cleanUp2 doorctrl
 fi
 EOF
 echo "isodate=\`date +%Y%m%d\`
@@ -878,6 +889,7 @@ echo "isodate=\`date +%Y%m%d\`
 		mv mellonbot.deb mellonbot_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-cloudconnect.deb homegear-cloudconnect_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv ibs-ssh.deb ibs-ssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv doorctrl.deb doorctrl_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
@@ -897,7 +909,7 @@ cd /build
 
 if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb || test ! -f doorctrl_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
@@ -924,7 +936,7 @@ cd /build
 
 if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb || test ! -f doorctrl_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
@@ -975,7 +987,7 @@ cd /build
 if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
-	tar -zcpf \${path} homegear* lib* ibs-ssh* mellon* python3-homegear* distribution
+	tar -zcpf \${path} homegear* lib* doorctrl* ibs-ssh* mellon* python3-homegear* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
