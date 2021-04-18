@@ -208,8 +208,8 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
   cd $rootfs/usr/src
   wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz
-  tar -zxf -- *.tar.gz
-  rm -- *.tar.gz
+  tar -zxf *.tar.gz
+  rm *.tar.gz
   cd pjproject* || exit 1
   ./configure
   make dep
