@@ -637,7 +637,7 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv ibs-ssh-${1}* ibs-ssh-${1}
 
-  if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
+  if [ "$distribution" == "Raspbian" ] && [ "$distributionVersion" == "bullseye" ]; then
     wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
     [ $? -ne 0 ] && exit 1
     unzip ${1}.zip
@@ -754,7 +754,7 @@ if [[ -n $2 ]]; then
 	createPackage mellonbot $1 mellonbot 1
 	createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
 	createPackage ibs-ssh $1 ibs-ssh 1
-	if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
+	if [ "$distribution" == "Raspbian" ] && [ "$distributionVersion" == "bullseye" ]; then
 	  createPackage doorctrl $1 doorctrl 1
 	fi
 fi
