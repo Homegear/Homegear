@@ -206,11 +206,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 
 # {{{ PJPROJECT for doorctrl
 if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
-  cd $rootfs/usr/src
-  wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz
-  tar -zxf *.tar.gz
-  rm *.tar.gz
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs cd /usr/src/pjproject* && ./configure && make dep && make && make install
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz && tar -zxf 2.11.tar.gz && rm 2.11.tar.gz cd /usr/src/pjproject-2.11 && ./configure && make dep && make && make install
 fi
 # }}}
 
@@ -640,6 +636,13 @@ if [[ -n $2 ]]; then
     [ $? -ne 0 ] && exit 1
     rm ${1}.zip
     mv doorctrl-${1}* doorctrl-${1}
+
+    wget --https-only https://gitit.de/api/v4/projects/332/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+    [ $? -ne 0 ] && exit 1
+    unzip ${1}.zip
+    [ $? -ne 0 ] && exit 1
+    rm ${1}.zip
+    mv ltp08-connector-${1}* ltp08-connector-${1}
 	fi
 fi
 
@@ -752,6 +755,7 @@ if [[ -n $2 ]]; then
 	createPackage ibs-ssh $1 ibs-ssh 1
 	if [ "$distribution" == "Raspbian" ] && [ "$distributionVersion" == "bullseye" ]; then
 	  createPackage doorctrl $1 doorctrl 1
+	  createPackage ltp08-connector $1 ltp08-connector 1
 	fi
 fi
 EOF
@@ -855,6 +859,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 ibs-ssh
 	cleanUp2 doorctrl
 	cleanUp2 doorbell
+	cleanUp2 ltp08-connector
 fi
 EOF
 echo "isodate=\`date +%Y%m%d\`
@@ -912,6 +917,7 @@ echo "isodate=\`date +%Y%m%d\`
 		mv ibs-ssh.deb ibs-ssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv doorctrl.deb doorctrl_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv doorbell.deb doorbell_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv ltp08-connector.deb ltp08-connector_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
@@ -1009,7 +1015,7 @@ cd /build
 if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
-	tar -zcpf \${path} homegear* lib* doorbell* doorctrl* ibs-ssh* mellon* python3-homegear* distribution
+	tar -zcpf \${path} homegear* lib* doorbell* doorctrl* ltp08* ibs-ssh* mellon* python3-homegear* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
