@@ -206,7 +206,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 
 # {{{ PJPROJECT for doorctrl
 if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz && tar -zxf 2.11.tar.gz && rm 2.11.tar.gz cd /usr/src/pjproject-2.11 && ./configure && make dep && make && make install'
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz && tar -zxf 2.11.tar.gz && rm 2.11.tar.gz && cd /usr/src/pjproject-2.11 && ./configure && make dep && make && make install'
 fi
 # }}}
 
