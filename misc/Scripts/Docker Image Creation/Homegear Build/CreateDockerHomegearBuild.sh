@@ -210,11 +210,7 @@ if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
   wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz
   tar -zxf *.tar.gz
   rm *.tar.gz
-  cd pjproject* || exit 1
-  ./configure
-  make dep
-  make
-  make install
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs cd /usr/src/pjproject* && ./configure && make dep && make && make install
 fi
 # }}}
 
