@@ -1884,6 +1884,9 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         if (BaseLib::Io::fileExists(path)) contentString = BaseLib::Io::getFileContent(path);
       }
       responseEncoding = "application/json";
+    } else if (path == "node-blue/plugins") {
+      responseEncoding = "application/json";
+      contentString = "{}";
     } else if (path == "node-blue/nodes") {
       if (!loginValid) return "unauthorized";
       path = _webroot + "static/" + path.substr(10);
