@@ -1912,6 +1912,8 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         newPath = _webroot + "icons/" + pathPair.second;
         if (BaseLib::Io::fileExists(newPath)) contentString = BaseLib::Io::getFileContent(newPath);
       }
+      auto filePair = BaseLib::HelperFunctions::splitLast(pathPair.second, '.');
+      if (!filePair.second.empty()) responseEncoding = http.getMimeType(filePair.second);
     } else if (path.compare(0, 30, "node-blue/library/local/flows/") == 0 || path.compare(0, 35, "node-blue/library/_examples_/flows/") == 0) {
       if (!loginValid) return "unauthorized";
 
