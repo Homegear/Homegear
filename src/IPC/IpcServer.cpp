@@ -939,7 +939,7 @@ BaseLib::PVariable IpcServer::callRpcMethod(const BaseLib::PRpcClientInfo &clien
       if (clientData.size() == 1) return response;
       else responseStruct->structValue->emplace(std::to_string(client->id), response);
     }
-
+    return responses;
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
