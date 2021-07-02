@@ -76,6 +76,10 @@ bool Nodepink::isStarted() {
   return _processStartUpComplete;
 }
 
+bool Nodepink::startUpError() {
+  return _startUpError;
+}
+
 void Nodepink::start() {
   try {
     _out.printInfo("Starting Node-PINK...");
@@ -187,6 +191,8 @@ void Nodepink::startProgram() {
 
 void Nodepink::execThread() {
   try {
+    _startUpError = false; //Set to false only once so on error it stays true until process start up is complete
+
     do {
       if (_stdErr != -1) {
         close(_stdErr);
@@ -195,7 +201,6 @@ void Nodepink::execThread() {
       if (_errorThread.joinable()) _errorThread.join();
 
       _processStartUpComplete = false;
-      _startUpError = false;
 
       auto redJsPath = GD::bl->settings.nodeRedJsPath();
       if (redJsPath.empty()) redJsPath = GD::bl->settings.dataPath() + "node-blue/node-red/packages/node_modules/node-red/red.js";
@@ -288,6 +293,7 @@ void Nodepink::event(const BaseLib::PArray &parameters) {
       if (parameters->at(1)->stringValue == "isReady") {
         {
           std::lock_guard<std::mutex> waitLock(_processStartUpMutex);
+          _startUpError = false;
           _processStartUpComplete = true;
         }
         _processStartUpConditionVariable.notify_all();

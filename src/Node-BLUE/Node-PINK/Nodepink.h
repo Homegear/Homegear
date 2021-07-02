@@ -62,6 +62,7 @@ class Nodepink {
   ~Nodepink();
 
   bool isStarted();
+  bool startUpError();
   void start();
   void stop();
   void reload();

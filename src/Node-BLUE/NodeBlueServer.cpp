@@ -1408,6 +1408,7 @@ void NodeBlueServer::startFlows() {
       } else {
         _nodepinkWebsocket->start();
         _nodepink->start();
+        if (_nodepink->startUpError()) GD::rpcClient->broadcastNodeEvent("global", "nodePinkStartError", std::make_shared<BaseLib::Variable>(), false);
       }
     }
     //}}}
@@ -2197,6 +2198,7 @@ std::string NodeBlueServer::installNode(BaseLib::Http &http) {
     if (_nodeManager->nodeRedRequired() && !_nodepink->isStarted()) {
       _nodepinkWebsocket->start();
       _nodepink->start();
+      if (_nodepink->startUpError()) GD::rpcClient->broadcastNodeEvent("global", "nodePinkStartError", std::make_shared<BaseLib::Variable>(), false);
     }
 
     BaseLib::PVariable moduleInfo;
@@ -2591,7 +2593,7 @@ uint32_t NodeBlueServer::flowCount() {
 }
 
 bool NodeBlueServer::isReady() {
-  return !((_nodeManager->nodeRedRequired() && !_nodepink->isStarted()) || _flowsRestarting);
+  return !((_nodeManager->nodeRedRequired() && (!_nodepink->isStarted() || _nodepink->startUpError())) || _flowsRestarting);
 }
 
 void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values) {
@@ -3522,11 +3524,11 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount) {
     std::lock_guard<std::mutex> processGuard(_newProcessMutex);
     {
       std::lock_guard<std::mutex> processGuard2(_processMutex);
-      for (auto &_processe : _processes) {
-        if (_processe.second->getClientData()->closed) continue;
-        if (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || _processe.second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
-          _processe.second->lastExecution = BaseLib::HelperFunctions::getTime();
-          return _processe.second;
+      for (auto &process : _processes) {
+        if (process.second->getClientData()->closed) continue;
+        if (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || process.second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
+          process.second->lastExecution = BaseLib::HelperFunctions::getTime();
+          return process.second;
         }
       }
     }

@@ -1,57 +1,58 @@
 {
-    "event": {
-        "connectingHomegear": "Connecting to Homegear"
-    },
-    "menu": {
-        "label": {
-            "restartNodeBlue": "Restart Node-BLUE",
-            "powered": "Powered by Node-RED",
-            "nodebluewebsite": "Node-BLUE website"
-        }
-    },
-    "notification": {
-        "info": "<strong>Info</strong>: __message__",
-        "infoMessages": {
-            "flowsRestarting": "Flows are restarting. Please wait...",
-            "flowsStarted": "Flows have been restarted."
-        },
-        "warnings": {
-            "restartRequired" : "Nodes were updated. To load the updated versions, please click on the menu entry \"restart Node-BLUE\".",
-            "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
-        },
-        "errors": {
-             "flowStartError": "<p>Failed to start flow '__flow__'. Most probable cause are too many nodes on that flow. Please see the error log for more details.</p>",
-             "flowStartErrorCrash": "<p>A flow process crashed. Your flows are most probably not working. Please see the log files for more details.</p>",
-             "loadCatalogManagementError": "<p>Could not get system architecture. Is homegear-management installed?</p>"
-        }
-    },
-    "editor": {
-        "types": {
-            "string": "string",
-            "int": "integer",
-            "float": "float",
-            "bool": "bool",
-            "array": "array",
-            "struct": "struct"
-        }
-    },
-    "palette" : {
-        "editor": {
-            "confirm": {
-                "install" : {
-                    "body":"<p>Installing '__module__'</p><p>Before installing, please read the node's documentation. Some nodes have dependencies that cannot be automatically resolved.</p>"
-                }
-            }
-        }
-    },
-    "history": {
-        "title": "History",
-        "lastValue": "Last value:"
-    },
-    "fixedInputs": {
-        "title": "Set fixed input",
-        "description": "You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.",
-        "clear": "Clear",
-        "set": "Set"
+  "event": {
+    "connectingHomegear": "Connecting to Homegear"
+  },
+  "menu": {
+    "label": {
+      "restartNodeBlue": "Restart Node-BLUE",
+      "powered": "Powered by Node-RED",
+      "nodebluewebsite": "Node-BLUE website"
     }
+  },
+  "notification": {
+    "info": "<strong>Info</strong>: __message__",
+    "infoMessages": {
+      "flowsRestarting": "Flows are restarting. Please wait...",
+      "flowsStarted": "Flows have been restarted."
+    },
+    "warnings": {
+      "restartRequired": "Nodes were updated. To load the updated versions, please click on the menu entry \"restart Node-BLUE\".",
+      "fixed_inputs": "<p>Be aware that some inputs are currently set to fixed values. The affected nodes are marked by an orange circle.</p>"
+    },
+    "errors": {
+      "flowStartError": "<p>Failed to start flow '__flow__'. Most probable cause are too many nodes on that flow. Please see the error log for more details.</p>",
+      "flowStartErrorCrash": "<p>A flow process crashed. Your flows are most probably not working. Please see the log files for more details.</p>",
+      "nodePinkStartError": "<p>Error starting Node-PINK (Homegear's Node-RED). Please see the log files for more details.</p>",
+      "loadCatalogManagementError": "<p>Could not get system architecture. Is homegear-management installed?</p>"
+    }
+  },
+  "editor": {
+    "types": {
+      "string": "string",
+      "int": "integer",
+      "float": "float",
+      "bool": "bool",
+      "array": "array",
+      "struct": "struct"
+    }
+  },
+  "palette": {
+    "editor": {
+      "confirm": {
+        "install": {
+          "body": "<p>Installing '__module__'</p><p>Before installing, please read the node's documentation. Some nodes have dependencies that cannot be automatically resolved.</p>"
+        }
+      }
+    }
+  },
+  "history": {
+    "title": "History",
+    "lastValue": "Last value:"
+  },
+  "fixedInputs": {
+    "title": "Set fixed input",
+    "description": "You can set the input to a fixed value here. The fixed input is reset upon restart of Homegear.",
+    "clear": "Clear",
+    "set": "Set"
+  }
 }
