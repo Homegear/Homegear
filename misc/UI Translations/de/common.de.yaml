@@ -1,4 +1,7 @@
 ---
 # {{{ Service messages
-common.serviceMessage.unreach: 'Offline'
+common.serviceMessage.unreach: 'Das Gerät ist offline'
+common.serviceMessage.stickyUnreach: 'Das Gerät war offline'
+common.serviceMessage.configPending: 'Konfigurationsparameter müssen noch an das Gerät übertragen werden'
+common.serviceMessage.lowbat: 'Die Batterie des Gerätes ist fast leer'
 # }}}
