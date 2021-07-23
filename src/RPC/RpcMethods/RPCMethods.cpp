@@ -4468,37 +4468,34 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
     bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tBoolean})
+                                                                                                                 std::vector<BaseLib::VariableType>(),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tString})
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
     bool id = false;
-    if (parameters->size() == 1) id = parameters->at(0)->booleanValue;
+    std::string language;
+    if (parameters->size() >= 1) id = parameters->at(0)->booleanValue;
+    if (parameters->size() >= 2) language = parameters->at(1)->stringValue;
 
-    BaseLib::PVariable serviceMessages(new BaseLib::Variable(BaseLib::VariableType::tArray));
+    auto serviceMessages = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 
     if (id) {
-      auto globalMessages = GD::bl->globalServiceMessages.get(clientInfo);
-      if (!globalMessages->arrayValue->empty())
-        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(),
-                                            globalMessages->arrayValue->begin(),
-                                            globalMessages->arrayValue->end());
+      auto globalMessages = GD::bl->globalServiceMessages.get(clientInfo, language);
+      if (!globalMessages->arrayValue->empty()) {
+        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), globalMessages->arrayValue->begin(), globalMessages->arrayValue->end());
+      }
     }
 
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
-         i != families.end(); ++i) {
-      std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+    for (auto &family : families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
       if (!central) continue;
-      BaseLib::PVariable messages = central->getServiceMessages(clientInfo, id, checkAcls);
-      if (!messages->arrayValue->empty())
-        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(),
-                                            messages->arrayValue->begin(),
-                                            messages->arrayValue->end());
+      BaseLib::PVariable messages = central->getServiceMessages(clientInfo, id, language, checkAcls);
+      if (!messages->arrayValue->empty()) {
+        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
+      }
     }
 
     return serviceMessages;
@@ -7125,6 +7122,7 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
                                                                                                                      {BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tString,
                                                                                                                       BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tString,
                                                                                                                       BaseLib::VariableType::tInteger,
@@ -7136,18 +7134,19 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
     if (error != ParameterError::Enum::noError) return getError(error);
 
     std::list<std::string> variables;
-    for (auto &element : *parameters->at(5)->arrayValue) {
+    for (auto &element : *parameters->at(6)->arrayValue) {
       variables.emplace_back(element->stringValue);
     }
 
     GD::bl->globalServiceMessages.set(parameters->at(0)->integerValue,
-                                      parameters->at(1)->integerValue,
-                                      parameters->at(2)->stringValue,
-                                      parameters->at(3)->integerValue,
-                                      parameters->at(4)->stringValue,
+                                      parameters->at(1)->stringValue,
+                                      parameters->at(2)->integerValue,
+                                      parameters->at(3)->stringValue,
+                                      parameters->at(4)->integerValue,
+                                      parameters->at(5)->stringValue,
                                       variables,
-                                      parameters->at(6),
-                                      parameters->at(7)->integerValue64);
+                                      parameters->at(7),
+                                      parameters->at(8)->integerValue64);
 
     return std::make_shared<BaseLib::Variable>();
   }

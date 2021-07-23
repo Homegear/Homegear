@@ -1,7 +1,7 @@
 ---
 # {{{ Service messages
-common.serviceMessage.unreach: 'Device is offline'
-common.serviceMessage.stickyUnreach: 'Device was offline'
-common.serviceMessage.configPending: 'Device has pending configuration'
-common.serviceMessage.lowbat: 'The device''s battery is nearly empty'
+l10n.common.serviceMessage.unreach: 'Device is offline'
+l10n.common.serviceMessage.stickyUnreach: 'Device was offline'
+l10n.common.serviceMessage.configPending: 'Device has pending configuration'
+l10n.common.serviceMessage.lowbat: 'The device''s battery is nearly empty'
 # }}}

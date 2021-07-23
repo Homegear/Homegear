@@ -1,7 +1,7 @@
 ---
 # {{{ Service messages
-common.serviceMessage.unreach: 'Das Gerät ist offline'
-common.serviceMessage.stickyUnreach: 'Das Gerät war offline'
-common.serviceMessage.configPending: 'Konfigurationsparameter müssen noch an das Gerät übertragen werden'
-common.serviceMessage.lowbat: 'Die Batterie des Gerätes ist fast leer'
+l10n.common.serviceMessage.unreach: 'Das Gerät ist offline'
+l10n.common.serviceMessage.stickyUnreach: 'Das Gerät war offline'
+l10n.common.serviceMessage.configPending: 'Konfigurationsparameter müssen noch an das Gerät übertragen werden'
+l10n.common.serviceMessage.lowbat: 'Die Batterie des Gerätes ist fast leer'
 # }}}

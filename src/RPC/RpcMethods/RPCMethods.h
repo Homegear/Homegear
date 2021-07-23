@@ -958,6 +958,7 @@ class RPCGetServiceMessages : public BaseLib::Rpc::RpcMethod {
   RPCGetServiceMessages() {
     addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>());
     addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean});
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tBoolean, BaseLib::VariableType::tString});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
