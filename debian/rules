@@ -19,6 +19,11 @@ override_dh_auto_install:
 
 	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
 
+	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/admin-ui/translations/modules/common
+	cp -R $(CURDIR)/misc/UI\ Translations/* $(CURDIR)/debian/homegear/var/lib/homegear/admin-ui/translations/modules/common
+	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/admin-ui/translations/modules/common
+	chmod -R 555 $(CURDIR)/debian/homegear/var/lib/homegear/admin-ui/translations/modules/common
+
 	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
 	cp $(CURDIR)/misc/System\ Config/homegear.init $(CURDIR)/debian/homegear/etc/init.d/homegear
 	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear

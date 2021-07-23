@@ -1,0 +1,4 @@
+---
+# {{{ Service messages
+common.serviceMessage.unreach: 'Offline'
+# }}}
