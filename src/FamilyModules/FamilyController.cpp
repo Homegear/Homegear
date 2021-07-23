@@ -210,6 +210,15 @@ void FamilyController::onEvent(std::string source, uint64_t peerID, int32_t chan
   }
 }
 
+void FamilyController::onServiceMessageEvent(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    serviceMessage->messageTranslations->print(true);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
 void FamilyController::onRunScript(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, bool wait) {
   try {
 #ifndef NO_SCRIPTENGINE
