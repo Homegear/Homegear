@@ -860,6 +860,53 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
   }
 }
 
+void ScriptEngineServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    if (_shuttingDown) return;
+    if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
+
+    bool checkAcls = _scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    std::shared_ptr<BaseLib::Systems::Peer> peer;
+
+    if (serviceMessage->peerId > 0) {
+      auto families = GD::familyController->getFamilies();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+        if (central) peer = central->getPeer(serviceMessage->peerId);
+        if (peer) break;
+      }
+      if (!peer) return;
+    }
+
+    if (checkAcls && peer && !serviceMessage->variable.empty() && !_scriptEngineClientInfo->acls->checkVariableReadAccess(peer, serviceMessage->channel, serviceMessage->variable)) {
+      return;
+    }
+
+    std::vector<PScriptEngineClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->emplace_back(serviceMessage->serialize());
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastServiceMessage", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastServiceMessage\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
 void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions) {
   try {
     if (_shuttingDown) return;

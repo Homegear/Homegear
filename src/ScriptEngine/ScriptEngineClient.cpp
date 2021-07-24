@@ -81,6 +81,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
   _localRpcMethods.emplace("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("executeDeviceMethod", std::bind(&ScriptEngineClient::executeDeviceMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastServiceMessage", std::bind(&ScriptEngineClient::broadcastServiceMessage, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1));
@@ -1053,9 +1054,9 @@ void ScriptEngineClient::runNode(int32_t id, PScriptInfo scriptInfo) {
         int callResult = 0;
 
         zend_try
-        {
-          callResult = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
-        }
+            {
+              callResult = call_user_function(&(Z_OBJ(homegearNodeObject)->ce->function_table), &homegearNodeObject, &function, &returnValue, 3, parameters);
+            }
         zend_end_try();
 
         if (callResult != 0) _out.printError("Error calling function \"input\" in file: " + scriptInfo->fullPath);
@@ -1240,9 +1241,9 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
     ZVAL_STRINGL(&function, "session_start", sizeof("session_start") - 1);
 
     zend_try
-    {
-      call_user_function(EG(function_table), nullptr, &function, &returnValue, 0, nullptr);
-    }
+        {
+          call_user_function(EG(function_table), nullptr, &function, &returnValue, 0, nullptr);
+        }
     zend_end_try();
 
     zval_ptr_dtor(&function);
@@ -1740,6 +1741,30 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray &parameter
     }
 
     return BaseLib::PVariable(new BaseLib::Variable());
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::broadcastServiceMessage(BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+    std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+    for (auto &event : PhpEvents::eventsMap) {
+      if (!event.second) continue;
+      auto eventData = std::make_shared<PhpEvents::EventData>();
+      eventData->type = PhpEvents::EventDataType::serviceMessage;
+      eventData->value = parameters->at(0);
+      if (!event.second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+    }
+
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

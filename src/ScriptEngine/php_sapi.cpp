@@ -1327,6 +1327,8 @@ ZEND_FUNCTION(hg_poll_event) {
         Homegear::PhpVariableConverter::getPHPVariable(eventData->value, &element);
         add_assoc_zval_ex(return_value, "VALUE", sizeof("VALUE") - 1, &element);
       }
+    } else if (eventData->type == Homegear::PhpEvents::EventDataType::serviceMessage) {
+      Homegear::PhpVariableConverter::getPHPVariable(eventData->value, return_value);
     } else if (eventData->type == Homegear::PhpEvents::EventDataType::variableProfileStateChanged) {
       ZVAL_STRINGL(&element, "variableProfileStateChanged", sizeof("variableProfileStateChanged") - 1);
       add_assoc_zval_ex(return_value, "TYPE", sizeof("TYPE") - 1, &element);

@@ -75,6 +75,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("broadcastEvent", std::bind(&NodeBlueClient::broadcastEvent, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastFlowVariableEvent", std::bind(&NodeBlueClient::broadcastFlowVariableEvent, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastGlobalVariableEvent", std::bind(&NodeBlueClient::broadcastGlobalVariableEvent, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastServiceMessage", std::bind(&NodeBlueClient::broadcastServiceMessage, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&NodeBlueClient::broadcastDeleteDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastNewDevices", std::bind(&NodeBlueClient::broadcastNewDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&NodeBlueClient::broadcastUpdateDevice, this, std::placeholders::_1));
@@ -2385,6 +2386,26 @@ Flows::PVariable NodeBlueClient::broadcastGlobalVariableEvent(Flows::PArray &par
       for (const auto &nodeId : _globalSubscriptions) {
         Flows::PINode node = _nodeManager->getNode(nodeId);
         if (node) node->globalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
+      }
+    }
+
+    return std::make_shared<Flows::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::broadcastServiceMessage(Flows::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
+
+    {
+      std::lock_guard<std::mutex> eventsGuard(_homegearEventSubscriptionsMutex);
+      for (const auto &nodeId : _homegearEventSubscriptions) {
+        Flows::PINode node = _nodeManager->getNode(nodeId);
+        if (node) node->homegearEvent("serviceMessage", parameters);
       }
     }
 

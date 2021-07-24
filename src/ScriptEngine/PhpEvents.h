@@ -45,6 +45,7 @@ class PhpEvents {
   enum class EventDataType {
     undefined,
     event,
+    serviceMessage,
     newDevices,
     deleteDevices,
     updateDevice,

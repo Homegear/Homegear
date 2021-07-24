@@ -358,6 +358,27 @@ void Client::broadcastEvent(const std::string &source,
   }
 }
 
+void Client::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    try {
+      std::lock_guard<std::mutex> serversGuard(_serversMutex);
+      for (auto &server : _servers) {
+        if (!server.second->initialized || !server.second->newFormat || (!server.second->knownMethods.empty() && server.second->knownMethods.find("serviceMessage") == server.second->knownMethods.end())) continue;
+        if (!server.second->getServerClientInfo()->acls->checkEventServerMethodAccess("serviceMessage")) continue;
+        auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+        parameters->emplace_back(serviceMessage->serialize());
+        server.second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("serviceMessage", parameters));
+      }
+    }
+    catch (const std::exception &ex) {
+      GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
 void Client::systemListMethods(std::pair<std::string, std::string> &address) {
   try {
     std::shared_ptr<RemoteRpcServer> server = getServer(address);

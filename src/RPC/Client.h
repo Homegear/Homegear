@@ -85,6 +85,8 @@ class Client {
                       const std::shared_ptr<std::vector<std::string>> &valueKeys,
                       const std::shared_ptr<std::vector<BaseLib::PVariable>> &values);
 
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
+
   void systemListMethods(std::pair<std::string, std::string> &address);
 
   void listDevices(std::pair<std::string, std::string> &address);

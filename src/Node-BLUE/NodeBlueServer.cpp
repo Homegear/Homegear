@@ -2830,6 +2830,117 @@ void NodeBlueServer::broadcastGlobalVariableEvent(std::string &variable, BaseLib
   }
 }
 
+void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    if (_shuttingDown || _flowsRestarting) return;
+    if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
+
+    bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    std::shared_ptr<BaseLib::Systems::Peer> peer;
+
+    if (serviceMessage->peerId > 0) {
+      auto families = GD::familyController->getFamilies();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+        if (central) peer = central->getPeer(serviceMessage->peerId);
+        if (peer) break;
+      }
+      if (!peer) return;
+    }
+
+    if (checkAcls && peer && !serviceMessage->variable.empty() && !_nodeBlueClientInfo->acls->checkVariableReadAccess(peer, serviceMessage->channel, serviceMessage->variable)) {
+      return;
+    }
+
+    std::vector<PNodeBlueClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client : clients) {
+      auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      if (peer) {
+        metadata->structValue->emplace("name", std::make_shared<BaseLib::Variable>(peer->getName()));
+        metadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(peer->getRoom(-1)));
+
+        {
+          auto categories = peer->getCategories(-1);
+          auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+          categoryArray->arrayValue->reserve(categories.size());
+          for (auto category : categories) {
+            categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+          }
+          metadata->structValue->emplace("categories", categoryArray);
+        }
+
+        if (serviceMessage->channel != -1) {
+          metadata->structValue->emplace("channelName", std::make_shared<BaseLib::Variable>(peer->getName(serviceMessage->channel)));
+          metadata->structValue->emplace("channelRoom", std::make_shared<BaseLib::Variable>(peer->getRoom(serviceMessage->channel)));
+
+          {
+            auto categories = peer->getCategories(serviceMessage->channel);
+            auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+            categoryArray->arrayValue->reserve(categories.size());
+            for (auto category : categories) {
+              categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+            }
+            metadata->structValue->emplace("channelCategories", categoryArray);
+          }
+
+          if (!serviceMessage->variable.empty()) {
+            auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            metadata->structValue->emplace("variableMetadata", variableMetadata);
+
+            auto room = peer->getVariableRoom(serviceMessage->channel, serviceMessage->variable);
+            variableMetadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(room));
+
+            {
+              auto categories = peer->getVariableCategories(serviceMessage->channel, serviceMessage->variable);
+              auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+              categoryArray->arrayValue->reserve(categories.size());
+              for (auto category : categories) {
+                categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
+              }
+              variableMetadata->structValue->emplace("categories", categoryArray);
+            }
+
+            {
+              auto roles = peer->getVariableRoles(serviceMessage->channel, serviceMessage->variable);
+              auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+              for (auto &role : roles) {
+                auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
+                roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
+                if (role.second.invert) roleStruct->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(role.second.invert));
+                rolesArray->arrayValue->emplace_back(std::move(roleStruct));
+              }
+              variableMetadata->structValue->emplace("roles", rolesArray);
+            }
+          }
+        }
+      }
+
+      auto parameters = std::make_shared<BaseLib::Array>();
+      parameters->reserve(2);
+      parameters->emplace_back(serviceMessage->serialize());
+      parameters->emplace_back(metadata);
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastServiceMessage", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastServiceMessage\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
 void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions) {
   try {
     if (_shuttingDown || _flowsRestarting) return;

@@ -576,16 +576,61 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
       }
     }
 
+    auto parameters = std::make_shared<BaseLib::Array>();
+    parameters->reserve(5);
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
+
     for (std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-      auto parameters = std::make_shared<BaseLib::Array>();
-      parameters->reserve(5);
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void IpcServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    if (_shuttingDown) return;
+    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
+
+    if (serviceMessage->peerId > 0 && _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
+      std::shared_ptr<BaseLib::Systems::Peer> peer;
+      std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+        if (central) peer = central->getPeer(serviceMessage->peerId);
+        if (peer) break;
+      }
+
+      if (!peer) return;
+
+      if (!_dummyClientInfo->acls->checkVariableReadAccess(peer, serviceMessage->channel, serviceMessage->variable)) {
+        return;
+      }
+    }
+
+    std::vector<PIpcClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : clients) {
+        if (client->closed) continue;
+        clients.push_back(client);
+      }
+    }
+
+    auto parameters = std::make_shared<BaseLib::Array>();
+    parameters->emplace_back(serviceMessage->serialize());
+
+    for (auto &client : clients) {
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastServiceMessage", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastServiceMessage\". Queue is full.");
     }
   }
   catch (const std::exception &ex) {

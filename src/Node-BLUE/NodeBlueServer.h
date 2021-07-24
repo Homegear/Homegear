@@ -81,6 +81,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastGlobalVariableEvent(std::string &variable, BaseLib::PVariable &value);
 
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
+
   void broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions);
 
   void broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo);

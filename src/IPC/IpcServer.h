@@ -55,6 +55,8 @@ class IpcServer : public BaseLib::IQueue {
 
   void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
+
   void broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions);
 
   void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);

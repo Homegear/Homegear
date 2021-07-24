@@ -212,7 +212,12 @@ void FamilyController::onEvent(std::string source, uint64_t peerID, int32_t chan
 
 void FamilyController::onServiceMessageEvent(const BaseLib::PServiceMessage &serviceMessage) {
   try {
-    serviceMessage->messageTranslations->print(true);
+    if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastServiceMessage(serviceMessage);
+#ifndef NO_SCRIPTENGINE
+    if (GD::scriptEngineServer) GD::scriptEngineServer->broadcastServiceMessage(serviceMessage);
+#endif
+    if (GD::ipcServer) GD::ipcServer->broadcastServiceMessage(serviceMessage);
+    GD::rpcClient->broadcastServiceMessage(serviceMessage);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -720,7 +725,11 @@ void FamilyController::physicalInterfaceStartListening() {
   try {
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
     for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-      i->second->physicalInterfaces()->setRawPacketEvent(std::function<void(int32_t, const std::string &, const BaseLib::PVariable &)>(std::bind(&FamilyController::rawPacketEvent, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
+      i->second->physicalInterfaces()->setRawPacketEvent(std::function<void(int32_t, const std::string &, const BaseLib::PVariable &)>(std::bind(&FamilyController::rawPacketEvent,
+                                                                                                                                                 this,
+                                                                                                                                                 std::placeholders::_1,
+                                                                                                                                                 std::placeholders::_2,
+                                                                                                                                                 std::placeholders::_3)));
       i->second->physicalInterfaces()->startListening();
     }
   }

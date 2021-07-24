@@ -354,6 +354,8 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   Flows::PVariable broadcastGlobalVariableEvent(Flows::PArray &parameters);
 
+  Flows::PVariable broadcastServiceMessage(Flows::PArray &parameters);
+
   Flows::PVariable broadcastNewDevices(Flows::PArray &parameters);
 
   Flows::PVariable broadcastDeleteDevices(Flows::PArray &parameters);

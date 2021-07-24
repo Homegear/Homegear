@@ -276,6 +276,8 @@ class ScriptEngineClient : public BaseLib::IQueue {
 
   BaseLib::PVariable broadcastEvent(BaseLib::PArray &parameters);
 
+  BaseLib::PVariable broadcastServiceMessage(BaseLib::PArray &parameters);
+
   BaseLib::PVariable broadcastNewDevices(BaseLib::PArray &parameters);
 
   BaseLib::PVariable broadcastDeleteDevices(BaseLib::PArray &parameters);
