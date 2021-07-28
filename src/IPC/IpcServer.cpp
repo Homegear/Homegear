@@ -602,8 +602,8 @@ void IpcServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceM
     if (serviceMessage->peerId > 0 && _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(serviceMessage->peerId);
         if (peer) break;
       }

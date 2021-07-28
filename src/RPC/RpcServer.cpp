@@ -793,7 +793,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
   }
 }
 
-void RpcServer::analyzeRPC(std::shared_ptr<Client> client,
+void RpcServer::analyzeRPC(const std::shared_ptr<Client> &client,
                            const std::vector<char> &packet,
                            PacketType::Enum packetType,
                            bool keepAlive) {
@@ -876,7 +876,7 @@ void RpcServer::analyzeRPC(std::shared_ptr<Client> client,
 }
 
 void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
-                                        BaseLib::PVariable variable,
+                                        const BaseLib::PVariable &variable,
                                         int32_t messageId,
                                         PacketType::Enum responseType,
                                         bool keepAlive) {
@@ -927,7 +927,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
   }
 }
 
-bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &methodName) {
+bool RpcServer::methodExists(const BaseLib::PRpcClientInfo &clientInfo, std::string &methodName) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
 
@@ -943,11 +943,11 @@ bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &me
   return false;
 }
 
-BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
+BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientInfo,
                                          const std::string &methodName,
                                          BaseLib::PVariable &parameters) {
   try {
-    if (!parameters) parameters = BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tArray));
+    if (!parameters) parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     if (GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
     auto rpcMethodsIterator = _rpcMethods->find(methodName);
     if (rpcMethodsIterator == _rpcMethods->end()) {
@@ -968,7 +968,7 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
     if (GD::bl->debugLevel >= 4) {
       if (methodName != "getMetadata") {
         _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
-        for (std::vector<BaseLib::PVariable>::iterator i = parameters->arrayValue->begin();
+        for (auto i = parameters->arrayValue->begin();
              i != parameters->arrayValue->end(); ++i) {
           (*i)->print(true, false);
         }
@@ -995,7 +995,7 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
   return BaseLib::Variable::createError(-32500, ": Unknown application error.");
 }
 
-void RpcServer::callMethod(std::shared_ptr<Client> client,
+void RpcServer::callMethod(const std::shared_ptr<Client> &client,
                            const std::string &methodName,
                            std::shared_ptr<std::vector<BaseLib::PVariable>> parameters,
                            int32_t messageId,
@@ -1040,8 +1040,8 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
                          + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "")
                          + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t)(client->rpcType))
                          + ") Parameters:");
-      for (std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i) {
-        (*i)->print(true, false);
+      for (auto &i : *parameters) {
+        i->print(true, false);
       }
     }
     BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(client, parameters);
@@ -1064,7 +1064,7 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
   }
 }
 
-std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection) {
+std::string RpcServer::getHttpResponseHeader(const std::string& contentType, uint32_t contentLength, bool closeConnection) {
   std::string header;
   header.append("HTTP/1.1 200 OK\r\n");
   header.append("Connection: ");
@@ -1074,7 +1074,7 @@ std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t c
   return header;
 }
 
-void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client,
+void RpcServer::analyzeRPCResponse(const std::shared_ptr<Client>& client,
                                    const std::vector<char> &packet,
                                    PacketType::Enum packetType,
                                    bool keepAlive) {
@@ -1655,7 +1655,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 http.reset();
                 if (client->socketDescriptor->descriptor == -1) {
                   if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
-                  if (processedBytes < bytesRead) _out.printInfo("Info: " + std::to_string(bytesRead - processedBytes) + " bytes are not processed, because connection to client number " + std::to_string(client->socketDescriptor->id) + " was closed.");
+                  if (processedBytes < bytesRead)
+                    _out.printInfo("Info: " + std::to_string(bytesRead - processedBytes) + " bytes are not processed, because connection to client number " + std::to_string(client->socketDescriptor->id) + " was closed.");
                   break;
                 }
               }
