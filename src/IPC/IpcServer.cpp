@@ -484,22 +484,22 @@ void IpcServer::stop() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        clients.push_back(i->second);
-        closeClientConnection(i->second);
+      for (auto &client : _clients) {
+        clients.push_back(client.second);
+        closeClientConnection(client.second);
       }
     }
 
     _stopServer = true;
     GD::bl->threadManager.join(_mainThread);
-    while (_clients.size() > 0) {
-      for (std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-        std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+    while (!_clients.empty()) {
+      for (auto &client : clients) {
+        std::unique_lock<std::mutex> waitLock(client->waitMutex);
         waitLock.unlock();
-        (*i)->requestConditionVariable.notify_all();
+        client->requestConditionVariable.notify_all();
       }
       collectGarbage();
-      if (_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      if (!_clients.empty()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     stopQueue(0);
     stopQueue(1);
@@ -536,8 +536,8 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
     if (_dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (peer) break;
       }
@@ -570,9 +570,9 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
@@ -584,8 +584,8 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
     parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
     parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
 
-    for (std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
+    for (auto &client : clients) {
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastEvent", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
     }
   }
@@ -619,9 +619,9 @@ void IpcServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceM
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : clients) {
-        if (client->closed) continue;
-        clients.push_back(client);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
