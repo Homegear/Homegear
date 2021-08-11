@@ -95,9 +95,9 @@ void DatabaseController::initializeDatabase() {
     _db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)", false);
     _db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)", false);
     _db.executeCommand(
-        "CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, interface TEXT, peerID INTEGER NOT NULL, messageID INTEGER NOT NULL, messageSubID TEXT, timestamp INTEGER, integerValue INTEGER, message TEXT, variables BLOB, binaryData BLOB)",
+        "CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, interface TEXT, peerID INTEGER NOT NULL, messageID INTEGER NOT NULL, messageSubID TEXT, timestamp INTEGER, integerValue INTEGER, message TEXT, variables BLOB, binaryData BLOB, priority INTEGER)",
         false);
-    _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, interface, peerID, messageID, messageSubID, timestamp)", false);
+    _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, interface, peerID, messageID, messageSubID, timestamp, priority)", false);
     _db.executeCommand(
         "CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, categories TEXT, roles TEXT, specialType INTEGER, metadata BLOB)",
         false);
@@ -353,7 +353,7 @@ void DatabaseController::initializeDatabase() {
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.1"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.2"));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, false);
 
@@ -436,7 +436,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
       int64_t versionId = result->at(0).at(0)->intValue;
       std::string version = result->at(0).at(3)->textValue;
 
-      static const std::string kCurrentVersion("0.8.1");
+      static const std::string kCurrentVersion("0.8.2");
 
       if (version == kCurrentVersion) return false; //Up to date
       /*if(version == "0.0.7")
@@ -904,6 +904,28 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.8.1";
+      }
+      if (version == "0.8.1") {
+        GD::out.printMessage("Converting database from version " + version + " to version 0.8.2...");
+
+        data.clear();
+        _db.executeCommand("DROP INDEX serviceMessagesIndex", factoryDatabase);
+        _db.executeCommand("DROP TABLE serviceMessages", factoryDatabase);
+        _db.executeCommand(
+            "CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, familyID INTEGER NOT NULL, interface TEXT, peerID INTEGER NOT NULL, messageID INTEGER NOT NULL, messageSubID TEXT, timestamp INTEGER, integerValue INTEGER, message TEXT, variables BLOB, binaryData BLOB, priority INTEGER)",
+            factoryDatabase);
+        _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, interface, peerID, messageID, messageSubID, timestamp, priority)", factoryDatabase);
+
+        data.clear();
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        //Don't forget to set new version in initializeDatabase!!!
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.2"));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
+
+        version = "0.8.2";
       }
 
       if (version != kCurrentVersion) {
@@ -4911,10 +4933,10 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
       }
       std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE serviceMessages SET timestamp=?, integerValue=?, message=?, binaryData=? WHERE variableID=?", data);
       enqueue(0, entry);
-    } else if (data.size() == 9) {
+    } else if (data.size() == 10) {
       std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(
-          "INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp, integerValue, message, variables, binaryData) VALUES((SELECT variableID FROM serviceMessages WHERE peerID="
-              + std::to_string(data.at(1)->intValue) + " AND messageID=" + std::to_string(data.at(2)->intValue) + "), ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO serviceMessages (variableID, familyID, peerID, messageID, messageSubID, timestamp, integerValue, message, variables, binaryData, priority) VALUES((SELECT variableID FROM serviceMessages WHERE peerID="
+              + std::to_string(data.at(1)->intValue) + " AND messageID=" + std::to_string(data.at(2)->intValue) + "), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           data);
       enqueue(0, entry);
     } else if (data.size() == 11 && data.at(0)->intValue != 0) {

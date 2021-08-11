@@ -1520,8 +1520,8 @@ class RPCSetGlobalServiceMessage : public BaseLib::Rpc::RpcMethod {
  public:
   RPCSetGlobalServiceMessage() {
     addSignature(BaseLib::VariableType::tVoid,
-                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
-                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger,
+                                                    BaseLib::VariableType::tString, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger,
                                                     BaseLib::VariableType::tString, BaseLib::VariableType::tArray,
                                                     BaseLib::VariableType::tVariant, BaseLib::VariableType::tInteger});
   }

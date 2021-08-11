@@ -7126,6 +7126,7 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
                                                                                                                       BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tString,
                                                                                                                       BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tString,
                                                                                                                       BaseLib::VariableType::tArray,
                                                                                                                       BaseLib::VariableType::tVariant,
@@ -7134,7 +7135,7 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
     if (error != ParameterError::Enum::noError) return getError(error);
 
     std::list<std::string> variables;
-    for (auto &element : *parameters->at(6)->arrayValue) {
+    for (auto &element : *parameters->at(7)->arrayValue) {
       variables.emplace_back(element->stringValue);
     }
 
@@ -7142,11 +7143,12 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
                                       parameters->at(1)->stringValue,
                                       parameters->at(2)->integerValue,
                                       parameters->at(3)->stringValue,
-                                      parameters->at(4)->integerValue,
-                                      parameters->at(5)->stringValue,
+                                      (BaseLib::ServiceMessagePriority)parameters->at(4)->integerValue,
+                                      parameters->at(5)->integerValue,
+                                      parameters->at(6)->stringValue,
                                       variables,
-                                      parameters->at(7),
-                                      parameters->at(8)->integerValue64);
+                                      parameters->at(8),
+                                      parameters->at(9)->integerValue64);
 
     return std::make_shared<BaseLib::Variable>();
   }
