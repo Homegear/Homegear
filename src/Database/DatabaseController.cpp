@@ -4954,10 +4954,10 @@ void DatabaseController::saveServiceMessageAsynchronous(uint64_t peerID, BaseLib
 
 void DatabaseController::saveGlobalServiceMessageAsynchronous(BaseLib::Database::DataRow &data) {
   try {
-    if (data.size() == 12) {
+    if (data.size() == 13) {
       std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>(
-          "INSERT OR REPLACE INTO serviceMessages (variableID, familyID, interface, peerID, messageID, messageSubID, timestamp, integerValue, message, variables, binaryData) VALUES((SELECT variableID FROM serviceMessages WHERE familyID="
-              + std::to_string(data.at(2)->intValue) + " AND messageID=" + std::to_string(data.at(4)->intValue) + " AND messageSubID=? AND message=?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO serviceMessages (variableID, familyID, interface, peerID, messageID, messageSubID, timestamp, integerValue, message, variables, binaryData, priority) VALUES((SELECT variableID FROM serviceMessages WHERE familyID="
+              + std::to_string(data.at(2)->intValue) + " AND messageID=" + std::to_string(data.at(4)->intValue) + " AND messageSubID=? AND message=?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           data);
       enqueue(0, entry);
     } else GD::out.printError("Error: Either variableID is 0 or the number of columns is invalid.");
