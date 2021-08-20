@@ -814,7 +814,7 @@ void startUp() {
         }
       }
     }
-    
+
     GD::out.printInfo("Loading common translations...");
     BaseLib::TranslationManager::load(GD::bl->settings.uiTranslationPath() + "common" + "/");
 

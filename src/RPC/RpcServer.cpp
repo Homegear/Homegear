@@ -955,8 +955,15 @@ BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientIn
         auto result = GD::familyServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
         if (!result->errorStruct || result->structValue->at("faultCode")->integerValue != 32601) return result;
       }
-      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
-      return result;
+      if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
+        auto hgdcMethodName = methodName.substr(4);
+        hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+        auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters->arrayValue);
+        return result;
+      } else {
+        auto result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
+        return result;
+      }
     }
 
     {
@@ -1023,8 +1030,15 @@ void RpcServer::callMethod(const std::shared_ptr<Client> &client,
           return;
         }
       }
-      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
-      sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+      if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
+        auto hgdcMethodName = methodName.substr(4);
+        hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+        auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters);
+        sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+      } else {
+        BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
+        sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+      }
       return;
     }
 
