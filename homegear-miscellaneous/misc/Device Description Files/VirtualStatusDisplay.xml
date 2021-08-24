@@ -132,8 +132,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -154,8 +157,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -176,8 +182,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -198,8 +207,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -220,8 +232,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -242,8 +257,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -264,8 +282,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -286,8 +307,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -308,8 +332,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -330,8 +357,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -352,8 +382,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -374,8 +407,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -396,8 +432,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -418,8 +457,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -440,8 +482,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
@@ -462,8 +507,11 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+		            <casts>
+		   	        	<rpcBinary />
+	    	        </casts>
 				</properties>
-				<logicalString/>
+				<logicalString />
 				<physicalNone>
 					<operationType>store</operationType>
 				</physicalNone>
