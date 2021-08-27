@@ -1239,9 +1239,17 @@ void ScriptEngineServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
       std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>::iterator methodIterator = _rpcMethods.find(queueEntry->methodName);
       if (methodIterator == _rpcMethods.end()) {
-        BaseLib::PVariable result = GD::ipcServer->callRpcMethod(scriptInfo->clientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
-        if (queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, scriptId, queueEntry->parameters->at(1), result);
-        return;
+        if (GD::bl->hgdc && queueEntry->methodName.compare(0, 4, "hgdc") == 0) {
+          auto hgdcMethodName = queueEntry->methodName.substr(4);
+          hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+          auto result = GD::bl->hgdc->invoke(hgdcMethodName, queueEntry->parameters->at(3)->arrayValue);
+          if (queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, scriptId, queueEntry->parameters->at(1), result);
+          return;
+        } else {
+          auto result = GD::ipcServer->callRpcMethod(scriptInfo->clientInfo, queueEntry->methodName, queueEntry->parameters->at(3)->arrayValue);
+          if (queueEntry->parameters->at(2)->booleanValue) sendResponse(queueEntry->clientData, scriptId, queueEntry->parameters->at(1), result);
+          return;
+        }
       }
 
       if (GD::bl->debugLevel >= 5) {
