@@ -1033,8 +1033,17 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 
         auto methodIterator = _rpcMethods.find(methodName);
         if (methodIterator == _rpcMethods.end()) {
-          BaseLib::PVariable result = callRpcMethod(_dummyClientInfo, methodName, parameters->at(2)->arrayValue);
-          sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+          if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
+            auto hgdcMethodName = methodName.substr(4);
+            hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+            auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters->at(2)->arrayValue);
+            sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+            return;
+          } else {
+            auto result = callRpcMethod(_dummyClientInfo, methodName, parameters->at(2)->arrayValue);
+            sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+            return;
+          }
           return;
         }
 
