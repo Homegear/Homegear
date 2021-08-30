@@ -1463,5 +1463,32 @@
             "de-DE": "Wetter - VOC"
         }
 
+    },
+    {
+        "id": "80.00.00",
+        "translations": {
+            "en-US": "service",
+            "de-DE": "Service"
+        }
+    },
+    {
+        "id": "80.00.01",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "low battery",
+            "de-DE": "Batterie schwach"
+        }
+    },
+    {
+        "id": "80.00.02",
+        "types": [
+            "string"
+        ],
+        "translations": {
+            "en-US": "device offline",
+            "de-DE": "Gerät offline"
+        }
     }
 ]
