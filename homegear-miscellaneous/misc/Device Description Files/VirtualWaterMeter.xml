@@ -12,7 +12,7 @@
             <![CDATA[<?php
 use parallel\{Channel,Runtime,Events,Events\Event};
 
-$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
+$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel, Channel $eventChannel)
 {
 	$hg = new \Homegear\Homegear();
 
@@ -35,21 +35,14 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
 		{
 			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
 			{
-				if($result["VARIABLE"] == 'LEVEL')
+				if($result["VARIABLE"] == 'TOTAL_VOLUME')
 				{
-					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
-					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"]);
+					//Set consumption
 				}
-				else if($result["VARIABLE"] == 'LEVEL_FAST')
-				{
-					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
-					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"]);
-				}
-				else if($result["VARIABLE"] == 'STATE')
-				{
-					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
-					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
-				}
+			}
+			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
+			{
+				$eventChannel->send(['name' => 'updateDevice', 'value' => true]);
 			}
 		}
 
@@ -74,13 +67,88 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
 	}
 };
 
+$mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, Channel $eventChannel)
+{
+	$hg = new \Homegear\Homegear();
+
+	if($hg->registerThread($scriptId) === false)
+	{
+		$hg->log(2, 'Could not register thread.');
+		return false;
+	}
+
+	$interval = 60;
+	$secondsWaited = 0;
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->addChannel($eventChannel);
+	//$events->setTimeout(1000000);
+	$events->setBlocking(false);
+
+	while(true)
+	{
+		if($secondsWaited >= 60)
+		{
+			$secondsWaited = 0;
+            $hg->setValue($peerId, 1, "TOTAL_VOLUME", "+=".random_int(0, 100));
+		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event)
+			{
+				if($event->source == 'mainHomegearChannelPeer'.$peerId)
+				{
+					$events->addChannel($homegearChannel);
+					if($event->type == Event\Type::Read)
+					{
+						if(is_array($event->value) && count($event->value) > 0)
+						{
+							if($event->value['name'] == 'stop') return true; //Stop
+						}
+					}
+					else if($event->type == Event\Type::Close) return true; //Stop
+				}
+				else if($event->source == 'eventChannelPeer'.$peerId)
+				{
+					$events->addChannel($eventChannel);
+					if($event->type == Event\Type::Read)
+					{
+						if(is_array($event->value) && count($event->value) > 0)
+						{
+							if($event->value['name'] == 'updateDevice' || $event->value['name'] == 'request')
+							{
+								$secondsWaited = $interval;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		while($event);
+
+		$secondsWaited++;
+		if($secondsWaited >= $interval) continue;
+		sleep(1);
+	}
+
+	return true;
+};
+
 class HomegearDevice extends HomegearDeviceBase
 {
 	private $hg = NULL;
 	private $peerId = NULL;
+	private $mainRuntime = NULL;
+	private $mainFuture = NULL;
+	private $mainHomegearChannel = NULL; //Channel to pass Homegear events to main thread
 	private $eventRuntime = NULL;
 	private $eventFuture = NULL;
 	private $eventHomegearChannel = NULL; //Channel to pass events to event thread
+	private $eventChannel = NULL; //Channel to pass events from event thread to main thread
 
 	function __construct()
 	{
@@ -101,12 +169,18 @@ class HomegearDevice extends HomegearDeviceBase
 
 	public function start() : bool
 	{
+	    $this->mainRuntime = new Runtime();
 		$this->eventRuntime = new Runtime();
 
+        $this->mainHomegearChannel = Channel::make('mainHomegearChannelPeer'.$this->peerId, Channel::Infinite);
 		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventChannel = Channel::make('eventChannelPeer'.$this->peerId, Channel::Infinite);
+
+        global $mainThread;
+		$this->mainFuture = $this->mainRuntime->run($mainThread, [$this->hg->getScriptId(), $this->peerId, $this->mainHomegearChannel, $this->eventChannel]);
 
 		global $eventThread;
-		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel]);
+		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel, $this->eventChannel]);
 
 		return true;
 	}
@@ -114,6 +188,7 @@ class HomegearDevice extends HomegearDeviceBase
 	public function stop()
 	{
 		if($this->eventHomegearChannel) $this->eventHomegearChannel->send(['name' => 'stop', 'value' => true]);
+		if($this->mainHomegearChannel) $this->mainHomegearChannel->send(['name' => 'stop', 'value' => true]);
 	}
 
 	public function waitForStop()
@@ -124,16 +199,40 @@ class HomegearDevice extends HomegearDeviceBase
 			$this->eventFuture = NULL;
 		}
 
+		if($this->mainFuture)
+		{
+			$this->mainFuture->value();
+			$this->mainFuture = NULL;
+		}
+
+		if($this->mainHomegearChannel)
+		{
+			$this->mainHomegearChannel->close();
+			$this->mainHomegearChannel = NULL;
+		}
+
 		if($this->eventHomegearChannel)
 		{
 			$this->eventHomegearChannel->close();
 			$this->eventHomegearChannel = NULL;
 		}
 
+		if($this->eventChannel)
+		{
+			$this->eventChannel->close();
+			$this->eventChannel = NULL;
+		}
+
 		if($this->eventRuntime)
 		{
 			$this->eventRuntime->close();
 			$this->eventRuntime = NULL;
+		}
+
+		if($this->mainRuntime)
+		{
+			$this->mainRuntime->close();
+			$this->mainRuntime = NULL;
 		}
 	}
 }
@@ -207,107 +306,20 @@ class HomegearDevice extends HomegearDeviceBase
             </parameter>
         </variables>
         <variables id="custom_ch1_values">
-            <parameter id="LEVEL">
+            <parameter id="TOTAL_VOLUME">
                 <properties>
                     <readable>true</readable>
-                    <writeable>true</writeable>
-                </properties>
-                <logicalInteger>
-                    <minimumValue>0</minimumValue>
-                    <maximumValue>100</maximumValue>
-                    <defaultValue>0</defaultValue>
-                </logicalInteger>
-                <physicalNone>
-                    <operationType>store</operationType>
-                </physicalNone>
-            </parameter>
-            <parameter id="LEVEL_FAST">
-                <properties>
-                    <readable>true</readable>
-                    <writeable>true</writeable>
-                </properties>
-                <logicalInteger>
-                    <minimumValue>0</minimumValue>
-                    <maximumValue>100</maximumValue>
-                    <defaultValue>0</defaultValue>
-                </logicalInteger>
-                <physicalNone>
-                    <operationType>store</operationType>
-                </physicalNone>
-            </parameter>
-            <parameter id="DIM_SPEED">
-                <properties>
-                    <readable>true</readable>
-                    <writeable>true</writeable>
-                </properties>
-                <logicalInteger>
-                    <minimumValue>0</minimumValue>
-                    <maximumValue>255</maximumValue>
-                    <defaultValue>0</defaultValue>
-                </logicalInteger>
-                <physicalNone>
-                    <operationType>store</operationType>
-                </physicalNone>
-            </parameter>
-            <parameter id="STATE_LEVEL">
-                <properties>
-                    <readable>true</readable>
-                    <writeable>true</writeable>
-                </properties>
-                <logicalInteger>
-                    <minimumValue>0</minimumValue>
-                    <maximumValue>100</maximumValue>
-                    <defaultValue>0</defaultValue>
-                </logicalInteger>
-                <physicalNone>
-                    <operationType>store</operationType>
-                </physicalNone>
-            </parameter>
-            <parameter id="STATE">
-                <properties>
-                    <readable>true</readable>
-                    <writeable>true</writeable>
-                </properties>
-                <logicalBoolean/>
-                <physicalNone>
-                    <operationType>store</operationType>
-                </physicalNone>
-            </parameter>
-            <parameter id="LAST_DATA">
-                <properties>
-                    <readable>true</readable>
-                    <writeable>true</writeable>
+                    <writeable>false</writeable>
                     <addonWriteable>true</addonWriteable>
-                    <unit>s</unit>
-                    <casts>
-                        <rpcBinary/>
-                    </casts>
+                    <unit>l</unit>
+                    <roles>
+                        <role>900101</role>
+                    </roles>
                 </properties>
                 <logicalInteger>
+                    <minimumValue>0</minimumValue>
                     <defaultValue>0</defaultValue>
                 </logicalInteger>
-                <physicalInteger>
-                    <operationType>store</operationType>
-                </physicalInteger>
-            </parameter>
-            <parameter id="BATTERY">
-                <properties>
-                    <casts>
-                        <rpcBinary/>
-                    </casts>
-                </properties>
-                <logicalInteger/>
-                <physicalNone>
-                    <operationType>store</operationType>
-                </physicalNone>
-            </parameter>
-            <parameter id="DATA_MISC">
-                <properties>
-                    <casts>
-                        <rpcBinary/>
-                    </casts>
-                </properties>
-                <logicalString/>
                 <physicalNone>
                     <operationType>store</operationType>
                 </physicalNone>
