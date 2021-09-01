@@ -1490,5 +1490,75 @@
             "en-US": "device offline",
             "de-DE": "Gerät offline"
         }
+    },
+    {
+        "id": "90.00.00",
+        "translations": {
+            "en-US": "meters",
+            "de-DE": "Zähler"
+        }
+    },
+    {
+        "id": "90.01.00",
+        "translations": {
+            "en-US": "Water meter",
+            "de-DE": "Wasserzähler"
+        }
+    },
+    {
+        "id": "90.01.01",
+        "translations": {
+            "en-US": "Meter reading",
+            "de-DE": "Zählerstand"
+        }
+    },
+    {
+        "id": "90.01.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        }
+    },
+    {
+        "id": "90.02.00",
+        "translations": {
+            "en-US": "Power meter",
+            "de-DE": "Stromzähler"
+        }
+    },
+    {
+        "id": "90.02.01",
+        "translations": {
+            "en-US": "Meter reading",
+            "de-DE": "Zählerstand"
+        }
+    },
+    {
+        "id": "90.02.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        }
+    },
+    {
+        "id": "90.03.00",
+        "translations": {
+            "en-US": "Gas meter",
+            "de-DE": "Gaszähler"
+        }
+    },
+    {
+        "id": "90.03.01",
+        "translations": {
+            "en-US": "Meter reading",
+            "de-DE": "Zählerstand"
+        }
+    },
+    {
+        "id": "90.03.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        }
     }
 ]
