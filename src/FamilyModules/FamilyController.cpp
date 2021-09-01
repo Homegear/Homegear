@@ -784,6 +784,8 @@ BaseLib::PVariable FamilyController::listInterfaces(int32_t familyId) {
           interfaceStruct->structValue->insert(BaseLib::StructElement("VIRTUAL", std::make_shared<BaseLib::Variable>(true)));
           interfaceStruct->structValue->insert(BaseLib::StructElement("ID", std::make_shared<BaseLib::Variable>(std::to_string(family.first) + ".virtual")));
           interfaceStruct->structValue->insert(BaseLib::StructElement("CONNECTED", std::make_shared<BaseLib::Variable>(true)));
+
+          interfaces->arrayValue->emplace_back(interfaceStruct);
         }
       }
     }
