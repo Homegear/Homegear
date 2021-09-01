@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+    <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <device id="VirtualWaterMeter">
+            <description>VirtualWaterMeter</description>
+            <typeNumber>0xF00A</typeNumber>
+        </device>
+    </supportedDevices>
+    <runProgram>
+        <startType>permanent</startType>
+        <script2>
+            <![CDATA[<?php
+use parallel\{Channel,Runtime,Events,Events\Event};
+
+$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel)
+{
+	$hg = new \Homegear\Homegear();
+
+	if($hg->registerThread($scriptId) === false)
+	{
+		$hg->log(2, 'Could not register thread.');
+		return false;
+	}
+
+	$hg->subscribePeer($peerId);
+
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->setBlocking(false);
+
+	while(true)
+	{
+		$result = $hg->pollEvent();
+		if($result)
+		{
+			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
+			{
+				if($result["VARIABLE"] == 'LEVEL')
+				{
+					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
+					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"]);
+				}
+				else if($result["VARIABLE"] == 'LEVEL_FAST')
+				{
+					$hg->setValue($peerId, 1, 'STATE', $result["VALUE"] != 0);
+					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"]);
+				}
+				else if($result["VARIABLE"] == 'STATE')
+				{
+					$hg->setValue($peerId, 1, 'LEVEL', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
+					$hg->setValue($peerId, 1, 'LEVEL_FAST', $result["VALUE"] ? $hg->getValue($peerId, 1, 'STATE_LEVEL') : 0);					
+				}
+			}
+		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event && $event->source == 'eventHomegearChannelPeer'.$peerId)
+			{
+				$events->addChannel($homegearChannel);
+				if($event->type == Event\Type::Read)
+				{
+					if(is_array($event->value) && count($event->value) > 0)
+					{
+						if($event->value['name'] == 'stop') return true; //Stop
+					}
+				}
+				else if($event->type == Event\Type::Close) return true; //Stop
+			}
+		}
+		while($event);
+	}
+};
+
+class HomegearDevice extends HomegearDeviceBase
+{
+	private $hg = NULL;
+	private $peerId = NULL;
+	private $eventRuntime = NULL;
+	private $eventFuture = NULL;
+	private $eventHomegearChannel = NULL; //Channel to pass events to event thread
+
+	function __construct()
+	{
+		$this->hg = new \Homegear\Homegear();
+	}
+
+	function __destruct()
+	{
+		$this->stop();
+		$this->waitForStop();
+	}
+
+	public function init($peerId) : bool
+	{
+		$this->peerId = $peerId;
+		return true;
+	}
+
+	public function start() : bool
+	{
+		$this->eventRuntime = new Runtime();
+
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+
+		global $eventThread;
+		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel]);
+
+		return true;
+	}
+
+	public function stop()
+	{
+		if($this->eventHomegearChannel) $this->eventHomegearChannel->send(['name' => 'stop', 'value' => true]);
+	}
+
+	public function waitForStop()
+	{
+		if($this->eventFuture)
+		{
+			$this->eventFuture->value();
+			$this->eventFuture = NULL;
+		}
+
+		if($this->eventHomegearChannel)
+		{
+			$this->eventHomegearChannel->close();
+			$this->eventHomegearChannel = NULL;
+		}
+
+		if($this->eventRuntime)
+		{
+			$this->eventRuntime->close();
+			$this->eventRuntime = NULL;
+		}
+	}
+}
+]]>
+        </script2>
+    </runProgram>
+    <properties/>
+    <functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+            <properties>
+                <internal>true</internal>
+            </properties>
+            <configParameters>config</configParameters>
+            <variables>maint_ch0_values</variables>
+        </function>
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualWaterMeter">
+            <variables>custom_ch1_values</variables>
+        </function>
+    </functions>
+    <parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <configParameters id="config"/>
+        <variables id="maint_ch0_values">
+            <parameter id="LOWBAT">
+                <properties>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean>
+                    <defaultValue>false</defaultValue>
+                </logicalBoolean>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="RSSI_PEER">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalInteger>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="UNREACH">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalBoolean>
+                    <operationType>internal</operationType>
+                </physicalBoolean>
+            </parameter>
+            <parameter id="STICKY_UNREACH">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                    <sticky>true</sticky>
+                </properties>
+                <logicalBoolean/>
+                <physicalBoolean>
+                    <operationType>internal</operationType>
+                </physicalBoolean>
+            </parameter>
+        </variables>
+        <variables id="custom_ch1_values">
+            <parameter id="LEVEL">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalInteger>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100</maximumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="LEVEL_FAST">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalInteger>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100</maximumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="DIM_SPEED">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalInteger>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>255</maximumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="STATE_LEVEL">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalInteger>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100</maximumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="STATE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="LAST_DATA">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <addonWriteable>true</addonWriteable>
+                    <unit>s</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalInteger>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalInteger>
+                    <operationType>store</operationType>
+                </physicalInteger>
+            </parameter>
+            <parameter id="BATTERY">
+                <properties>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalInteger/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="DATA_MISC">
+                <properties>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalString/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+        </variables>
+    </parameterGroups>
+</homegearDevice>

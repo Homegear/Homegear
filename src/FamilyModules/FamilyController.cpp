@@ -774,8 +774,17 @@ BaseLib::PVariable FamilyController::listInterfaces(int32_t familyId) {
     } else {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
       for (auto &family : families) {
-        auto tempArray = family.second->physicalInterfaces()->listInterfaces();
-        if (!tempArray->arrayValue->empty()) interfaces->arrayValue->insert(interfaces->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+        if (family.second->hasPhysicalInterface()) {
+          auto tempArray = family.second->physicalInterfaces()->listInterfaces();
+          if (!tempArray->arrayValue->empty()) interfaces->arrayValue->insert(interfaces->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+        } else {
+          BaseLib::PVariable interfaceStruct(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+
+          interfaceStruct->structValue->insert(BaseLib::StructElement("FAMILYID", std::make_shared<BaseLib::Variable>(family.first)));
+          interfaceStruct->structValue->insert(BaseLib::StructElement("VIRTUAL", std::make_shared<BaseLib::Variable>(true)));
+          interfaceStruct->structValue->insert(BaseLib::StructElement("ID", std::make_shared<BaseLib::Variable>(std::to_string(family.first) + ".virtual")));
+          interfaceStruct->structValue->insert(BaseLib::StructElement("CONNECTED", std::make_shared<BaseLib::Variable>(true)));
+        }
       }
     }
   }
