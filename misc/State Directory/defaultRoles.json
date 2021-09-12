@@ -1,13 +1,13 @@
 [
     {
-        "id": 100000,
+        "id": "10.00.00",
         "translations": {
             "en-US": "light",
             "de-DE": "Licht"
         }
     },
     {
-        "id": 100001,
+        "id": "10.00.01",
         "types": [
             "bool",
             "int"
@@ -86,7 +86,7 @@
         }
     },
     {
-        "id": 101001,
+        "id": "10.10.01",
         "types": [
             "int",
             "float"
@@ -140,14 +140,14 @@
         }
     },
     {
-        "id": 102000,
+        "id": "10.20.00",
         "translations": {
             "en-US": "light - color",
             "de-DE": "Licht - Farbe"
         }
     },
     {
-        "id": 102001,
+        "id": "10.20.01",
         "types": [
             "int"
         ],
@@ -157,7 +157,7 @@
         }
     },
     {
-        "id": 102002,
+        "id": "10.20.02",
         "types": [
             "int",
             "float"
@@ -168,7 +168,7 @@
         }
     },
     {
-        "id": 102003,
+        "id": "10.20.03",
         "types": [
             "int",
             "float"
@@ -179,14 +179,14 @@
         }
     },
     {
-        "id": 102004,
+        "id": "10.20.04",
         "translations": {
             "en-US": "light - color - XY",
             "de-DE": "Licht - Farbe - XY"
         }
     },
     {
-        "id": 103000,
+        "id": "10.30.00",
         "types": [
             "int",
             "float"
@@ -197,7 +197,7 @@
         }
     },
     {
-        "id": 103001,
+        "id": "10.30.01",
         "types": [
             "int",
             "float"
@@ -208,21 +208,21 @@
         }
     },
     {
-        "id": 200000,
+        "id": "20.00.00",
         "translations": {
             "en-US": "HVAC",
             "de-DE": "HLK"
         }
     },
     {
-        "id": 201000,
+        "id": "20.10.00",
         "translations": {
             "en-US": "heating",
             "de-DE": "Heizung"
         }
     },
     {
-        "id": 201001,
+        "id": "20.10.01",
         "types": [
             "float"
         ],
@@ -232,7 +232,7 @@
         }
     },
     {
-        "id": 201002,
+        "id": "20.10.02",
         "types": [
             "float"
         ],
@@ -356,7 +356,7 @@
         }
     },
     {
-        "id": 201003,
+        "id": "20.10.03",
         "types": [
             "int"
         ],
@@ -376,7 +376,7 @@
         }
     },
     {
-        "id": 201004,
+        "id": "20.10.04",
         "types": [
             "float"
         ],
@@ -386,7 +386,7 @@
         }
     },
     {
-        "id": 201005,
+        "id": "20.10.05",
         "types": [
             "float"
         ],
@@ -396,7 +396,7 @@
         }
     },
     {
-        "id": 201006,
+        "id": "20.10.06",
         "types": [
             "float"
         ],
@@ -406,14 +406,14 @@
         }
     },
     {
-        "id": 202000,
+        "id": "20.20.00",
         "translations": {
             "en-US": "ventilation",
             "de-DE": "Lüftung"
         }
     },
     {
-        "id": 202001,
+        "id": "20.20.01",
         "translations": {
             "en-US": "ventilation level",
             "de-DE": "Lüftungsstufe"
@@ -1513,13 +1513,6 @@
         }
     },
     {
-        "id": "90.01.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
-        }
-    },
-    {
         "id": "90.02.00",
         "translations": {
             "en-US": "Power meter",
@@ -1531,13 +1524,6 @@
         "translations": {
             "en-US": "Meter reading",
             "de-DE": "Zählerstand"
-        }
-    },
-    {
-        "id": "90.02.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
         }
     },
     {
@@ -1555,10 +1541,59 @@
         }
     },
     {
-        "id": "90.03.02",
+        "id": "90.04.00",
         "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
+            "en-US": "Heat meter",
+            "de-DE": "Wärmemengenzähler"
+        }
+    },
+    {
+        "id": "90.03.01",
+        "translations": {
+            "en-US": "Meter reading",
+            "de-DE": "Zählerstand"
+        }
+    },
+    {
+        "id": "01.00.00",
+        "translations": {
+            "en-US": "Environment sensors",
+            "de-DE": "Umgebungssensoren"
+        }
+    },
+    {
+        "id": "01.00.01",
+        "translations": {
+            "en-US": "Temperature",
+            "de-DE": "Temperatur"
+        }
+    },
+    {
+        "id": "01.00.02",
+        "translations": {
+            "en-US": "Humidity",
+            "de-DE": "Luftfeuchtigkeit"
+        }
+    },
+    {
+        "id": "01.00.03",
+        "translations": {
+            "en-US": "CO2",
+            "de-DE": "CO2"
+        }
+    },
+    {
+        "id": "01.00.04",
+        "translations": {
+            "en-US": "VOC",
+            "de-DE": "VOC"
+        }
+    },
+    {
+        "id": "01.00.05",
+        "translations": {
+            "en-US": "Barometric pressure",
+            "de-DE": "Luftdruck"
         }
     }
 ]
