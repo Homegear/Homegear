@@ -110,7 +110,7 @@ ZEND_FUNCTION(hg_get_script_id);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_register_thread_arg_info, 0, 1, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_register_thread);
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_list_modules_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_list_modules_arg_info, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_list_modules);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_load_module_arg_info, 0, 1, IS_LONG, 0)
@@ -131,7 +131,7 @@ ZEND_FUNCTION(hg_create_user);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_delete_user_arg_info, 0, 1, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_delete_user);
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_user_metadata_arg_info, 0, 1, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_user_metadata_arg_info, 0, 1, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_user_metadata);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_set_user_metadata_arg_info, 0, 2, _IS_BOOL, 0)
@@ -146,7 +146,7 @@ ZEND_FUNCTION(hg_update_user);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_user_exists_arg_info, 0, 1, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_user_exists);
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_users_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_users_arg_info, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_users);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_log_arg_info, 0, 2, _IS_BOOL, 0)
@@ -182,13 +182,13 @@ ZEND_FUNCTION(hg_check_license);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_remove_license_arg_info, 0, 3, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_remove_license);
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_license_states_arg_info, 0, 1, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_license_states_arg_info, 0, 1, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_license_states);
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_poll_event_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_poll_event_arg_info, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_poll_event);
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_list_rpc_clients_arg_info, 0, 0, IS_ARRAY, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_list_rpc_clients_arg_info, 0, 0, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_list_rpc_clients);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_peer_exists_arg_info, 0, 1, _IS_BOOL, 0)
