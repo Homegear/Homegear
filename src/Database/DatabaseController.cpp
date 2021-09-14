@@ -2768,6 +2768,11 @@ void DatabaseController::createDefaultRoles() {
                 metadata->structValue->emplace("types", typesArray);
               }
 
+              auto aggregationIterator = roleEntry->structValue->find("aggregation");
+              if (aggregationIterator != roleEntry->structValue->end()) {
+                metadata->structValue->emplace("aggregation", aggregationIterator->second);
+              }
+
               auto addVariablesIterator = roleEntry->structValue->find("addVariables");
               if (addVariablesIterator != roleEntry->structValue->end()) {
                 metadata->structValue->emplace("addVariables", addVariablesIterator->second);

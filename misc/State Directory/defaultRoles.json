@@ -444,21 +444,21 @@
         }
     },
     {
-        "id": 300000,
+        "id": "30.00.00",
         "translations": {
             "en-US": "security",
             "de-DE": "Sicherheit"
         }
     },
     {
-        "id": 301000,
+        "id": "30.10.00",
         "translations": {
             "en-US": "security - contact sensor",
             "de-DE": "Sicherheit - Kontaktsensor"
         }
     },
     {
-        "id": 301001,
+        "id": "30.10.01",
         "types": [
             "bool",
             "int"
@@ -480,7 +480,7 @@
         }
     },
     {
-        "id": 301002,
+        "id": "30.10.02",
         "types": [
             "bool",
             "int"
@@ -502,7 +502,7 @@
         }
     },
     {
-        "id": 301003,
+        "id": "30.10.03",
         "types": [
             "bool",
             "int"
@@ -524,14 +524,14 @@
         }
     },
     {
-        "id": 400000,
+        "id": "40.00.00",
         "translations": {
             "en-US": "socket",
             "de-DE": "Steckdose"
         }
     },
     {
-        "id": 400001,
+        "id": "40.00.01",
         "types": [
             "bool",
             "int"
@@ -564,14 +564,14 @@
         }
     },
     {
-        "id": 500000,
+        "id": "50.00.00",
         "translations": {
             "en-US": "shading",
             "de-DE": "Beschattung"
         }
     },
     {
-        "id": 501000,
+        "id": "50.10.00",
         "translations": {
             "en-US": "shading - blind",
             "de-DE": "Beschattung - Rollladen"
@@ -659,7 +659,7 @@
         }
     },
     {
-        "id": 501001,
+        "id": "50.10.01",
         "types": [
             "bool",
             "int"
@@ -679,7 +679,7 @@
         }
     },
     {
-        "id": 501002,
+        "id": "50.10.02",
         "types": [
             "bool",
             "int"
@@ -699,7 +699,7 @@
         }
     },
     {
-        "id": 501003,
+        "id": "50.10.03",
         "types": [
             "bool",
             "int"
@@ -711,7 +711,7 @@
         "uiRef": 501000
     },
     {
-        "id": 501004,
+        "id": "50.10.04",
         "types": [
             "int",
             "float"
@@ -732,7 +732,7 @@
         }
     },
     {
-        "id": 501005,
+        "id": "50.10.05",
         "types": [
             "bool",
             "int"
@@ -744,7 +744,7 @@
         "uiRef": 501000
     },
     {
-        "id": 501006,
+        "id": "50.10.06",
         "types": [
             "bool",
             "int"
@@ -756,7 +756,7 @@
         "uiRef": 501000
     },
     {
-        "id": 501007,
+        "id": "50.10.07",
         "types": [
             "int",
             "float"
@@ -768,7 +768,7 @@
         "uiRef": 501000
     },
     {
-        "id": 501008,
+        "id": "50.10.08",
         "types": [
             "bool",
             "int"
@@ -780,7 +780,7 @@
         "uiRef": 501000
     },
     {
-        "id": 502000,
+        "id": "50.20.00",
         "translations": {
             "en-US": "shading - awning",
             "de-DE": "Beschattung - Markise"
@@ -871,7 +871,7 @@
         }
     },
     {
-        "id": 502001,
+        "id": "50.20.01",
         "types": [
             "bool",
             "int"
@@ -891,7 +891,7 @@
         }
     },
     {
-        "id": 502002,
+        "id": "50.20.02",
         "types": [
             "bool",
             "int"
@@ -911,7 +911,7 @@
         }
     },
     {
-        "id": 502003,
+        "id": "50.20.03",
         "types": [
             "bool",
             "int"
@@ -923,7 +923,7 @@
         "uiRef": 502000
     },
     {
-        "id": 502004,
+        "id": "50.20.04",
         "types": [
             "int",
             "float"
@@ -944,7 +944,7 @@
         }
     },
       {
-        "id": 502005,
+        "id": "50.20.05",
         "types": [
             "bool",
             "int"
@@ -956,7 +956,7 @@
         "uiRef": 502000
     },
     {
-        "id": 502006,
+        "id": "50.20.06",
         "types": [
             "bool",
             "int"
@@ -968,7 +968,7 @@
         "uiRef": 502000
     },
     {
-        "id": 502007,
+        "id": "50.20.07",
         "types": [
             "int",
             "float"
@@ -980,7 +980,7 @@
         "uiRef": 502000
     },
     {
-        "id": 502008,
+        "id": "50.20.08",
         "types": [
             "bool",
             "int"
@@ -992,7 +992,7 @@
         "uiRef": 502000
     },
     {
-        "id": 600000,
+        "id": "60.00.00",
         "translations": {
             "en-US": "window",
             "de-DE": "Fenster"
@@ -1018,7 +1018,7 @@
         }
     },
     {
-        "id": 600001,
+        "id": "60.00.01",
         "types": [
             "bool",
             "int"
@@ -1038,7 +1038,7 @@
         }
     },
     {
-        "id": 600002,
+        "id": "60.00.02",
         "types": [
             "bool",
             "int"
@@ -1058,7 +1058,7 @@
         }
     },
     {
-        "id": 600003,
+        "id": "60.00.03",
         "types": [
             "bool",
             "int"
@@ -1070,7 +1070,7 @@
         "uiRef": 600000
     },
     {
-        "id": 600004,
+        "id": "60.00.04",
         "types": [
             "int",
             "float"
@@ -1510,7 +1510,8 @@
         "translations": {
             "en-US": "Meter reading",
             "de-DE": "Zählerstand"
-        }
+        },
+        "aggregation": "meter"
     },
     {
         "id": "90.02.00",
@@ -1524,7 +1525,8 @@
         "translations": {
             "en-US": "Meter reading",
             "de-DE": "Zählerstand"
-        }
+        },
+        "aggregation": "meter"
     },
     {
         "id": "90.03.00",
@@ -1538,7 +1540,8 @@
         "translations": {
             "en-US": "Meter reading",
             "de-DE": "Zählerstand"
-        }
+        },
+        "aggregation": "meter"
     },
     {
         "id": "90.04.00",
@@ -1552,7 +1555,8 @@
         "translations": {
             "en-US": "Meter reading",
             "de-DE": "Zählerstand"
-        }
+        },
+        "aggregation": "meter"
     },
     {
         "id": "01.00.00",
