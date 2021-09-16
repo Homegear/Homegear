@@ -1514,6 +1514,14 @@
         "aggregation": "meter"
     },
     {
+        "id": "90.01.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        },
+        "aggregation": "count"
+    },
+    {
         "id": "90.02.00",
         "translations": {
             "en-US": "Power meter",
@@ -1527,6 +1535,14 @@
             "de-DE": "Zählerstand"
         },
         "aggregation": "meter"
+    },
+    {
+        "id": "90.02.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        },
+        "aggregation": "count"
     },
     {
         "id": "90.03.00",
@@ -1544,6 +1560,14 @@
         "aggregation": "meter"
     },
     {
+        "id": "90.03.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        },
+        "aggregation": "count"
+    },
+    {
         "id": "90.04.00",
         "translations": {
             "en-US": "Heat meter",
@@ -1551,12 +1575,20 @@
         }
     },
     {
-        "id": "90.03.01",
+        "id": "90.04.01",
         "translations": {
             "en-US": "Meter reading",
             "de-DE": "Zählerstand"
         },
         "aggregation": "meter"
+    },
+    {
+        "id": "90.04.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        },
+        "aggregation": "count"
     },
     {
         "id": "01.00.00",
