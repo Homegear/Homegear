@@ -1104,7 +1104,7 @@ void NodeBlueClient::queueOutput(const std::string &nodeId, uint32_t index, Flow
 
 void NodeBlueClient::nodeEvent(const std::string &nodeId, const std::string &topic, const Flows::PVariable &value, bool retain) {
   try {
-    if (!value || !_startUpComplete) return;
+    if (!value) return; //Allow nodeEvent even if startup is not complete yet (don't check _startUpComplete here)
 
     if (!_frontendConnected && !retain) return;
 
