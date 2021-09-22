@@ -127,7 +127,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval *value, bool arraysAre
   catch (const std::exception &ex) {
     GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return BaseLib::PVariable();
+  return {};
 }
 
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
@@ -138,23 +138,23 @@ void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval *output
 
     if (input->type == BaseLib::VariableType::tArray) {
       array_init(output);
-      for (auto &i : *input->arrayValue) {
+      for (auto &i: *input->arrayValue) {
         zval element;
         getPHPVariable(i, &element);
         add_next_index_zval(output, &element);
       }
       return;
     } else if (input->type == BaseLib::VariableType::tStruct) {
-      if (input->structValue->empty()) {
+      /*if (input->structValue->empty()) {
         object_init(output);
-      } else {
-        array_init(output);
-        for (auto &i : *input->structValue) {
-          zval element;
-          getPHPVariable(i.second, &element);
-          add_assoc_zval_ex(output, i.first.c_str(), i.first.size(), &element);
-        }
+      } else {*/
+      array_init(output);
+      for (auto &i: *input->structValue) {
+        zval element;
+        getPHPVariable(i.second, &element);
+        add_assoc_zval_ex(output, i.first.c_str(), i.first.size(), &element);
       }
+      //}
       return;
     }
 
