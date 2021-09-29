@@ -99,6 +99,13 @@ std::vector<uint64_t> User::getGroups(const std::string &userName) {
   return GD::bl->db->getUsersGroups(userId);
 }
 
+void User::deleteDefaultPasswordFile() {
+  std::string filename = GD::bl->settings.writeableDataPath() + "defaultPassword.txt";
+  if (BaseLib::Io::fileExists(filename)) BaseLib::Io::deleteFile(filename);
+  filename = GD::bl->settings.dataPath() + "defaultPassword.txt";
+  if (BaseLib::Io::fileExists(filename)) BaseLib::Io::deleteFile(filename);
+}
+
 bool User::exists(const std::string &userName) {
   return GD::bl->db->userNameExists(userName);
 }
@@ -129,6 +136,9 @@ bool User::create(const std::string &userName, const std::string &password, cons
 
     if (GD::bl->db->createUser(userName, passwordHash, salt, groups)) {
       if (metadata) setMetadata(userName, metadata);
+
+      deleteDefaultPasswordFile();
+
       return true;
     }
   }
@@ -179,7 +189,10 @@ bool User::update(const std::string &userName, const std::string &password, cons
     std::vector<uint8_t> salt;
     std::vector<uint8_t> passwordHash = password.empty() ? std::vector<uint8_t>() : User::generateWHIRLPOOL(password, salt);
 
-    if (GD::bl->db->updateUser(userId, passwordHash, salt, groups)) return true;
+    if (GD::bl->db->updateUser(userId, passwordHash, salt, groups)) {
+      deleteDefaultPasswordFile();
+      return true;
+    }
   }
   catch (std::exception &ex) {
     GD::out.printError("Error updating user: " + std::string(ex.what()));

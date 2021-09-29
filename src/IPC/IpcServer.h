@@ -55,6 +55,8 @@ class IpcServer : public BaseLib::IQueue {
 
   void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
+
   void broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions);
 
   void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
@@ -116,8 +118,8 @@ class IpcServer : public BaseLib::IQueue {
 
   BaseLib::Output _out;
   std::string _socketPath;
-  std::atomic_bool _shuttingDown;
-  std::atomic_bool _stopServer;
+  std::atomic_bool _shuttingDown{false};
+  std::atomic_bool _stopServer{false};
   std::thread _mainThread;
   int32_t _backlog = 100;
   std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
@@ -166,6 +168,12 @@ class IpcServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getClientId(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
+  BaseLib::PVariable getNodeCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setNodeCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setNodeCredentialTypes(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
   BaseLib::PVariable registerRpcMethod(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable cliGeneralCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
@@ -173,6 +181,8 @@ class IpcServer : public BaseLib::IQueue {
   BaseLib::PVariable cliFamilyCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable cliPeerCommand(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable noderedEvent(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
 
   BaseLib::PVariable ptyOutput(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters);
   // }}}

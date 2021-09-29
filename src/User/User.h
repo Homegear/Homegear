@@ -96,6 +96,8 @@ class User {
 
  private:
   static std::string generateOauthKey(const std::string &userName, const std::string &privateKey, const std::string &publicKey, std::string type, int32_t lifetime);
+
+  static void deleteDefaultPasswordFile();
 };
 
 }

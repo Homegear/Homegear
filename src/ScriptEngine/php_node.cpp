@@ -40,30 +40,56 @@
 void php_homegear_node_invoke_rpc(std::string &methodName, BaseLib::PVariable &parameters, zval *return_value, bool wait) {
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   if (!SEG(rpcCallback)) RETURN_FALSE;
   if (!parameters) parameters.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
   BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters, wait);
   if (result->errorStruct) {
     zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
-    RETURN_NULL()
+    RETURN_NULL();
   }
   Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_log_arg_info, 0, 2, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_log);
+ZEND_BEGIN_ARG_INFO_EX(hg_node_frontend_event_log_arg_info, nullptr, 0, 1)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_frontend_event_log);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_invoke_node_method_arg_info, 0, 3, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_invoke_node_method);
+ZEND_BEGIN_ARG_INFO_EX(hg_node_output_arg_info, nullptr, 0, 2)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_output);
+ZEND_BEGIN_ARG_INFO_EX(hg_node_node_event_arg_info, nullptr, 0, 3)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_node_event);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_node_data_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_node_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_node_data_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_node_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_flow_data_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_flow_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_flow_data_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_flow_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_global_data_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_global_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_global_data_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_global_data);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_set_internal_message_arg_info, 0, 1, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_set_internal_message);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_node_get_config_parameter_arg_info, 0, 2, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_node_get_config_parameter);
 
 ZEND_FUNCTION(hg_node_log) {
@@ -72,15 +98,15 @@ ZEND_FUNCTION(hg_node_log) {
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   int32_t logLevel = 3;
   std::string message;
-  if (argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::log().");
-  else if (argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::log().");
+  if (argc > 2) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::log().");
+  else if (argc < 2) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::log().");
   else {
-    if (Z_TYPE(args[0]) != IS_LONG) php_error_docref(NULL, E_WARNING, "logLevel is not of type integer.");
+    if (Z_TYPE(args[0]) != IS_LONG) php_error_docref(nullptr, E_WARNING, "logLevel is not of type integer.");
     else {
       logLevel = Z_LVAL(args[0]);
     }
 
-    if (Z_TYPE(args[1]) != IS_STRING) php_error_docref(NULL, E_WARNING, "message is not of type string.");
+    if (Z_TYPE(args[1]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "message is not of type string.");
     else {
       if (Z_STRLEN(args[1]) > 0) message = std::string(Z_STRVAL(args[1]), Z_STRLEN(args[1]));
     }
@@ -224,15 +250,17 @@ ZEND_FUNCTION(hg_node_node_event) {
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
   BaseLib::PVariable value;
-  if (argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::nodeEvent().");
-  else if (argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::nodeEvent().");
+  bool retain = true;
+  if (argc > 3) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::nodeEvent().");
+  else if (argc < 2) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::nodeEvent().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "topic is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "topic is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
 
-    value = Homegear::PhpVariableConverter::getVariable(&(args[1]));
+    value = Homegear::PhpVariableConverter::getVariable(&args[1]);
+    if (argc >= 3) retain = Z_TYPE_P(&args[2]) == IS_TRUE;
   }
 
   std::string methodName("executePhpNodeBaseMethod");
@@ -241,10 +269,11 @@ ZEND_FUNCTION(hg_node_node_event) {
   parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
   parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>("nodeEvent"));
   BaseLib::PVariable innerParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  innerParameters->arrayValue->reserve(3);
+  innerParameters->arrayValue->reserve(4);
   innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(SEG(nodeId)));
   innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(topic));
   innerParameters->arrayValue->push_back(value);
+  innerParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(retain));
   parameters->arrayValue->push_back(innerParameters);
   php_homegear_node_invoke_rpc(methodName, parameters, return_value, false);
 }
@@ -254,10 +283,10 @@ ZEND_FUNCTION(hg_node_get_node_data) {
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
-  if (argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::getNodeData().");
-  else if (argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::getNodeData().");
+  if (argc > 1) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::getNodeData().");
+  else if (argc < 1) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::getNodeData().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "key is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
@@ -277,10 +306,10 @@ ZEND_FUNCTION(hg_node_set_node_data) {
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
   BaseLib::PVariable value;
-  if (argc > 2) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::setNodeData().");
-  else if (argc < 2) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::setNodeData().");
+  if (argc > 2) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::setNodeData().");
+  else if (argc < 2) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::setNodeData().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "key is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
@@ -302,10 +331,10 @@ ZEND_FUNCTION(hg_node_get_flow_data) {
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   std::string topic;
-  if (argc > 1) php_error_docref(NULL, E_WARNING, "Too many arguments passed to HomegearNode::getFlowData().");
-  else if (argc < 1) php_error_docref(NULL, E_WARNING, "Not enough arguments passed to HomegearNode::getFlowData().");
+  if (argc > 1) php_error_docref(nullptr, E_WARNING, "Too many arguments passed to HomegearNode::getFlowData().");
+  else if (argc < 1) php_error_docref(nullptr, E_WARNING, "Not enough arguments passed to HomegearNode::getFlowData().");
   else {
-    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(NULL, E_WARNING, "key is not of type string.");
+    if (Z_TYPE(args[0]) != IS_STRING) php_error_docref(nullptr, E_WARNING, "key is not of type string.");
     else {
       if (Z_STRLEN(args[0]) > 0) topic = std::string(Z_STRVAL(args[0]), Z_STRLEN(args[0]));
     }
@@ -442,27 +471,26 @@ ZEND_FUNCTION(hg_node_get_config_parameter) {
 }
 
 static const zend_function_entry homegear_node_base_methods[] = {
-    ZEND_ME_MAPPING(log, hg_node_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(frontendEventLog, hg_node_frontend_event_log, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(invokeNodeMethod, hg_node_invoke_node_method, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(output, hg_node_output, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setNodeData, hg_node_set_node_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getFlowData, hg_node_get_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setFlowData, hg_node_set_flow_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getGlobalData, hg_node_get_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(setInternalMessage, hg_node_set_internal_message, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
-    {NULL, NULL, NULL}
+    ZEND_ME_MAPPING(log, hg_node_log, hg_node_log_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(frontendEventLog, hg_node_frontend_event_log, hg_node_frontend_event_log_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(invokeNodeMethod, hg_node_invoke_node_method, hg_node_invoke_node_method_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(output, hg_node_output, hg_node_output_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(nodeEvent, hg_node_node_event, hg_node_node_event_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getNodeData, hg_node_get_node_data, hg_node_get_node_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setNodeData, hg_node_set_node_data, hg_node_set_node_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getFlowData, hg_node_get_flow_data, hg_node_get_flow_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setFlowData, hg_node_set_flow_data, hg_node_set_flow_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getGlobalData, hg_node_get_global_data, hg_node_get_global_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setGlobalData, hg_node_set_global_data, hg_node_set_global_data_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(setInternalMessage, hg_node_set_internal_message, hg_node_set_internal_message_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(getConfigParameter, hg_node_get_config_parameter, hg_node_get_config_parameter_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    {nullptr, nullptr, nullptr}
 };
 
 void php_node_startup() {
   zend_class_entry homegearNodeBaseCe{};
   INIT_CLASS_ENTRY(homegearNodeBaseCe, "HomegearNodeBase", homegear_node_base_methods);
   homegear_node_base_class_entry = zend_register_internal_class(&homegearNodeBaseCe);
-  zend_declare_class_constant_stringl(homegear_node_base_class_entry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
 }
 
 bool php_init_node(PScriptInfo scriptInfo, zend_class_entry *homegearNodeClassEntry, zval *homegearNodeObject) {
@@ -473,6 +501,8 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry *homegearNodeClassEn
       zend_string *className = zend_string_init("HomegearNode", sizeof("HomegearNode") - 1, 0);
       homegearNodeClassEntry = zend_lookup_class(className);
       zend_string_release(className);
+      zend_declare_class_constant_stringl(homegearNodeClassEntry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
+      zend_declare_class_constant_stringl(homegearNodeClassEntry, "FLOW_ID", sizeof("FLOW_ID") - 1, SEG(flowId).c_str(), SEG(flowId).size());
     }
 
     if (!homegearNodeClassEntry) {
@@ -545,7 +575,8 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo &scriptInfo, zval *h
     std::string methodName2 = methodName;
     BaseLib::HelperFunctions::toLower(methodName2);
     if (!zend_hash_str_find_ptr(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), methodName2.c_str(), methodName2.size())) {
-      if (methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "startUpComplete" && methodName != "variableEvent" && methodName != "setNodeVariable" && methodName != "waitForStop") {
+      if ((methodName != "__destruct" && methodName != "configNodesStarted" && methodName != "startUpComplete" && methodName != "variableEvent" && methodName != "setNodeVariable" && methodName != "waitForStop") ||
+          (scriptInfo->getType() == BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode && methodName != "start" && methodName != "stop")) {
         return BaseLib::Variable::createError(-1, "Unknown method.");
       } else return std::make_shared<BaseLib::Variable>();
     }
@@ -554,7 +585,7 @@ BaseLib::PVariable php_node_object_invoke_local(PScriptInfo &scriptInfo, zval *h
     zval function;
     ZVAL_STRINGL(&function, methodName.c_str(), methodName.size());
     int result = 0;
-    if (methodParameters->size() == 0) {
+    if (methodParameters->empty()) {
       zend_try
           {
             result = call_user_function(&(Z_OBJ_P(homegearNodeObject)->ce->function_table), homegearNodeObject, &function, &returnValue, 0, nullptr);

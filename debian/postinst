@@ -24,16 +24,16 @@ case $1 in
 		chown homegear:homegear /var/lib/homegear
 		chmod 750 /var/lib/homegear
 
-		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION && test ! -e /var/lib/homegear/scripts/HM-XMLRPC-Client; then
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION && test ! -e /var/lib/homegear/scripts/HG-JSONRPC-Client; then
 			rm -Rf /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
 			mkdir /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
-			wget -P /tmp/HomegearScriptsDir/ https://homegear.eu/downloads/Homegear_PHP_XMLRPC_Client.zip
+			wget -P /tmp/HomegearScriptsDir/ https://homegear.eu/downloads/Homegear_PHP_JSONRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
-			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
+			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_JSONRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
-			rm /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
+			rm /tmp/HomegearScriptsDir/Homegear_PHP_JSONRPC_Client.zip
 			mkdir -p /var/lib/homegear/scripts
 			[ $? -ne 0 ] && exit 1
 			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts
@@ -41,6 +41,26 @@ case $1 in
 			chown -R homegear:homegear /var/lib/homegear/scripts
 			chmod -R 550 /var/lib/homegear/scripts
 			rm -Rf /tmp/HomegearScriptsDir
+		fi
+
+		if test ! -e /usr/bin/npm; then
+			# Linking this file uses /usr/bin/node_modules instead of /usr/lib/node_modules
+			ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npm /usr/bin/npm
+		fi
+		if test ! -e /usr/bin/npx; then
+			# Linking this file uses /usr/bin/node_modules instead of /usr/lib/node_modules
+			ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npx /usr/bin/npx
+		fi
+		# Update /usr/bin/node of old nightly
+		if [[ -e /usr/bin/node && $(md5sum /usr/bin/node | cut -d " " -f 1) == "bbaf2f551360a9bfbf63ba7721728ed5" ]]; then
+			rm -f /usr/bin/node
+		fi
+		if test ! -e /usr/bin/node; then
+			ln -s homegear-node /usr/bin/node
+		fi
+		if test ! -e /usr/bin/node_modules; then
+			# This works and doesn't bite with the real Node.js if installled.
+			ln -s /usr/share/homegear/nodejs/lib/node_modules /usr/bin/node_modules
 		fi
 
 		mkdir -p /var/log/homegear
@@ -54,6 +74,12 @@ case $1 in
 		chown -R homegear:homegear /var/lib/homegear/www
 
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
+		  if test ! -e /etc/homegear/nodeBlueCredentialKey.txt; then
+		    # We need 43 characters to have the equivalent of 32 fully random bytes (1.18e77 vs. 1.16e77 possibilities)
+		    tr -dc A-Za-z0-9 < /dev/urandom | head -c 43 > /etc/homegear/nodeBlueCredentialKey.txt
+		    chown homegear:homegear /etc/homegear/nodeBlueCredentialKey.txt
+				chmod 400 /etc/homegear/nodeBlueCredentialKey.txt
+		  fi
 			if test ! -e /etc/homegear/homegear.crt; then
 				openssl genrsa -out /etc/homegear/homegear.key 2048
 				openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
@@ -88,29 +114,49 @@ case $1 in
 			fi
 		fi
 
+		# {{{ Move old Node-BLUE data path to new one
+		sed -i -e 's/\/data\/homegear-data\/flows/\/data\/homegear-data\/node-blue/g' /etc/homegear/main.conf
+		if test -d /data/homegear-data/flows; then
+			mkdir -p /data/homegear-data/node-blue
+			cp -a /data/homegear-data/flows/* /data/homegear-data/node-blue/
+			rm -Rf /data/homegear-data/flows
+		fi
 		sed -i -e 's/\/var\/lib\/homegear\/flows/\/var\/lib\/homegear\/node-blue/g' /etc/homegear/main.conf
+		if test -d /var/lib/homegear/flows; then
+			mkdir -p /var/lib/homegear/node-blue
+			cp -a /var/lib/homegear/flows/* /var/lib/homegear/node-blue/
+			rm -Rf /var/lib/homegear/flows
+		fi
+		# }}}
 
-    if [[ ! -f /.dockerenv ]]; then
-      pidof systemd
-      if [ $? -eq 0 ]; then
-        systemctl enable homegear.service
-      else
-        result=`ps -A | grep -c ' systemd$'`
-        command -v systemctl > /dev/null 2>&1
-        if [ $? -ne 0 ] || [ $result -eq 0 ]; then
-          if test -f /usr/lib/insserv/insserv; then
-            /usr/lib/insserv/insserv homegear
-          else
-            command -v insserv > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-              insserv homegear
-            fi
-          fi
-        else
-          systemctl enable homegear.service
-        fi
-      fi
-    fi
+		if test -e /data/homegear-data && test ! -e /data/homegear-data/node-blue/node-red/settings.js; then
+			mkdir -p /data/homegear-data/node-blue/node-red
+			cp /var/lib/homegear/node-blue/data/node-red/settings.js /data/homegear-data/node-blue/node-red/
+			sed -i 's/\/var\/lib\/homegear\/node-blue\/data\/node-red/\/data\/homegear-data\/node-blue\/node-red/g' /data/homegear-data/node-blue/node-red/settings.js
+			chown -R homegear:homegear /data/homegear-data
+		fi
+
+		if [[ ! -f /.dockerenv ]]; then
+			pidof systemd
+			if [ $? -eq 0 ]; then
+				systemctl enable homegear.service
+			else
+				result=`ps -A | grep -c ' systemd$'`
+				command -v systemctl > /dev/null 2>&1
+				if [ $? -ne 0 ] || [ $result -eq 0 ]; then
+					if test -f /usr/lib/insserv/insserv; then
+						/usr/lib/insserv/insserv homegear
+					else
+						command -v insserv > /dev/null 2>&1
+						if [ $? -eq 0 ]; then
+							insserv homegear
+						fi
+					fi
+				else
+					systemctl enable homegear.service
+				fi
+			fi
+		fi
 		touch /var/lib/homegear/homegear_updated
 		;;
 

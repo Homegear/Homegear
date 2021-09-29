@@ -58,9 +58,10 @@ class FlowParser {
    * @param tab The tab to add the nodes to. If the tab doesn't exist, it is created.
    * @param tag A tag that is added to the nodes added by this method. If specified, all nodes with this tag are deleted before the new nodes are added.
    * @param nodes The nodes to add.
+   * @param[out] nodeIdMap The replacement map with the node IDs generated for the passed nodes.
    * @return Returns the flow with the new nodes on success or a null pointer when there is no change.
    */
-  static BaseLib::PVariable addNodesToFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes);
+  static BaseLib::PVariable addNodesToFlow(const BaseLib::PVariable &flow, const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes, std::unordered_map<std::string, std::string> &nodeIdMap);
 
   /**
    * Removes tagged nodes from a flow

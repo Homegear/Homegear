@@ -45,14 +45,14 @@ namespace Rpc {
 
 class AuthException : public BaseLib::Exception {
  public:
-  AuthException(std::string message) : BaseLib::Exception(message) {}
+  explicit AuthException(const std::string& message) : BaseLib::Exception(message) {}
 };
 
 class Auth {
  public:
-  Auth(std::unordered_set<uint64_t> &validGroups);
+  explicit Auth(std::unordered_set<uint64_t> &validGroups);
 
-  virtual ~Auth() {}
+  virtual ~Auth() = default;
 
   bool authenticated() { return _authenticated; }
 

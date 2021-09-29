@@ -41,7 +41,7 @@ class SimplePhpNode : public Flows::INode {
  private:
   Flows::PVariable _nodeInfo;
  public:
-  SimplePhpNode(const std::string &path, const std::string &nodeNamespace, const std::string &type, const std::atomic_bool *frontendConnected);
+  SimplePhpNode(const std::string &path, const std::string &type, const std::atomic_bool *frontendConnected);
   ~SimplePhpNode() override;
 
   void input(const Flows::PNodeInfo &nodeInfo, uint32_t index, const Flows::PVariable &message) override;

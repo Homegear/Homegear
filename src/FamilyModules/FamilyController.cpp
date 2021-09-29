@@ -199,14 +199,25 @@ void FamilyController::onRPCDeleteDevices(std::vector<uint64_t> &ids, BaseLib::P
 void FamilyController::onEvent(std::string source, uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values) {
   try {
     if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, peerID, channel, variables, values);
-#ifdef EVENTHANDLER
-    GD::eventHandler->trigger(peerID, channel, variables, values);
-#endif
 #ifndef NO_SCRIPTENGINE
     if (GD::scriptEngineServer) GD::scriptEngineServer->broadcastEvent(source, peerID, channel, variables, values);
 #endif
     if (GD::ipcServer) GD::ipcServer->broadcastEvent(source, peerID, channel, variables, values);
     if (GD::variableProfileManager) GD::variableProfileManager->variableEvent(source, peerID, channel, variables, values);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void FamilyController::onServiceMessageEvent(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastServiceMessage(serviceMessage);
+#ifndef NO_SCRIPTENGINE
+    if (GD::scriptEngineServer) GD::scriptEngineServer->broadcastServiceMessage(serviceMessage);
+#endif
+    if (GD::ipcServer) GD::ipcServer->broadcastServiceMessage(serviceMessage);
+    GD::rpcClient->broadcastServiceMessage(serviceMessage);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -714,6 +725,11 @@ void FamilyController::physicalInterfaceStartListening() {
   try {
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
     for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
+      i->second->physicalInterfaces()->setRawPacketEvent(std::function<void(int32_t, const std::string &, const BaseLib::PVariable &)>(std::bind(&FamilyController::rawPacketEvent,
+                                                                                                                                                 this,
+                                                                                                                                                 std::placeholders::_1,
+                                                                                                                                                 std::placeholders::_2,
+                                                                                                                                                 std::placeholders::_3)));
       i->second->physicalInterfaces()->startListening();
     }
   }
@@ -758,8 +774,19 @@ BaseLib::PVariable FamilyController::listInterfaces(int32_t familyId) {
     } else {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = getFamilies();
       for (auto &family : families) {
-        auto tempArray = family.second->physicalInterfaces()->listInterfaces();
-        if (!tempArray->arrayValue->empty()) interfaces->arrayValue->insert(interfaces->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+        if (family.second->hasPhysicalInterface()) {
+          auto tempArray = family.second->physicalInterfaces()->listInterfaces();
+          if (!tempArray->arrayValue->empty()) interfaces->arrayValue->insert(interfaces->arrayValue->end(), tempArray->arrayValue->begin(), tempArray->arrayValue->end());
+        } else {
+          BaseLib::PVariable interfaceStruct(new BaseLib::Variable(BaseLib::VariableType::tStruct));
+
+          interfaceStruct->structValue->insert(BaseLib::StructElement("FAMILYID", std::make_shared<BaseLib::Variable>(family.first)));
+          interfaceStruct->structValue->insert(BaseLib::StructElement("VIRTUAL", std::make_shared<BaseLib::Variable>(true)));
+          interfaceStruct->structValue->insert(BaseLib::StructElement("ID", std::make_shared<BaseLib::Variable>(std::to_string(family.first) + ".virtual")));
+          interfaceStruct->structValue->insert(BaseLib::StructElement("CONNECTED", std::make_shared<BaseLib::Variable>(true)));
+
+          interfaces->arrayValue->emplace_back(interfaceStruct);
+        }
       }
     }
   }
@@ -790,6 +817,15 @@ BaseLib::PVariable FamilyController::listFamilies(int32_t familyId) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+void FamilyController::rawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet) {
+  try {
+    if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastRawPacketEvent(familyId, interfaceId, packet);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 }

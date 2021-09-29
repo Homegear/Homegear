@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+
+override_dh_auto_configure:
+	
+override_dh_auto_build:
+	#{{{ Rename libnode to libnodejs-homegear
+	# This actually renames the library
+	sed -i 's/libnode/libnodejs-homegear/g' $(CURDIR)/node.gyp
+	sed -i 's/libnode/libnodejs-homegear/g' $(CURDIR)/deps/npm/node_modules/node-gyp/lib/configure.js
+	# This only copies the built library. Without this change the script looks for libnode.so.<version>
+	sed -i "s/output_file = 'node'/output_file = 'nodejs-homegear'/g" $(CURDIR)/tools/install.py
+	#}}}
+	mkdir -p $(CURDIR)/build
+	./configure --shared --prefix $(CURDIR)/build
+	make install
+
+override_dh_auto_install:
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	mkdir -p $(CURDIR)/debian/nodejs-homegear/usr/include/
+	cp -a $(CURDIR)/build/include/node $(CURDIR)/debian/nodejs-homegear/usr/include/nodejs-homegear
+	mkdir -p $(CURDIR)/debian/nodejs-homegear/usr/lib
+	version=`ls $(CURDIR)/build/lib/libnodejs-homegear.so* | cut -d '.' -f 3`
+	cp $(CURDIR)/build/lib/libnodejs-homegear.so* $(CURDIR)/debian/nodejs-homegear/usr/lib/libnodejs-homegear.so.${version}
+	ln -s libnodejs-homegear.so.${version} $(CURDIR)/debian/nodejs-homegear/usr/lib/libnodejs-homegear.so
+	mkdir -p $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib
+	cp -a $(CURDIR)/build/bin $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/
+	cp -a $(CURDIR)/build/lib/node_modules $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib
+	chmod 755 $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib/node_modules/npm/bin/*.js
+	find $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib -type f -print0 | xargs -0 sed -i 's/#!\/usr\/bin\/env node/#!\/usr\/bin\/env homegear-node/g'
+	find $(CURDIR)/debian/nodejs-homegear/usr/share/homegear/nodejs/lib -type f -print0 | xargs -0 sed -i 's/#!\/usr\/bin\/homegear -n/#!\/usr\/bin\/env homegear-node/g'
+
+override_dh_auto_test:
+
+override_dh_strip:
+
+%:
+	dh $@ --parallel

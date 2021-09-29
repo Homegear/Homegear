@@ -61,6 +61,23 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval *value, bool arraysAre
     } else if (Z_TYPE_P(value) == IS_STRING) {
       if (Z_STRLEN_P(value) > 0) variable = std::make_shared<BaseLib::Variable>(std::string(Z_STRVAL_P(value), Z_STRLEN_P(value)));
       else variable = std::make_shared<BaseLib::Variable>(std::string(""));
+    } else if (Z_TYPE_P(value) == IS_OBJECT) {
+      variable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      auto properties = Z_OBJPROP_P(value);
+      if (properties) {
+        zval *element = nullptr;
+        zend_string *key = nullptr;
+        ulong keyIndex = 0;
+        ZEND_HASH_FOREACH_KEY_VAL(properties, keyIndex, key, element)
+            {
+              BaseLib::PVariable propertyValue = getVariable(element, subArraysAreStructs, subArraysAreStructs);
+              if (!propertyValue) continue;
+              std::string keyName;
+              keyName = key ? std::string(key->val, key->len) : std::to_string(SIZEOF_ZEND_LONG == 8 ? (int64_t)keyIndex : (int32_t)keyIndex);
+              if (keyName.size() > 1 && keyName.at(0) == '\\') keyName = keyName.substr(1);
+              variable->structValue->emplace(keyName, propertyValue);
+            }ZEND_HASH_FOREACH_END();
+      }
     } else if (Z_TYPE_P(value) == IS_ARRAY) {
       zval *element = nullptr;
       HashTable *ht = Z_ARRVAL_P(value);
@@ -110,7 +127,7 @@ BaseLib::PVariable PhpVariableConverter::getVariable(zval *value, bool arraysAre
   catch (const std::exception &ex) {
     GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return BaseLib::PVariable();
+  return {};
 }
 
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
@@ -121,19 +138,23 @@ void PhpVariableConverter::getPHPVariable(BaseLib::PVariable input, zval *output
 
     if (input->type == BaseLib::VariableType::tArray) {
       array_init(output);
-      for (std::vector<BaseLib::PVariable>::iterator i = input->arrayValue->begin(); i != input->arrayValue->end(); ++i) {
+      for (auto &i: *input->arrayValue) {
         zval element;
-        getPHPVariable(*i, &element);
+        getPHPVariable(i, &element);
         add_next_index_zval(output, &element);
       }
       return;
     } else if (input->type == BaseLib::VariableType::tStruct) {
+      /*if (input->structValue->empty()) {
+        object_init(output);
+      } else {*/
       array_init(output);
-      for (std::map<std::string, BaseLib::PVariable>::iterator i = input->structValue->begin(); i != input->structValue->end(); ++i) {
+      for (auto &i: *input->structValue) {
         zval element;
-        getPHPVariable(i->second, &element);
-        add_assoc_zval_ex(output, i->first.c_str(), i->first.size(), &element);
+        getPHPVariable(i.second, &element);
+        add_assoc_zval_ex(output, i.first.c_str(), i.first.size(), &element);
       }
+      //}
       return;
     }
 

@@ -29,6 +29,8 @@
 */
 
 #include "IpcServer.h"
+
+#include <memory>
 #include "../GD/GD.h"
 #include "../CLI/CliServer.h"
 #include "../RPC/RpcMethods/BuildingRpcMethods.h"
@@ -36,6 +38,7 @@
 #include "../RPC/RpcMethods/UiNotificationsRpcMethods.h"
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
+#include "../RPC/RpcMethods/MaintenanceRpcMethods.h"
 
 namespace Homegear {
 
@@ -43,16 +46,13 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _out.init(GD::bl.get());
   _out.setPrefix("IPC Server: ");
 
-  _shuttingDown = false;
-  _stopServer = false;
-
   _lifetick1.first = 0;
   _lifetick1.second = true;
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
-  _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
+  _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, false);
+  _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
   _dummyClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
   _dummyClientInfo->ipcServer = true;
   _dummyClientInfo->initInterfaceId = "ipcServer";
@@ -69,9 +69,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("system.multicall", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSystemMulticall()));
   _rpcMethods.emplace("acknowledgeGlobalServiceMessage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAcknowledgeGlobalServiceMessage()));
   _rpcMethods.emplace("activateLinkParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCActivateLinkParamset()));
-  _rpcMethods.emplace("abortEventReset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
   _rpcMethods.emplace("addDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddDevice()));
-  _rpcMethods.emplace("addEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddEvent()));
   _rpcMethods.emplace("addLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCAddLink()));
   _rpcMethods.emplace("checkServiceAccess", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCheckServiceAccess()));
   _rpcMethods.emplace("copyConfig", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCCopyConfig()));
@@ -82,7 +80,6 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("deleteMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteMetadata()));
   _rpcMethods.emplace("deleteNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteNodeData()));
   _rpcMethods.emplace("deleteSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCDeleteSystemVariable()));
-  _rpcMethods.emplace("enableEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCEnableEvent()));
   _rpcMethods.emplace("executeMiscellaneousDeviceMethod", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCExecuteMiscellaneousDeviceMethod()));
   _rpcMethods.emplace("familyExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCFamilyExists()));
   _rpcMethods.emplace("forceConfigUpdate", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCForceConfigUpdate()));
@@ -95,7 +92,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetData()));
   _rpcMethods.emplace("getDeviceDescription", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceDescription()));
   _rpcMethods.emplace("getDeviceInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetDeviceInfo()));
-  _rpcMethods.emplace("getEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetEvent()));
+  _rpcMethods.emplace("getLastEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLastEvents()));
   _rpcMethods.emplace("getInstallMode", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstallMode()));
   _rpcMethods.emplace("getInstanceId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetInstanceId()));
   _rpcMethods.emplace("getKeyMismatchDevice", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetKeyMismatchDevice()));
@@ -104,10 +101,11 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getLinks", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetLinks()));
   _rpcMethods.emplace("getMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetMetadata()));
   _rpcMethods.emplace("getName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetName()));
-  _rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeData()));
-  _rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetFlowData()));
-  _rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetGlobalData()));
-  _rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetNodeVariable()));
+  _rpcMethods.emplace("getNodeBlueDataKeys", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetNodeBlueDataKeys()));
+  _rpcMethods.emplace("getNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetNodeData()));
+  _rpcMethods.emplace("getFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetFlowData()));
+  _rpcMethods.emplace("getGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetGlobalData()));
+  _rpcMethods.emplace("getNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetNodeVariable()));
   _rpcMethods.emplace("getPairingInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingInfo()));
   _rpcMethods.emplace("getPairingState", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPairingState()));
   _rpcMethods.emplace("getParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamset()));
@@ -115,6 +113,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getParamsetId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetParamsetId()));
   _rpcMethods.emplace("getPeerId", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetPeerId()));
   _rpcMethods.emplace("getServiceMessages", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetServiceMessages()));
+  _rpcMethods.emplace("getSniffedDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSniffedDevices()));
   _rpcMethods.emplace("getSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariable()));
   _rpcMethods.emplace("getSystemVariableFlags", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetSystemVariableFlags()));
   _rpcMethods.emplace("getUpdateStatus", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCGetUpdateStatus()));
@@ -127,17 +126,14 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("listBidcosInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListBidcosInterfaces()));
   _rpcMethods.emplace("listClientServers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListClientServers()));
   _rpcMethods.emplace("listDevices", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListDevices()));
-  _rpcMethods.emplace("listEvents", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListEvents()));
   _rpcMethods.emplace("listFamilies", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListFamilies()));
   _rpcMethods.emplace("listInterfaces", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListInterfaces()));
   _rpcMethods.emplace("listKnownDeviceTypes", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListKnownDeviceTypes()));
   _rpcMethods.emplace("listTeams", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCListTeams()));
   _rpcMethods.emplace("logLevel", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCLogLevel()));
-  _rpcMethods.emplace("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCNodeOutput()));
   _rpcMethods.emplace("peerExists", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPeerExists()));
   _rpcMethods.emplace("ping", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPing()));
   _rpcMethods.emplace("putParamset", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCPutParamset()));
-  _rpcMethods.emplace("removeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveEvent()));
   _rpcMethods.emplace("removeLink", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRemoveLink()));
   _rpcMethods.emplace("reportValueUsage", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCReportValueUsage()));
   _rpcMethods.emplace("rssiInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCRssiInfo()));
@@ -153,15 +149,16 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("setLinkInfo", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetLinkInfo()));
   _rpcMethods.emplace("setMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetMetadata()));
   _rpcMethods.emplace("setName", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetName()));
-  _rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeData()));
-  _rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetFlowData()));
-  _rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetGlobalData()));
-  _rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetNodeVariable()));
+  _rpcMethods.emplace("setNodeData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetNodeData()));
+  _rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetFlowData()));
+  _rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetGlobalData()));
+  _rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetNodeVariable()));
   _rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
   _rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
   _rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));
+  _rpcMethods.emplace("startSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStartSniffing()));
+  _rpcMethods.emplace("stopSniffing", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCStopSniffing()));
   _rpcMethods.emplace("subscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSubscribePeers()));
-  _rpcMethods.emplace("triggerEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerEvent()));
   _rpcMethods.emplace("triggerRpcEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCTriggerRpcEvent()));
   _rpcMethods.emplace("unsubscribePeers", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUnsubscribePeers()));
   _rpcMethods.emplace("updateFirmware", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCUpdateFirmware()));
@@ -170,7 +167,12 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   { // Node-BLUE
     _rpcMethods.emplace("addNodesToFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddNodesToFlow()));
     _rpcMethods.emplace("flowHasTag", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCFlowHasTag()));
+    _rpcMethods.emplace("nodeBlueIsReady", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeBlueIsReady()));
+    _rpcMethods.emplace("nodeEvent", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeEvent()));
+    _rpcMethods.emplace("nodeLog", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeLog()));
+    _rpcMethods.emplace("nodeOutput", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCNodeOutput()));
     _rpcMethods.emplace("removeNodesFromFlow", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveNodesFromFlow()));
+    _rpcMethods.emplace("restartFlows", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRestartFlows()));
   }
 
   { // Buildings
@@ -270,9 +272,11 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("getUiElement", std::make_shared<RpcMethods::RpcGetUiElement>());
     _rpcMethods.emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
     _rpcMethods.emplace("getUiElementsWithVariable", std::make_shared<RpcMethods::RpcGetUiElementsWithVariable>());
+    _rpcMethods.emplace("getUiElementTemplate", std::make_shared<RpcMethods::RpcGetUiElementTemplate>());
     _rpcMethods.emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
     _rpcMethods.emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
     _rpcMethods.emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
+    _rpcMethods.emplace("uiElementExists", std::make_shared<RpcMethods::RpcUiElementExists>());
   }
 
   { // UI notification
@@ -302,6 +306,11 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("getVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcGetVariableProfile>()));
   _rpcMethods.emplace("updateVariableProfile", std::static_pointer_cast<BaseLib::Rpc::RpcMethod>(std::make_shared<RpcMethods::RpcUpdateVariableProfile>()));
   //}}}
+
+  { // Maintenance
+    _rpcMethods.emplace("enableMaintenanceMode", std::make_shared<RpcMethods::RpcEnableMaintenanceMode>());
+    _rpcMethods.emplace("disableMaintenanceMode", std::make_shared<RpcMethods::RpcDisableMaintenanceMode>());
+  }
 
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("getHomegearPid",
                                                                                                                                                                std::bind(&IpcServer::getHomegearPid,
@@ -341,6 +350,30 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
                                                                                                                                                                          std::placeholders::_3)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("cliPeerCommand",
                                                                                                                                                                std::bind(&IpcServer::cliPeerCommand,
+                                                                                                                                                                         this,
+                                                                                                                                                                         std::placeholders::_1,
+                                                                                                                                                                         std::placeholders::_2,
+                                                                                                                                                                         std::placeholders::_3)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("getNodeCredentials",
+                                                                                                                                                               std::bind(&IpcServer::getNodeCredentials,
+                                                                                                                                                                         this,
+                                                                                                                                                                         std::placeholders::_1,
+                                                                                                                                                                         std::placeholders::_2,
+                                                                                                                                                                         std::placeholders::_3)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("setNodeCredentials",
+                                                                                                                                                               std::bind(&IpcServer::setNodeCredentials,
+                                                                                                                                                                         this,
+                                                                                                                                                                         std::placeholders::_1,
+                                                                                                                                                                         std::placeholders::_2,
+                                                                                                                                                                         std::placeholders::_3)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("setNodeCredentialTypes",
+                                                                                                                                                               std::bind(&IpcServer::setNodeCredentialTypes,
+                                                                                                                                                                         this,
+                                                                                                                                                                         std::placeholders::_1,
+                                                                                                                                                                         std::placeholders::_2,
+                                                                                                                                                                         std::placeholders::_3)));
+  _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PIpcClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters)>>("noderedEvent",
+                                                                                                                                                               std::bind(&IpcServer::noderedEvent,
                                                                                                                                                                          this,
                                                                                                                                                                          std::placeholders::_1,
                                                                                                                                                                          std::placeholders::_2,
@@ -451,22 +484,22 @@ void IpcServer::stop() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        clients.push_back(i->second);
-        closeClientConnection(i->second);
+      for (auto &client : _clients) {
+        clients.push_back(client.second);
+        closeClientConnection(client.second);
       }
     }
 
     _stopServer = true;
     GD::bl->threadManager.join(_mainThread);
-    while (_clients.size() > 0) {
-      for (std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-        std::unique_lock<std::mutex> waitLock((*i)->waitMutex);
+    while (!_clients.empty()) {
+      for (auto &client : clients) {
+        std::unique_lock<std::mutex> waitLock(client->waitMutex);
         waitLock.unlock();
-        (*i)->requestConditionVariable.notify_all();
+        client->requestConditionVariable.notify_all();
       }
       collectGarbage();
-      if (_clients.size() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      if (!_clients.empty()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     stopQueue(0);
     stopQueue(1);
@@ -485,20 +518,7 @@ void IpcServer::homegearShuttingDown() {
   try {
     _shuttingDown = true;
 
-    {
-      std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        closeClientConnection(i->second);
-      }
-    }
-
-    int32_t i = 0;
-    while (_clients.size() > 0 && i < 60) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      collectGarbage();
-      i++;
-    }
+    //Don't close client connections here as they are still needed until "stop()" is called.
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -516,8 +536,8 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
     if (_dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
-        std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (peer) break;
       }
@@ -550,22 +570,67 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (std::map<int32_t, PIpcClientData>::iterator i = _clients.begin(); i != _clients.end(); ++i) {
-        if (i->second->closed) continue;
-        clients.push_back(i->second);
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
       }
     }
 
-    for (std::vector<PIpcClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
-      auto parameters = std::make_shared<BaseLib::Array>();
-      parameters->reserve(5);
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
-      parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
-      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(*i, "broadcastEvent", parameters);
+    auto parameters = std::make_shared<BaseLib::Array>();
+    parameters->reserve(5);
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(id));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(channel));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(*variables));
+    parameters->emplace_back(std::make_shared<BaseLib::Variable>(values));
+
+    for (auto &client : clients) {
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastEvent", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastEvent\". Queue is full.");
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void IpcServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    if (_shuttingDown) return;
+    if (!_dummyClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
+
+    if (serviceMessage->peerId > 0 && _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
+      std::shared_ptr<BaseLib::Systems::Peer> peer;
+      std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+      for (auto &family : families) {
+        std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+        if (central) peer = central->getPeer(serviceMessage->peerId);
+        if (peer) break;
+      }
+
+      if (!peer) return;
+
+      if (!_dummyClientInfo->acls->checkVariableReadAccess(peer, serviceMessage->channel, serviceMessage->variable)) {
+        return;
+      }
+    }
+
+    std::vector<PIpcClientData> clients;
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      clients.reserve(_clients.size());
+      for (auto &client : _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    auto parameters = std::make_shared<BaseLib::Array>();
+    parameters->emplace_back(serviceMessage->serialize());
+
+    for (auto &client : clients) {
+      std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastServiceMessage", parameters);
+      if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastServiceMessage\". Queue is full.");
     }
   }
   catch (const std::exception &ex) {
@@ -919,7 +984,7 @@ BaseLib::PVariable IpcServer::callRpcMethod(const BaseLib::PRpcClientInfo &clien
       if (clientData.size() == 1) return response;
       else responseStruct->structValue->emplace(std::to_string(client->id), response);
     }
-
+    return responses;
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -968,8 +1033,17 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
 
         auto methodIterator = _rpcMethods.find(methodName);
         if (methodIterator == _rpcMethods.end()) {
-          BaseLib::PVariable result = callRpcMethod(_dummyClientInfo, methodName, parameters->at(2)->arrayValue);
-          sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+          if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
+            auto hgdcMethodName = methodName.substr(4);
+            hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+            auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters->at(2)->arrayValue);
+            sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+            return;
+          } else {
+            auto result = callRpcMethod(_dummyClientInfo, methodName, parameters->at(2)->arrayValue);
+            sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
+            return;
+          }
           return;
         }
 
@@ -1060,7 +1134,7 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
       std::lock_guard<std::mutex> packetIdGuard(_packetIdMutex);
       packetId = _currentPacketId++;
     }
-    BaseLib::PArray array(new BaseLib::Array{BaseLib::PVariable(new BaseLib::Variable(packetId)), BaseLib::PVariable(new BaseLib::Variable(parameters))});
+    BaseLib::PArray array(new BaseLib::Array{std::make_shared<BaseLib::Variable>(packetId), std::make_shared<BaseLib::Variable>(parameters)});
     std::vector<char> data;
     _rpcEncoder->encodeRequest(methodName, array, data);
 
@@ -1090,7 +1164,9 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
       return response->finished || clientData->closed || _stopServer;
     })) {
       i++;
-      if (i == 15) {
+      if (i > 60 && (i % 60 == 0)) {
+        _out.printWarning("Warning: IPC client with ID " + std::to_string(clientData->id) + " (Process ID: " + std::to_string(clientData->pid) + ") is still executing RPC method \"." + methodName + "\" after " + std::to_string(i) + " seconds.");
+      } else if (i == 3600) {
         _out.printError("Error: IPC client with ID " + std::to_string(clientData->id) + " is not responding... Closing connection.");
         closeClientConnection(clientData);
         break;
@@ -1535,6 +1611,70 @@ BaseLib::PVariable IpcServer::cliPeerCommand(PIpcClientData &clientData, int32_t
 
     CliServer cliServer(clientData->id);
     return std::make_shared<BaseLib::Variable>(cliServer.peerCommand((uint64_t)parameters->at(0)->integerValue64, command));
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::getNodeCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
+
+    return GD::nodeBlueServer->getNodeCredentials(parameters->at(0)->stringValue);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::setNodeCredentials(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+
+    return GD::nodeBlueServer->setNodeCredentials(parameters->at(0)->stringValue, parameters->at(1));
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::setNodeCredentialTypes(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+
+    GD::nodeBlueServer->setNodeCredentialTypes(parameters->at(0)->stringValue, parameters->at(1));
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable IpcServer::noderedEvent(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
+  try {
+    GD::nodeBlueServer->getNodered()->event(parameters);
+
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

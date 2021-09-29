@@ -23,7 +23,7 @@ if test -z $1; then
 fi
 
 if test -z $2; then
-	echo "Please provide a valid Linux distribution version (wheezy, trusty, ...)."	
+	echo "Please provide a valid Linux distribution version (buster, focal, ...)."	
 	print_usage
 	exit 1
 fi
@@ -131,27 +131,19 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
 
-if [ "$distver" == "jessie" ]; then
-	wget -P $rootfs https://packages.sury.org/php/apt.gpg
-	chroot $rootfs apt-key add apt.gpg
-	rm $rootfs/apt.gpg
-
-	echo "deb https://packages.sury.org/php $distver main" > $rootfs/etc/apt/sources.list.d/php7.list
-fi
-
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -163,68 +155,41 @@ wget -P $rootfs https://homegear.eu/packages/Release.key
 chroot $rootfs apt-key add Release.key
 rm $rootfs/Release.key
 
-wget -P $rootfs https://deb.nodesource.com/gpgkey/nodesource.gpg.key
-chroot $rootfs apt-key add nodesource.gpg.key
-rm $rootfs/nodesource.gpg.key
-
-if [ "$distver" != "buster" ] || [ "$arch" == "i386" ]; then
-	if [ "$arch" == "i386" ]; then
-		# 10.x and later are not available for i386
-		echo "deb https://deb.nodesource.com/node_9.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
-	else
-		echo "deb https://deb.nodesource.com/node_12.x $distver main" > $rootfs/etc/apt/sources.list.d/nodesource.list
-	fi
-fi
-
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 # python: Needed by homegear-ui's npm on some systems
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php7-homegear-dev libxslt1-dev libedit-dev libenchant-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev python
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool cmake sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev
 
-if [ "$distver" == "buster" ] && [ "$arch" != "i386" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install npm
+# {{{ Packages for doorctrl
+if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libasound2-dev libboost-dev libboost-thread-dev libboost-log-dev libboost-system-dev libboost-program-options-dev libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad libavdevice58 libsdl2-2.0-0 libsdl2-2.0-0 libsdl2-2.0-0 libopencore-amrnb0 libopencore-amrwb0 libgpiod-dev libssl-dev libxss-dev
+fi
+# }}}
+
+if [ "$distver" == "bullseye" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-2-dev
 else
-	if [ "$arch" == "i386" ]; then
-		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install nodejs=9.11.2-1nodesource1
-	else
-		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install nodejs
-	fi
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-dev python
 fi
 
-# Fix npm uid/gid issue (effect: npm install doesn't work)
-if test -d $rootfs/usr/lib/node_modules/npm/node_modules/uid-number; then
-	echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/node_modules/npm/node_modules/uid-number/uid-number.js
-fi
-if test -d $rootfs/usr/lib/nodejs/npm/node_modules/uid-number; then
-	echo "module.exports = function uidNumber(uid, gid, cb) {cb(null, 0, 0)}" > $rootfs/usr/lib/nodejs/npm/node_modules/uid-number/uid-number.js
-fi
-
-if [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ]; then
+if [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ] || [ "$distver" == "bullseye" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ];  then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
-if [ "$distver" == "wheezy" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt11-dev libgnutls-dev g++-4.7 gcc-4.7 libcurl4-gnutls-dev
-	rm $rootfs/usr/bin/g++
-	rm $rootfs/usr/bin/gcc
-	ln -s g++-4.7 $rootfs/usr/bin/g++
-	ln -s gcc-4.7 $rootfs/usr/bin/gcc
-else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-	if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "jessie" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
-		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
-	fi
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "focal" ]; then
+if [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8 libreadline-dev
 else
 	if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bionic" ]; then
@@ -237,8 +202,12 @@ fi
 
 # {{{ UI build dependencies
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
-DEBIAN_FRONTEND=noninteractive chroot $rootfs npm -g install babel-cli
-DEBIAN_FRONTEND=noninteractive chroot $rootfs ln -s /usr/local/bin/babel /usr/bin/babel
+# }}}
+
+# {{{ PJPROJECT for doorctrl
+if [ "$dist" == "Raspbian" ] && [ "$distver" == "bullseye" ]; then
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz && tar -zxf 2.11.tar.gz && rm 2.11.tar.gz && cd /usr/src/pjproject-2.11 && ./configure && make dep && make && make install'
+fi
 # }}}
 
 mkdir $rootfs/build
@@ -262,7 +231,9 @@ function createPackage {
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
 	[ $? -ne 0 ] && exit 1
-	./bootstrap
+	if [ -f ./bootstrap ]; then
+	  ./bootstrap
+	fi
 	[ $? -ne 0 ] && exit 1
 	cd ..
 	if [ "$distribution" == "Debian" ]; then
@@ -273,13 +244,7 @@ function createPackage {
 	fi' $sourcePath/debian/preinst
 	fi
 	sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-	if [ "$distributionVersion" == "wheezy" ]; then
-		sed -i 's/libgcrypt20-dev/libgcrypt11-dev/g' $sourcePath/debian/control
-		sed -i 's/libgnutls28-dev/libgnutls-dev/g' $sourcePath/debian/control
-		sed -i 's/libgcrypt20/libgcrypt11/g' $sourcePath/debian/control
-		sed -i 's/libgnutlsxx28/libgnutlsxx27/g' $sourcePath/debian/control
-	fi
-	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "buster" ] && [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "wheezy" ] && [ "$distributionVersion" != "xenial" ] && [ "$distributionVersion" != "bionic" ] && [ "$distributionVersion" != "focal" ]; then
+	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "buster" ] && [ "$distributionVersion" != "bullseye" ] && [ "$distributionVersion" != "bionic" ] && [ "$distributionVersion" != "focal" ]; then
 		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
 		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
 	fi
@@ -288,7 +253,7 @@ function createPackage {
 
   * See https://github.com/Homegear/${1}/issues?q=is%3Aissue+is%3Aclosed
 
- -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
+ -- Dr. Sathya Laufer <s.laufer@homegear.email>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
@@ -379,6 +344,12 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
+wget --https-only https://github.com/Homegear/homegear-nodes-ui/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
+
 wget --https-only https://github.com/Homegear/Homegear-HomeMaticBidCoS/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
@@ -445,13 +416,11 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
-	wget --https-only https://github.com/Homegear/Homegear-Velux-KLF200/archive/${1}.zip
-	[ $? -ne 0 ] && exit 1
-	unzip ${1}.zip
-	[ $? -ne 0 ] && exit 1
-	rm ${1}.zip
-fi
+wget --https-only https://github.com/Homegear/Homegear-Velux-KLF200/archive/${1}.zip
+[ $? -ne 0 ] && exit 1
+unzip ${1}.zip
+[ $? -ne 0 ] && exit 1
+rm ${1}.zip
 
 wget --https-only https://github.com/dimmu311/Homegear-Loxone/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
@@ -518,14 +487,12 @@ if [[ -n $2 ]]; then
 	rm master.zip
 	mv homegear-nodes-extra-master* homegear-nodes-extra-${1}
 
-	if [ "$distributionVersion" != "jessie" ]; then
-		wget --https-only https://gitit.de/api/v4/projects/3/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
-		[ $? -ne 0 ] && exit 1
-		unzip ${1}.zip
-		[ $? -ne 0 ] && exit 1
-		rm ${1}.zip
-		mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
-	fi
+	wget --https-only https://gitit.de/api/v4/projects/3/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv Homegear-Beckhoff-${1}* Homegear-Beckhoff-${1}
 
 	wget --https-only https://gitit.de/api/v4/projects/1/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 	[ $? -ne 0 ] && exit 1
@@ -648,20 +615,34 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv mellonbot-${1}* mellonbot-${1}
 
-	if [ "$distributionVersion" != "jessie" ]; then
-		wget --https-only https://gitit.de/api/v4/projects/25/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
-		[ $? -ne 0 ] && exit 1
-		unzip ${1}.zip
-		[ $? -ne 0 ] && exit 1
-		rm ${1}.zip
-		mv homegear-cloudconnect-${1}* homegear-cloudconnect-${1}
+	wget --https-only https://gitit.de/api/v4/projects/25/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv homegear-cloudconnect-${1}* homegear-cloudconnect-${1}
 
-		wget --https-only https://gitit.de/api/v4/projects/67/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
-		[ $? -ne 0 ] && exit 1
-		unzip ${1}.zip
-		[ $? -ne 0 ] && exit 1
-		rm ${1}.zip
-		mv ibs-ssh-${1}* ibs-ssh-${1}
+	wget --https-only https://gitit.de/api/v4/projects/67/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	unzip ${1}.zip
+	[ $? -ne 0 ] && exit 1
+	rm ${1}.zip
+	mv ibs-ssh-${1}* ibs-ssh-${1}
+
+  if [ "$distribution" == "Raspbian" ] && [ "$distributionVersion" == "bullseye" ]; then
+    wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+    [ $? -ne 0 ] && exit 1
+    unzip ${1}.zip
+    [ $? -ne 0 ] && exit 1
+    rm ${1}.zip
+    mv doorctrl-${1}* doorctrl-${1}
+
+    wget --https-only https://gitit.de/api/v4/projects/332/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+    [ $? -ne 0 ] && exit 1
+    unzip ${1}.zip
+    [ $? -ne 0 ] && exit 1
+    rm ${1}.zip
+    mv ltp08-connector-${1}* ltp08-connector-${1}
 	fi
 fi
 
@@ -694,7 +675,7 @@ createPackageWithoutAutomake python3-homegear $1 python3-homegear 0
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 createPackage Homegear $1 homegear 0
 if test -f homegear*.deb; then
-	dpkg --purge php7-homegear-dev
+	dpkg --purge php8-homegear-dev
 	dpkg -i homegear*.deb
 else
 	echo "Error building Homegear."
@@ -702,6 +683,7 @@ else
 fi
 
 createPackage homegear-nodes-core $1 homegear-nodes-core 0
+createPackage homegear-nodes-ui $1 homegear-nodes-ui 0
 createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos 0
 createPackage Homegear-HomeMaticWired $1 homegear-homematicwired 0
 createPackage Homegear-Insteon $1 homegear-insteon 0
@@ -713,9 +695,7 @@ createPackage Homegear-IPCam $1 homegear-ipcam 0
 createPackage Homegear-Intertechno $1 homegear-intertechno 0
 createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage Homegear-CCU $1 homegear-ccu 0
-if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
-	createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
-fi
+createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
 createPackage Homegear-Loxone $1 homegear-loxone 0
 createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
@@ -754,9 +734,7 @@ if [[ -n $2 ]]; then
 	createPackage homegear-licensing $1 homegear-licensing 1
 
 	createPackage homegear-nodes-extra $1 homegear-nodes-extra 1
-	if [ "$distributionVersion" != "jessie" ]; then
-		createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
-	fi
+	createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
 	createPackage Homegear-KNX $1 homegear-knx 1
 	createPackage Homegear-EnOcean $1 homegear-enocean 1
 	createPackage homegear-easycam $1 homegear-easycam 1
@@ -773,9 +751,11 @@ if [[ -n $2 ]]; then
 	createPackage homegear-webssh $1 homegear-webssh 1
 	createPackage homegear-dc-connector $1 homegear-dc-connector 1
 	createPackage mellonbot $1 mellonbot 1
-	if [ "$distributionVersion" != "jessie" ]; then
-		createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
-		createPackage ibs-ssh $1 ibs-ssh 1
+	createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
+	createPackage ibs-ssh $1 ibs-ssh 1
+	if [ "$distribution" == "Raspbian" ] && [ "$distributionVersion" == "bullseye" ]; then
+	  createPackage doorctrl $1 doorctrl 1
+	  createPackage ltp08-connector $1 ltp08-connector 1
 	fi
 fi
 EOF
@@ -792,30 +772,19 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
-	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
-		if test ! -f homegear-velux-klf200_*.deb; then
-			echo "Error: Some or all packages from GitHub could not be created."
-			exit 1
-		fi
-	fi
-
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
-		fi
-
-		if [ "$distributionVersion" != "jessie" ]; then
-			if test ! -f homegear-beckhoff_*.deb; then
-				echo "Error: Some or all packages from gitit.de could not be created."
-				exit 1
-			fi
 		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
 fi
 
 function cleanUp {
@@ -843,6 +812,7 @@ cleanUp libhomegear-ipc
 cleanUp python3-homegear
 cleanUp homegear
 cleanUp homegear-nodes-core
+cleanUp homegear-nodes-ui
 cleanUp homegear-homematicbidcos
 cleanUp homegear-homematicwired
 cleanUp homegear-insteon
@@ -854,9 +824,7 @@ cleanUp homegear-ipcam
 cleanUp homegear-intertechno
 cleanUp homegear-nanoleaf
 cleanUp homegear-ccu
-if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
-	cleanUp homegear-velux-klf200
-fi
+cleanUp homegear-velux-klf200
 cleanUp homegear-loxone
 cleanUp homegear-influxdb
 cleanUp homegear-gateway
@@ -870,9 +838,7 @@ if [[ -n $1 ]]; then
 	cleanUp2 homegear-licensing
 
 	cleanUp2 homegear-nodes-extra
-	if [ "$distributionVersion" != "jessie" ]; then
-		cleanUp2 homegear-beckhoff
-	fi
+	cleanUp2 homegear-beckhoff
 	cleanUp2 homegear-knx
 	cleanUp2 homegear-enocean
 	cleanUp2 homegear-easycam
@@ -891,6 +857,9 @@ if [[ -n $1 ]]; then
 	cleanUp2 mellonbot
 	cleanUp2 homegear-cloudconnect
 	cleanUp2 ibs-ssh
+	cleanUp2 doorctrl
+	cleanUp2 doorbell
+	cleanUp2 ltp08-connector
 fi
 EOF
 echo "isodate=\`date +%Y%m%d\`
@@ -900,6 +869,7 @@ echo "isodate=\`date +%Y%m%d\`
 	mv python3-homegear.deb python3-homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-nodes-core.deb homegear-nodes-core_\$[isodate]_${distlc}_${distver}_${arch}.deb
+	mv homegear-nodes-ui.deb homegear-nodes-ui_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-homematicwired.deb homegear-homematicwired_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-insteon.deb homegear-insteon_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -917,10 +887,7 @@ echo "isodate=\`date +%Y%m%d\`
 	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv homegear-ui.deb homegear-ui_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	mv binrpc.deb binrpc_\$[isodate]_${distlc}_${distver}_${arch}.deb
-
-	if [ \"\$distributionVersion\" != \"jessie\" ] && [ \"\$distributionVersion\" != \"xenial\" ]; then
-		mv homegear-velux-klf200.deb homegear-velux-klf200_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	fi
+	mv homegear-velux-klf200.deb homegear-velux-klf200_\$[isodate]_${distlc}_${distver}_${arch}.deb
 
 	if [[ -n \$1 ]]; then
 		mv homegear-adminui.deb homegear-adminui_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -939,6 +906,7 @@ echo "isodate=\`date +%Y%m%d\`
 		mv homegear-mbus.deb homegear-mbus_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-zwave.deb homegear-zwave_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-zigbee.deb homegear-zigbee_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv homegear-beckhoff.deb homegear-beckhoff_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-abi.deb homegear-abi_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-freeathome.deb homegear-freeathome_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-klafs.deb homegear-klafs_\$[isodate]_${distlc}_${distver}_${arch}.deb
@@ -947,10 +915,9 @@ echo "isodate=\`date +%Y%m%d\`
 		mv mellonbot.deb mellonbot_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv homegear-cloudconnect.deb homegear-cloudconnect_\$[isodate]_${distlc}_${distver}_${arch}.deb
 		mv ibs-ssh.deb ibs-ssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
-
-		if [ \"\$distributionVersion\" != \"jessie\" ]; then
-			mv homegear-beckhoff.deb homegear-beckhoff_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		fi
+		mv doorctrl.deb doorctrl_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv doorbell.deb doorbell_\$[isodate]_${distlc}_${distver}_${arch}.deb
+		mv ltp08-connector.deb ltp08-connector_\$[isodate]_${distlc}_${distver}_${arch}.deb
 	fi
 	if test -f /build/UploadNightly.sh; then
 		/build/UploadNightly.sh
@@ -968,30 +935,19 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
-	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
-		if test ! -f homegear-velux-klf200_*.deb; then
-			echo "Error: Some or all packages from GitHub could not be created."
-			exit 1
-		fi
-	fi
-
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
-		fi
-
-		if [ "$distributionVersion" != "jessie" ]; then
-			if test ! -f homegear-beckhoff_*.deb; then
-				echo "Error: Some or all packages from gitit.de could not be created."
-				exit 1
-			fi
 		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
@@ -1006,30 +962,19 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
-	if [ "$distributionVersion" != "jessie" ] && [ "$distributionVersion" != "xenial" ]; then
-		if test ! -f homegear-velux-klf200_*.deb; then
-			echo "Error: Some or all packages from GitHub could not be created."
-			exit 1
-		fi
-	fi
-
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
-		fi
-
-		if [ "$distributionVersion" != "jessie" ]; then
-			if test ! -f homegear-beckhoff_*.deb; then
-				echo "Error: Some or all packages from gitit.de could not be created."
-				exit 1
-			fi
 		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
 	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
@@ -1070,7 +1015,7 @@ cd /build
 if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
-	tar -zcpf \${path} homegear* lib* ibs-ssh* mellon* python3-homegear* distribution
+	tar -zcpf \${path} homegear* lib* doorbell* doorctrl* ltp08* ibs-ssh* mellon* python3-homegear* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)

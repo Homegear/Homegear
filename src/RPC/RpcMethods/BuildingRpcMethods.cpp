@@ -31,8 +31,7 @@
 #include "BuildingRpcMethods.h"
 #include "../../GD/GD.h"
 
-namespace Homegear {
-namespace RpcMethods {
+namespace Homegear::RpcMethods {
 
 BaseLib::PVariable RPCAddStoryToBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
@@ -51,7 +50,7 @@ BaseLib::PVariable RPCAddStoryToBuilding::invoke(BaseLib::PRpcClientInfo clientI
     auto result = GD::bl->db->addStoryToBuilding((uint64_t)parameters->at(0)->integerValue64,
                                                  (uint64_t)parameters->at(1)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -83,7 +82,7 @@ BaseLib::PVariable RPCCreateBuilding::invoke(BaseLib::PRpcClientInfo clientInfo,
                                              parameters->size()
                                                  == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -110,7 +109,7 @@ BaseLib::PVariable RPCDeleteBuilding::invoke(BaseLib::PRpcClientInfo clientInfo,
 
     auto result = GD::bl->db->deleteBuilding((uint64_t)parameters->at(0)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -213,7 +212,7 @@ BaseLib::PVariable RPCRemoveStoryFromBuilding::invoke(BaseLib::PRpcClientInfo cl
     auto result = GD::bl->db->removeStoryFromBuilding((uint64_t)parameters->at(0)->integerValue64,
                                                       (uint64_t)parameters->at(1)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -279,7 +278,7 @@ BaseLib::PVariable RPCUpdateBuilding::invoke(BaseLib::PRpcClientInfo clientInfo,
                                           parameters->at(1),
                                           std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -292,5 +291,4 @@ BaseLib::PVariable RPCUpdateBuilding::invoke(BaseLib::PRpcClientInfo clientInfo,
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-}
 }

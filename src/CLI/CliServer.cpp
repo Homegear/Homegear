@@ -73,7 +73,8 @@ std::string CliServer::userCommand(std::string &command) {
         return stringStream.str();
       }
 
-      auto groups = GD::bl->db->getGroups("en-US");
+      auto groups = GD::bl->db->getGroups("en");
+      if (groups->arrayValue->empty()) groups = GD::bl->db->getGroups("en-US"); //Backwards compatibility
       for (auto &group : *groups->arrayValue) {
         auto nameIterator = group->structValue->find("NAME");
         if (nameIterator == group->structValue->end()) continue;
@@ -557,6 +558,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
       stringStream << "reloadroles (rrl)    Delete all roles and recreate them from \"defaultRoles.json\"." << std::endl;
       stringStream << "threads              Prints current thread count" << std::endl;
+      stringStream << "slavemode (sm)       Enables slave mode when in a master/slave installation" << std::endl;
 #ifndef NO_SCRIPTENGINE
       stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
       stringStream << "runcommand (rc)      Executes a PHP command" << std::endl;
@@ -564,8 +566,9 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "scriptsrunning (sr)  Returns the ID and filename of all running scripts" << std::endl;
 #endif
       if (GD::bl->settings.enableNodeBlue()) {
-        stringStream << "flowcount (fc)     Restarts the number of currently running flows" << std::endl;
+        stringStream << "flowcount (fc)       Returns the number of currently running flows" << std::endl;
         stringStream << "flowsrestart (fr)    Restarts all flows" << std::endl;
+        stringStream << "flowsstop (ft)       Stops all flows" << std::endl;
       }
       stringStream << "users [COMMAND]      Execute user commands. Type \"users help\" for more information."
                    << std::endl;
@@ -614,7 +617,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
 
       std::stringstream stream(command);
       std::string element;
-      std::stringstream arguments;
+      std::stringstream scriptArguments;
       int32_t index = 0;
       while (std::getline(stream, element, ' ')) {
         if (index == 0) {
@@ -622,10 +625,17 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
           continue;
         } else if (index == 1) {
           if (element == "help" || element.empty()) break;
-          relativePath = '/' + element;
-          fullPath = GD::bl->settings.scriptPath() + element;
+          relativePath = element;
+          if (!BaseLib::Io::fileExists(relativePath)) fullPath = GD::bl->settings.scriptPath() + element;
+          else fullPath = element;
+          if (!BaseLib::Io::fileExists(fullPath)) {
+            auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            output->structValue->emplace("output", std::make_shared<BaseLib::Variable>("File not found.\n"));
+            output->structValue->emplace("exitCode", std::make_shared<BaseLib::Variable>(1));
+            return output;
+          }
         } else {
-          arguments << element << " ";
+          scriptArguments << element << " ";
         }
         index++;
       }
@@ -640,7 +650,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
         return std::make_shared<BaseLib::Variable>(stringStream.str());
       }
 
-      std::string argumentsString = arguments.str();
+      std::string argumentsString = scriptArguments.str();
       BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::cli, fullPath, relativePath, argumentsString));
       scriptInfo->scriptFinishedCallback = std::bind(&CliServer::scriptFinished, this, std::placeholders::_1, std::placeholders::_2);
       scriptInfo->scriptOutputCallback = std::bind(&CliServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
@@ -751,6 +761,18 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       if (GD::nodeBlueServer) GD::nodeBlueServer->restartFlows();
 
       stringStream << "Flows restarted." << std::endl;
+
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "flowsstop", "ft", "", 0, arguments, showHelp)) {
+      if (showHelp) {
+        stringStream << "Description: This command stops all flows." << std::endl;
+        stringStream << "Usage: flowsstop" << std::endl << std::endl;
+        return std::make_shared<BaseLib::Variable>(stringStream.str());
+      }
+
+      if (GD::nodeBlueServer) GD::nodeBlueServer->stopFlows();
+
+      stringStream << "Flows stopped." << std::endl;
 
       return std::make_shared<BaseLib::Variable>(stringStream.str());
     } else if (BaseLib::HelperFunctions::checkCliCommand(command, "reloadroles", "rrl", "", 0, arguments, showHelp)) {
@@ -936,7 +958,31 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
                    << "Maximum thread count since start: " << GD::bl->threadManager.getMaxRegisteredThreadCount()
                    << std::endl;
       return std::make_shared<BaseLib::Variable>(stringStream.str());
-    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "lifetick", "lt", "", 2, arguments, showHelp)) {
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "slavemode", "sm", "", 1, arguments, showHelp)) {
+      if (showHelp) {
+        stringStream << "Description: This command enables or disables slave mode when running in a master/slave installation." << std::endl;
+        stringStream << "             Executing this command stops all Node-BLUE flows and sets a flag, that slave mode is enabled." << std::endl;
+        stringStream << "             This flag can be used within device families to disable device communication." << std::endl;
+        stringStream << "Usage: slavemode ENABLE" << std::endl << std::endl;
+        stringStream << "Parameters:" << std::endl;
+        stringStream << "  ENABLE: \"true\" to enable and \"false\" to disable slave mode." << std::endl;
+        return std::make_shared<BaseLib::Variable>(stringStream.str());
+      }
+
+      bool enable = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(arguments.at(0))) == "true";
+      if (enable && !GD::bl->slaveMode) {
+        GD::bl->slaveMode = true;
+        if (GD::nodeBlueServer) GD::nodeBlueServer->stopFlows();
+        stringStream << "Slave mode enabled." << std::endl;
+      } else if (!enable && GD::bl->slaveMode) {
+        GD::bl->slaveMode = false;
+        if (GD::nodeBlueServer) GD::nodeBlueServer->restartFlows();
+        stringStream << "Slave mode disabled." << std::endl;
+      } else {
+        stringStream << "Slave mode unchanged." << std::endl;
+      }
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "lifetick", "lt", "", 0, arguments, showHelp)) {
       int32_t exitCode = 0;
       try {
         if (!GD::rpcClient->lifetick()) {
@@ -1043,7 +1089,7 @@ std::string CliServer::peerCommand(uint64_t peerId, std::string &command) {
 }
 
 #ifndef NO_SCRIPTENGINE
-void CliServer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode) {
+void CliServer::scriptFinished(const BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode) {
   try {
     std::unique_lock<std::mutex> waitLock(_waitMutex);
     _scriptFinished = true;
@@ -1055,8 +1101,10 @@ void CliServer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, i
   }
 }
 
-void CliServer::scriptOutput(PScriptInfo &scriptInfo, std::string &output, bool error) {
+void CliServer::scriptOutput(const PScriptInfo &scriptInfo, const std::string &output, bool error) {
   try {
+    //Warning: scriptInfo might be nullptr.
+
     std::string methodName = "cliOutput-" + std::to_string(_clientId);
 
     BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();

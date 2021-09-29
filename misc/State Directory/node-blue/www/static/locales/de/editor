@@ -17,6 +17,14 @@
       "cont" : "Weiter"
     }
   },
+  "event": {
+    "loadPalette": "Lade Palette",
+    "loadNodeCatalogs": "Lade Knotenkataloge",
+    "loadNodes": "Lade Knoten (__count__)",
+    "loadFlows": "Lade Flows",
+    "importFlows": "Füge Flows zum Arbeitsplatz hinzu",
+    "importError": "<p>Fehler beim Hinzufügen der Flows: </p><p>__message__</p>"
+  },
   "workspace" : {
     "defaultName" : "Flow __number__",
     "editFlow" : "Flow bearbeiten: __name__",
@@ -32,7 +40,7 @@
     "label" : {
       "view" : {
         "view" : "Ansicht",
-        "grid" : "Gitter",
+        "grid" : "Raster",
         "showGrid" : "Raster anzeigen",
         "snapGrid" : "Am Raster ausrichten",
         "gridSize" : "Rastergröße",

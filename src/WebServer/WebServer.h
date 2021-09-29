@@ -47,11 +47,13 @@ class WebServer : public BaseLib::IEventsEx {
 
   void post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
+  void put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
+
   void delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
 
   void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char> &content);
 
-  void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders);
+  void getError(int32_t code, const std::string& codeDescription, const std::string& longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders);
 
   void registerSendHeadersHook(std::string &moduleName, std::function<void(BaseLib::Http &http, BaseLib::PVariable &headers)> &callback);
 

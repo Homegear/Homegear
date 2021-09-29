@@ -119,7 +119,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("system.multicall", std::make_shared<RPCSystemMulticall>());
   _rpcMethods->emplace("acknowledgeGlobalServiceMessage", std::make_shared<RPCAcknowledgeGlobalServiceMessage>());
   _rpcMethods->emplace("activateLinkParamset", std::make_shared<RPCActivateLinkParamset>());
-  _rpcMethods->emplace("abortEventReset", std::make_shared<RPCTriggerEvent>());
   _rpcMethods->emplace("addCategoryToChannel", std::make_shared<RPCAddCategoryToChannel>());
   _rpcMethods->emplace("addCategoryToDevice", std::make_shared<RPCAddCategoryToDevice>());
   _rpcMethods->emplace("addCategoryToSystemVariable", std::make_shared<RPCAddCategoryToSystemVariable>());
@@ -127,7 +126,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("addChannelToRoom", std::make_shared<RPCAddChannelToRoom>());
   _rpcMethods->emplace("addDevice", std::make_shared<RPCAddDevice>());
   _rpcMethods->emplace("addDeviceToRoom", std::make_shared<RPCAddDeviceToRoom>());
-  _rpcMethods->emplace("addEvent", std::make_shared<RPCAddEvent>());
   _rpcMethods->emplace("addLink", std::make_shared<RPCAddLink>());
   _rpcMethods->emplace("addRoomToStory", std::make_shared<RPCAddRoomToStory>());
   _rpcMethods->emplace("addSystemVariableToRoom", std::make_shared<RPCAddSystemVariableToRoom>());
@@ -147,7 +145,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("deleteRoom", std::make_shared<RPCDeleteRoom>());
   _rpcMethods->emplace("deleteStory", std::make_shared<RPCDeleteStory>());
   _rpcMethods->emplace("deleteSystemVariable", std::make_shared<RPCDeleteSystemVariable>());
-  _rpcMethods->emplace("enableEvent", std::make_shared<RPCEnableEvent>());
   _rpcMethods->emplace("executeMiscellaneousDeviceMethod", std::make_shared<RPCExecuteMiscellaneousDeviceMethod>());
   _rpcMethods->emplace("familyExists", std::make_shared<RPCFamilyExists>());
   _rpcMethods->emplace("forceConfigUpdate", std::make_shared<RPCForceConfigUpdate>());
@@ -166,7 +163,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("getDeviceInfo", std::make_shared<RPCGetDeviceInfo>());
   _rpcMethods->emplace("getDevicesInCategory", std::make_shared<RPCGetDevicesInCategory>());
   _rpcMethods->emplace("getDevicesInRoom", std::make_shared<RPCGetDevicesInRoom>());
-  _rpcMethods->emplace("getEvent", std::make_shared<RPCGetEvent>());
   _rpcMethods->emplace("getLastEvents", std::make_shared<RPCGetLastEvents>());
   _rpcMethods->emplace("getInstallMode", std::make_shared<RPCGetInstallMode>());
   _rpcMethods->emplace("getInstanceId", std::make_shared<RPCGetInstanceId>());
@@ -176,12 +172,13 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("getLinks", std::make_shared<RPCGetLinks>());
   _rpcMethods->emplace("getMetadata", std::make_shared<RPCGetMetadata>());
   _rpcMethods->emplace("getName", std::make_shared<RPCGetName>());
-  _rpcMethods->emplace("getNodeData", std::make_shared<RPCGetNodeData>());
-  _rpcMethods->emplace("getFlowData", std::make_shared<RPCGetFlowData>());
-  _rpcMethods->emplace("getGlobalData", std::make_shared<RPCGetGlobalData>());
-  _rpcMethods->emplace("getNodeEvents", std::make_shared<RPCGetNodeEvents>());
-  _rpcMethods->emplace("getNodesWithFixedInputs", std::make_shared<RPCGetNodesWithFixedInputs>());
-  _rpcMethods->emplace("getNodeVariable", std::make_shared<RPCGetNodeVariable>());
+  _rpcMethods->emplace("getNodeBlueDataKeys", std::make_shared<RpcMethods::RPCGetNodeBlueDataKeys>());
+  _rpcMethods->emplace("getNodeData", std::make_shared<RpcMethods::RPCGetNodeData>());
+  _rpcMethods->emplace("getFlowData", std::make_shared<RpcMethods::RPCGetFlowData>());
+  _rpcMethods->emplace("getGlobalData", std::make_shared<RpcMethods::RPCGetGlobalData>());
+  _rpcMethods->emplace("getNodeEvents", std::make_shared<RpcMethods::RPCGetNodeEvents>());
+  _rpcMethods->emplace("getNodesWithFixedInputs", std::make_shared<RpcMethods::RPCGetNodesWithFixedInputs>());
+  _rpcMethods->emplace("getNodeVariable", std::make_shared<RpcMethods::RPCGetNodeVariable>());
   _rpcMethods->emplace("getPairingInfo", std::make_shared<RPCGetPairingInfo>());
   _rpcMethods->emplace("getParamset", std::make_shared<RPCGetParamset>());
   _rpcMethods->emplace("getParamsetDescription", std::make_shared<RPCGetParamsetDescription>());
@@ -210,13 +207,11 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("listBidcosInterfaces", std::make_shared<RPCListBidcosInterfaces>());
   _rpcMethods->emplace("listClientServers", std::make_shared<RPCListClientServers>());
   _rpcMethods->emplace("listDevices", std::make_shared<RPCListDevices>());
-  _rpcMethods->emplace("listEvents", std::make_shared<RPCListEvents>());
   _rpcMethods->emplace("listFamilies", std::make_shared<RPCListFamilies>());
   _rpcMethods->emplace("listInterfaces", std::make_shared<RPCListInterfaces>());
   _rpcMethods->emplace("listKnownDeviceTypes", std::make_shared<RPCListKnownDeviceTypes>());
   _rpcMethods->emplace("listTeams", std::make_shared<RPCListTeams>());
   _rpcMethods->emplace("logLevel", std::make_shared<RPCLogLevel>());
-  _rpcMethods->emplace("nodeOutput", std::make_shared<RPCNodeOutput>());
   _rpcMethods->emplace("peerExists", std::make_shared<RPCPeerExists>());
   _rpcMethods->emplace("ping", std::make_shared<RPCPing>());
   _rpcMethods->emplace("putParamset", std::make_shared<RPCPutParamset>());
@@ -229,7 +224,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("removeRoomFromStory", std::make_shared<RPCRemoveRoomFromStory>());
   _rpcMethods->emplace("removeSystemVariableFromRoom", std::make_shared<RPCRemoveSystemVariableFromRoom>());
   _rpcMethods->emplace("removeVariableFromRoom", std::make_shared<RPCRemoveVariableFromRoom>());
-  _rpcMethods->emplace("removeEvent", std::make_shared<RPCRemoveEvent>());
   _rpcMethods->emplace("removeLink", std::make_shared<RPCRemoveLink>());
   _rpcMethods->emplace("reportValueUsage", std::make_shared<RPCReportValueUsage>());
   _rpcMethods->emplace("rssiInfo", std::make_shared<RPCRssiInfo>());
@@ -246,10 +240,10 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("setLinkInfo", std::make_shared<RPCSetLinkInfo>());
   _rpcMethods->emplace("setMetadata", std::make_shared<RPCSetMetadata>());
   _rpcMethods->emplace("setName", std::make_shared<RPCSetName>());
-  _rpcMethods->emplace("setNodeData", std::make_shared<RPCSetNodeData>());
-  _rpcMethods->emplace("setFlowData", std::make_shared<RPCSetFlowData>());
-  _rpcMethods->emplace("setGlobalData", std::make_shared<RPCSetGlobalData>());
-  _rpcMethods->emplace("setNodeVariable", std::make_shared<RPCSetNodeVariable>());
+  _rpcMethods->emplace("setNodeData", std::make_shared<RpcMethods::RPCSetNodeData>());
+  _rpcMethods->emplace("setFlowData", std::make_shared<RpcMethods::RPCSetFlowData>());
+  _rpcMethods->emplace("setGlobalData", std::make_shared<RpcMethods::RPCSetGlobalData>());
+  _rpcMethods->emplace("setNodeVariable", std::make_shared<RpcMethods::RPCSetNodeVariable>());
   _rpcMethods->emplace("setRoomMetadata", std::make_shared<RPCSetRoomMetadata>());
   _rpcMethods->emplace("setStoryMetadata", std::make_shared<RPCSetStoryMetadata>());
   _rpcMethods->emplace("setSystemVariable", std::make_shared<RPCSetSystemVariable>());
@@ -258,7 +252,6 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("startSniffing", std::make_shared<RPCStartSniffing>());
   _rpcMethods->emplace("stopSniffing", std::make_shared<RPCStopSniffing>());
   _rpcMethods->emplace("subscribePeers", std::make_shared<RPCSubscribePeers>());
-  _rpcMethods->emplace("triggerEvent", std::make_shared<RPCTriggerEvent>());
   _rpcMethods->emplace("triggerRpcEvent", std::make_shared<RPCTriggerRpcEvent>());
   _rpcMethods->emplace("unsubscribePeers", std::make_shared<RPCUnsubscribePeers>());
   _rpcMethods->emplace("updateCategory", std::make_shared<RPCUpdateCategory>());
@@ -270,6 +263,9 @@ RpcServer::RpcServer() {
   { //Node-BLUE
     _rpcMethods->emplace("addNodesToFlow", std::make_shared<RpcMethods::RPCAddNodesToFlow>());
     _rpcMethods->emplace("flowHasTag", std::make_shared<RpcMethods::RPCFlowHasTag>());
+    _rpcMethods->emplace("nodeEvent", std::make_shared<RpcMethods::RPCNodeEvent>());
+    _rpcMethods->emplace("nodeLog", std::make_shared<RpcMethods::RPCNodeLog>());
+    _rpcMethods->emplace("nodeOutput", std::make_shared<RpcMethods::RPCNodeOutput>());
     _rpcMethods->emplace("removeNodesFromFlow", std::make_shared<RpcMethods::RPCRemoveNodesFromFlow>());
   }
 
@@ -316,9 +312,11 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("getUiElement", std::make_shared<RpcMethods::RpcGetUiElement>());
   _rpcMethods->emplace("getUiElementMetadata", std::make_shared<RpcMethods::RpcGetUiElementMetadata>());
   _rpcMethods->emplace("getUiElementsWithVariable", std::make_shared<RpcMethods::RpcGetUiElementsWithVariable>());
+  _rpcMethods->emplace("getUiElementTemplate", std::make_shared<RpcMethods::RpcGetUiElementTemplate>());
   _rpcMethods->emplace("requestUiRefresh", std::make_shared<RpcMethods::RpcRequestUiRefresh>());
   _rpcMethods->emplace("removeUiElement", std::make_shared<RpcMethods::RpcRemoveUiElement>());
   _rpcMethods->emplace("setUiElementMetadata", std::make_shared<RpcMethods::RpcSetUiElementMetadata>());
+  _rpcMethods->emplace("uiElementExists", std::make_shared<RpcMethods::RpcUiElementExists>());
   //}}}
 
   // UI notification
@@ -408,8 +406,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
       _out.printError("Error: Settings is nullptr.");
       return;
     }
-    if (!_info->familyServer && !_info->webServer && !_info->xmlrpcServer && !_info->jsonrpcServer
-        && !_info->restServer) {
+    if (!_info->familyServer && !_info->webServer && !_info->rpcServer && !_info->restServer) {
       GD::out.printWarning("Warning: Not starting server as no server types are specified.");
       return;
     }
@@ -438,7 +435,7 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
           "Warning: SSL is not enabled for this RPC server. It is strongly recommended to disable all unencrypted RPC servers when the connected clients support it.");
     }
 
-    if ((_info->xmlrpcServer || _info->jsonrpcServer || _info->restServer)
+    if ((_info->rpcServer || _info->restServer)
         && _info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::none && _info->interface != "::1"
         && _info->interface != "127.0.0.1") {
       _out.printWarning(
@@ -565,7 +562,6 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
         catch (const std::exception &ex) {
           _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         }
-
       }
     }
     //}}}
@@ -797,7 +793,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
   }
 }
 
-void RpcServer::analyzeRPC(std::shared_ptr<Client> client,
+void RpcServer::analyzeRPC(const std::shared_ptr<Client> &client,
                            const std::vector<char> &packet,
                            PacketType::Enum packetType,
                            bool keepAlive) {
@@ -880,7 +876,7 @@ void RpcServer::analyzeRPC(std::shared_ptr<Client> client,
 }
 
 void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
-                                        BaseLib::PVariable variable,
+                                        const BaseLib::PVariable &variable,
                                         int32_t messageId,
                                         PacketType::Enum responseType,
                                         bool keepAlive) {
@@ -889,10 +885,11 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
     std::vector<char> data;
     if (responseType == PacketType::Enum::xmlResponse) {
       _xmlRpcEncoder->encodeResponse(variable, data);
+      std::string header = getHttpResponseHeader("text/xml", data.size() + 23, !keepAlive);
+      header.append("<?xml version=\"1.0\"?>");
+      data.reserve(data.size() + header.size() + 2);
       data.push_back('\r');
       data.push_back('\n');
-      std::string header = getHttpResponseHeader("text/xml", data.size() + 21, !keepAlive);
-      header.append("<?xml version=\"1.0\"?>");
       data.insert(data.begin(), header.begin(), header.end());
       if (GD::bl->debugLevel >= 5) {
         _out.printDebug("Response packet: " + std::string(data.data(), data.size()));
@@ -904,9 +901,10 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
       }
     } else if (responseType == PacketType::Enum::jsonResponse) {
       _jsonEncoder->encodeResponse(variable, messageId, data);
+      std::string header = getHttpResponseHeader("application/json", data.size() + 2, !keepAlive);
+      data.reserve(data.size() + header.size() + 2);
       data.push_back('\r');
       data.push_back('\n');
-      std::string header = getHttpResponseHeader("application/json", data.size(), !keepAlive);
       data.insert(data.begin(), header.begin(), header.end());
       if (GD::bl->debugLevel >= 5) {
         _out.printDebug("Response packet: " + std::string(&data.at(0), data.size()));
@@ -929,7 +927,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client,
   }
 }
 
-bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &methodName) {
+bool RpcServer::methodExists(const BaseLib::PRpcClientInfo &clientInfo, std::string &methodName) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return false;
 
@@ -945,11 +943,11 @@ bool RpcServer::methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &me
   return false;
 }
 
-BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
+BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientInfo,
                                          const std::string &methodName,
                                          BaseLib::PVariable &parameters) {
   try {
-    if (!parameters) parameters = BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tArray));
+    if (!parameters) parameters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     if (GD::bl->shuttingDown) return BaseLib::Variable::createError(100000, "Server is stopped.");
     auto rpcMethodsIterator = _rpcMethods->find(methodName);
     if (rpcMethodsIterator == _rpcMethods->end()) {
@@ -957,8 +955,15 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
         auto result = GD::familyServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
         if (!result->errorStruct || result->structValue->at("faultCode")->integerValue != 32601) return result;
       }
-      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
-      return result;
+      if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
+        auto hgdcMethodName = methodName.substr(4);
+        hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+        auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters->arrayValue);
+        return result;
+      } else {
+        auto result = GD::ipcServer->callRpcMethod(clientInfo, methodName, parameters->arrayValue);
+        return result;
+      }
     }
 
     {
@@ -968,10 +973,12 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
     }
 
     if (GD::bl->debugLevel >= 4) {
-      _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
-      for (std::vector<BaseLib::PVariable>::iterator i = parameters->arrayValue->begin();
-           i != parameters->arrayValue->end(); ++i) {
-        (*i)->print(true, false);
+      if (methodName != "getMetadata") {
+        _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
+        for (auto i = parameters->arrayValue->begin();
+             i != parameters->arrayValue->end(); ++i) {
+          (*i)->print(true, false);
+        }
       }
     }
     BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(clientInfo, parameters->arrayValue);
@@ -995,7 +1002,7 @@ BaseLib::PVariable RpcServer::callMethod(BaseLib::PRpcClientInfo clientInfo,
   return BaseLib::Variable::createError(-32500, ": Unknown application error.");
 }
 
-void RpcServer::callMethod(std::shared_ptr<Client> client,
+void RpcServer::callMethod(const std::shared_ptr<Client> &client,
                            const std::string &methodName,
                            std::shared_ptr<std::vector<BaseLib::PVariable>> parameters,
                            int32_t messageId,
@@ -1004,7 +1011,7 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
   try {
     if (_stopped || GD::bl->shuttingDown) return;
 
-    if (methodName == "setClientType" && parameters->size() > 0) {
+    if (methodName == "setClientType" && !parameters->empty()) {
       if (parameters->at(0)->integerValue == 1) {
         _out.printInfo("Info: Type of client " + std::to_string(client->id) + " set to addon.");
         client->addon = true;
@@ -1023,8 +1030,15 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
           return;
         }
       }
-      BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
-      sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+      if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
+        auto hgdcMethodName = methodName.substr(4);
+        hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+        auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters);
+        sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+      } else {
+        BaseLib::PVariable result = GD::ipcServer->callRpcMethod(client, methodName, parameters);
+        sendRPCResponseToClient(client, result, messageId, responseType, keepAlive);
+      }
       return;
     }
 
@@ -1040,8 +1054,8 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
                          + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "")
                          + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t)(client->rpcType))
                          + ") Parameters:");
-      for (std::vector<BaseLib::PVariable>::iterator i = parameters->begin(); i != parameters->end(); ++i) {
-        (*i)->print(true, false);
+      for (auto &i : *parameters) {
+        i->print(true, false);
       }
     }
     BaseLib::PVariable ret = rpcMethodsIterator->second->invoke(client, parameters);
@@ -1064,7 +1078,7 @@ void RpcServer::callMethod(std::shared_ptr<Client> client,
   }
 }
 
-std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection) {
+std::string RpcServer::getHttpResponseHeader(const std::string& contentType, uint32_t contentLength, bool closeConnection) {
   std::string header;
   header.append("HTTP/1.1 200 OK\r\n");
   header.append("Connection: ");
@@ -1074,7 +1088,7 @@ std::string RpcServer::getHttpResponseHeader(std::string contentType, uint32_t c
   return header;
 }
 
-void RpcServer::analyzeRPCResponse(std::shared_ptr<Client> client,
+void RpcServer::analyzeRPCResponse(const std::shared_ptr<Client>& client,
                                    const std::vector<char> &packet,
                                    PacketType::Enum packetType,
                                    bool keepAlive) {
@@ -1351,7 +1365,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
       if (binaryRpc.processingStarted()
           || (!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted()
               && !strncmp(buffer.data(), "Bin", 3))) {
-        if (!_info->xmlrpcServer) continue;
+        if (!_info->rpcServer) continue;
 
         try {
           processedBytes = 0;
@@ -1384,6 +1398,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none)) {
                 _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
                 http.reset();
+                doBreak = true;
                 break;
               }
 
@@ -1536,6 +1551,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
 
         if (processHttp) {
           try {
+            bool doBreak = false;
             processedBytes = 0;
             while (processedBytes < bytesRead) {
               processedBytes += http.process(buffer.data() + processedBytes, bytesRead - processedBytes);
@@ -1545,6 +1561,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 std::vector<char> data;
                 _webServer->getError(400, "Bad Request", "Your client sent a request larger than 100 MiB.", data);
                 sendRPCResponseToClient(client, data, false);
+                doBreak = true;
                 break;
               }
 
@@ -1556,6 +1573,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   auto headerIterator = header.fields.find("ibs-userid");
                   if (headerIterator != header.fields.end()) {
                     auto userMapIterator = cloudUserMap.find(headerIterator->second);
+                    if (userMapIterator == cloudUserMap.end()) userMapIterator = cloudUserMap.find("*");
                     if (userMapIterator != cloudUserMap.end()) {
                       if (client->acls->fromUser(userMapIterator->second)) {
                         client->user = userMapIterator->second;
@@ -1570,10 +1588,18 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 //}}}
 
                 if (_info->webSocket && (http.getHeader().connection & BaseLib::Http::Connection::upgrade)) {
-                  //Do this before basic auth, because currently basic auth is not supported by WebSockets. Authorization takes place after the upgrade.
-                  handleConnectionUpgrade(client, http);
-                  http.reset();
-                  break;
+                  if (http.getHeader().path.compare(0, 11, "/node-blue/") == 0) {
+                    GD::nodeBlueServer->getNoderedWebsocket()->handoverClient(client->socket, client->socketDescriptor, http);
+                    client->socketDescriptor.reset(new BaseLib::FileDescriptor());
+                    client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+                    client->closed = true;
+                    continue;
+                  } else {
+                    //Do this before basic auth, because currently basic auth is not supported by WebSockets. Authorization takes place after the upgrade.
+                    handleConnectionUpgrade(client, http);
+                    http.reset();
+                    continue;
+                  }
                 }
 
                 if (!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)) {
@@ -1583,6 +1609,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                         _out.printError(
                             "Error: Authorization failed for host " + http.getHeader().host + ". Closing connection.");
                         http.reset();
+                        doBreak = true;
                         break;
                       } else _out.printInfo("Info: Basic authentication failed. Falling back to no authentication.");
                     } else {
@@ -1595,27 +1622,23 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                     _out.printError("Error: Authorization failed for host " + http.getHeader().host
                                         + ". Closing connection. Error was: " + ex.what());
                     http.reset();
+                    doBreak = true;
                     break;
                   }
                 } else if (!client->authenticated
                     && !(_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::none)) {
                   _out.printError("Error: Authorization failed for host " + http.getHeader().host + ".");
                   http.reset();
+                  doBreak = true;
                   break;
                 }
                 if (_info->restServer && http.getHeader().path.compare(0, 5, "/api/") == 0) {
                   if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by REST server.");
                   _restServer->process(client, http, client->socket);
                 } else if (_info->webServer && (
-                    !_info->xmlrpcServer ||
+                    !_info->rpcServer ||
                         (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
-                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml") ||
-                        http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
-                        http.getHeader().path.compare(0, 7, "/admin/") == 0
-                ) && (
-                    !_info->jsonrpcServer ||
-                        (http.getHeader().method != "POST" && http.getType() != BaseLib::Http::Type::Enum::response) ||
-                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "application/json") ||
+                        (!http.getHeader().contentType.empty() && http.getHeader().contentType != "text/xml" && http.getHeader().contentType != "application/json") ||
                         http.getHeader().path.compare(0, 11, "/node-blue/") == 0 ||
                         http.getHeader().path.compare(0, 4, "/ui/") == 0 ||
                         http.getHeader().path.compare(0, 7, "/admin/") == 0
@@ -1634,11 +1657,10 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                   if (http.getHeader().connection & BaseLib::Http::Connection::Enum::close)
                     closeClientConnection(client);
                   client->lastReceivedPacket = BaseLib::HelperFunctions::getTime();
-                } else if (http.getContentSize() > 0 && (_info->xmlrpcServer || _info->jsonrpcServer)) {
+                } else if (http.getContentSize() > 0 && _info->rpcServer) {
                   if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Packet is handled by RPC server.");
                   if (http.getHeader().contentType == "application/json" || http.getContent().at(0) == '{')
-                    packetType = packetType
-                                     == PacketType::xmlRequest ? PacketType::jsonRequest : PacketType::jsonResponse;
+                    packetType = (packetType == PacketType::xmlRequest || packetType == PacketType::jsonRequest) ? PacketType::jsonRequest : PacketType::jsonResponse;
                   packetReceived(client,
                                  http.getContent(),
                                  packetType,
@@ -1646,14 +1668,14 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 }
                 http.reset();
                 if (client->socketDescriptor->descriptor == -1) {
-                  if (GD::bl->debugLevel >= 5)
-                    _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id)
-                                        + " closed.");
+                  if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+                  if (processedBytes < bytesRead)
+                    _out.printInfo("Info: " + std::to_string(bytesRead - processedBytes) + " bytes are not processed, because connection to client number " + std::to_string(client->socketDescriptor->id) + " was closed.");
                   break;
                 }
               }
             }
-            continue;
+            if (doBreak) break;
           }
           catch (BaseLib::HttpException &ex) {
             _out.printError("XML RPC Server: Could not process HTTP packet: " + std::string(ex.what()) + " Buffer: "
@@ -1664,6 +1686,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                                  "Your client sent a request that this server could not understand.",
                                  data);
             sendRPCResponseToClient(client, data, false);
+            break;
           }
         }
       }
@@ -1728,7 +1751,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
       }
       FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
     }
-    if (!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) {
+    if (!select(nfds, &readFileDescriptor, nullptr, nullptr, &timeout)) {
       if (GD::bl->hf.getTime() - _lastGargabeCollection > 60000
           || _clients.size() > GD::bl->settings.rpcServerMaxConnections() * 100 / 112)
         collectGarbage();
