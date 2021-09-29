@@ -60,9 +60,6 @@ std::unique_ptr<UPnP> GD::uPnP(new UPnP());
 std::unique_ptr<Mqtt> GD::mqtt;
 std::unique_ptr<UiController> GD::uiController;
 std::unique_ptr<VariableProfileManager> GD::variableProfileManager;
-#ifdef EVENTHANDLER
-std::unique_ptr<EventHandler> GD::eventHandler;
-#endif
 #ifndef NO_SCRIPTENGINE
 std::unique_ptr<ScriptEngine::ScriptEngineServer> GD::scriptEngineServer;
 #endif

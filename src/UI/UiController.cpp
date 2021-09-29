@@ -46,6 +46,7 @@ void UiController::load() {
     _uiElements.clear();
     _uiElementsByRoom.clear();
     _uiElementsByCategory.clear();
+    _uiElementsByNode.clear();
     auto rows = GD::bl->db->getUiElements();
     for (auto &row : *rows) {
       auto uiElement = std::make_shared<UiElement>();
@@ -63,6 +64,7 @@ void UiController::load() {
       for (auto categoryId : uiElement->categoryIds) {
         _uiElementsByCategory[categoryId].emplace(uiElement);
       }
+      if (!uiElement->nodeId.empty()) _uiElementsByNode[uiElement->nodeId].emplace(uiElement);
     }
   }
   catch (const std::exception &ex) {
@@ -75,36 +77,36 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
     if (elementId.empty()) return BaseLib::Variable::createError(-1, "elementId is empty.");
     if (data->type != BaseLib::VariableType::tStruct) return BaseLib::Variable::createError(-1, "data is not of type Struct.");
 
-    BaseLib::PVariable dataCopy = data;
     BaseLib::PVariable dynamicMetadata = metadata;
     if (!dynamicMetadata || dynamicMetadata->structValue->empty()) {
-      auto metadataIterator = dataCopy->structValue->find("dynamicMetadata");
-      if (metadataIterator != dataCopy->structValue->end()) {
+      auto metadataIterator = data->structValue->find("dynamicMetadata");
+      if (metadataIterator != data->structValue->end()) {
         dynamicMetadata = metadataIterator->second;
-        dataCopy->structValue->erase("dynamicMetadata");
+        data->structValue->erase("dynamicMetadata");
       }
     }
 
     std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
-    auto databaseId = GD::bl->db->addUiElement(elementId, dataCopy, dynamicMetadata);
+    auto databaseId = GD::bl->db->addUiElement(elementId, data, dynamicMetadata);
 
     if (databaseId == 0) return BaseLib::Variable::createError(-1, "Error adding element to database.");
 
     auto uiElement = std::make_shared<UiElement>();
     uiElement->databaseId = databaseId;
     uiElement->elementId = elementId;
-    uiElement->data = dataCopy;
+    uiElement->data = data;
     uiElement->metadata = dynamicMetadata;
 
-    addDataInfo(uiElement, dataCopy);
+    addDataInfo(uiElement, data);
 
     _uiElements.emplace(uiElement->databaseId, uiElement);
     _uiElementsByRoom[uiElement->roomId].emplace(uiElement);
     for (auto categoryId : uiElement->categoryIds) {
       _uiElementsByCategory[categoryId].emplace(uiElement);
     }
+    if (!uiElement->nodeId.empty()) _uiElementsByNode[uiElement->nodeId].emplace(uiElement);
 
-    requestUiRefresh(clientInfo, "");
+    requestUiRefresh("");
 
     return std::make_shared<BaseLib::Variable>(databaseId);
   }
@@ -117,7 +119,7 @@ BaseLib::PVariable UiController::addUiElement(BaseLib::PRpcClientInfo clientInfo
 BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PVariable &uiInfo, const BaseLib::PVariable &variable, uint64_t roomId, BaseLib::PVariable &inputPeers, BaseLib::PVariable &outputPeers) {
   try {
     std::list<std::list<uint64_t>> roleIdsIn;
-    std::list<std::list<std::pair<uint64_t, BaseLib::PVariable>>> roleIdsOut;
+    std::list < std::list < std::pair < uint64_t, BaseLib::PVariable>>> roleIdsOut;
 
     { //Get required role Ids
       auto roleIdsInIterator = uiInfo->structValue->find("roleIdsIn");
@@ -276,25 +278,33 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
               for (auto &deviceIterator : *variables2->structValue) {
                 for (auto &channelIterator2 : *deviceIterator.second->structValue) {
                   for (auto &variableIterator : *channelIterator2.second->structValue) {
-                    bool wrongDirection = false;
-                    auto directionIterator = variableIterator.second->structValue->find("direction");
-                    if (directionIterator != variableIterator.second->structValue->end()) {
-                      if (directionIterator->second->integerValue64 == 1) {
-                        if (GD::bl->debugLevel >= 5)
-                          GD::out.printDebug("Debug: Required role (" + std::to_string(roleId) + ") " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + " of device " + deviceIterator.first
-                                                 + ". Simple UI element creation is not possible.");
-                        wrongDirection = true;
+                    for (auto &roleIterator : *variableIterator.second->arrayValue) {
+                      auto idIterator = roleIterator->structValue->find("id");
+                      if (idIterator == roleIterator->structValue->end()) continue;
+
+                      if ((uint64_t)idIterator->second->integerValue64 != roleId) continue;
+
+                      bool wrongDirection = false;
+                      auto directionIterator = roleIterator->structValue->find("direction");
+                      if (directionIterator != roleIterator->structValue->end()) {
+                        if (directionIterator->second->integerValue64 == 1) {
+                          if (GD::bl->debugLevel >= 5)
+                            GD::out.printDebug(
+                                "Debug: Required role (" + std::to_string(roleId) + ") of variable " + variableIterator.first + " does not have required direction (input) in channel " + channelIterator2.first + " of device " + deviceIterator.first
+                                    + ". Simple UI element creation is not possible.");
+                          wrongDirection = true;
+                        }
                       }
-                    }
 
-                    if (!wrongDirection) {
-                      roleCount++;
+                      if (!wrongDirection) {
+                        roleCount++;
 
-                      auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                      roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                      roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                      roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                      outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                        auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                        roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                        roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                        roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                        outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                      }
                     }
                   }
                 }
@@ -314,7 +324,7 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
       for (const auto &roleIdOuter : roleIdsOut) {
         auto outerArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
         outerArray->arrayValue->reserve(roleIdOuter.size());
-        for (auto roleId : roleIdOuter) {
+        for (const auto &roleId : roleIdOuter) {
           BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
           requestParameters->arrayValue->reserve(2);
           requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(roleId.first));
@@ -420,27 +430,34 @@ BaseLib::PVariable UiController::findRoleVariables(const BaseLib::PRpcClientInfo
               for (auto &deviceIterator : *variables2->structValue) {
                 for (auto &channelIterator2 : *deviceIterator.second->structValue) {
                   for (auto &variableIterator : *channelIterator2.second->structValue) {
-                    bool wrongDirection = false;
-                    auto directionIterator = variableIterator.second->structValue->find("direction");
-                    if (directionIterator != variableIterator.second->structValue->end()) {
-                      if (directionIterator->second->integerValue64 == 0) {
-                        if (GD::bl->debugLevel >= 5)
-                          GD::out.printDebug(
-                              "Debug: Required role (" + std::to_string(roleId.first) + ") " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device " + deviceIterator.first
-                                  + ". Simple UI element creation is not possible.");
-                        wrongDirection = true;
+                    for (auto &roleIterator : *variableIterator.second->arrayValue) {
+                      auto idIterator = roleIterator->structValue->find("id");
+                      if (idIterator == roleIterator->structValue->end()) continue;
+
+                      if ((uint64_t)idIterator->second->integerValue64 != roleId.first) continue;
+                      bool wrongDirection = false;
+                      auto directionIterator = roleIterator->structValue->find("direction");
+                      if (directionIterator != roleIterator->structValue->end()) {
+                        if (directionIterator->second->integerValue64 == 0) {
+                          if (GD::bl->debugLevel >= 5)
+                            GD::out.printDebug(
+                                "Debug: Required role (" + std::to_string(roleId.first) + ") of variable " + variableIterator.first + " does not have required direction (output) in channel " + channelIterator2.first + " of device "
+                                    + deviceIterator.first
+                                    + ". Simple UI element creation is not possible.");
+                          wrongDirection = true;
+                        }
                       }
-                    }
 
-                    if (!wrongDirection) {
-                      roleCount++;
+                      if (!wrongDirection) {
+                        roleCount++;
 
-                      auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                      roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
-                      roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
-                      roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
-                      if (roleId.second) roleVariable->structValue->emplace("value", roleId.second);
-                      outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                        auto roleVariable = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                        roleVariable->structValue->emplace("peer", variable->arrayValue->at(0));
+                        roleVariable->structValue->emplace("channel", std::make_shared<BaseLib::Variable>(BaseLib::Math::getNumber(channelIterator2.first)));
+                        roleVariable->structValue->emplace("name", std::make_shared<BaseLib::Variable>(variableIterator.first));
+                        if (roleId.second) roleVariable->structValue->emplace("value", roleId.second);
+                        outerArray->arrayValue->emplace_back(std::move(roleVariable));
+                      }
                     }
                   }
                 }
@@ -679,9 +696,13 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
     uiElement->peerInfo->outputPeers.clear();
     uiElement->roomId = 0;
     uiElement->categoryIds.clear();
+    uiElement->nodeId.clear();
 
     auto dataIterator = data->structValue->find("label");
     if (dataIterator != data->structValue->end()) uiElement->label = dataIterator->second->stringValue;
+
+    dataIterator = data->structValue->find("icons");
+    if (dataIterator != data->structValue->end()) uiElement->icons = dataIterator->second;
 
     dataIterator = data->structValue->find("inputPeers");
     if (dataIterator != data->structValue->end()) {
@@ -704,6 +725,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
             auto nameIterator = peerElement->structValue->find("name");
             if (nameIterator != peerElement->structValue->end()) variableInfo->name = nameIterator->second->stringValue;
 
+            auto unitIterator = peerElement->structValue->find("unit");
+            if (unitIterator != peerElement->structValue->end()) variableInfo->unit = unitIterator->second->stringValue;
+
             auto minimumValueIterator = peerElement->structValue->find("minimum");
             if (minimumValueIterator != peerElement->structValue->end()) variableInfo->minimumValue = minimumValueIterator->second;
 
@@ -715,6 +739,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
 
             auto maximumValueScaledIterator = peerElement->structValue->find("maximumScaled");
             if (maximumValueScaledIterator != peerElement->structValue->end()) variableInfo->maximumValueScaled = maximumValueScaledIterator->second;
+
+            auto renderingIterator = peerElement->structValue->find("rendering");
+            if (renderingIterator != peerElement->structValue->end()) variableInfo->rendering = renderingIterator->second;
           } else if (peerElement->type == BaseLib::VariableType::tInteger || peerElement->type == BaseLib::VariableType::tInteger64) {
             variableInfo->peerId = (uint64_t)peerElement->integerValue64;
           } else continue;
@@ -773,6 +800,9 @@ void UiController::addDataInfo(UiController::PUiElement &uiElement, const BaseLi
         uiElement->categoryIds.emplace((uint64_t)categoryElement->integerValue64);
       }
     }
+
+    dataIterator = data->structValue->find("node");
+    if (dataIterator != data->structValue->end()) uiElement->nodeId = dataIterator->second->stringValue;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -817,23 +847,61 @@ void UiController::addVariableInfo(const BaseLib::PRpcClientInfo &clientInfo, co
         continue;
       }
 
-      auto typeIterator = description->structValue->find("TYPE");
-      if (typeIterator != description->structValue->end()) variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(typeIterator->second->stringValue)));
+      BaseLib::VariableType type = BaseLib::VariableType::tVoid;
 
-      auto minimumValueIterator = variable->structValue->find("minimumValue");
-      auto maximumValueIterator = variable->structValue->find("maximumValue");
-      if (minimumValueIterator == variable->structValue->end() || maximumValueIterator == variable->structValue->end()) {
-        if (minimumValueIterator == variable->structValue->end()) {
-          auto minimumValueIterator2 = description->structValue->find("MIN");
-          if (minimumValueIterator2 != description->structValue->end()) {
-            variable->structValue->emplace("minimumValue", minimumValueIterator2->second);
+      auto typeIterator = description->structValue->find("TYPE");
+      if (typeIterator != description->structValue->end()) {
+        auto &stringType = typeIterator->second->stringValue;
+        variable->structValue->emplace("type", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::toLower(stringType)));
+
+        if (stringType == "INTEGER") type = BaseLib::VariableType::tInteger;
+        else if (stringType == "INTEGER64") type = BaseLib::VariableType::tInteger64;
+        else if (stringType == "FLOAT") type = BaseLib::VariableType::tFloat;
+      }
+
+      if (type != BaseLib::VariableType::tVoid) {
+        auto propertiesIterator = variable->structValue->find("properties");
+        if (propertiesIterator == variable->structValue->end()) {
+          auto result = variable->structValue->emplace("properties", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+          if (!result.second) continue;
+          propertiesIterator = result.first;
+        }
+
+        auto minimumValueIterator2 = description->structValue->find("MIN");
+        if (minimumValueIterator2 != description->structValue->end()) {
+          bool replaceMinimumValue = false;
+          if (type == BaseLib::VariableType::tInteger) replaceMinimumValue = (minimumValueIterator2->second->integerValue != -2147483648);
+          else if (type == BaseLib::VariableType::tInteger64) replaceMinimumValue = (minimumValueIterator2->second->integerValue64 != (-9223372036854775807ll - 1));
+          else if (type == BaseLib::VariableType::tFloat) replaceMinimumValue = (minimumValueIterator2->second->floatValue != -3.40282347e+38f);
+
+          if (replaceMinimumValue) {
+            auto minimumIterator = propertiesIterator->second->structValue->find("minimum");
+            if (minimumIterator == propertiesIterator->second->structValue->end()) {
+              auto result = propertiesIterator->second->structValue->emplace("minimum", std::make_shared<BaseLib::Variable>(type));
+              if (!result.second) continue;
+              minimumIterator = result.first;
+            }
+
+            minimumIterator->second = minimumValueIterator2->second;
           }
         }
 
-        if (maximumValueIterator == variable->structValue->end()) {
-          auto maximumValueIterator2 = description->structValue->find("MAX");
-          if (maximumValueIterator2 != description->structValue->end()) {
-            variable->structValue->emplace("maximumValue", maximumValueIterator2->second);
+        auto maximumValueIterator2 = description->structValue->find("MAX");
+        if (maximumValueIterator2 != description->structValue->end()) {
+          bool replaceMaximumValue = false;
+          if (type == BaseLib::VariableType::tInteger) replaceMaximumValue = (maximumValueIterator2->second->integerValue != 2147483647);
+          else if (type == BaseLib::VariableType::tInteger64) replaceMaximumValue = (maximumValueIterator2->second->integerValue64 != (-9223372036854775807ll));
+          else if (type == BaseLib::VariableType::tFloat) replaceMaximumValue = (maximumValueIterator2->second->floatValue != 3.40282347e+38f);
+
+          if (replaceMaximumValue) {
+            auto maximumIterator = propertiesIterator->second->structValue->find("maximum");
+            if (maximumIterator == propertiesIterator->second->structValue->end()) {
+              auto result = propertiesIterator->second->structValue->emplace("maximum", std::make_shared<BaseLib::Variable>(type));
+              if (!result.second) continue;
+              maximumIterator = result.first;
+            }
+
+            maximumIterator->second = maximumValueIterator2->second;
           }
         }
       }
@@ -882,10 +950,16 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
       auto &uiElement = uiElementIterator->second;
       auto languageIterator = uiElement->rpcElement.find(language);
       if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
+        auto language2 = language;
+        auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement && language2.size() == 5) {
+          language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+          rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        }
+        if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
         if (!rpcElement) continue;
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
+        uiElement->rpcElement.emplace(language2, rpcElement);
+        languageIterator = uiElement->rpcElement.find(language2);
         if (languageIterator == uiElement->rpcElement.end()) continue;
       }
 
@@ -897,11 +971,13 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
         if (!checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
       }
 
-      auto elementInfo = languageIterator->second->getElementInfo();
+      auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("clickCount", std::make_shared<BaseLib::Variable>(uiElementIterator->first));
+      if (uiElement->icons) (*elementInfo->structValue)["icons"] = uiElement->icons;
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
+      if (!uiElement->nodeId.empty()) elementInfo->structValue->emplace("node", std::make_shared<BaseLib::Variable>(uiElement->nodeId));
       auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       categories->arrayValue->reserve(uiElement->categoryIds.size());
       for (auto categoryId : uiElement->categoryIds) {
@@ -984,10 +1060,16 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
 
     auto languageIterator = uiElement->rpcElement.find(language);
     if (languageIterator == uiElement->rpcElement.end()) {
-      auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-      if (!rpcElement) return BaseLib::Variable::createError(-32500, "Unknown application error.");
-      uiElement->rpcElement.emplace(language, rpcElement);
-      languageIterator = uiElement->rpcElement.find(language);
+      auto language2 = language;
+      auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+      if (!rpcElement && language2.size() == 5) {
+        language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+        rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+      }
+      if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
+      if (!rpcElement) return BaseLib::Variable::createError(-1, "No XML file found for UI element.");
+      uiElement->rpcElement.emplace(language2, rpcElement);
+      languageIterator = uiElement->rpcElement.find(language2);
       if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
     }
 
@@ -999,10 +1081,12 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
       if (!checkElementAccess(clientInfo, uiElement, languageIterator->second)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     }
 
-    auto elementInfo = languageIterator->second->getElementInfo();
+    auto elementInfo = languageIterator->second->getElementInfo(false);
     elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
+    if (uiElement->icons) (*elementInfo->structValue)["icons"] = uiElement->icons;
     elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
     elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
+    if (!uiElement->nodeId.empty()) elementInfo->structValue->emplace("node", std::make_shared<BaseLib::Variable>(uiElement->nodeId));
     auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     categories->arrayValue->reserve(uiElement->categoryIds.size());
     for (auto categoryId : uiElement->categoryIds) {
@@ -1090,16 +1174,22 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
     for (auto &uiElement : roomIterator->second) {
       auto languageIterator = uiElement->rpcElement.find(language);
       if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-        if (!rpcElement) continue;
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
-        if (languageIterator == uiElement->rpcElement.end()) continue;
+        auto language2 = language;
+        auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement && language2.size() == 5) {
+          language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+          rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        }
+        if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement) return BaseLib::Variable::createError(-1, "No XML file found for UI element.");
+        uiElement->rpcElement.emplace(language2, rpcElement);
+        languageIterator = uiElement->rpcElement.find(language2);
+        if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
       }
 
       if (checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
 
-      auto elementInfo = languageIterator->second->getElementInfo();
+      auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
@@ -1167,23 +1257,29 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
     for (auto &uiElement : categoryIterator->second) {
       auto languageIterator = uiElement->rpcElement.find(language);
       if (languageIterator == uiElement->rpcElement.end()) {
-        auto rpcElement = _descriptions->getUiElement(language, uiElement->elementId, uiElement->peerInfo);
-        if (!rpcElement) continue;
-        uiElement->rpcElement.emplace(language, rpcElement);
-        languageIterator = uiElement->rpcElement.find(language);
-        if (languageIterator == uiElement->rpcElement.end()) continue;
+        auto language2 = language;
+        auto rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement && language2.size() == 5) {
+          language2 = BaseLib::HelperFunctions::splitFirst(language, '-').first;
+          rpcElement = _descriptions->getUiElement(language2, uiElement->elementId, uiElement->peerInfo);
+        }
+        if (!rpcElement) rpcElement = _descriptions->getUiElement("en", uiElement->elementId, uiElement->peerInfo);
+        if (!rpcElement) return BaseLib::Variable::createError(-1, "No XML file found for UI element.");
+        uiElement->rpcElement.emplace(language2, rpcElement);
+        languageIterator = uiElement->rpcElement.find(language2);
+        if (languageIterator == uiElement->rpcElement.end()) return BaseLib::Variable::createError(-32500, "Unknown application error.");
       }
 
       if (checkAcls && !checkElementAccess(clientInfo, uiElement, languageIterator->second)) continue;
 
-      auto elementInfo = languageIterator->second->getElementInfo();
+      auto elementInfo = languageIterator->second->getElementInfo(false);
       elementInfo->structValue->emplace("databaseId", std::make_shared<BaseLib::Variable>(uiElement->databaseId));
       elementInfo->structValue->emplace("label", std::make_shared<BaseLib::Variable>(uiElement->label));
       elementInfo->structValue->emplace("room", std::make_shared<BaseLib::Variable>(uiElement->roomId));
       auto categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       categories->arrayValue->reserve(uiElement->categoryIds.size());
-      for (auto categoryId : uiElement->categoryIds) {
-        categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(categoryId));
+      for (auto elementCategoryId : uiElement->categoryIds) {
+        categories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(elementCategoryId));
       }
       elementInfo->structValue->emplace("categories", categories);
 
@@ -1221,6 +1317,23 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
     }
 
     return uiElements;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::getUiElementTemplate(const BaseLib::PRpcClientInfo &clientInfo, const std::string &elementId, const std::string &language) {
+  try {
+    auto uiElement = _descriptions->getUiElement(language, elementId);
+    if (!uiElement && language.size() == 5) {
+      auto languageCodePair = BaseLib::HelperFunctions::splitFirst(language, '-');
+      uiElement = _descriptions->getUiElement(languageCodePair.first, elementId);
+    }
+    if (!uiElement) uiElement = _descriptions->getUiElement("en", elementId);
+    if (uiElement) return uiElement->getElementInfo(true);
+    else return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1280,7 +1393,7 @@ bool UiController::checkElementAccess(const BaseLib::PRpcClientInfo &clientInfo,
   return false;
 }
 
-BaseLib::PVariable UiController::requestUiRefresh(const BaseLib::PRpcClientInfo &clientInfo, const std::string &id) {
+BaseLib::PVariable UiController::requestUiRefresh(const std::string &id) {
   try {
     GD::rpcClient->broadcastRequestUiRefresh(id);
 
@@ -1292,7 +1405,7 @@ BaseLib::PVariable UiController::requestUiRefresh(const BaseLib::PRpcClientInfo 
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId) {
+BaseLib::PVariable UiController::removeUiElement(uint64_t databaseId) {
   try {
     if (databaseId == 0) return BaseLib::Variable::createError(-1, "databaseId is invalid.");
 
@@ -1326,9 +1439,20 @@ BaseLib::PVariable UiController::removeUiElement(const BaseLib::PRpcClientInfo &
       }
     }
 
+    auto nodeIterator = _uiElementsByNode.find(elementIterator->second->nodeId);
+    if (nodeIterator != _uiElementsByNode.end()) {
+      for (auto &nodeUiElement : nodeIterator->second) {
+        if (nodeUiElement.get() == elementIterator->second.get()) {
+          nodeIterator->second.erase(nodeUiElement);
+          break;
+        }
+      }
+      if (nodeIterator->second.empty()) _uiElementsByNode.erase(nodeIterator);
+    }
+
     _uiElements.erase(elementIterator);
 
-    requestUiRefresh(clientInfo, "");
+    requestUiRefresh("");
 
     return std::make_shared<BaseLib::Variable>();
   }
@@ -1355,6 +1479,52 @@ BaseLib::PVariable UiController::setUiElementMetadata(const BaseLib::PRpcClientI
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable UiController::uiElementExists(const BaseLib::PRpcClientInfo &clientInfo, uint64_t databaseId) {
+  try {
+    std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+    auto elementIterator = _uiElements.find(databaseId);
+
+    return std::make_shared<BaseLib::Variable>(elementIterator != _uiElements.end());
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+std::unordered_map<std::string, std::unordered_set<UiController::PUiElement>> UiController::getAllNodeUiElements() {
+  try {
+    std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+    return _uiElementsByNode;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::unordered_map < std::string, std::unordered_set < UiController::PUiElement >> ();
+}
+
+void UiController::removeNodeUiElements(const std::string &nodeId) {
+  try {
+    GD::out.printInfo("Info: Removing UI elements of node " + nodeId + "...");
+    std::unordered_set<PUiElement> uiElements;
+
+    {
+      std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
+      auto uiElementsIterator = _uiElementsByNode.find(nodeId);
+      if (uiElementsIterator == _uiElementsByNode.end()) {
+        return;
+      }
+      uiElements = uiElementsIterator->second;
+    }
+
+    for (auto &uiElement : uiElements) {
+      GD::out.printInfo("Removing UI element with database ID " + std::to_string(uiElement->databaseId) + "...");
+      removeUiElement(uiElement->databaseId);
+    }
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
 }
 
 std::unordered_set<uint64_t> UiController::getUiElementsWithVariable(uint64_t peerId, int32_t channel, const std::string &variableName) {

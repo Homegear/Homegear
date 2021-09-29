@@ -100,9 +100,9 @@ class RpcServer {
 
   std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; };
 
-  bool methodExists(BaseLib::PRpcClientInfo clientInfo, std::string &methodName);
+  bool methodExists(const BaseLib::PRpcClientInfo& clientInfo, std::string &methodName);
 
-  BaseLib::PVariable callMethod(BaseLib::PRpcClientInfo clientInfo,
+  BaseLib::PVariable callMethod(const BaseLib::PRpcClientInfo& clientInfo,
                                 const std::string &methodName,
                                 BaseLib::PVariable &parameters);
 
@@ -157,7 +157,7 @@ class RpcServer {
   void readClient(std::shared_ptr<Client> client);
 
   void sendRPCResponseToClient(std::shared_ptr<Client> client,
-                               BaseLib::PVariable variable,
+                               const BaseLib::PVariable& variable,
                                int32_t messageId,
                                PacketType::Enum packetType,
                                bool keepAlive);
@@ -171,24 +171,24 @@ class RpcServer {
 
   void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http &http);
 
-  void analyzeRPC(std::shared_ptr<Client> client,
+  void analyzeRPC(const std::shared_ptr<Client>& client,
                   const std::vector<char> &packet,
                   PacketType::Enum packetType,
                   bool keepAlive);
 
-  void analyzeRPCResponse(std::shared_ptr<Client> client,
+  void analyzeRPCResponse(const std::shared_ptr<Client>& client,
                           const std::vector<char> &packet,
                           PacketType::Enum packetType,
                           bool keepAlive);
 
-  void callMethod(std::shared_ptr<Client> client,
+  void callMethod(const std::shared_ptr<Client>& client,
                   const std::string &methodName,
                   std::shared_ptr<std::vector<BaseLib::PVariable>> parameters,
                   int32_t messageId,
                   PacketType::Enum responseType,
                   bool keepAlive);
 
-  std::string getHttpResponseHeader(std::string contentType, uint32_t contentLength, bool closeConnection);
+  static std::string getHttpResponseHeader(const std::string& contentType, uint32_t contentLength, bool closeConnection);
 
   void closeClientConnection(std::shared_ptr<Client> client);
 

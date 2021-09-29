@@ -34,8 +34,7 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear {
-namespace RpcMethods {
+namespace Homegear::RpcMethods {
 
 class RpcActivateVariableProfile : public BaseLib::Rpc::RpcMethod {
  public:
@@ -96,7 +95,6 @@ class RpcUpdateVariableProfile : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-}
 }
 
 #endif //HOMEGEAR_VARIABLEPROFILERPCMETHODS_H

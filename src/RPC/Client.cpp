@@ -161,43 +161,45 @@ BaseLib::PVariable Client::getNodeEvents() {
   return BaseLib::Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 
-void Client::broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value) {
+void Client::broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value, bool retain) {
   try {
     if (!GD::bl->booting) {
       std::lock_guard<std::mutex> serversGuard(_serversMutex);
       for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin();
            server != _servers.end(); ++server) {
         if (!server->second->nodeEvents) continue;
-        if (server->second->removed || (server->second->getServerClientInfo()->sendEventsToRpcServer
-            && (server->second->getServerClientInfo()->closed
-                || !server->second->getServerClientInfo()->socket->connected()))
-            || (server->second->socket && !server->second->socket->connected() && server->second->keepAlive
-                && !server->second->reconnectInfinitely) || (!server->second->initialized
-            && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120))
+        if (server->second->removed ||
+            (server->second->getServerClientInfo()->sendEventsToRpcServer && (server->second->getServerClientInfo()->closed || !server->second->getServerClientInfo()->socket->connected())) ||
+            (server->second->socket && !server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely) ||
+            (!server->second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server->second->creationTime > 120)) {
           continue;
+        }
         if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("nodeEvent")) continue;
         if (server->second->webSocket || server->second->json) {
           std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
           parameters->push_back(std::make_shared<BaseLib::Variable>(nodeId));
           parameters->push_back(std::make_shared<BaseLib::Variable>(topic));
           parameters->push_back(value);
-          server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(
-              "nodeEvent",
-              parameters));
+          server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("nodeEvent", parameters));
         }
       }
     }
 
-    {
-      if (topic.compare(0, 13, "statusBottom/") == 0) //Only save statusBottom
-      {
-        std::lock_guard<std::mutex> nodeEventCacheGuard(_nodeEventCacheMutex);
-        _nodeEventCache[nodeId][topic] = value;
-        if (_nodeEventCache.size() > 1000000 || _nodeEventCache[nodeId].size() > 100000) {
-          GD::out.printError("Error: Event cache is full. Clearing it.");
-          _nodeEventCache.clear();
-        }
+    if (retain) {
+      std::lock_guard<std::mutex> nodeEventCacheGuard(_nodeEventCacheMutex);
+      _nodeEventCache[nodeId][topic] = value;
+      if (_nodeEventCache[nodeId].size() > 100) {
+        GD::out.printWarning("Warning: Event cache of node \"" + nodeId + "\" is full. Clearing it.");
       }
+      if (_nodeEventCache.size() > 100000) {
+        GD::out.printError("Error: Event cache is full. Clearing it.");
+        _nodeEventCache.clear();
+      }
+    }
+
+    if (topic.compare(0, 13, "statusBottom/") == 0 || topic.compare(0, 7, "status/") == 0) {
+      auto pair = BaseLib::HelperFunctions::splitFirst(topic, '/'); //Parameter nodeId might be empty (e. g. from Node-RED) so we need to get the node ID from topic.
+      GD::nodeBlueServer->broadcastStatus(pair.second, value);
     }
 
     if (!GD::bl->booting && BaseLib::HelperFunctions::getTime() - _lastGarbageCollection > 60000) collectGarbage();
@@ -215,12 +217,13 @@ void Client::broadcastEvent(const std::string &source,
                             const std::shared_ptr<std::vector<BaseLib::PVariable>> &values) {
   try {
     if (GD::bl->booting) {
-      GD::out.printDebug("Debug: Not broadcasting event as I'm still starting up.");
+      if (GD::bl->debugLevel >= 5) GD::out.printDebug("Debug: Not broadcasting event as I'm still starting up.");
       return;
     }
     if (!valueKeys || !values || valueKeys->size() != values->size()) {
       return;
     }
+
     {
       std::lock_guard<std::mutex> lifetickGuard(_lifetick1Mutex);
       _lifetick1.first = BaseLib::HelperFunctions::getTime();
@@ -232,20 +235,17 @@ void Client::broadcastEvent(const std::string &source,
     std::lock_guard<std::mutex> serversGuard(_serversMutex);
     for (std::map<int32_t, std::shared_ptr<RemoteRpcServer>>::const_iterator server = _servers.begin();
          server != _servers.end(); ++server) {
-      if (server->second->removed || (server->second->getServerClientInfo()->sendEventsToRpcServer
-          && (server->second->getServerClientInfo()->closed
-              || !server->second->getServerClientInfo()->socket->connected()))
-          || (server->second->socket && !server->second->socket->connected() && server->second->keepAlive
-              && !server->second->reconnectInfinitely))
+      if (server->second->removed ||
+          (server->second->getServerClientInfo()->sendEventsToRpcServer && (server->second->getServerClientInfo()->closed || !server->second->getServerClientInfo()->socket->connected())) ||
+          (server->second->socket && !server->second->socket->connected() && server->second->keepAlive && !server->second->reconnectInfinitely))
         continue;
       //At least OpenHAB needs PONG to be send event when initialization is not complete
-      if ((!server->second->initialized && valueKeys->at(0) != "PONG") || (!server->second->knownMethods.empty()
-          && (server->second->knownMethods.find("event") == server->second->knownMethods.end()
-              || server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end())))
+      if ((!server->second->initialized && valueKeys->at(0) != "PONG") ||
+          (!server->second->knownMethods.empty() && (server->second->knownMethods.find("event") == server->second->knownMethods.end() ||
+              server->second->knownMethods.find("system.multicall") == server->second->knownMethods.end())))
         continue;
       if (!server->second->getServerClientInfo()->acls->checkEventServerMethodAccess("event")) continue;
-      if (id > 0 && server->second->subscribePeers
-          && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end())
+      if (id > 0 && server->second->subscribePeers && server->second->subscribedPeers.find(id) == server->second->subscribedPeers.end())
         continue;
 
       bool checkAcls = server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesDevicesReadSet();
@@ -268,9 +268,12 @@ void Client::broadcastEvent(const std::string &source,
             if (id == 0) {
               if (server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet()) {
                 auto systemVariable = GD::systemVariableController->getInternal(valueKeys->at(i));
-                if (!systemVariable
-                    || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
+                if (!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
                   continue;
+              }
+            } else if (id == 0x50000000 || id == 0x50000001) {
+              if (server->second->getServerClientInfo()->acls->variablesReadSet() && !server->second->getServerClientInfo()->acls->checkNodeBlueVariableReadAccess(valueKeys->at(i), channel)) {
+                continue;
               }
             } else if (!peer || !server->second->getServerClientInfo()->acls->checkVariableReadAccess(peer,
                                                                                                       channel,
@@ -286,8 +289,7 @@ void Client::broadcastEvent(const std::string &source,
           } else parameters->push_back(std::make_shared<BaseLib::Variable>(deviceAddress));
           parameters->push_back(std::make_shared<BaseLib::Variable>(valueKeys->at(i)));
           parameters->push_back(values->at(i));
-          server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("event",
-                                                                                                               parameters));
+          server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("event", parameters));
         }
       } else {
         std::shared_ptr<std::list<BaseLib::PVariable>> parameters = std::make_shared<std::list<BaseLib::PVariable>>();
@@ -298,13 +300,14 @@ void Client::broadcastEvent(const std::string &source,
             if (id == 0) {
               if (server->second->getServerClientInfo()->acls->variablesRoomsCategoriesRolesReadSet()) {
                 auto systemVariable = GD::systemVariableController->getInternal(valueKeys->at(i));
-                if (!systemVariable
-                    || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
+                if (!systemVariable || !server->second->getServerClientInfo()->acls->checkSystemVariableReadAccess(systemVariable))
                   continue;
               }
-            } else if (!peer || !server->second->getServerClientInfo()->acls->checkVariableReadAccess(peer,
-                                                                                                      channel,
-                                                                                                      valueKeys->at(i)))
+            } else if (id == 0x50000000 || id == 0x50000001) {
+              if (server->second->getServerClientInfo()->acls->variablesReadSet() && !server->second->getServerClientInfo()->acls->checkNodeBlueVariableReadAccess(valueKeys->at(i), channel)) {
+                continue;
+              }
+            } else if (!peer || !server->second->getServerClientInfo()->acls->checkVariableReadAccess(peer, channel, valueKeys->at(i)))
               continue;
           }
 
@@ -327,9 +330,7 @@ void Client::broadcastEvent(const std::string &source,
         }
         parameters->push_back(array);
         //Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-        server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>(
-            "system.multicall",
-            parameters));
+        server->second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("system.multicall", parameters));
       }
     }
 
@@ -350,6 +351,27 @@ void Client::broadcastEvent(const std::string &source,
     {
       std::lock_guard<std::mutex> lifetickGuard(_lifetick1Mutex);
       _lifetick1.second = true;
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Client::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage) {
+  try {
+    try {
+      std::lock_guard<std::mutex> serversGuard(_serversMutex);
+      for (auto &server : _servers) {
+        if (!server.second->initialized || !server.second->newFormat || (!server.second->knownMethods.empty() && server.second->knownMethods.find("serviceMessage") == server.second->knownMethods.end())) continue;
+        if (!server.second->getServerClientInfo()->acls->checkEventServerMethodAccess("serviceMessage")) continue;
+        auto parameters = std::make_shared<std::list<BaseLib::PVariable>>();
+        parameters->emplace_back(serviceMessage->serialize());
+        server.second->queueMethod(std::make_shared<std::pair<std::string, std::shared_ptr<BaseLib::List>>>("serviceMessage", parameters));
+      }
+    }
+    catch (const std::exception &ex) {
+      GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
   }
   catch (const std::exception &ex) {

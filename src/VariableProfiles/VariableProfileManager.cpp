@@ -37,7 +37,6 @@ VariableProfileManager::VariableProfileManager() {
   _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, false));
 
   _profileManagerClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
-  _profileManagerClientInfo->scriptEngineServer = true;
   _profileManagerClientInfo->initInterfaceId = "profileManager";
   _profileManagerClientInfo->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
   std::vector<uint64_t> groups{2};
@@ -273,6 +272,15 @@ bool VariableProfileManager::setValue(const BaseLib::PRpcClientInfo &clientInfo,
         GD::out.printWarning("Warning: Error metadata variable \"" + variable + "\" of profile " + std::to_string(profileId) + ": " + result->structValue->at("faultString")->stringValue);
         return false;
       }
+    } else if (peerId == 0x50000000 || peerId == 0x50000001) { //Node-BLUE variable
+      if (!clientInfo->acls->checkNodeBlueVariableWriteAccess(variable, channel)) return false;
+      auto variables = std::make_shared<std::vector<std::string>>();
+      variables->emplace_back(variable);
+      auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
+      values->emplace_back(value);
+      GD::nodeBlueServer->broadcastEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+      variableEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+      return true;
     } else //Device variable
     {
       auto families = GD::familyController->getFamilies();
@@ -518,6 +526,7 @@ BaseLib::PVariable VariableProfileManager::getAllVariableProfiles(const std::str
       } else {
         std::string name;
         auto nameIterator = profile.second->name->structValue->find(languageCode);
+        if (nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en");
         if (nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->find("en-US");
         if (nameIterator == profile.second->name->structValue->end()) nameIterator = profile.second->name->structValue->begin();
         if (nameIterator != profile.second->name->structValue->end()) name = nameIterator->second->stringValue;
@@ -556,6 +565,7 @@ BaseLib::PVariable VariableProfileManager::getVariableProfile(uint64_t id, const
     } else {
       std::string name;
       auto nameIterator = variableProfileIterator->second->name->structValue->find(languageCode);
+      if (nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en");
       if (nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->find("en-US");
       if (nameIterator == variableProfileIterator->second->name->structValue->end()) nameIterator = variableProfileIterator->second->name->structValue->begin();
       if (nameIterator != variableProfileIterator->second->name->structValue->end()) name = nameIterator->second->stringValue;

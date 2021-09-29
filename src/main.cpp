@@ -34,6 +34,7 @@
 #include "Node-BLUE/NodeBlueClient.h"
 #include "UPnP/UPnP.h"
 #include "MQTT/Mqtt.h"
+#include "Nodejs/Nodejs.h"
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
 
@@ -52,6 +53,7 @@
 #include <malloc.h>
 
 #include <cmath>
+#include <memory>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -75,7 +77,6 @@ std::mutex _stopHomegearMutex;
 std::condition_variable _stopHomegearConditionVariable;
 
 void exitHomegear(int exitCode) {
-  if (GD::eventHandler) GD::eventHandler->dispose();
   if (GD::familyController) GD::familyController->disposeDeviceFamilies();
   if (GD::bl->hgdc) GD::bl->hgdc->stop();
   if (GD::bl->db) {
@@ -85,6 +86,10 @@ void exitHomegear(int exitCode) {
   if (GD::familyController) GD::familyController->dispose();
   if (GD::licensingController) GD::licensingController->dispose();
   exit(exitCode);
+}
+
+void loadSettings(bool hideOutput = false) {
+  GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath, hideOutput);
 }
 
 void bindRPCServers() {
@@ -105,23 +110,30 @@ void bindRPCServers() {
   }
 }
 
-void startRPCServers() {
+void initRPCServers() {
   for (int32_t i = 0; i < GD::serverInfo.count(); i++) {
     BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
-    std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
+    std::string info = "Initializing RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
     if (settings->ssl) info += ", SSL enabled";
     else GD::bl->rpcPort = static_cast<uint32_t>(settings->port);
     if (settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none) info += ", authentication enabled";
     info += "...";
     GD::out.printInfo(info);
     if (!GD::rpcServers[i]) GD::rpcServers[i] = std::make_shared<Rpc::RpcServer>();
-    GD::rpcServers[i]->start(settings);
   }
   if (GD::rpcServers.empty()) {
     GD::out.printCritical("Critical: No RPC servers are running. Terminating Homegear.");
     exitHomegear(1);
   }
+}
 
+void startRPCServers() {
+  for (int32_t i = 0; i < GD::serverInfo.count(); i++) {
+    BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
+    std::string info = "Starting RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
+    if (settings->ssl) info += ", SSL enabled";
+    GD::rpcServers[i]->start(settings);
+  }
 }
 
 void stopRPCServers(bool dispose) {
@@ -139,8 +151,8 @@ void terminateHomegear(int signalNumber) {
     GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
     GD::bl->shuttingDown = true;
 
-    if (GD::ipcServer) GD::ipcServer->homegearShuttingDown();
     if (GD::nodeBlueServer) GD::nodeBlueServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
+    if (GD::ipcServer) GD::ipcServer->homegearShuttingDown();
     #ifndef NO_SCRIPTENGINE
     if (GD::scriptEngineServer) GD::scriptEngineServer->homegearShuttingDown(); //Needs to be called before familyController->homegearShuttingDown()
     #endif
@@ -149,10 +161,6 @@ void terminateHomegear(int signalNumber) {
       GD::out.printInfo("Stopping UPnP server...");
       GD::uPnP->stop();
     }
-    #ifdef EVENTHANDLER
-    GD::out.printInfo( "(Shutdown) => Stopping Event handler");
-    if(GD::eventHandler) GD::eventHandler->dispose();
-    #endif
     if (GD::mqtt && GD::mqtt->enabled()) {
       GD::out.printInfo("(Shutdown) => Stopping MQTT client");;
       GD::mqtt->stop();
@@ -167,10 +175,11 @@ void terminateHomegear(int signalNumber) {
       GD::out.printInfo("(Shutdown) => Stopping Homegear Daisy Chain client...");
       if (GD::bl->hgdc) GD::bl->hgdc->stop();
     }
-    GD::out.printInfo("(Shutdown) => Stopping IPC server...");
-    if (GD::ipcServer) GD::ipcServer->stop();
     if (GD::bl->settings.enableNodeBlue()) GD::out.printInfo("(Shutdown) => Stopping Node-BLUE server...");
     if (GD::nodeBlueServer) GD::nodeBlueServer->stop();
+    //Stop after Node-BLUE server so that nodes connected over IPC are properly stopped
+    GD::out.printInfo("(Shutdown) => Stopping IPC server...");
+    if (GD::ipcServer) GD::ipcServer->stop();
     #ifndef NO_SCRIPTENGINE
     GD::out.printInfo("(Shutdown) => Stopping script engine server...");
     if (GD::scriptEngineServer) GD::scriptEngineServer->stop();
@@ -239,9 +248,10 @@ void reloadHomegear() {
       //Binding fails sometimes with "address is already in use" without waiting.
       std::this_thread::sleep_for(std::chrono::milliseconds(10000));
       GD::out.printMessage("Reloading settings...");
-      GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+      loadSettings();
       GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
       GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
+      initRPCServers();
       startRPCServers();
       GD::mqtt->loadSettings();
       if (GD::mqtt->enabled()) {
@@ -338,12 +348,12 @@ void errorCallback(int32_t level, std::string message) {
 }
 
 void getExecutablePath(int argc, char *argv[]) {
-  char path[1024];
-  if (!getcwd(path, sizeof(path))) {
+  std::array<char, PATH_MAX> path{};
+  if (!getcwd(path.data(), path.size())) {
     std::cerr << "Could not get working directory." << std::endl;
     exit(1);
   }
-  GD::workingDirectory = std::string(path);
+  GD::workingDirectory = std::string(path.data());
 #ifdef KERN_PROC //BSD system
   int mib[4];
   mib[0] = CTL_KERN;
@@ -361,7 +371,7 @@ void getExecutablePath(int argc, char *argv[]) {
   GD::executablePath = std::string(path);
   GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 #else
-  int length = readlink("/proc/self/exe", path, sizeof(path) - 1);
+  int length = readlink("/proc/self/exe", path.data(), path.size() - 1);
   if (length < 0) {
     std::cerr << "Could not get executable path." << std::endl;
     exit(1);
@@ -371,8 +381,8 @@ void getExecutablePath(int argc, char *argv[]) {
     exit(1);
   }
   path[length] = '\0';
-  GD::executablePath = std::string(path);
-  GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+  GD::executablePath = std::string(path.data());
+  GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of('/') + 1);
 #endif
 
   GD::executableFile = std::string(argc > 0 ? argv[0] : "homegear");
@@ -417,18 +427,18 @@ void setLimits() {
     //Set rlimit for core dumps
     getrlimit(RLIMIT_CORE, &limits);
     limits.rlim_cur = limits.rlim_max;
-    GD::out.printInfo("Info: Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+    GD::out.printInfo("Setting allowed core file size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
     setrlimit(RLIMIT_CORE, &limits);
     getrlimit(RLIMIT_CORE, &limits);
-    GD::out.printInfo("Info: Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
+    GD::out.printInfo("Core file size now is \"" + std::to_string(limits.rlim_cur) + "\".");
   }
 #ifdef RLIMIT_RTPRIO //Not existant on BSD systems
   getrlimit(RLIMIT_RTPRIO, &limits);
   limits.rlim_cur = limits.rlim_max;
-  GD::out.printInfo("Info: Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+  GD::out.printInfo("Setting maximum thread priority to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
   setrlimit(RLIMIT_RTPRIO, &limits);
   getrlimit(RLIMIT_RTPRIO, &limits);
-  GD::out.printInfo("Info: Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
+  GD::out.printInfo("Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
 #endif
 }
 
@@ -581,11 +591,11 @@ void startUp() {
     if (databasePath.empty()) databasePath = GD::bl->settings.dataPath();
     std::string databaseBackupPath = GD::bl->settings.databaseBackupPath();
     if (databaseBackupPath.empty()) databaseBackupPath = GD::bl->settings.dataPath();
-    GD::bl->db->open(databasePath, "db.sql", GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, "db.sql.bak");
+    GD::bl->db->open(databasePath, "db.sql", GD::bl->settings.factoryDatabasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, GD::bl->settings.factoryDatabaseBackupPath(), "db.sql.bak");
     if (!GD::bl->db->isOpen()) exitHomegear(1);
 
     GD::out.printInfo("Initializing database...");
-    if (GD::bl->db->convertDatabase()) exitHomegear(0);
+    if (GD::bl->db->convertDatabase(databasePath, "db.sql", GD::bl->settings.factoryDatabasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databaseWALJournal(), databaseBackupPath, GD::bl->settings.factoryDatabaseBackupPath(), "db.sql.bak")) exitHomegear(0);
     GD::bl->db->initializeDatabase();
 
     {
@@ -699,7 +709,7 @@ void startUp() {
     GD::licensingController->loadModules();
 
     GD::out.printInfo("Initializing system variable controller...");
-    GD::systemVariableController.reset(new SystemVariableController());
+    GD::systemVariableController = std::make_unique<SystemVariableController>();
 
     GD::familyController->init();
     GD::familyController->loadModules();
@@ -805,21 +815,20 @@ void startUp() {
       }
     }
 
+    GD::out.printInfo("Loading common translations...");
+    BaseLib::TranslationManager::load(GD::bl->settings.uiTranslationPath() + "common" + "/");
+
     GD::bl->globalServiceMessages.load();
 
-    GD::uiController.reset(new UiController());
+    GD::uiController = std::make_unique<UiController>();
     GD::uiController->load();
 
-    GD::variableProfileManager.reset(new VariableProfileManager());
+    GD::variableProfileManager = std::make_unique<VariableProfileManager>();
 
-    GD::ipcLogger.reset(new IpcLogger());
+    GD::ipcLogger = std::make_unique<IpcLogger>();
 
-#ifdef EVENTHANDLER
-    GD::eventHandler.reset(new EventHandler());
-#endif
-
-    GD::nodeBlueServer.reset(new NodeBlue::NodeBlueServer());
-    GD::ipcServer.reset(new IpcServer());
+    GD::nodeBlueServer = std::make_unique<NodeBlue::NodeBlueServer>();
+    GD::ipcServer = std::make_unique<IpcServer>();
 
     if (!GD::bl->io.directoryExists(GD::bl->settings.tempPath() + "php")) {
       if (!GD::bl->io.createDirectory(GD::bl->settings.tempPath() + "php", S_IRWXU | S_IRWXG)) {
@@ -829,7 +838,7 @@ void startUp() {
     }
 #ifndef NO_SCRIPTENGINE
     GD::out.printInfo("Starting script engine server...");
-    GD::scriptEngineServer.reset(new ScriptEngine::ScriptEngineServer());
+    GD::scriptEngineServer = std::make_unique<ScriptEngine::ScriptEngineServer>();
     if (!GD::scriptEngineServer->start()) {
       GD::out.printCritical("Critical: Cannot start script engine server. Exiting Homegear.");
       exitHomegear(1);
@@ -858,20 +867,7 @@ void startUp() {
     GD::out.printInfo("Initializing RPC client...");
     GD::rpcClient->init();
 
-    startRPCServers();
-
-    GD::mqtt->loadSettings(); //Needs database to be available
-    if (GD::mqtt->enabled()) {
-      GD::out.printInfo("Starting MQTT client...");
-      GD::mqtt->start();
-    }
-
-#ifdef EVENTHANDLER
-    GD::out.printInfo("Initializing event handler...");
-    GD::eventHandler->init();
-    GD::out.printInfo("Loading events...");
-    GD::eventHandler->load();
-#endif
+    initRPCServers();
 
     GD::out.printInfo("Start listening for packets...");
     GD::familyController->physicalInterfaceStartListening();
@@ -894,6 +890,14 @@ void startUp() {
     GD::out.printInfo("Starting variable profile manager...");
     GD::variableProfileManager->load();
 
+    startRPCServers(); //Required variable profile manager and Node-BLUE to be started, otherwise client might connect and get wrong RPC call results from both.
+
+    GD::mqtt->loadSettings(); //Requires RPC servers to be started.
+    if (GD::mqtt->enabled()) {
+      GD::out.printInfo("Starting MQTT client...");
+      GD::mqtt->start();
+    }
+
     BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
     GD::bl->threadManager.start(_signalHandlerThread, true, &signalHandlerThread);
 
@@ -903,13 +907,13 @@ void startUp() {
     {
       uint32_t maxWait = GD::bl->settings.maxWaitForPhysicalInterfaces();
       if (maxWait < 1) maxWait = 1;
-      for (int32_t i = 0; i < (signed)maxWait; i++) {
+      for (uint32_t i = 0; i < maxWait; i++) {
         if (GD::bl->debugLevel >= 4 && i % 10 == 0) GD::out.printInfo("Info: Waiting for physical interfaces to connect (" + std::to_string(i) + " of 180s" + ").");
         if (GD::familyController->physicalInterfaceIsOpen()) {
           GD::out.printMessage("All physical interfaces are connected now.");
           break;
         }
-        if (i == 299) GD::out.printError("Error: At least one physical interface is not connected.");
+        if (i == GD::bl->settings.maxWaitForPhysicalInterfaces() - 1) GD::out.printError("Error: At least one physical interface is not connected.");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
     }
@@ -943,7 +947,7 @@ int main(int argc, char *argv[]) {
   try {
     getExecutablePath(argc, argv);
     _errorCallback.reset(new std::function<void(int32_t, std::string)>(errorCallback));
-    GD::bl.reset(new BaseLib::SharedObjects());
+    GD::bl = std::make_unique<BaseLib::SharedObjects>();
 
     if (BaseLib::Io::directoryExists(GD::executablePath + "config")) GD::configPath = GD::executablePath + "config/";
     else if (BaseLib::Io::directoryExists(GD::executablePath + "cfg")) GD::configPath = GD::executablePath + "cfg/";
@@ -1011,10 +1015,10 @@ int main(int argc, char *argv[]) {
             std::cout << "Please run Homegear as root to set the device permissions." << std::endl;
             exit(1);
           }
-          GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+          loadSettings();
           GD::bl->debugLevel = 3; //Only output warnings.
-          GD::licensingController.reset(new LicensingController());
-          GD::familyController.reset(new FamilyController());
+          GD::licensingController = std::make_unique<LicensingController>();
+          GD::familyController = std::make_unique<FamilyController>();
           GD::licensingController->loadModules();
           GD::familyController->loadModules();
           uid_t userId = GD::bl->hf.userId(std::string(argv[i + 1]));
@@ -1039,7 +1043,7 @@ int main(int argc, char *argv[]) {
         }
       } else if (arg == "-o") {
         if (i + 2 < argc) {
-          GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+          loadSettings();
           std::string inputFile(argv[i + 1]);
           std::string outputFile(argv[i + 2]);
           BaseLib::DeviceDescription::Devices devices(GD::bl.get(), nullptr, 0);
@@ -1051,10 +1055,21 @@ int main(int argc, char *argv[]) {
           printHelp();
           exit(1);
         }
+      } else if (arg == "--title") {
+        if (i + 1 < argc) {
+          auto processTitle = std::string(argv[i + 1]);
+          auto maxTitleSize = strlen(argv[0]); //We can't exceed this size. Assigning a newly allocated string won't make the title show in ps and top.
+          strncpy(argv[0], processTitle.data(), maxTitleSize);
+          getExecutablePath(argc, argv);
+          i++;
+        } else {
+          printHelp();
+          exit(1);
+        }
       } else if (arg == "-d") {
         _startAsDaemon = true;
       } else if (arg == "-r") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
         std::string command;
         int32_t exitCode = cliClient.terminal(command);
@@ -1062,11 +1077,11 @@ int main(int argc, char *argv[]) {
       }
 #ifndef NO_SCRIPTENGINE
       else if (arg == "-rse") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         initGnuTls();
         setLimits();
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
-        GD::licensingController.reset(new LicensingController());
+        GD::licensingController = std::make_unique<LicensingController>();
         GD::licensingController->loadModules();
         GD::licensingController->init();
         GD::licensingController->load();
@@ -1078,11 +1093,11 @@ int main(int argc, char *argv[]) {
       }
 #endif
       else if (arg == "-rl") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         initGnuTls();
         setLimits();
         BaseLib::ProcessManager::startSignalHandler(GD::bl->threadManager);
-        GD::licensingController.reset(new LicensingController());
+        GD::licensingController = std::make_unique<LicensingController>();
         GD::licensingController->loadModules();
         GD::licensingController->init();
         GD::licensingController->load();
@@ -1092,7 +1107,7 @@ int main(int argc, char *argv[]) {
         BaseLib::ProcessManager::stopSignalHandler(GD::bl->threadManager);
         exit(0);
       } else if (arg == "-e") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath, true);
+        loadSettings(true);
         GD::bl->debugLevel = 0; //Disable output messages
         std::stringstream command;
         if (i + 1 < argc) {
@@ -1117,19 +1132,19 @@ int main(int argc, char *argv[]) {
         std::cout << GD::bl->threadManager.getMaxThreadCount() << std::endl;
         exit(0);
       } else if (arg == "-l") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         GD::bl->debugLevel = 0; //Only output warnings.
         std::string command = "lifetick";
         CliClient cliClient(GD::bl->settings.socketPath() + "homegearIPC.sock");
         int32_t exitCode = cliClient.terminal(command);
         exit(exitCode);
       } else if (arg == "-i") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         GD::bl->debugLevel = 3; //Only output warnings.
         std::cout << BaseLib::HelperFunctions::getTimeUuid() << std::endl;
         exit(0);
       } else if (arg == "-pre") {
-        GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+        loadSettings();
         GD::serverInfo.init(GD::bl.get());
         GD::serverInfo.load(GD::bl->settings.serverSettingsPath());
         if (GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
@@ -1315,9 +1330,11 @@ int main(int argc, char *argv[]) {
         std::cout << "  - libhomegear-base: " << GD::baseLibVersion << std::endl;
         std::cout << "  - libhomegear-node: " << GD::nodeLibVersion << std::endl;
         std::cout << "  - libhomegear-ipc:  " << GD::ipcLibVersion << std::endl << std::endl;
-        std::cout << "PHP (License: PHP License):" << std::endl;
-        std::cout << "This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
-        std::cout << "Copyright (c) 1999-2020 The PHP Group. All rights reserved." << std::endl << std::endl;
+        std::cout << "Included open source software:" << std::endl;
+        std::cout << "  - Node.js (license: MIT License, homepage: nodejs.org)" << std::endl;
+        std::cout << "  - PHP (license: PHP License, homepage: www.php.net):" << std::endl;
+        std::cout << "      This product includes PHP software, freely available from <http://www.php.net/software/>" << std::endl;
+        std::cout << "      Copyright (c) 1999-2020 The PHP Group. All rights reserved." << std::endl << std::endl;
 
         exit(0);
       } else {
@@ -1355,7 +1372,7 @@ int main(int argc, char *argv[]) {
 
     // {{{ Load settings
     GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
-    GD::bl->settings.load(GD::configPath + "main.conf", GD::executablePath);
+    loadSettings();
     if (GD::runAsUser.empty()) GD::runAsUser = GD::bl->settings.runAsUser();
     if (GD::runAsGroup.empty()) GD::runAsGroup = GD::bl->settings.runAsGroup();
     if ((!GD::runAsUser.empty() && GD::runAsGroup.empty()) || (!GD::runAsGroup.empty() && GD::runAsUser.empty())) {

@@ -34,7 +34,6 @@
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"
-#include "../Events/EventHandler.h"
 #include "../Licensing/LicensingController.h"
 #include "../FamilyModules/FamilyController.h"
 #include "../FamilyModules/FamilyServer.h"
@@ -56,11 +55,12 @@
 namespace Homegear {
 
 class UPnP;
-
 class Mqtt;
 
 class GD {
  public:
+  GD() = delete;
+
   static std::unique_ptr<BaseLib::SharedObjects> bl;
   static BaseLib::Output out;
   static const std::string baseLibVersion;
@@ -95,15 +95,6 @@ class GD {
   static std::unique_ptr<VariableProfileManager> variableProfileManager;
   static std::unique_ptr<SystemVariableController> systemVariableController;
   static std::unique_ptr<IpcLogger> ipcLogger;
-#ifdef EVENTHANDLER
-  static std::unique_ptr<EventHandler> eventHandler;
-#endif
-
-  virtual ~GD() {}
-
- private:
-  //Non public constructor
-  GD();
 };
 
 }

@@ -44,16 +44,15 @@
 #include <thread>
 #include <mutex>
 #include <string>
+#include <utility>
 
-namespace Homegear {
-
-namespace NodeBlue {
+namespace Homegear::NodeBlue {
 
 class NodeBlueClient : public BaseLib::IQueue {
  public:
   NodeBlueClient();
 
-  virtual ~NodeBlueClient();
+  ~NodeBlueClient() override;
 
   void dispose();
 
@@ -73,22 +72,29 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() {}
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
 
-    QueueEntry(std::string &methodName, Flows::PArray parameters) {
+    QueueEntry(const std::string &methodName, const Flows::PArray &parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->methodName = methodName;
       this->parameters = parameters;
     }
 
-    QueueEntry(std::vector<char> &packet) { this->packet = packet; }
+    explicit QueueEntry(std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
+      this->packet = packet;
+    }
 
-    QueueEntry(Flows::PNodeInfo nodeInfo, uint32_t targetPort, Flows::PVariable message) {
+    QueueEntry(const Flows::PNodeInfo &nodeInfo, uint32_t targetPort, const Flows::PVariable &message) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->nodeInfo = nodeInfo;
       this->targetPort = targetPort;
       this->message = message;
     }
 
-    virtual ~QueueEntry() {}
+    int64_t time = 0;
 
     //{{{ Request
     std::string methodName;
@@ -106,21 +112,28 @@ class NodeBlueClient : public BaseLib::IQueue {
     //}}}
   };
 
+  struct ErrorEventSubscription {
+    std::string nodeId;
+    bool catchConfigurationNodeErrors;
+    bool hasScope;
+    bool ignoreCaught;
+  };
+
   BaseLib::Output _out;
-  std::atomic_int _threadCount;
-  std::atomic_int _processingThreadCount1;
-  std::atomic_int _processingThreadCount2;
-  std::atomic_int _processingThreadCount3;
-  std::atomic<int64_t> _processingThreadCountMaxReached1;
-  std::atomic<int64_t> _processingThreadCountMaxReached2;
-  std::atomic<int64_t> _processingThreadCountMaxReached3;
-  std::atomic_bool _startUpComplete;
-  std::atomic_bool _shuttingDownOrRestarting;
-  std::atomic_bool _shutdownComplete;
-  std::atomic_bool _disposed;
+  std::atomic_int _threadCount{0};
+  std::atomic_int _processingThreadCount1{0};
+  std::atomic_int _processingThreadCount2{0};
+  std::atomic_int _processingThreadCount3{0};
+  std::atomic<int64_t> _processingThreadCountMaxReached1{0};
+  std::atomic<int64_t> _processingThreadCountMaxReached2{0};
+  std::atomic<int64_t> _processingThreadCountMaxReached3{0};
+  std::atomic_bool _startUpComplete{false};
+  std::atomic_bool _shuttingDownOrRestarting{false};
+  std::atomic_bool _shutdownComplete{false};
+  std::atomic_bool _disposed{false};
   std::string _socketPath;
   std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
-  std::atomic_bool _stopped;
+  std::atomic_bool _stopped{false};
   std::mutex _sendMutex;
   std::mutex _rpcResponsesMutex;
   std::map<int64_t, std::map<int32_t, PNodeBlueResponseClient>> _rpcResponses;
@@ -132,12 +145,14 @@ class NodeBlueClient : public BaseLib::IQueue {
   std::map<int64_t, PRequestInfo> _requestInfo;
   std::mutex _packetIdMutex;
   int32_t _currentPacketId = 0;
-  std::atomic_bool _nodesStopped;
+  std::atomic_bool _nodesStopped{false};
   std::unique_ptr<NodeManager> _nodeManager;
-  std::atomic_bool _frontendConnected;
-  std::atomic<int64_t> _lastQueueSize;
+  std::atomic_bool _frontendConnected{false};
+  std::atomic<int64_t> _lastQueueSize{0};
   std::mutex _eventFlowIdMutex;
   std::string _eventFlowId;
+  std::atomic_int _lastQueueSlowErrorCounter{0};
+  std::atomic<int64_t> _lastQueueSlowError{0};
 
   std::unique_ptr<Flows::BinaryRpc> _binaryRpc;
   std::unique_ptr<Flows::RpcDecoder> _rpcDecoder;
@@ -153,8 +168,12 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   std::mutex _peerSubscriptionsMutex;
   std::unordered_map<uint64_t, std::unordered_map<int32_t, std::unordered_map<std::string, std::set<std::string>>>> _peerSubscriptions;
-  std::mutex _eventSubscriptionsMutex;
-  std::set<std::string> _eventSubscriptions;
+  std::mutex _homegearEventSubscriptionsMutex;
+  std::unordered_set<std::string> _homegearEventSubscriptions;
+  std::mutex _statusEventSubscriptionsMutex;
+  std::unordered_set<std::string> _statusEventSubscriptions;
+  std::mutex _errorEventSubscriptionsMutex;
+  std::list<ErrorEventSubscription> _errorEventSubscriptions;
 
   std::mutex _flowSubscriptionsMutex;
   std::unordered_map<std::string, std::set<std::string>> _flowSubscriptions;
@@ -183,11 +202,13 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void sendResponse(Flows::PVariable &packetId, Flows::PVariable &variable);
 
-  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
   Flows::PVariable send(std::vector<char> &data);
 
   void log(const std::string &nodeId, int32_t logLevel, const std::string &message);
+
+  void errorEvent(const std::string &nodeId, int32_t level, const std::string &message);
 
   void frontendEventLog(const std::string &nodeId, const std::string &message);
 
@@ -207,9 +228,17 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void unsubscribeHomegearEvents(const std::string &nodeId);
 
+  void subscribeStatusEvents(const std::string &nodeId);
+
+  void unsubscribeStatusEvents(const std::string &nodeId);
+
+  void subscribeErrorEvents(const std::string &nodeId, bool catchConfigurationNodeErrors, bool hasScope, bool ignoreCaught);
+
+  void unsubscribeErrorEvents(const std::string &nodeId);
+
   void queueOutput(const std::string &nodeId, uint32_t index, Flows::PVariable message, bool synchronous);
 
-  void nodeEvent(const std::string &nodeId, const std::string &topic, Flows::PVariable value);
+  void nodeEvent(const std::string &nodeId, const std::string &topic, const Flows::PVariable& value, bool retain);
 
   Flows::PVariable getNodeData(const std::string &nodeId, const std::string &key);
 
@@ -225,7 +254,7 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   void setInternalMessage(const std::string &nodeId, Flows::PVariable message);
 
-  void setInputValue(const std::string &nodeId, int32_t inputIndex, Flows::PVariable message);
+  void setInputValue(const std::string &nodeType, const std::string &nodeId, int32_t inputIndex, const Flows::PVariable& message);
 
   Flows::PVariable getConfigParameter(const std::string &nodeId, const std::string &name);
 
@@ -279,6 +308,12 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable stopNodes(Flows::PArray &parameters);
 
   /**
+   * Executes the method "waitForStop" on all nodes. RPC methods can't be called anymore.
+   * @param parameters
+   */
+  Flows::PVariable waitForNodesStopped(Flows::PArray &parameters);
+
+  /**
    * Stops a flow.
    * @param parameters
    */
@@ -290,6 +325,8 @@ class NodeBlueClient : public BaseLib::IQueue {
    * @return Returns the number of running flows.
    */
   Flows::PVariable flowCount(Flows::PArray &parameters);
+
+  Flows::PVariable nodeLog(Flows::PArray &parameters);
 
   Flows::PVariable nodeOutput(Flows::PArray &parameters);
 
@@ -317,11 +354,17 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   Flows::PVariable broadcastGlobalVariableEvent(Flows::PArray &parameters);
 
+  Flows::PVariable broadcastServiceMessage(Flows::PArray &parameters);
+
   Flows::PVariable broadcastNewDevices(Flows::PArray &parameters);
 
   Flows::PVariable broadcastDeleteDevices(Flows::PArray &parameters);
 
   Flows::PVariable broadcastUpdateDevice(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastStatus(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastError(Flows::PArray &parameters);
 
   Flows::PVariable broadcastVariableProfileStateChanged(Flows::PArray &parameters);
 
@@ -330,10 +373,10 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable broadcastUiNotificationRemoved(Flows::PArray &parameters);
 
   Flows::PVariable broadcastUiNotificationAction(Flows::PArray &parameters);
+
+  Flows::PVariable broadcastRawPacketEvent(Flows::PArray &parameters);
   // }}}
 };
-
-}
 
 }
 #endif

@@ -276,30 +276,6 @@ BaseLib::PVariable RPCSystemMulticall::invoke(BaseLib::PRpcClientInfo clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAbortEventReset::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("abortEventReset")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->abortReset(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCAcknowledgeGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo clientInfo,
                                                               BaseLib::PArray parameters) {
   try {
@@ -707,7 +683,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
       }
       //}}}
 
-      GD::uiController->requestUiRefresh(clientInfo, "");
+      GD::uiController->requestUiRefresh("");
 
       return std::make_shared<BaseLib::Variable>(true);
     }
@@ -1025,31 +1001,6 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCAddEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("addEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tStruct}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->add(parameters->at(0));
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("addLink"))
@@ -1351,7 +1302,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
     }
     //}}}
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return std::make_shared<BaseLib::Variable>(true);
   }
@@ -1381,7 +1332,7 @@ BaseLib::PVariable RPCAddRoomToStory::invoke(BaseLib::PRpcClientInfo clientInfo,
     auto result = GD::bl->db->addRoomToStory((uint64_t)parameters->at(0)->integerValue64,
                                              (uint64_t)parameters->at(1)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -1951,7 +1902,7 @@ BaseLib::PVariable RPCCreateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
                                          parameters->size()
                                              == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -1983,7 +1934,7 @@ BaseLib::PVariable RPCCreateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
                                           parameters->size()
                                               == 2 ? parameters->at(1) : std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -2315,7 +2266,7 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     GD::systemVariableController->removeRoom(roomId);
     GD::bl->db->removeRoomFromStories(roomId);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -2344,7 +2295,7 @@ BaseLib::PVariable RPCDeleteStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
     auto result = GD::bl->db->deleteStory(storyId);
     GD::bl->db->removeStoryFromBuildings(storyId);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -2410,30 +2361,6 @@ BaseLib::PVariable RPCDeleteUserData::invoke(BaseLib::PRpcClientInfo clientInfo,
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCEnableEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("enableEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->enable(parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
 }
 
 BaseLib::PVariable RPCExecuteMiscellaneousDeviceMethod::invoke(BaseLib::PRpcClientInfo clientInfo,
@@ -3343,30 +3270,6 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCGetEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("getEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->get(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getLastEvents"))
@@ -3849,151 +3752,6 @@ BaseLib::PVariable RPCGetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     }
 
     return BaseLib::Variable::createError(-2, "Device not found.");
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getNodeData"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
-    return GD::bl->db->getNodeData(parameters->at(0)->stringValue,
-                                   key,
-                                   clientInfo->flowsServer || clientInfo->scriptEngineServer);
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getFlowData"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    std::string key = parameters->size() == 2 ? parameters->at(1)->stringValue : "";
-    return GD::bl->db->getNodeData(parameters->at(0)->stringValue,
-                                   key,
-                                   clientInfo->flowsServer || clientInfo->scriptEngineServer);
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getGlobalData"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    std::string key = parameters->size() == 1 ? parameters->at(0)->stringValue : "";
-    std::string nodeId = "global";
-    return GD::bl->db->getNodeData(nodeId, key, clientInfo->flowsServer || clientInfo->scriptEngineServer);
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetNodeEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getNodeEvents"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    return GD::rpcClient->getNodeEvents();
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetNodesWithFixedInputs::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getNodesWithFixedInputs"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    if (GD::nodeBlueServer) return GD::nodeBlueServer->getNodesWithFixedInputs();
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCGetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getNodeVariable"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    if (GD::nodeBlueServer)
-      return GD::nodeBlueServer->getNodeVariable(parameters->at(0)->stringValue,
-                                                 parameters->at(1)->stringValue);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -4710,37 +4468,34 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
     bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tBoolean})
+                                                                                                                 std::vector<BaseLib::VariableType>(),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean, BaseLib::VariableType::tString})
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
     bool id = false;
-    if (parameters->size() == 1) id = parameters->at(0)->booleanValue;
+    std::string language;
+    if (parameters->size() >= 1) id = parameters->at(0)->booleanValue;
+    if (parameters->size() >= 2) language = parameters->at(1)->stringValue;
 
-    BaseLib::PVariable serviceMessages(new BaseLib::Variable(BaseLib::VariableType::tArray));
+    auto serviceMessages = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
 
     if (id) {
-      auto globalMessages = GD::bl->globalServiceMessages.get(clientInfo);
-      if (!globalMessages->arrayValue->empty())
-        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(),
-                                            globalMessages->arrayValue->begin(),
-                                            globalMessages->arrayValue->end());
+      auto globalMessages = GD::bl->globalServiceMessages.get(clientInfo, language);
+      if (!globalMessages->arrayValue->empty()) {
+        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), globalMessages->arrayValue->begin(), globalMessages->arrayValue->end());
+      }
     }
 
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
-         i != families.end(); ++i) {
-      std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
+    for (auto &family : families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
       if (!central) continue;
-      BaseLib::PVariable messages = central->getServiceMessages(clientInfo, id, checkAcls);
-      if (!messages->arrayValue->empty())
-        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(),
-                                            messages->arrayValue->begin(),
-                                            messages->arrayValue->end());
+      BaseLib::PVariable messages = central->getServiceMessages(clientInfo, id, language, checkAcls);
+      if (!messages->arrayValue->empty()) {
+        serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
+      }
     }
 
     return serviceMessages;
@@ -5074,6 +4829,13 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
       }
     }
 
+    if (parameters->size() == 1) {
+      auto variables = GD::nodeBlueServer->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64);
+      result->structValue->insert(variables->structValue->begin(), variables->structValue->end());
+    } else if (parameters->size() == 2 && (parameters->at(1)->integerValue == 0x50000000 || parameters->at(1)->integerValue == 0x50000001)) {
+      return GD::nodeBlueServer->getVariablesInRole(clientInfo, parameters->at(0)->integerValue64, parameters->at(1)->integerValue);
+    }
+
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
     for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
          i != families.end(); ++i) {
@@ -5249,39 +5011,15 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean,
-                                                                                                                      BaseLib::VariableType::tBoolean}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tString}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tBoolean,
-                                                                                                                      BaseLib::VariableType::tBoolean})
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString, BaseLib::VariableType::tBoolean,
+                                                                                                                                                     BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString,
+                                                                                                                                                     BaseLib::VariableType::tBoolean}),
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString,
+                                                                                                                                                     BaseLib::VariableType::tBoolean, BaseLib::VariableType::tBoolean})
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
     std::string serialNumber;
@@ -5295,8 +5033,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       int32_t pos = parameters->at(0)->stringValue.find(':');
       if (pos > -1) {
         serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1)
-          channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
       } else serialNumber = parameters->at(0)->stringValue;
       if (parameters->size() >= 3) requestFromDevice = parameters->at(2)->booleanValue;
       if (parameters->size() >= 4) asynchronously = parameters->at(3)->booleanValue;
@@ -5306,9 +5043,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       if (parameters->size() >= 5) asynchronously = parameters->at(4)->booleanValue;
     }
 
-    if (useSerialNumber && checkAcls)
-      return BaseLib::Variable::createError(-32603,
-                                            "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+    if (useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32603, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
     if (!useSerialNumber) {
       if (peerId == 0 && channel < 0) {
@@ -5323,6 +5058,14 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         requestParameters->arrayValue->push_back(parameters->at(2));
         std::string methodName = "getMetadata";
         return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+      } else if (peerId == 0x50000000 || peerId == 0x50000001) {
+        if (!clientInfo->acls->checkNodeBlueVariableReadAccess(parameters->at(2)->stringValue, channel)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        BaseLib::PVariable requestParameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+        requestParameters->arrayValue->reserve(2);
+        requestParameters->arrayValue->push_back(parameters->at(2));
+        requestParameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>((peerId == 0x50000000 ? "i" : "o") + std::to_string(parameters->at(1)->integerValue)));
+        std::string methodName = "getNodeData";
+        return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
       }
     }
 
@@ -5333,28 +5076,16 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       if (central) {
         if (useSerialNumber) {
           if (central->peerExists(serialNumber))
-            return central->getValue(clientInfo,
-                                     serialNumber,
-                                     channel,
-                                     parameters->at(1)->stringValue,
-                                     requestFromDevice,
-                                     asynchronously);
+            return central->getValue(clientInfo, serialNumber, channel, parameters->at(1)->stringValue, requestFromDevice, asynchronously);
         } else {
           if (!central->peerExists(peerId)) continue;
 
           if (checkAcls) {
             auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
-            if (!peer
-                || !clientInfo->acls->checkVariableReadAccess(peer, channel, parameters->at(2)->stringValue))
-              return BaseLib::Variable::createError(-32603, "Unauthorized.");
+            if (!peer || !clientInfo->acls->checkVariableReadAccess(peer, channel, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
           }
 
-          return central->getValue(clientInfo,
-                                   peerId,
-                                   channel,
-                                   parameters->at(2)->stringValue,
-                                   requestFromDevice,
-                                   asynchronously);
+          return central->getValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, requestFromDevice, asynchronously);
         }
       }
     }
@@ -5531,19 +5262,6 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
     if (!interfaceId.empty() && clientInfo->sendEventsToRpcServer) {
       //Already initialized
       return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
-    }
-
-    if (!url.empty()
-        && GD::bl->settings.clientAddressesToReplace().find(url) != GD::bl->settings.clientAddressesToReplace().end()) {
-      //Todo: Remove beginning of 2021
-      GD::out.printWarning(
-          "Warning: Using clientAddressesToReplace is deprecated and will be removed in future versions of Homegear.");
-      std::string newAddress = GD::bl->settings.clientAddressesToReplace().at(url);
-      std::string remoteIP = clientInfo->address;
-      if (remoteIP.empty()) return BaseLib::Variable::createError(-32500, "Could not get client's IP address.");
-      GD::bl->hf.stringReplace(newAddress, "$remoteip", remoteIP);
-      GD::out.printInfo("Info: Replacing address " + url + " with " + newAddress);
-      url = newAddress;
     }
 
     std::pair<std::string, std::string> server;
@@ -5920,52 +5638,6 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCListEvents::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("listEvents")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        if(parameters->size() > 0)
-        {
-            ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger}),
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger}),
-                                                                                                                             std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
-                                                                                                                     }));
-            if(error != ParameterError::Enum::noError) return getError(error);
-        }
-
-        int32_t type = -1;
-        uint64_t peerID = 0;
-        int32_t channel = -1;
-        std::string variable;
-        if(parameters->size() > 0)
-        {
-            if(parameters->size() == 1) type = parameters->at(0)->integerValue;
-            else
-            {
-                peerID = parameters->at(0)->integerValue64;
-                channel = parameters->at(1)->integerValue;
-            }
-            if(parameters->size() == 3) variable = parameters->at(2)->stringValue;
-        }
-        return GD::eventHandler->list(type, peerID, channel, variable);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCListFamilies::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("listFamilies"))
@@ -6140,44 +5812,6 @@ BaseLib::PVariable RPCLogLevel::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       GD::bl->debugLevel = debugLevel;
     }
     return BaseLib::PVariable(new BaseLib::Variable(GD::bl->debugLevel));
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCNodeOutput::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("nodeOutput"))
-      return BaseLib::Variable::createError(-32603,
-                                            "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tVariant}),
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tInteger,
-                                                                                                                      BaseLib::VariableType::tVariant,
-                                                                                                                      BaseLib::VariableType::tBoolean})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    if (GD::nodeBlueServer)
-      GD::nodeBlueServer->nodeOutput(parameters->at(0)->stringValue,
-                                     parameters->at(1)->integerValue,
-                                     parameters->at(2),
-                                     parameters->size() == 4 ? parameters->at(3)->booleanValue : false);
-
-    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -6714,31 +6348,6 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCRemoveEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("removeEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->remove(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
-}
-
 BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("removeLink"))
@@ -6881,7 +6490,7 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
 
     auto result = GD::systemVariableController->setRoles(systemVariable->name, systemVariable->roles);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -6972,7 +6581,7 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
                                                  parameters->at(2)->stringValue,
                                                  (uint64_t)parameters->at(3)->integerValue64);
 
-      GD::uiController->requestUiRefresh(clientInfo, "");
+      GD::uiController->requestUiRefresh("");
 
       return std::make_shared<BaseLib::Variable>(result);
     }
@@ -7005,7 +6614,7 @@ BaseLib::PVariable RPCRemoveRoomFromStory::invoke(BaseLib::PRpcClientInfo client
     auto result = GD::bl->db->removeRoomFromStory((uint64_t)parameters->at(0)->integerValue64,
                                                   (uint64_t)parameters->at(1)->integerValue64);
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -7258,7 +6867,7 @@ BaseLib::PVariable RPCRunScript::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     auto pos = filename.find_last_of('.');
     if (pos != std::string::npos) ending = filename.substr(pos);
     GD::bl->hf.toLower(ending);
-    if (ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".hgs") {
+    if (ending == ".php" || ending == ".php5" || ending == ".php7" || ending == ".php8" || ending == ".hgs") {
 #ifndef NO_SCRIPTENGINE
       internalEngine = true;
 #else
@@ -7513,8 +7122,10 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
                                                                                                                      {BaseLib::VariableType::tInteger,
+                                                                                                                      BaseLib::VariableType::tString,
                                                                                                                       BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tString,
+                                                                                                                      BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tInteger,
                                                                                                                       BaseLib::VariableType::tString,
                                                                                                                       BaseLib::VariableType::tArray,
@@ -7524,18 +7135,20 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
     if (error != ParameterError::Enum::noError) return getError(error);
 
     std::list<std::string> variables;
-    for (auto &element : *parameters->at(5)->arrayValue) {
+    for (auto &element : *parameters->at(7)->arrayValue) {
       variables.emplace_back(element->stringValue);
     }
 
     GD::bl->globalServiceMessages.set(parameters->at(0)->integerValue,
-                                      parameters->at(1)->integerValue,
-                                      parameters->at(2)->stringValue,
-                                      parameters->at(3)->integerValue,
-                                      parameters->at(4)->stringValue,
+                                      parameters->at(1)->stringValue,
+                                      parameters->at(2)->integerValue,
+                                      parameters->at(3)->stringValue,
+                                      (BaseLib::ServiceMessagePriority)parameters->at(4)->integerValue,
+                                      parameters->at(5)->integerValue,
+                                      parameters->at(6)->stringValue,
                                       variables,
-                                      parameters->at(6),
-                                      parameters->at(7)->integerValue64);
+                                      parameters->at(8),
+                                      parameters->at(9)->integerValue64);
 
     return std::make_shared<BaseLib::Variable>();
   }
@@ -8030,116 +7643,6 @@ BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable RPCSetNodeData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setNodeData"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tVariant})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    return GD::bl->db->setNodeData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCSetFlowData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setFlowData"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tVariant})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    GD::nodeBlueServer->broadcastFlowVariableEvent(parameters->at(0)->stringValue,
-                                                   parameters->at(1)->stringValue,
-                                                   parameters->at(2));
-
-    return GD::bl->db->setNodeData(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCSetGlobalData::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setGlobalData"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tVariant})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    GD::nodeBlueServer->broadcastGlobalVariableEvent(parameters->at(0)->stringValue, parameters->at(1));
-
-    std::string nodeId = "global";
-    return GD::bl->db->setNodeData(nodeId, parameters->at(0)->stringValue, parameters->at(1));
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCSetNodeVariable::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-  try {
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setNodeVariable"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tVariant})
-                                                                                                             }));
-    if (error != ParameterError::Enum::noError) return getError(error);
-
-    if (GD::nodeBlueServer)
-      GD::nodeBlueServer->setNodeVariable(parameters->at(0)->stringValue,
-                                          parameters->at(1)->stringValue,
-                                          parameters->at(2));
-    return std::make_shared<BaseLib::Variable>();
-  }
-  catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-  }
-  catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-  }
-  return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
 BaseLib::PVariable RPCSetRoleMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -8156,7 +7659,7 @@ BaseLib::PVariable RPCSetRoleMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
 
     auto result = GD::bl->db->setRoleMetadata((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -8465,16 +7968,13 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       int32_t pos = parameters->at(0)->stringValue.find(':');
       if (pos > -1) {
         serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1)
-          channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+        if (parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
       } else serialNumber = parameters->at(0)->stringValue;
     } else {
       channel = parameters->at(1)->integerValue;
     }
 
-    if (useSerialNumber && checkAcls)
-      return BaseLib::Variable::createError(-32603,
-                                            "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
+    if (useSerialNumber && checkAcls) return BaseLib::Variable::createError(-32603, "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
     BaseLib::PVariable value;
     if (useSerialNumber && parameters->size() >= 3) value = parameters->at(2);
@@ -8501,30 +8001,30 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
         requestParameters->arrayValue->emplace_back(value);
         std::string methodName = "setMetadata";
         return GD::rpcServers.begin()->second->callMethod(clientInfo, methodName, requestParameters);
+      } else if (peerId == 0x50000000 || peerId == 0x50000001) {
+        if (!clientInfo->acls->checkNodeBlueVariableWriteAccess(parameters->at(2)->stringValue, channel)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+        auto variables = std::make_shared<std::vector<std::string>>();
+        variables->emplace_back(parameters->at(2)->stringValue);
+        auto values = std::make_shared<std::vector<BaseLib::PVariable>>();
+        values->emplace_back(value);
+        GD::nodeBlueServer->broadcastEvent(clientInfo->initInterfaceId, peerId, channel, variables, values);
+        GD::variableProfileManager->variableEvent(parameters->at(0)->stringValue, peerId, channel, variables, values);
+        return std::make_shared<BaseLib::Variable>();
       }
     }
 
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
-         i != families.end(); ++i) {
+    for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
       std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
       if (central) {
         if (useSerialNumber) {
-          if (central->peerExists(serialNumber))
-            return central->setValue(clientInfo,
-                                     serialNumber,
-                                     channel,
-                                     parameters->at(1)->stringValue,
-                                     value,
-                                     wait);
+          if (central->peerExists(serialNumber)) return central->setValue(clientInfo, serialNumber, channel, parameters->at(1)->stringValue, value, wait);
         } else {
           if (!central->peerExists(peerId)) continue;
 
           if (checkAcls) {
             auto peer = central->getPeer(peerId);
-            if (!peer
-                || !clientInfo->acls->checkVariableWriteAccess(peer, channel, parameters->at(2)->stringValue))
-              return BaseLib::Variable::createError(-32603, "Unauthorized.");
+            if (!peer || !clientInfo->acls->checkVariableWriteAccess(peer, channel, parameters->at(2)->stringValue)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
           }
 
           return central->setValue(clientInfo, peerId, channel, parameters->at(2)->stringValue, value, wait);
@@ -8650,31 +8150,6 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
-}
-
-BaseLib::PVariable RPCTriggerEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
-#ifdef EVENTHANDLER
-                                                                                                                          try
-    {
-        if(!clientInfo || !clientInfo->acls->checkMethodAccess("triggerEvent")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-
-        ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
-        if(error != ParameterError::Enum::noError) return getError(error);
-
-        return GD::eventHandler->trigger(parameters->at(0)->stringValue);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::Variable::createError(-32500, "Unknown application error.");
-#else
-  return BaseLib::Variable::createError(-32500, "This version of Homegear is compiled without event handler.");
-#endif
 }
 
 BaseLib::PVariable RPCTriggerRpcEvent::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
@@ -8963,7 +8438,7 @@ BaseLib::PVariable RPCUpdateRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
                                       parameters->at(1),
                                       std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -9005,7 +8480,7 @@ BaseLib::PVariable RPCUpdateStory::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
                                        parameters->at(1),
                                        std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
-    GD::uiController->requestUiRefresh(clientInfo, "");
+    GD::uiController->requestUiRefresh("");
 
     return result;
   }
@@ -9041,7 +8516,7 @@ BaseLib::PVariable RPCWriteLog::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
                            true);
     else GD::out.printMessage(parameters->at(0)->stringValue);
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

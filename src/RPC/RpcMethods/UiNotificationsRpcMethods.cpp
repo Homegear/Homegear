@@ -134,7 +134,7 @@ BaseLib::PVariable RpcUiNotificationAction::invoke(BaseLib::PRpcClientInfo clien
     auto notificationId = (uint64_t)parameters->at(0)->integerValue64;
     auto buttonId = (uint64_t)parameters->at(1)->integerValue64;
 
-    auto notification = GD::bl->db->getUiNotification(notificationId, "en-US");
+    auto notification = GD::bl->db->getUiNotification(notificationId, "en");
     if (notification->errorStruct) return notification;
 
     std::string type;

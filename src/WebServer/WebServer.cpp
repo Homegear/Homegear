@@ -91,17 +91,19 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
     if (GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0) {
       _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: GET)");
       std::string responseEncoding;
-      std::string contentString = GD::nodeBlueServer->handleGet(path, http, responseEncoding);
+      std::string responseHeader;
+      std::string contentString = GD::nodeBlueServer->handleGet(path, http, responseEncoding, responseHeader);
       if (contentString == "unauthorized") {
         getError(401, _http.getStatusText(401), "You are not logged in.", content);
         send(socket, content);
         socket->close();
         return;
-      } else if (!contentString.empty()) {
-        std::vector<std::string> headers;
-        std::string header;
-        _http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
-        content.insert(content.end(), header.begin(), header.end());
+      } else if (!responseHeader.empty() || !contentString.empty()) {
+        if (responseHeader.empty()) {
+          std::vector<std::string> headers;
+          BaseLib::Http::constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, responseHeader);
+        }
+        content.insert(content.end(), responseHeader.begin(), responseHeader.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
         send(socket, content);
         socket->close();
@@ -332,17 +334,19 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
     if (GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0) {
       _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: POST)");
       std::string responseEncoding;
-      std::string contentString = GD::nodeBlueServer->handlePost(path, http, responseEncoding);
+      std::string responseHeader;
+      std::string contentString = GD::nodeBlueServer->handlePost(path, http, responseEncoding, responseHeader);
       if (contentString == "unauthorized") {
         getError(401, _http.getStatusText(401), "You are not logged in.", content);
         send(socket, content);
         socket->close();
         return;
-      } else if (!contentString.empty()) {
-        std::vector<std::string> headers;
-        std::string header;
-        _http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
-        content.insert(content.end(), header.begin(), header.end());
+      } else if (!responseHeader.empty() || !contentString.empty()) {
+        if (responseHeader.empty()) {
+          std::vector<std::string> headers;
+          BaseLib::Http::constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, responseHeader);
+        }
+        content.insert(content.end(), responseHeader.begin(), responseHeader.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
         send(socket, content);
         socket->close();
@@ -476,6 +480,59 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
   }
 }
 
+void WebServer::put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket) {
+  try {
+    if (!socket) {
+      _out.printError("Error: Socket is nullptr.");
+      return;
+    }
+    std::string path = http.getHeader().path;
+
+    std::vector<char> content;
+    if (!path.empty() && path.front() == '/') path = path.substr(1);
+
+    if (GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0) {
+      _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: DELETE)");
+      std::string responseEncoding;
+      std::string responseHeader;
+      std::string contentString = GD::nodeBlueServer->handlePut(path, http, responseEncoding, responseHeader);
+      if (contentString == "unauthorized") {
+        getError(401, _http.getStatusText(401), "You are not logged in.", content);
+        send(socket, content);
+        return;
+      } else if (!responseHeader.empty() || !contentString.empty()) {
+        if (responseHeader.empty()) {
+          std::vector<std::string> headers;
+          BaseLib::Http::constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, responseHeader);
+        }
+        content.insert(content.end(), responseHeader.begin(), responseHeader.end());
+        content.insert(content.end(), contentString.begin(), contentString.end());
+        send(socket, content);
+        return;
+      } else {
+        if (responseHeader.empty()) {
+          std::vector<std::string> headers;
+          BaseLib::Http::constructHeader(contentString.size(), responseEncoding, 204, "No Content", headers, responseHeader);
+        }
+        content.insert(content.end(), responseHeader.begin(), responseHeader.end());
+        send(socket, content);
+        return;
+      }
+    }
+
+    GD::out.printWarning("Warning: Requested URL not found: " + path);
+    getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
+    send(socket, content);
+    return;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
 void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket) {
   try {
     if (!socket) {
@@ -490,24 +547,27 @@ void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http,
     if (GD::bl->settings.enableNodeBlue() && path.compare(0, 10, "node-blue/") == 0) {
       _out.printInfo("Client is requesting: " + http.getHeader().path + " (translated to " + _serverInfo->contentPath + path + ", method: DELETE)");
       std::string responseEncoding;
-      std::string contentString = GD::nodeBlueServer->handleDelete(path, http, responseEncoding);
+      std::string responseHeader;
+      std::string contentString = GD::nodeBlueServer->handleDelete(path, http, responseEncoding, responseHeader);
       if (contentString == "unauthorized") {
         getError(401, _http.getStatusText(401), "You are not logged in.", content);
         send(socket, content);
         return;
-      } else if (!contentString.empty()) {
-        std::vector<std::string> headers;
-        std::string header;
-        _http.constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, header);
-        content.insert(content.end(), header.begin(), header.end());
+      } else if (!responseHeader.empty() || !contentString.empty()) {
+        if (responseHeader.empty()) {
+          std::vector<std::string> headers;
+          BaseLib::Http::constructHeader(contentString.size(), responseEncoding, 200, "OK", headers, responseHeader);
+        }
+        content.insert(content.end(), responseHeader.begin(), responseHeader.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
         send(socket, content);
         return;
       } else {
-        std::vector<std::string> headers;
-        std::string header;
-        _http.constructHeader(contentString.size(), responseEncoding, 204, "No Content", headers, header);
-        content.insert(content.end(), header.begin(), header.end());
+        if (responseHeader.empty()) {
+          std::vector<std::string> headers;
+          BaseLib::Http::constructHeader(contentString.size(), responseEncoding, 204, "No Content", headers, responseHeader);
+        }
+        content.insert(content.end(), responseHeader.begin(), responseHeader.end());
         send(socket, content);
         return;
       }
@@ -533,7 +593,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
         "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear "
             + GD::baseLibVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
     std::string header;
-    _http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
+    BaseLib::Http::constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
     content.insert(content.end(), header.begin(), header.end());
     content.insert(content.end(), contentString.begin(), contentString.end());
   }
@@ -545,13 +605,13 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
   }
 }
 
-void WebServer::getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders) {
+void WebServer::getError(int32_t code, const std::string& codeDescription, const std::string& longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders) {
   try {
     std::string contentString =
         "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear "
             + GD::baseLibVersion + " at Port " + std::to_string(_serverInfo->port) + "</address></body></html>";
     std::string header;
-    _http.constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
+    BaseLib::Http::constructHeader(contentString.size(), "text/html", code, codeDescription, additionalHeaders, header);
     content.insert(content.end(), header.begin(), header.end());
     content.insert(content.end(), contentString.begin(), contentString.end());
   }

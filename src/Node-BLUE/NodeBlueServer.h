@@ -35,18 +35,23 @@
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"
 #include "NodeManager.h"
+#include "NodeBlueCredentials.h"
+#include "Node-PINK/Nodepink.h"
+#include "Node-PINK/NodepinkWebsocket.h"
 
 #include <queue>
+#include <utility>
 
-namespace Homegear {
-
-namespace NodeBlue {
+namespace Homegear::NodeBlue {
 
 class NodeBlueServer : public BaseLib::IQueue {
  public:
   NodeBlueServer();
 
-  virtual ~NodeBlueServer();
+  ~NodeBlueServer() override;
+
+  std::shared_ptr<Nodepink> getNodered() { return _nodepink; }
+  std::shared_ptr<NodepinkWebsocket> getNoderedWebsocket() { return _nodepinkWebsocket; }
 
   bool lifetick();
 
@@ -56,6 +61,10 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void restartFlows();
 
+  bool restartFlowsAsync();
+
+  void stopFlows();
+
   void homegearShuttingDown();
 
   void homegearReloading();
@@ -64,17 +73,25 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   uint32_t flowCount();
 
+  bool isReady();
+
   void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
   void broadcastFlowVariableEvent(std::string &flowId, std::string &variable, BaseLib::PVariable &value);
 
   void broadcastGlobalVariableEvent(std::string &variable, BaseLib::PVariable &value);
 
-  void broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariable deviceDescriptions);
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
 
-  void broadcastDeleteDevices(BaseLib::PVariable deviceInfo);
+  void broadcastNewDevices(const std::vector<uint64_t> &ids, const BaseLib::PVariable &deviceDescriptions);
+
+  void broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo);
 
   void broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint);
+
+  void broadcastStatus(const std::string &nodeId, const BaseLib::PVariable &status);
+
+  void broadcastError(const std::string &nodeId, int32_t level, const BaseLib::PVariable &error);
 
   void broadcastVariableProfileStateChanged(uint64_t profileId, bool state);
 
@@ -82,15 +99,23 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void broadcastUiNotificationRemoved(uint64_t uiNotificationId);
 
-  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string& uiNotificationType, uint64_t buttonId);
+  void broadcastUiNotificationAction(uint64_t uiNotificationId, const std::string &uiNotificationType, uint64_t buttonId);
 
-  std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
+  void broadcastRawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet);
 
-  std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
+  std::string handleGet(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-  std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding);
+  std::string handlePost(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
 
-  void nodeOutput(std::string nodeId, uint32_t index, BaseLib::PVariable message, bool synchronous);
+  std::string handlePut(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
+
+  std::string handleDelete(std::string &path, BaseLib::Http &http, std::string &responseEncoding, std::string &responseHeader);
+
+  BaseLib::PVariable getVariablesInRole(BaseLib::PRpcClientInfo clientInfo, uint64_t roleId, uint64_t peerId = 0);
+
+  void nodeLog(const std::string &nodeId, uint32_t logLevel, const std::string &message);
+
+  void nodeOutput(const std::string &nodeId, uint32_t index, const BaseLib::PVariable &message, bool synchronous);
 
   BaseLib::PVariable addNodesToFlow(const std::string &tab, const std::string &tag, const BaseLib::PVariable &nodes);
 
@@ -102,32 +127,44 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodesWithFixedInputs();
 
-  BaseLib::PVariable getNodeVariable(std::string nodeId, std::string topic);
+  BaseLib::PVariable getNodeCredentials(const std::string &nodeId);
 
-  void setNodeVariable(std::string nodeId, std::string topic, BaseLib::PVariable value);
+  BaseLib::PVariable setNodeCredentials(const std::string &nodeId, const BaseLib::PVariable &credentials);
+
+  BaseLib::PVariable getNodeCredentialTypes(const std::string &nodeId);
+
+  void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
+
+  BaseLib::PVariable getNodeVariable(const std::string& nodeId, const std::string& topic);
+
+  void setNodeVariable(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
 
   void enableNodeEvents();
 
   void disableNodeEvents();
 
+  void frontendNodeEventLog(const std::string &message);
  private:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() {}
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
 
-    QueueEntry(PNodeBlueClientData clientData, std::vector<char> &packet) {
+    QueueEntry(const PNodeBlueClientData &clientData, const std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->clientData = clientData;
       this->packet = packet;
     }
 
-    QueueEntry(PNodeBlueClientData clientData, std::string methodName, BaseLib::PArray parameters) {
+    QueueEntry(const PNodeBlueClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->clientData = clientData;
       this->methodName = methodName;
       this->parameters = parameters;
     }
 
-    virtual ~QueueEntry() {}
-
+    int64_t time = 0;
     PNodeBlueClientData clientData;
 
     // {{{ Request
@@ -140,12 +177,20 @@ class NodeBlueServer : public BaseLib::IQueue {
     // }}}
   };
 
+  struct NodeServerInfo {
+    int32_t clientId = -1;
+    std::string type;
+    NodeManager::NodeCodeType nodeCodeType = NodeManager::NodeCodeType::undefined;
+    std::unordered_map<uint32_t, uint32_t> outputRoles;
+  };
+
   BaseLib::Output _out;
   std::string _socketPath;
   std::string _webroot;
-  std::atomic_bool _shuttingDown;
-  std::atomic_bool _stopServer;
-  std::atomic_bool _nodeEventsEnabled;
+  std::vector<std::string> _anonymousPaths;
+  std::atomic_bool _shuttingDown{false};
+  std::atomic_bool _stopServer{false};
+  std::atomic_bool _nodeEventsEnabled{false};
   std::thread _mainThread;
   std::thread _maintenanceThread;
   int32_t _backlog = 100;
@@ -158,30 +203,37 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::mutex _currentFlowIdMutex;
   int32_t _currentFlowId = 0;
   std::mutex _stateMutex;
+  std::shared_ptr<Nodepink> _nodepink;
+  std::shared_ptr<NodepinkWebsocket> _nodepinkWebsocket;
   std::map<int32_t, PNodeBlueClientData> _clients;
   int32_t _currentClientId = 0;
   int64_t _lastGarbageCollection = 0;
-  std::shared_ptr<BaseLib::RpcClientInfo> _dummyClientInfo;
+  std::shared_ptr<BaseLib::RpcClientInfo> _nodeBlueClientInfo;
   std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>> _rpcMethods;
   std::map<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>> _localRpcMethods;
   std::mutex _packetIdMutex;
   int32_t _currentPacketId = 0;
-  std::atomic_bool _flowsRestarting;
+  std::atomic_bool _flowsRestarting{false};
   std::mutex _restartFlowsMutex;
   std::mutex _flowsPostMutex;
   std::mutex _flowsFileMutex;
   std::mutex _nodesInstallMutex;
+  std::unique_ptr<NodeManager> _nodeManager;
   std::map<std::string, uint32_t> _maxThreadCounts;
-  std::vector<NodeManager::PNodeInfo> _nodeInfo;
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-  std::mutex _nodeClientIdMapMutex;
-  std::map<std::string, int32_t> _nodeClientIdMap;
+  std::mutex _nodeInfoMapMutex;
+  std::map<std::string, NodeServerInfo> _nodeInfoMap;
   std::mutex _flowClientIdMapMutex;
   std::map<std::string, int32_t> _flowClientIdMap;
+  std::unique_ptr<NodeBlueCredentials> _nodeBlueCredentials;
+  std::unique_ptr<BaseLib::HttpClient> _nodePinkHttpClient;
 
-  std::atomic<int64_t> _lastNodeEvent;
-  std::atomic<uint32_t> _nodeEventCounter;
+  std::atomic<int64_t> _lastNodeEvent{0};
+  std::atomic<uint32_t> _nodeEventCounter{0};
+
+  std::atomic<int64_t> _lastQueueSlowError{0};
+  std::atomic_int _lastQueueSlowErrorCounter{0};
 
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
@@ -207,7 +259,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable send(PNodeBlueClientData &clientData, std::vector<char> &data);
 
-  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, std::string methodName, const BaseLib::PArray &parameters, bool wait);
+  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, const std::string& methodName, const BaseLib::PArray &parameters, bool wait);
 
   void sendResponse(PNodeBlueClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
@@ -217,13 +269,13 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void closeClientConnections();
 
-  void closeClientConnection(const PNodeBlueClientData& client);
+  void closeClientConnection(const PNodeBlueClientData &client);
 
   PNodeBlueProcess getFreeProcess(uint32_t maxThreadCount);
 
   void getMaxThreadCounts();
 
-  bool checkIntegrity(std::string flowsFile);
+  bool checkIntegrity(const std::string& flowsFile);
 
   void backupFlows();
 
@@ -235,23 +287,32 @@ class NodeBlueServer : public BaseLib::IQueue {
                                        std::unordered_map<std::string, BaseLib::PVariable> &subflowInfos,
                                        std::unordered_map<std::string, BaseLib::PVariable> &flowNodes,
                                        std::unordered_map<std::string, BaseLib::PVariable> &subflowNodes,
-                                       std::set<std::string> &flowNodeIds,
                                        std::set<std::string> &allNodeIds);
 
-  void startFlow(PFlowInfoServer &flowInfo, std::set<std::string> &nodes);
+  void startFlow(PFlowInfoServer &flowInfo, const std::unordered_map<std::string, BaseLib::PVariable> &flowNodes);
 
-  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
+  void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry) override;
 
-  std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
+  std::string processNodeUpload(BaseLib::Http &http);
 
-  void frontendNodeEventLog(const std::string &message);
+  std::string deploy(BaseLib::Http &http);
+
+  std::string installNode(BaseLib::Http &http);
+
+  static std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
 
   // {{{ RPC methods
   BaseLib::PVariable registerFlowsClient(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
+  BaseLib::PVariable errorEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
   BaseLib::PVariable executePhpNode(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable executePhpNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable getCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable invokeNodeMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
@@ -259,11 +320,17 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable nodeEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable frontendEventLog(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+  BaseLib::PVariable nodeBlueVariableEvent(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable nodeRedNodeInput(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable registerUiNodeRoles(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setCredentials(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
+
+  BaseLib::PVariable setCredentialTypes(PNodeBlueClientData &clientData, BaseLib::PArray &parameters);
   // }}}
 };
-
-}
 
 }
 

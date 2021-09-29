@@ -81,6 +81,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
   _localRpcMethods.emplace("executePhpNodeMethod", std::bind(&ScriptEngineClient::executePhpNodeMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("executeDeviceMethod", std::bind(&ScriptEngineClient::executeDeviceMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastEvent", std::bind(&ScriptEngineClient::broadcastEvent, this, std::placeholders::_1));
+  _localRpcMethods.emplace("broadcastServiceMessage", std::bind(&ScriptEngineClient::broadcastServiceMessage, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastNewDevices", std::bind(&ScriptEngineClient::broadcastNewDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastDeleteDevices", std::bind(&ScriptEngineClient::broadcastDeleteDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("broadcastUpdateDevice", std::bind(&ScriptEngineClient::broadcastUpdateDevice, this, std::placeholders::_1));
@@ -345,6 +346,17 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
     queueEntry = std::dynamic_pointer_cast<QueueEntry>(entry);
     if (!queueEntry) return;
 
+    if (BaseLib::HelperFunctions::getTime() - queueEntry->time > 2000) {
+      _lastQueueSlowErrorCounter++;
+      if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+        _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+        _lastQueueSlowErrorCounter = 0;
+        _out.printWarning(
+            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
+                + std::to_string(_lastQueueSlowErrorCounter));
+      }
+    }
+
     if (index == 0) //Request
     {
       _processingThreadCount1++;
@@ -364,7 +376,7 @@ void ScriptEngineClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLi
 
         if (GD::bl->debugLevel >= 5) {
           _out.printInfo("Debug: Server is calling RPC method: " + queueEntry->methodName);
-          for (const auto& parameter : *queueEntry->parameters) {
+          for (const auto &parameter : *queueEntry->parameters) {
             parameter->print(true, false);
           }
         }
@@ -830,7 +842,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         zendHandle.handle.stream.handle = nullptr;
         zendHandle.handle.stream.closer = nullptr;
         memset(&zendHandle.handle.stream.mmap, 0, sizeof(zend_mmap));
-        zendHandle.handle.stream.mmap.buf = (char*) scriptInfo->script.c_str(); //String is not modified
+        zendHandle.handle.stream.mmap.buf = (char *)scriptInfo->script.c_str(); //String is not modified
         zendHandle.handle.stream.mmap.len = scriptInfo->script.size();
         zendHandle.filename = scriptInfo->fullPath.c_str();
         zendHandle.opened_path = nullptr;
@@ -1599,7 +1611,7 @@ BaseLib::PVariable ScriptEngineClient::executePhpNodeMethod(BaseLib::PArray &par
     {
       std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMutex);
       auto nodeIterator = _nodeInfo.find(nodeId);
-      if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Unknown node.");
+      if (nodeIterator == _nodeInfo.end() || !nodeIterator->second) return BaseLib::Variable::createError(-1, "Node is unknown in script engine client.");
       nodeInfo = nodeIterator->second;
     }
 
@@ -1729,6 +1741,30 @@ BaseLib::PVariable ScriptEngineClient::broadcastEvent(BaseLib::PArray &parameter
     }
 
     return BaseLib::PVariable(new BaseLib::Variable());
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::broadcastServiceMessage(BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+
+    std::lock_guard<std::mutex> eventsGuard(PhpEvents::eventsMapMutex);
+    for (auto &event : PhpEvents::eventsMap) {
+      if (!event.second) continue;
+      auto eventData = std::make_shared<PhpEvents::EventData>();
+      eventData->type = PhpEvents::EventDataType::serviceMessage;
+      eventData->value = parameters->at(0);
+      if (!event.second->enqueue(eventData)) printQueueFullError(_out, "Error: Could not queue event because event buffer is full. Dropping it.");
+    }
+
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

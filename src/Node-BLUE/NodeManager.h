@@ -51,7 +51,7 @@ class NodeLoader {
 
   virtual ~NodeLoader();
 
-  Flows::PINode createNode(const std::atomic_bool *nodeEventsEnabled, const std::string &nodeNamespace, const std::string &type, const std::string &nodePath);
+  Flows::PINode createNode(const std::atomic_bool *nodeEventsEnabled, const std::string &type, const std::string &nodePath);
 
  private:
   std::string _soPath;
@@ -65,46 +65,129 @@ class NodeLoader {
 
 class NodeManager {
  public:
+  typedef std::string NodeId;
+  typedef std::string NodeSet;
+  typedef std::string NodeType;
+  typedef std::string ModuleName;
+
+  enum class NodeCodeType {
+    undefined,
+    none, //No code file
+    cpp, //.so
+    statefulPhp, //.s.php
+    statefulPhpEncrypted, //.s.hgn
+    simplePhp, //.php
+    simplePhpEncrypted, //.hgn
+    python, //.py
+    pythonEncrypted, //.hgnpy
+    javascript, //.js
+    javascriptEncrypted //.hgnjs
+  };
+
   struct NodeInfo {
-    std::string filename;
-    std::string fullPath;
-    std::string nodeId;
-    std::string nodeName;
-    std::string readableName;
-    std::string version;
-    bool coreNode = false;
-    int32_t maxThreadCount = 1;
-    std::string frontendListEntry;
-    std::string frontendCode;
+    std::atomic_bool locked{false};
+    std::atomic_int referenceCounter{0};
+    NodeCodeType codeType = NodeCodeType::undefined;
+    NodeSet nodeSet;
+    NodeType type;
+    uint32_t maxThreadCount = 0;
+    std::string filePrefix;
+    std::string fullCodefilePath;
+    BaseLib::PVariable credentialTypes;
+    bool isUiNode = false;
   };
   typedef std::shared_ptr<NodeInfo> PNodeInfo;
 
-  struct NodeUsageInfo {
-    std::atomic_bool locked;
-    std::atomic_int referenceCounter;
+  struct ManagerModuleInfo {
+    std::string name;
+    std::string module;
+    std::string version;
+    std::string codeDirectory;
+    bool local = true;
+    std::string modulePath;
+    std::map<NodeType, PNodeInfo> nodes; //Nodes are displayed in the frontend in this order, so we need an ordered map
+    std::unordered_map<std::string, PNodeInfo> nodesByFilePrefix;
   };
-  typedef std::shared_ptr<NodeUsageInfo> PNodeUsageInfo;
+  typedef std::shared_ptr<ManagerModuleInfo> PManagerModuleInfo;
 
   explicit NodeManager(const std::atomic_bool *nodeEventsEnabled);
 
   virtual ~NodeManager();
 
   /**
-   * Returns a vector of type NodeInfo with information about all nodes.
-   * @return Returns a vector of type NodeInfo.
+   * Returns a map with the maximum thread count of all node types.
    */
-  static std::vector<PNodeInfo> getNodeInfo();
+  std::unordered_map<NodeType, uint32_t> getMaxThreadCounts();
 
-  static std::string getNodeLocales(std::string &language);
+  bool nodeRedRequired();
+  void setNodeRedRequired();
+
+  /**
+   * Returns a struct with information about all modules as required by the frontend.
+   */
+  BaseLib::PVariable getModuleInfo();
+
+  /**
+   * Returns information required for the node added frontend notification.
+   */
+  BaseLib::PVariable getNodesAddedInfo(const std::string &module);
+
+  /**
+ * Returns information required for the node update frontend notification.
+ */
+  BaseLib::PVariable getNodesUpdatedInfo(const std::string &module);
+
+  /**
+   * Returns information required for the node removed frontend notification.
+   */
+  BaseLib::PVariable getNodesRemovedInfo(const std::string &module);
+
+  /**
+   * Returns the directory where the specifed module's icons are stored.
+   */
+  std::string getModuleIconsDirectory(const std::string &module);
+
+  /**
+   * Returns the icons of all modules.
+   */
+  BaseLib::PVariable getIcons();
+
+  /**
+   * Returns examples for the specified path.
+   * When examplesPath is a file, a String is returned. When it is a directory, an Array is returned.
+   */
+  BaseLib::PVariable getExamples(const std::string &relativeExamplesPath);
+
+  /**
+   * Returns the content of all *.hni files.
+   */
+  std::string getFrontendCode();
+
+  /**
+   * Returns the content of a single *.hni files.
+   */
+  std::string getFrontendCode(const std::string &type);
+
+  NodeCodeType getNodeCodeType(const std::string &type);
+
+  bool isNodeRedNode(const std::string &type);
+
+  bool isUiNode(const std::string &type);
+
+  BaseLib::PVariable getNodeCredentialTypes(const std::string &type);
+
+  std::string getNodeLocales(std::string &language);
+
+  void registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
 
   /**
    * Loads a node. The node needs to be in Homegear's node path.
-   * @param name The name of the node (e. g. variable).
+   * @param type The type (= name) of the node (e. g. variable-in).
    * @param id The id of the node (e. g. 142947a.387ef34ad)
    * @param[out] node If loading was successful, this variable contains the loaded node.
    * @return Returns positive values or 0 on success and negative values on error. 0: Node successfully loaded, 1: Node already loaded, -1: System error, -2: Node does not exists, -4: Node initialization failed
    */
-  int32_t loadNode(const std::string &nodeNamespace, const std::string &type, const std::string &id, Flows::PINode &node);
+  int32_t loadNode(std::string type, const std::string &id, Flows::PINode &node);
 
   /**
    * Unloads a previously loaded node.
@@ -118,23 +201,37 @@ class NodeManager {
    */
   Flows::PINode getNode(const std::string &id);
 
+  /*
+   * Clears all node information. This causes the information to be loaded again from file system on first call to loadNode()
+   */
+  void clearManagerModuleInfo();
+
+  /*
+   * Clears and reloads all node information
+   */
+  void fillManagerModuleInfo();
  private:
   std::mutex _nodeLoadersMutex;
   std::unique_ptr<NodeLoader> _pythonNodeLoader;
   std::map<std::string, std::unique_ptr<NodeLoader>> _nodeLoaders;
 
-  typedef std::string NodeId; //Node ID from Homegear
-  typedef std::string NodeName; //Node name from Homegear
-
   std::mutex _nodesMutex;
   std::unordered_map<NodeId, Flows::PINode> _nodes;
-  std::unordered_map<NodeName, PNodeUsageInfo> _nodesUsage;
+  std::map<ModuleName, PManagerModuleInfo> _managerModuleInfo; //Modules are displayed in the frontend in this order, so we need an ordered map
+  std::unordered_map<NodeType, PManagerModuleInfo> _managerModuleInfoByNodeType;
+  /**
+   * This map is just a shortcut for faster access as node info is accessed a lot.
+   */
+  std::unordered_map<NodeType, PNodeInfo> _nodeInfoByNodeType;
 
   const std::atomic_bool *_nodeEventsEnabled;
+  std::atomic_bool _nodeRedRequired{false};
 
   NodeManager(const NodeManager &) = delete;
 
   NodeManager &operator=(const NodeManager &) = delete;
+
+  NodeManager::PManagerModuleInfo fillManagerModuleInfo(const std::string &directory);
 };
 
 }

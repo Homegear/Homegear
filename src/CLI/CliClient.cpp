@@ -310,7 +310,12 @@ int32_t CliClient::terminal(const std::string &command) {
         }
       } else if (BaseLib::HelperFunctions::checkCliCommand(currentCommand, "runscript", "rs", "", 0, arguments, showHelp) ||
           BaseLib::HelperFunctions::checkCliCommand(currentCommand, "runcommand", "rc", "", 0, arguments, showHelp)) {
-        invokeGeneralCommand(currentCommand);
+        auto result = invokeGeneralCommand(currentCommand);
+
+        if (!command.empty()) {
+          auto exitCodeIterator = result->structValue->find("exitCode");
+          if (exitCodeIterator != result->structValue->end()) return exitCodeIterator->second->integerValue;
+        }
       } else if (_currentPeer != 0) {
         Ipc::PArray parameters = std::make_shared<Ipc::Array>();
         parameters->reserve(2);
@@ -361,7 +366,7 @@ int32_t CliClient::terminal(const std::string &command) {
   return 0;
 }
 
-void CliClient::invokeGeneralCommand(const std::string &command) {
+Ipc::PVariable CliClient::invokeGeneralCommand(const std::string &command) {
   Ipc::PArray parameters = std::make_shared<Ipc::Array>();
   parameters->push_back(std::make_shared<Ipc::Variable>(command));
   Ipc::PVariable result = invoke("cliGeneralCommand", parameters);
@@ -374,6 +379,7 @@ void CliClient::invokeGeneralCommand(const std::string &command) {
       if (outputIterator != result->structValue->end()) standardOutput(outputIterator->second->stringValue);
     }
   }
+  return result;
 }
 
 void CliClient::standardOutput(const std::string &text) {

@@ -63,7 +63,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   void init() override;
 
   // {{{ General
-  void open(std::string databasePath, std::string databaseFilename, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, std::string backupPath, std::string backupFilename) override;
+  void open(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath, const std::string &factoryBackupPath, const std::string &backupFilename) override;
 
   void hotBackup() override;
 
@@ -71,7 +71,11 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   void initializeDatabase() override;
 
-  bool convertDatabase() override;
+  bool convertDatabase(const std::string &databasePath, const std::string &databaseFilename, const std::string &factoryDatabasePath, bool databaseSynchronous, bool databaseMemoryJournal, bool databaseWALJournal, const std::string &backupPath, const std::string &factoryBackupPath, const std::string &backupFilename) override;
+
+  bool enableMaintenanceMode() override;
+
+  bool disableMaintenanceMode() override;
 
   void createSavepointSynchronous(std::string &name) override;
 
@@ -216,13 +220,13 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   // }}}
 
   // {{{ Node data
-  BaseLib::PVariable setNodeData(std::string &node, std::string &key, BaseLib::PVariable &value) override;
+  BaseLib::PVariable setNodeData(const std::string &node, const std::string &key, const BaseLib::PVariable &value) override;
 
-  BaseLib::PVariable getNodeData(std::string &node, std::string &key, bool requestFromTrustedServer) override;
+  BaseLib::PVariable getNodeData(const std::string &node, const std::string &key, bool requestFromTrustedServer) override;
 
   std::set<std::string> getAllNodeDataNodes() override;
 
-  BaseLib::PVariable deleteNodeData(std::string &node, std::string &key) override;
+  BaseLib::PVariable deleteNodeData(const std::string &node, const std::string &key) override;
   // }}}
 
   // {{{ Metadata
@@ -309,14 +313,6 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   bool groupExists(uint64_t groupId) override;
 
   BaseLib::PVariable updateGroup(uint64_t groupId, BaseLib::PVariable translations, BaseLib::PVariable acl) override;
-  // }}}
-
-  // {{{ Events
-  std::shared_ptr<BaseLib::Database::DataTable> getEvents() override;
-
-  void saveEventAsynchronous(BaseLib::Database::DataRow &event) override;
-
-  void deleteEvent(std::string &name) override;
   // }}}
 
   // {{{ Family

@@ -66,7 +66,7 @@ class CliClient : public Ipc::IIpcClient {
   static void loadHistory();
   static void safeHistory();
 
-  void invokeGeneralCommand(const std::string &command);
+  Ipc::PVariable invokeGeneralCommand(const std::string &command);
 
   // {{{ RPC methods
   Ipc::PVariable broadcastEvent(Ipc::PArray &parameters) override;

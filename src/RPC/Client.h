@@ -76,7 +76,7 @@ class Client {
 
   void initServerMethods(std::pair<std::string, std::string> address);
 
-  void broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
+  void broadcastNodeEvent(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value, bool retain);
 
   void broadcastEvent(const std::string &source,
                       uint64_t id,
@@ -84,6 +84,8 @@ class Client {
                       const std::string &deviceAddress,
                       const std::shared_ptr<std::vector<std::string>> &valueKeys,
                       const std::shared_ptr<std::vector<BaseLib::PVariable>> &values);
+
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
 
   void systemListMethods(std::pair<std::string, std::string> &address);
 

@@ -89,6 +89,8 @@ class ScriptEngineServer : public BaseLib::IQueue {
 
   void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
+  void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
+
   void broadcastNewDevices(std::vector<uint64_t> &ids, const BaseLib::PVariable& deviceDescriptions);
 
   void broadcastDeleteDevices(const BaseLib::PVariable& deviceInfo);
@@ -108,21 +110,24 @@ class ScriptEngineServer : public BaseLib::IQueue {
  private:
   class QueueEntry : public BaseLib::IQueueEntry {
    public:
-    QueueEntry() {}
+    QueueEntry() {
+      this->time = BaseLib::HelperFunctions::getTime();
+    }
 
-    QueueEntry(PScriptEngineClientData clientData, std::vector<char> &packet) {
+    QueueEntry(const PScriptEngineClientData &clientData, const std::vector<char> &packet) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->clientData = clientData;
       this->packet = packet;
     }
 
-    QueueEntry(PScriptEngineClientData clientData, std::string methodName, BaseLib::PArray parameters) {
+    QueueEntry(const PScriptEngineClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters) {
+      this->time = BaseLib::HelperFunctions::getTime();
       this->clientData = clientData;
       this->methodName = methodName;
       this->parameters = parameters;
     }
 
-    virtual ~QueueEntry() {}
-
+    int64_t time = 0;
     PScriptEngineClientData clientData;
 
     // {{{ Request
@@ -171,6 +176,9 @@ class ScriptEngineServer : public BaseLib::IQueue {
   std::map<std::string, int32_t> _nodeClientIdMap;
   std::mutex _deviceClientIdMapMutex;
   std::map<uint64_t, int32_t> _deviceClientIdMap;
+
+  std::atomic<int64_t> _lastQueueSlowError{0};
+  std::atomic_int _lastQueueSlowErrorCounter{0};
 
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
@@ -282,7 +290,7 @@ class ScriptEngineServer : public BaseLib::IQueue {
   // }}}
 
   // {{{ Module methods
-  BaseLib::PVariable listModules(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable listModules(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
   BaseLib::PVariable loadModule(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
 
@@ -292,21 +300,19 @@ class ScriptEngineServer : public BaseLib::IQueue {
   // }}}
 
   // {{{ Licensing methods
-  BaseLib::PVariable checkLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable checkLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable removeLicense(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable removeLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable getLicenseStates(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable getLicenseStates(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
   BaseLib::PVariable getTrialStartTime(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
   // }}}
 
   // {{{ Flows
-  BaseLib::PVariable nodeEvent(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable nodeOutput(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
 
-  BaseLib::PVariable nodeOutput(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
-
-  BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+  BaseLib::PVariable executePhpNodeBaseMethod(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters);
   // }}}
   // }}}
 };

@@ -1,0 +1,22 @@
+Source: nodejs-homegear
+Maintainer: Dr. Sathya Laufer <s.laufer@homegear.email>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.6
+Build-Depends: debhelper (>= 8)
+Homepage: https://nodejs.org
+
+Package: nodejs-homegear
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libc6 (>= 2.17), libgcc1 (>= 1:3.4), libstdc++6 (>= 4.8.1), python3-minimal, ca-certificates
+Homepage: https://nodejs.org
+Description: Node.js event-based server-side javascript engine
+ Node.js is similar in design to and influenced by systems like
+ Ruby's Event Machine or Python's Twisted.
+ .
+ It takes the event model a bit further - it presents the event
+ loop as a language construct instead of as a library.
+ .
+ Node.js is bundled with several useful libraries to handle server tasks :
+ System, Events, Standard I/O, Modules, Timers, Child Processes, POSIX,
+ HTTP, Multipart Parsing, TCP, DNS, Assert, Path, URL, Query Strings.

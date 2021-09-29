@@ -106,9 +106,6 @@ BaseLib::PVariable SystemVariableController::erase(std::string &variableId) {
     value->structValue->insert(BaseLib::StructElement("TYPE", BaseLib::PVariable(new BaseLib::Variable(0))));
     value->structValue->insert(BaseLib::StructElement("CODE", BaseLib::PVariable(new BaseLib::Variable(1))));
     values->push_back(value);
-#ifdef EVENTHANDLER
-    GD::eventHandler->trigger(variableId, value);
-#endif
     std::string source;
     if (GD::nodeBlueServer) GD::nodeBlueServer->broadcastEvent(source, 0, -1, valueKeys, values);
 #ifndef NO_SCRIPTENGINE
@@ -956,9 +953,6 @@ BaseLib::PVariable SystemVariableController::setValue(BaseLib::PRpcClientInfo cl
       return result;
     }
 
-#ifdef EVENTHANDLER
-    GD::eventHandler->trigger(variableId, value);
-#endif
     std::string &source = clientInfo->initInterfaceId;
     std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>{variableId});
     std::shared_ptr<std::vector<BaseLib::PVariable>> values(new std::vector<BaseLib::PVariable>{value});

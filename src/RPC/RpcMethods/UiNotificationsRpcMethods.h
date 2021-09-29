@@ -34,8 +34,7 @@
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcMethod.h>
 
-namespace Homegear {
-namespace RpcMethods {
+namespace Homegear::RpcMethods {
 
 class RpcCreateUiNotification : public BaseLib::Rpc::RpcMethod {
  public:
@@ -82,7 +81,6 @@ class RpcUiNotificationAction : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
-}
 }
 
 #endif //HOMEGEAR_SRC_RPC_RPCMETHODS_UINOTIFICATIONSRPCMETHODS_H_

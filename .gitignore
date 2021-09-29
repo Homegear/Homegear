@@ -26,10 +26,6 @@
 *.pydevproject
 .metadata
 .gradle
-lib/
-bin/
-obj/
-tmp/
 *.tmp
 *.bak
 *.swp
@@ -54,7 +50,8 @@ local.properties
 autom4te.cache
 *.in~
 config.log
-homegear
+src/homegear
+src/homegear-node
 core
 vgcore.*
 
@@ -79,6 +76,9 @@ stamp-h?
 .libs/
 *.l[ao]
 *~
+
+#npm
+package-lock.json
 
 #CLion
 cmake*           

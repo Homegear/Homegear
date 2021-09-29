@@ -87,6 +87,8 @@ class FamilyController : public BaseLib::Systems::IFamilyEventSink {
 
   void onEvent(std::string source, uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<BaseLib::PVariable>> values) override;
 
+  void onServiceMessageEvent(const BaseLib::PServiceMessage &serviceMessage) override;
+
   void onRunScript(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, bool wait) override;
 
   BaseLib::PVariable onInvokeRpc(std::string &methodName, BaseLib::PArray &parameters) override;
@@ -198,6 +200,8 @@ class FamilyController : public BaseLib::Systems::IFamilyEventSink {
   FamilyController(const FamilyController &);
 
   FamilyController &operator=(const FamilyController &);
+
+  void rawPacketEvent(int32_t familyId, const std::string &interfaceId, const BaseLib::PVariable &packet);
 };
 
 }

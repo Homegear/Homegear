@@ -40,14 +40,14 @@
 void php_homegear_device_invoke_rpc(std::string &methodName, BaseLib::PVariable &parameters, zval *return_value, bool wait) {
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Please call \"registerThread\" before calling any Homegear specific method within threads.", -1);
-    RETURN_FALSE
+    RETURN_FALSE;
   }
   if (!SEG(rpcCallback)) RETURN_FALSE;
   if (!parameters) parameters.reset(new BaseLib::Variable(BaseLib::VariableType::tArray));
   BaseLib::PVariable result = SEG(rpcCallback)(methodName, parameters, wait);
   if (result->errorStruct) {
     zend_throw_exception(homegear_exception_class_entry, result->structValue->at("faultString")->stringValue.c_str(), result->structValue->at("faultCode")->integerValue);
-    RETURN_NULL()
+    RETURN_NULL();
   }
   Homegear::PhpVariableConverter::getPHPVariable(result, return_value);
 }
