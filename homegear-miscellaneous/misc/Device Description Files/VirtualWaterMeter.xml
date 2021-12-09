@@ -37,7 +37,11 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
 			{
 				if($result["VARIABLE"] == 'TOTAL_VOLUME')
 				{
-					//Set consumption
+				}
+			}
+			else if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"]) {
+				if($result["VARIABLE"] == 'UNREACH' && $result["VALUE"]) {
+					$hg->setValue($peerId, 0, "STICKY_UNREACH", true);
 				}
 			}
 			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
@@ -90,7 +94,7 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 		if($secondsWaited >= 60)
 		{
 			$secondsWaited = 0;
-            $hg->setValue($peerId, 1, "TOTAL_VOLUME", "+=".random_int(0, 100));
+			if (!$hg->getValue($peerId, 0, "UNREACH")) $hg->setValue($peerId, 1, "TOTAL_VOLUME", $hg->getValue($peerId, 1, "TOTAL_VOLUME") + random_int(0, 100));
 		}
 
 		$event = NULL;
@@ -312,7 +316,12 @@ class HomegearDevice extends HomegearDeviceBase
                     <writeable>false</writeable>
                     <addonWriteable>true</addonWriteable>
                     <unit>l</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
                     <roles>
+                        <role>900000</role>
+                        <role>900100</role>
                         <role>900101</role>
                     </roles>
                 </properties>
