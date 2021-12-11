@@ -444,6 +444,13 @@
         }
     },
     {
+        "id": "20.30.00",
+        "translations": {
+            "en-US": "heat pump",
+            "de-DE": "Wärmepumpe"
+        }
+    },
+    {
         "id": "30.00.00",
         "translations": {
             "en-US": "security",
@@ -521,6 +528,20 @@
                 ],
                 "roleIdsOut": []
             }
+        }
+    },
+    {
+        "id": "30.20.00",
+        "translations": {
+            "en-US": "RWA system",
+            "de-DE": "RWA-Anlage"
+        }
+    },
+    {
+        "id": "30.30.00",
+        "translations": {
+            "en-US": "emergency light",
+            "de-DE": "Notlicht"
         }
     },
     {
