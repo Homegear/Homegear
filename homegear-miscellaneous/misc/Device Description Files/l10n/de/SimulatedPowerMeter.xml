@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDeviceTranslation lang="de">
 	<supportedDevices>
-		<device id="VirtualHeatMeter">
-			<description>Virtueller Wärmemengenzähler</description>
-			<longDescription>Dieses Gerät ist ein für Testzwecke in PHP geschriebener virtueller Wärmemengenzähler. Der Zählerstand wird ungefähr alle 60 Sekunden aktualisiert.</longDescription>
+		<device id="SimulatedPowerMeter">
+			<description>Simulierter Stromzähler</description>
+			<longDescription>Dieses Gerät ist ein für Testzwecke in PHP geschriebener virtueller Stromzähler. Der Zählerstand wird ungefähr alle 60 Sekunden aktualisiert.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>
@@ -18,9 +18,9 @@
 			</parameter>
 		</variables>
 		<variables id="custom_ch1_values">
-			<parameter id="TOTAL_HEAT_QUANTITY">
+			<parameter id="TOTAL_ACTIVE_ENERGY">
 				<label>Zählerstand</label>
-				<description>Die Wärmemenge gemessen in Megawattstunden (MWh).</description>
+				<description>Die Wirkenergie gemessen in Kilowattstunden (kWh).</description>
 			</parameter>
 		</variables>
 	</parameterGroups>

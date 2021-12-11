@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDeviceTranslation lang="en">
 	<supportedDevices>
-		<device id="VirtualWaterMeter">
-			<description>Virtual water meter</description>
-			<longDescription>This device is a virtual water meter written for testing purposes in PHP. It updates it's meter reading roughly every 60 seconds.</longDescription>
+		<device id="SimulatedGasMeter">
+			<description>Simulated gas meter</description>
+			<longDescription>This device is a virtual gas meter written for testing purposes in PHP. It updates it's meter reading roughly every 60 seconds.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>
@@ -20,7 +20,7 @@
 		<variables id="custom_ch1_values">
 			<parameter id="TOTAL_VOLUME">
 				<label>Meter reading</label>
-				<description>The total volume measured in liters (l).</description>
+				<description>The total volume measured in cubic meters (m³).</description>
 			</parameter>
 		</variables>
 	</parameterGroups>

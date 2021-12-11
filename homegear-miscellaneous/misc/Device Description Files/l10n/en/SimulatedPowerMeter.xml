@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDeviceTranslation lang="en">
 	<supportedDevices>
-		<device id="VirtualHeatMeter">
-			<description>Virtual heat meter</description>
-			<longDescription>This device is a virtual heat meter written for testing purposes in PHP. It updates it's meter reading roughly every 60 seconds.</longDescription>
+		<device id="SimulatedPowerMeter">
+			<description>Simulated power meter</description>
+			<longDescription>This device is a virtual power meter written for testing purposes in PHP. It updates it's meter reading roughly every 60 seconds.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>
@@ -18,9 +18,9 @@
 			</parameter>
 		</variables>
 		<variables id="custom_ch1_values">
-			<parameter id="TOTAL_HEAT_QUANTITY">
+			<parameter id="TOTAL_ACTIVE_ENERGY">
 				<label>Meter reading</label>
-				<description>The total heat quantity measured in MWh.</description>
+				<description>The total active energy measured in kWh.</description>
 			</parameter>
 		</variables>
 	</parameterGroups>

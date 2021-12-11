@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
     <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-        <device id="VirtualGasMeter">
-            <description>VirtualGasMeter</description>
+        <device id="SimulatedGasMeter">
+            <description>Simulated gas meter</description>
             <typeNumber>0xF00B</typeNumber>
         </device>
     </supportedDevices>
@@ -252,7 +252,7 @@ class HomegearDevice extends HomegearDeviceBase
             <configParameters>config</configParameters>
             <variables>maint_ch0_values</variables>
         </function>
-        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualGasMeter">
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="SimulatedGasMeter">
             <variables>custom_ch1_values</variables>
         </function>
     </functions>

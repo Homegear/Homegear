@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDeviceTranslation lang="de">
 	<supportedDevices>
-		<device id="VirtualPowerMeter">
-			<description>Virtueller Stromzähler</description>
-			<longDescription>Dieses Gerät ist ein für Testzwecke in PHP geschriebener virtueller Stromzähler. Der Zählerstand wird ungefähr alle 60 Sekunden aktualisiert.</longDescription>
+		<device id="SimulatedWaterMeter">
+			<description>Simulierter Wasserzähler</description>
+			<longDescription>Dieses Gerät ist ein für Testzwecke in PHP geschriebener virtueller Wasserzähler. Der Zählerstand wird ungefähr alle 60 Sekunden aktualisiert.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>
@@ -18,9 +18,9 @@
 			</parameter>
 		</variables>
 		<variables id="custom_ch1_values">
-			<parameter id="TOTAL_ACTIVE_ENERGY">
+			<parameter id="TOTAL_VOLUME">
 				<label>Zählerstand</label>
-				<description>Die Wirkenergie gemessen in Kilowattstunden (kWh).</description>
+				<description>Der Zählerstand gemessen in Litern (l).</description>
 			</parameter>
 		</variables>
 	</parameterGroups>
