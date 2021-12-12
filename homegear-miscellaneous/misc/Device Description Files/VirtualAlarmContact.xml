@@ -24,10 +24,11 @@
 		<variables id="maint_ch0_values">
 		</variables>
 		<variables id="custom_ch1_values">
-			<parameter id="STATE">
+			<parameter id="FAULT">
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
+					<service>true</service>
 				</properties>
 				<logicalBoolean/>
 				<physicalNone>
