@@ -450,6 +450,13 @@
             "de-DE": "Wärmepumpe"
         }
     },
+	{
+        "id": "20.40.00",
+        "translations": {
+            "en-US": "pump",
+            "de-DE": "Pumpe"
+        }
+    },
     {
         "id": "30.00.00",
         "translations": {
@@ -542,6 +549,13 @@
         "translations": {
             "en-US": "emergency light",
             "de-DE": "Notlicht"
+        }
+    },
+	{
+        "id": "30.40.00",
+        "translations": {
+            "en-US": "pumping station",
+            "de-DE": "Hebeanlage"
         }
     },
     {
@@ -1530,6 +1544,16 @@
         "translations": {
             "en-US": "operation",
             "de-DE": "Betrieb"
+        }
+    },
+	{
+        "id": "80.01.02",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "emergency operation",
+            "de-DE": "Notbetrieb"
         }
     },
 	{
