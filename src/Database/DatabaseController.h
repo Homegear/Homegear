@@ -116,17 +116,25 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   // }}}
 
   // {{{ Buildings
+  BaseLib::PVariable addBuildingPartToBuilding(uint64_t buildingId, uint64_t buildingPartId) override;
+
   BaseLib::PVariable addStoryToBuilding(uint64_t buildingId, uint64_t storyId) override;
 
   BaseLib::PVariable createBuilding(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
 
   BaseLib::PVariable deleteBuilding(uint64_t storyId) override;
 
+  BaseLib::PVariable getBuildingPartsInBuilding(BaseLib::PRpcClientInfo clientInfo, uint64_t buildingId, bool checkAcls) override;
+
   BaseLib::PVariable getStoriesInBuilding(BaseLib::PRpcClientInfo clientInfo, uint64_t buildingId, bool checkAcls) override;
 
   BaseLib::PVariable getBuildingMetadata(uint64_t buildingId) override;
 
   BaseLib::PVariable getBuildings(std::string languageCode) override;
+
+  BaseLib::PVariable removeBuildingPartFromBuildings(uint64_t buildingPartId) override;
+
+  BaseLib::PVariable removeBuildingPartFromBuilding(uint64_t buildingId, uint64_t buildingPartId) override;
 
   BaseLib::PVariable removeStoryFromBuildings(uint64_t storyId) override;
 
@@ -137,6 +145,22 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
   BaseLib::PVariable setBuildingMetadata(uint64_t buildingId, BaseLib::PVariable metadata) override;
 
   BaseLib::PVariable updateBuilding(uint64_t buildingId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+  // }}}
+
+  // {{{ Building parts
+  BaseLib::PVariable createBuildingPart(BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
+
+  BaseLib::PVariable deleteBuildingPart(uint64_t buildingPartId) override;
+
+  BaseLib::PVariable getBuildingPartMetadata(uint64_t buildingPartId) override;
+
+  BaseLib::PVariable getBuildingParts(std::string languageCode) override;
+
+  bool buildingPartExists(uint64_t buildingPartId) override;
+
+  BaseLib::PVariable setBuildingPartMetadata(uint64_t buildingPartId, BaseLib::PVariable metadata) override;
+
+  BaseLib::PVariable updateBuildingPart(uint64_t buildingPartId, BaseLib::PVariable translations, BaseLib::PVariable metadata) override;
   // }}}
 
   // {{{ Stories

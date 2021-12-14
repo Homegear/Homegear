@@ -38,6 +38,7 @@
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
 #include "../RPC/RpcMethods/MaintenanceRpcMethods.h"
+#include "../RPC/RpcMethods/BuildingPartRpcMethods.h"
 
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
@@ -184,15 +185,27 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
   }
 
   { // Buildings
+    _rpcMethods.emplace("addBuildingPartToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddBuildingPartToBuilding()));
     _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
     _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
     _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
+    _rpcMethods.emplace("getBuildingPartsInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingPartsInBuilding()));
     _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
     _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
     _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
+    _rpcMethods.emplace("removeBuildingPartFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveBuildingPartFromBuilding()));
     _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
     _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
     _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+  }
+
+  { // Building parts
+    _rpcMethods.emplace("createBuildingPart", std::make_shared<RpcMethods::RPCCreateBuildingPart>());
+    _rpcMethods.emplace("deleteBuildingPart", std::make_shared<RpcMethods::RPCDeleteBuildingPart>());
+    _rpcMethods.emplace("getBuildingPartMetadata", std::make_shared<RpcMethods::RPCGetBuildingPartMetadata>());
+    _rpcMethods.emplace("getBuildingParts", std::make_shared<RpcMethods::RPCGetBuildingParts>());
+    _rpcMethods.emplace("setBuildingPartMetadata", std::make_shared<RpcMethods::RPCSetBuildingPartMetadata>());
+    _rpcMethods.emplace("updateBuildingPart", std::make_shared<RpcMethods::RPCUpdateBuildingPart>());
   }
 
   { // Stories
@@ -711,7 +724,7 @@ std::vector<std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>> Sc
     for (std::vector<PScriptEngineClientData>::iterator i = clients.begin(); i != clients.end(); ++i) {
       BaseLib::PVariable response = sendRequest(*i, "getRunningScripts", parameters, true);
       if (runningScripts.capacity() <= runningScripts.size() + response->arrayValue->size()) runningScripts.reserve(runningScripts.capacity() + response->arrayValue->size() + 100);
-      for (auto &script : *(response->arrayValue)) {
+      for (auto &script: *(response->arrayValue)) {
         runningScripts.push_back(std::tuple<int32_t, uint64_t, std::string, int32_t, std::string>((int32_t)(*i)->pid,
                                                                                                   script->arrayValue->at(0)->integerValue64,
                                                                                                   script->arrayValue->at(1)->stringValue,
@@ -801,7 +814,7 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
     std::shared_ptr<BaseLib::Systems::Peer> peer;
     if (checkAcls) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (peer) break;
@@ -834,13 +847,13 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
     std::vector<PScriptEngineClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(5);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(source));
@@ -870,7 +883,7 @@ void ScriptEngineServer::broadcastServiceMessage(const BaseLib::PServiceMessage 
 
     if (serviceMessage->peerId > 0) {
       auto families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(serviceMessage->peerId);
         if (peer) break;
@@ -886,13 +899,13 @@ void ScriptEngineServer::broadcastServiceMessage(const BaseLib::PServiceMessage 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(serviceMessage->serialize());
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastServiceMessage", parameters);
@@ -914,11 +927,11 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, const B
     if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
     if (_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
         {
-          for (auto id : ids) {
+          for (auto id: ids) {
             auto peer = central->getPeer((uint64_t)id);
             if (!peer || !_scriptEngineClientInfo->acls->checkDeviceReadAccess(peer)) return;
           }
@@ -929,13 +942,13 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, const B
     std::vector<PScriptEngineClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastNewDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastNewDevices\". Queue is full.");
@@ -955,13 +968,13 @@ void ScriptEngineServer::broadcastDeleteDevices(const BaseLib::PVariable &device
     std::vector<PScriptEngineClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastDeleteDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastDeleteDevices\". Queue is full.");
@@ -983,7 +996,7 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
     if (_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (!peer || !_scriptEngineClientInfo->acls->checkDeviceReadAccess(peer)) return;
@@ -994,13 +1007,13 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array{std::make_shared<BaseLib::Variable>(id), std::make_shared<BaseLib::Variable>(channel), std::make_shared<BaseLib::Variable>(hint)});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUpdateDevice", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
@@ -1022,13 +1035,13 @@ void ScriptEngineServer::broadcastVariableProfileStateChanged(uint64_t profileId
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
@@ -1053,13 +1066,13 @@ void ScriptEngineServer::broadcastUiNotificationCreated(uint64_t uiNotificationI
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
 
@@ -1082,13 +1095,13 @@ void ScriptEngineServer::broadcastUiNotificationRemoved(uint64_t uiNotificationI
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
 
@@ -1111,13 +1124,13 @@ void ScriptEngineServer::broadcastUiNotificationAction(uint64_t uiNotificationId
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
@@ -1158,7 +1171,7 @@ void ScriptEngineServer::stopDevices() {
         clients.push_back(i->second);
       }
     }
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "stopDevices", parameters, true);
     }
@@ -1454,7 +1467,7 @@ void ScriptEngineServer::mainThread() {
         {
           std::lock_guard<std::mutex> stateGuard(_stateMutex);
           clients.reserve(_clients.size());
-          for (auto &client : _clients) {
+          for (auto &client: _clients) {
             if (client.second->closed) continue;
             if (client.second->fileDescriptor->descriptor == -1) {
               client.second->closed = true;
@@ -1469,7 +1482,7 @@ void ScriptEngineServer::mainThread() {
         maxfd = _serverFileDescriptor->descriptor;
         FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 
-        for (auto &client : clients) {
+        for (auto &client: clients) {
           int32_t descriptor = client->fileDescriptor->descriptor;
           if (descriptor == -1) continue; //Never pass -1 to FD_SET => undefined behaviour. This is just a safety precaution, because the file descriptor manager is locked and descriptors shouldn't be modified.
           FD_SET(descriptor, &readFileDescriptor);
@@ -2087,7 +2100,7 @@ BaseLib::PVariable ScriptEngineServer::peerExists(PScriptEngineClientData &clien
 
     if (scriptInfo->clientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
       auto families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         auto central = family.second->getCentral();
         if (central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) {
           auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
@@ -2113,7 +2126,7 @@ BaseLib::PVariable ScriptEngineServer::listRpcClients(PScriptEngineClientData &c
     if (parameters->size() != 0) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
 
     BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
-    for (auto &server : GD::rpcServers) {
+    for (auto &server: GD::rpcServers) {
       const std::vector<BaseLib::PRpcClientInfo> clients = server.second->getClientInfo();
       for (std::vector<BaseLib::PRpcClientInfo>::const_iterator j = clients.begin(); j != clients.end(); ++j) {
         BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
@@ -2308,7 +2321,7 @@ BaseLib::PVariable ScriptEngineServer::createUser(PScriptEngineClientData &clien
 
     std::vector<uint64_t> groups;
     groups.reserve(parameters->at(2)->arrayValue->size());
-    for (auto &element : *parameters->at(2)->arrayValue) {
+    for (auto &element: *parameters->at(2)->arrayValue) {
       if (element->integerValue64 != 0) groups.push_back(element->integerValue64);
     }
     if (groups.empty()) return BaseLib::Variable::createError(-1, "No groups specified.");
@@ -2371,7 +2384,7 @@ BaseLib::PVariable ScriptEngineServer::getUsersGroups(PScriptEngineClientData &c
     auto groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     groupArray->arrayValue->reserve(groups.size());
 
-    for (auto &group : groups) {
+    for (auto &group: groups) {
       groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
     }
 
@@ -2419,7 +2432,7 @@ BaseLib::PVariable ScriptEngineServer::updateUser(PScriptEngineClientData &clien
     if (groupsIndex != -1) {
       std::vector<uint64_t> groups;
       groups.reserve(parameters->at(groupsIndex)->arrayValue->size());
-      for (auto &element : *parameters->at(groupsIndex)->arrayValue) {
+      for (auto &element: *parameters->at(groupsIndex)->arrayValue) {
         if (element->integerValue64 != 0) groups.push_back(element->integerValue64);
       }
 
@@ -2466,14 +2479,14 @@ BaseLib::PVariable ScriptEngineServer::listUsers(PScriptEngineClientData &client
 
     BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
     result->arrayValue->reserve(users.size());
-    for (auto &user : users) {
+    for (auto &user: users) {
       BaseLib::PVariable entry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       entry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(user.first));
       entry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(user.second.name));
 
       BaseLib::PVariable groups = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       groups->arrayValue->reserve(user.second.groups.size());
-      for (auto &group : user.second.groups) {
+      for (auto &group: user.second.groups) {
         groups->arrayValue->push_back(std::make_shared<BaseLib::Variable>(group));
       }
       entry->structValue->emplace("groups", groups);
@@ -2715,7 +2728,7 @@ BaseLib::PVariable ScriptEngineServer::updateGroup(PScriptEngineClientData &clie
 // }}}
 
 // {{{ Module methods
-BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clientData, const PClientScriptInfo &scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("listModules")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (!parameters->empty()) return BaseLib::Variable::createError(-1, "Method doesn't expect any parameters.");
@@ -2724,7 +2737,7 @@ BaseLib::PVariable ScriptEngineServer::listModules(PScriptEngineClientData &clie
 
     BaseLib::PVariable result(new BaseLib::Variable(BaseLib::VariableType::tArray));
     result->arrayValue->reserve(moduleInfo.size());
-    for (auto &module : moduleInfo) {
+    for (auto &module: moduleInfo) {
       BaseLib::PVariable element(new BaseLib::Variable(BaseLib::VariableType::tStruct));
 
       element->structValue->insert(BaseLib::StructElement("FILENAME", std::make_shared<BaseLib::Variable>(module->filename)));
@@ -2803,7 +2816,7 @@ BaseLib::PVariable ScriptEngineServer::reloadModule(PScriptEngineClientData &cli
 // }}}
 
 // {{{ Licensing methods
-BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &clientData, const PClientScriptInfo &scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("checkLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three or four parameters. " + std::to_string(parameters->size()) + " given.");
@@ -2834,7 +2847,7 @@ BaseLib::PVariable ScriptEngineServer::checkLicense(PScriptEngineClientData &cli
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &clientData, const PClientScriptInfo &scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("removeLicense")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
@@ -2865,7 +2878,7 @@ BaseLib::PVariable ScriptEngineServer::removeLicense(PScriptEngineClientData &cl
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::getLicenseStates(PScriptEngineClientData &clientData, const PClientScriptInfo &scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (!scriptInfo->clientInfo || !scriptInfo->clientInfo->acls->checkMethodAccess("getLicenseStates")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Method expects exactly one parameter.");
@@ -2938,7 +2951,7 @@ BaseLib::PVariable ScriptEngineServer::getTrialStartTime(PScriptEngineClientData
 // }}}
 
 // {{{ Flows
-BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData &clientData, const PClientScriptInfo &scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 3 && parameters->size() != 4) return BaseLib::Variable::createError(-1, "Method expects three parameters. " + std::to_string(parameters->size()) + " given.");
     if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
@@ -2958,7 +2971,7 @@ BaseLib::PVariable ScriptEngineServer::nodeOutput(PScriptEngineClientData &clien
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineClientData &clientData, const PClientScriptInfo& scriptInfo, BaseLib::PArray &parameters) {
+BaseLib::PVariable ScriptEngineServer::executePhpNodeBaseMethod(PScriptEngineClientData &clientData, const PClientScriptInfo &scriptInfo, BaseLib::PArray &parameters) {
   try {
     if (GD::nodeBlueServer) {
       if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects four parameters. " + std::to_string(parameters->size()) + " given.");

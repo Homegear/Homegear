@@ -126,7 +126,9 @@ void DatabaseController::initializeDatabase() {
     _db.executeCommand("CREATE INDEX IF NOT EXISTS roomsIndex ON rooms (id)", false);
     _db.executeCommand("CREATE TABLE IF NOT EXISTS stories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, rooms TEXT, metadata BLOB)", false);
     _db.executeCommand("CREATE INDEX IF NOT EXISTS storiesIndex ON stories (id)", false);
-    _db.executeCommand("CREATE TABLE IF NOT EXISTS buildings (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, stories TEXT, metadata BLOB)", false);
+    _db.executeCommand("CREATE TABLE IF NOT EXISTS buildingParts (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)", false);
+    _db.executeCommand("CREATE INDEX IF NOT EXISTS buildingPartsIndex ON buildingParts (id)", false);
+    _db.executeCommand("CREATE TABLE IF NOT EXISTS buildings (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, stories TEXT, buildingParts TEXT, metadata BLOB)", false);
     _db.executeCommand("CREATE INDEX IF NOT EXISTS buildingsIndex ON buildings (id)", false);
     _db.executeCommand("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY UNIQUE, translations BLOB, metadata BLOB)", false);
     _db.executeCommand("CREATE INDEX IF NOT EXISTS categoriesIndex ON categories (id)", false);
@@ -353,7 +355,7 @@ void DatabaseController::initializeDatabase() {
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.2"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.3"));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, false);
 
@@ -436,7 +438,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
       int64_t versionId = result->at(0).at(0)->intValue;
       std::string version = result->at(0).at(3)->textValue;
 
-      static const std::string kCurrentVersion("0.8.2");
+      static const std::string kCurrentVersion("0.8.3");
 
       if (version == kCurrentVersion) return false; //Up to date
       /*if(version == "0.0.7")
@@ -623,7 +625,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
 
         _db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables2 (variableID TEXT PRIMARY KEY UNIQUE NOT NULL, serializedObject BLOB, room INTEGER, categories TEXT)", factoryDatabase);
         std::shared_ptr<BaseLib::Database::DataTable> systemVariablesRows = _db.executeCommand("SELECT variableID, serializedObject FROM systemVariables", factoryDatabase);
-        for (auto &i : *systemVariablesRows) {
+        for (auto &i: *systemVariablesRows) {
           if (i.second.size() < 2) continue;
           data.clear();
           data.push_back(i.second.at(0));
@@ -927,6 +929,23 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
 
         version = "0.8.2";
       }
+      if (version == "0.8.2") {
+        GD::out.printMessage("Converting database from version " + version + " to version 0.8.3...");
+
+        data.clear();
+        _db.executeCommand("ALTER TABLE buildings ADD COLUMN buildingParts TEXT", factoryDatabase);
+
+        data.clear();
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        //Don't forget to set new version in initializeDatabase!!!
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.3"));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
+
+        version = "0.8.3";
+      }
 
       if (version != kCurrentVersion) {
         GD::out.printCritical("Critical: Unknown database version: " + version);
@@ -1066,7 +1085,7 @@ BaseLib::PVariable DatabaseController::getData(std::string &component, std::stri
 
     if (key.empty()) {
       value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      for (auto &row : *rows) {
+      for (auto &row: *rows) {
         value->structValue->emplace(row.second.at(0)->textValue, _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue));
       }
     } else {
@@ -1409,7 +1428,7 @@ BaseLib::PVariable DatabaseController::getUiNotification(uint64_t databaseId, co
 
     auto buttonsIterator = notification->structValue->find("buttons");
     if (buttonsIterator != notification->structValue->end()) {
-      for (auto &button : *buttonsIterator->second->arrayValue) {
+      for (auto &button: *buttonsIterator->second->arrayValue) {
         auto labelIterator = button->structValue->find("label");
         if (labelIterator != button->structValue->end()) {
           auto languageIterator = labelIterator->second->structValue->find(languageCode);
@@ -1442,7 +1461,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
     auto notifications = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     notifications->arrayValue->reserve(rows->size());
 
-    for (auto &row : *rows) {
+    for (auto &row: *rows) {
       auto id = (uint64_t)row.second.at(0)->intValue;
       auto notification = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
 
@@ -1502,7 +1521,7 @@ BaseLib::PVariable DatabaseController::getUiNotifications(const std::string &lan
 
       auto buttonsIterator = notification->structValue->find("buttons");
       if (buttonsIterator != notification->structValue->end()) {
-        for (auto &button : *buttonsIterator->second->arrayValue) {
+        for (auto &button: *buttonsIterator->second->arrayValue) {
           auto labelIterator = button->structValue->find("label");
           if (labelIterator != button->structValue->end()) {
             auto languageIterator = labelIterator->second->structValue->find(languageCode);
@@ -1544,6 +1563,42 @@ void DatabaseController::removeUiNotification(uint64_t databaseId) {
 //}}}
 
 //{{{ Buildings
+BaseLib::PVariable DatabaseController::addBuildingPartToBuilding(uint64_t buildingId, uint64_t buildingPartId) {
+  try {
+    if (!buildingPartExists(buildingPartId)) return BaseLib::Variable::createError(-2, "Unknown building part.");
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingId));
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT buildingParts FROM buildings WHERE id=?", data, false);
+    if (rows->empty()) return BaseLib::Variable::createError(-1, "Unknown building.");
+
+    std::vector<std::string> buildingPartStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
+    bool containsBuildingPart = false;
+
+    std::ostringstream buildingPartStream;
+    for (auto &buildingPartString: buildingPartStrings) {
+      auto buildingPart = (uint64_t)BaseLib::Math::getNumber64(buildingPartString);
+      if (buildingPart == buildingPartId) containsBuildingPart = true;
+      buildingPartStream << std::to_string(buildingPart) << ",";
+    }
+    if (!containsBuildingPart) {
+      buildingPartStream << std::to_string(buildingPartId) << ",";
+      std::string buildingPartString = buildingPartStream.str();
+      data.push_front(std::make_shared<BaseLib::Database::DataColumn>(buildingPartString));
+      _db.executeCommand("UPDATE buildings SET buildingParts=? WHERE id=?", data, false);
+      _db.executeCommand("UPDATE buildings SET buildingParts=? WHERE id=?", data, true);
+    }
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable DatabaseController::addStoryToBuilding(uint64_t buildingId, uint64_t storyId) {
   try {
     if (!storyExists(storyId)) return BaseLib::Variable::createError(-2, "Unknown story.");
@@ -1556,7 +1611,7 @@ BaseLib::PVariable DatabaseController::addStoryToBuilding(uint64_t buildingId, u
     bool containsStory = false;
 
     std::ostringstream storyStream;
-    for (auto &storyString : storyStrings) {
+    for (auto &storyString: storyStrings) {
       auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
       if (story == storyId) containsStory = true;
       storyStream << std::to_string(story) << ",";
@@ -1590,14 +1645,15 @@ BaseLib::PVariable DatabaseController::createBuilding(BaseLib::PVariable transla
     data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
 
     data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string()));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::string()));
 
     std::vector<char> metadataBlob;
     _rpcEncoder->encodeResponse(metadata, metadataBlob);
     data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
 
-    uint64_t result = _db.executeWriteCommand("REPLACE INTO buildings VALUES(?, ?, ?, ?)", data, false);
+    uint64_t result = _db.executeWriteCommand("REPLACE INTO buildings VALUES(?, ?, ?, ?, ?)", data, false);
     data.at(0) = std::make_shared<BaseLib::Database::DataColumn>(result);
-    _db.executeWriteCommand("REPLACE INTO buildings VALUES(?, ?, ?, ?)", data, true);
+    _db.executeWriteCommand("REPLACE INTO buildings VALUES(?, ?, ?, ?, ?)", data, true);
 
     return std::make_shared<BaseLib::Variable>(result);
   }
@@ -1630,6 +1686,41 @@ BaseLib::PVariable DatabaseController::deleteBuilding(uint64_t buildingId) {
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable DatabaseController::getBuildingPartsInBuilding(BaseLib::PRpcClientInfo clientInfo, uint64_t buildingId, bool checkAcls) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingId));
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT buildingParts FROM buildings WHERE id=?", data, false);
+    if (rows->empty()) return BaseLib::Variable::createError(-1, "Unknown building.");
+    std::multimap<int32_t, uint64_t> sortedBuildingParts;
+    int32_t pos = 0;
+    std::vector<std::string> buildingPartStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
+    for (auto &getBuildingPartString: buildingPartStrings) {
+      auto buildingPart = (uint64_t)BaseLib::Math::getNumber64(getBuildingPartString);
+      if (buildingPart != 0) {
+        auto metadata = getStoryMetadata(buildingPart);
+        auto positionIterator = metadata->structValue->find("position");
+        if (positionIterator != metadata->structValue->end()) sortedBuildingParts.emplace(positionIterator->second->integerValue64, buildingPart);
+        else sortedBuildingParts.emplace(pos++, buildingPart);
+      }
+    }
+
+    auto buildingParts = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    buildingParts->arrayValue->reserve(sortedBuildingParts.size());
+    for (auto &story: sortedBuildingParts) {
+      buildingParts->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(story.second));
+    }
+    return buildingParts;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable DatabaseController::getStoriesInBuilding(BaseLib::PRpcClientInfo clientInfo, uint64_t buildingId, bool checkAcls) {
   try {
     BaseLib::Database::DataRow data;
@@ -1639,7 +1730,7 @@ BaseLib::PVariable DatabaseController::getStoriesInBuilding(BaseLib::PRpcClientI
     std::multimap<int32_t, uint64_t> sortedStories;
     int32_t pos = 0;
     std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
-    for (auto &storyString : storyStrings) {
+    for (auto &storyString: storyStrings) {
       auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
       if (story != 0) {
         auto metadata = getStoryMetadata(story);
@@ -1651,7 +1742,7 @@ BaseLib::PVariable DatabaseController::getStoriesInBuilding(BaseLib::PRpcClientI
 
     auto stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     stories->arrayValue->reserve(sortedStories.size());
-    for (auto &story : sortedStories) {
+    for (auto &story: sortedStories) {
       stories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(story.second));
     }
     return stories;
@@ -1689,8 +1780,8 @@ BaseLib::PVariable DatabaseController::getBuildings(std::string languageCode) {
     std::multimap<int32_t, BaseLib::PVariable> sortedBuildings;
     int32_t buildingPos = 0;
 
-    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, stories, metadata FROM buildings", false);
-    for (auto &row : *rows) {
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, stories, buildingParts, metadata FROM buildings", false);
+    for (auto &row: *rows) {
       BaseLib::PVariable building = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       building->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
       BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
@@ -1715,28 +1806,52 @@ BaseLib::PVariable DatabaseController::getBuildings(std::string languageCode) {
         }
       }
 
-      std::multimap<int32_t, uint64_t> sortedStories;
-      int32_t storyPos = 0;
-      std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
-      for (auto &storyString : storyStrings) {
-        if (storyString.empty()) continue;
-        auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
-        if (story != 0) {
-          auto metadata = getStoryMetadata(story);
-          auto positionIterator = metadata->structValue->find("position");
-          if (positionIterator != metadata->structValue->end()) sortedStories.emplace(positionIterator->second->integerValue64, story);
-          else sortedStories.emplace(storyPos++, story);
+      {
+        std::multimap<int32_t, uint64_t> sortedStories;
+        int32_t storyPos = 0;
+        std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
+        for (auto &storyString: storyStrings) {
+          if (storyString.empty()) continue;
+          auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
+          if (story != 0) {
+            auto metadata = getStoryMetadata(story);
+            auto positionIterator = metadata->structValue->find("position");
+            if (positionIterator != metadata->structValue->end()) sortedStories.emplace(positionIterator->second->integerValue64, story);
+            else sortedStories.emplace(storyPos++, story);
+          }
         }
+        BaseLib::PVariable stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        stories->arrayValue->reserve(sortedStories.size());
+        for (auto &story: sortedStories) {
+          stories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(story.second));
+        }
+        building->structValue->emplace("STORIES", stories);
       }
-      BaseLib::PVariable stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-      stories->arrayValue->reserve(sortedStories.size());
-      for (auto &story : sortedStories) {
-        stories->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(story.second));
-      }
-      building->structValue->emplace("STORIES", stories);
 
-      if (!row.second.at(3)->binaryValue->empty()) {
-        BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(3)->binaryValue);
+      {
+        std::multimap<int32_t, uint64_t> sortedBuildingParts;
+        int32_t buildingPartPos = 0;
+        std::vector<std::string> buildingPartStrings = BaseLib::HelperFunctions::splitAll(row.second.at(3)->textValue, ',');
+        for (auto &buildingPartString: buildingPartStrings) {
+          if (buildingPartString.empty()) continue;
+          auto buildingPart = (uint64_t)BaseLib::Math::getNumber64(buildingPartString);
+          if (buildingPart != 0) {
+            auto metadata = getStoryMetadata(buildingPart);
+            auto positionIterator = metadata->structValue->find("position");
+            if (positionIterator != metadata->structValue->end()) sortedBuildingParts.emplace(positionIterator->second->integerValue64, buildingPart);
+            else sortedBuildingParts.emplace(buildingPartPos++, buildingPart);
+          }
+        }
+        BaseLib::PVariable buildingParts = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+        buildingParts->arrayValue->reserve(sortedBuildingParts.size());
+        for (auto &buildingPart: sortedBuildingParts) {
+          buildingParts->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(buildingPart.second));
+        }
+        building->structValue->emplace("BUILDING_PARTS", buildingParts);
+      }
+
+      if (!row.second.at(4)->binaryValue->empty()) {
+        BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(4)->binaryValue);
         building->structValue->emplace("METADATA", metadata);
 
         auto positionIterator = metadata->structValue->find("position");
@@ -1750,10 +1865,83 @@ BaseLib::PVariable DatabaseController::getBuildings(std::string languageCode) {
 
     BaseLib::PVariable buildings = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     buildings->arrayValue->reserve(sortedBuildings.size());
-    for (auto &building : sortedBuildings) {
+    for (auto &building: sortedBuildings) {
       buildings->arrayValue->emplace_back(building.second);
     }
     return buildings;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::removeBuildingPartFromBuildings(uint64_t buildingPartId) {
+  try {
+    if (buildingPartId == 0) return std::make_shared<BaseLib::Variable>(false);
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, buildingParts FROM buildings", false);
+
+    for (auto &i: *rows) {
+      std::vector<std::string> buildingPartStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
+      bool containsBuildingPart = false;
+
+      std::ostringstream buildingPartStream;
+      for (auto &buildingPartString: buildingPartStrings) {
+        auto buildingPart = (uint64_t)BaseLib::Math::getNumber64(buildingPartString);
+        if (buildingPart == buildingPartId) containsBuildingPart = true;
+        else buildingPartStream << std::to_string(buildingPart) << ",";
+      }
+
+      if (containsBuildingPart) {
+        std::string buildingPartString = buildingPartStream.str();
+        BaseLib::Database::DataRow data;
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingPartString));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(i.second.at(0)->intValue));
+        _db.executeCommand("UPDATE buildings SET buildingParts=? WHERE id=?", data, false);
+        _db.executeCommand("UPDATE buildings SET buildingParts=? WHERE id=?", data, true);
+      }
+    }
+
+    return std::make_shared<BaseLib::Variable>(true);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::removeBuildingPartFromBuilding(uint64_t buildingId, uint64_t buildingPartId) {
+  try {
+    if (buildingPartId == 0) return BaseLib::Variable::createError(-2, "Invalid story ID.");
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingId));
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT buildingParts FROM buildings WHERE id=?", data, false);
+    if (rows->empty()) return BaseLib::Variable::createError(-1, "Unknown building.");
+
+    std::vector<std::string> buildingPartStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
+    bool containsBuildingPart = false;
+
+    std::ostringstream buildingPartStream;
+    for (auto &buildingPartString: buildingPartStrings) {
+      auto buildingPart = (uint64_t)BaseLib::Math::getNumber64(buildingPartString);
+      if (buildingPart == buildingPartId) containsBuildingPart = true;
+      else buildingPartStream << std::to_string(buildingPart) << ",";
+    }
+
+    if (containsBuildingPart) {
+      std::string buildingPartString = buildingPartStream.str();
+      data.push_front(std::make_shared<BaseLib::Database::DataColumn>(buildingPartString));
+      _db.executeCommand("UPDATE buildings SET buildingParts=? WHERE id=?", data, false);
+      _db.executeCommand("UPDATE buildings SET buildingParts=? WHERE id=?", data, true);
+    }
+
+    return std::make_shared<BaseLib::Variable>();
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1769,12 +1957,12 @@ BaseLib::PVariable DatabaseController::removeStoryFromBuildings(uint64_t storyId
     if (storyId == 0) return std::make_shared<BaseLib::Variable>(false);
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, stories FROM buildings", false);
 
-    for (auto &i : *rows) {
+    for (auto &i: *rows) {
       std::vector<std::string> storyStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsStory = false;
 
       std::ostringstream storyStream;
-      for (auto &storyString : storyStrings) {
+      for (auto &storyString: storyStrings) {
         auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
         if (story == storyId) containsStory = true;
         else storyStream << std::to_string(story) << ",";
@@ -1813,7 +2001,7 @@ BaseLib::PVariable DatabaseController::removeStoryFromBuilding(uint64_t building
     bool containsStory = false;
 
     std::ostringstream storyStream;
-    for (auto &storyString : storyStrings) {
+    for (auto &storyString: storyStrings) {
       auto story = (uint64_t)BaseLib::Math::getNumber64(storyString);
       if (story == storyId) containsStory = true;
       else storyStream << std::to_string(story) << ",";
@@ -1909,6 +2097,206 @@ BaseLib::PVariable DatabaseController::updateBuilding(uint64_t buildingId, BaseL
 }
 //}}}
 
+//{{{ Building parts
+BaseLib::PVariable DatabaseController::createBuildingPart(BaseLib::PVariable translations, BaseLib::PVariable metadata) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+
+    std::vector<char> translationsBlob;
+    _rpcEncoder->encodeResponse(translations, translationsBlob);
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+    std::vector<char> metadataBlob;
+    _rpcEncoder->encodeResponse(metadata, metadataBlob);
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+
+    uint64_t result = _db.executeWriteCommand("REPLACE INTO buildingParts VALUES(?, ?, ?)", data, false);
+    data.at(0) = std::make_shared<BaseLib::Database::DataColumn>(result);
+    _db.executeWriteCommand("REPLACE INTO buildingParts VALUES(?, ?, ?)", data, true);
+
+    return std::make_shared<BaseLib::Variable>(result);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::deleteBuildingPart(uint64_t buildingPartId) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingPartId));
+    if (_db.executeCommand("SELECT id FROM buildingParts WHERE id=?", data, false)->empty()) return BaseLib::Variable::createError(-1, "Unknown building part.");
+
+    _db.executeWriteCommand("DELETE FROM buildingParts WHERE id=?", data, false);
+    _db.executeWriteCommand("DELETE FROM buildingParts WHERE id=?", data, true);
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getBuildingPartMetadata(uint64_t buildingPartId) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingPartId));
+    auto rows = _db.executeCommand("SELECT metadata FROM buildingParts WHERE id=?", data, false);
+
+    if (rows->empty()) return BaseLib::Variable::createError(-1, "Unknown building part.");
+
+    return _rpcDecoder->decodeResponse(*rows->at(0).at(0)->binaryValue);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::getBuildingParts(std::string languageCode) {
+  try {
+    std::multimap<int32_t, BaseLib::PVariable> sortedBuildingParts;
+    int32_t buildingPartPos = 0;
+
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM buildingParts", false);
+    for (auto &row: *rows) {
+      BaseLib::PVariable buildingPart = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+      buildingPart->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
+      BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
+      if (languageCode.empty()) buildingPart->structValue->emplace("TRANSLATIONS", translations);
+      else {
+        auto translationIterator = translations->structValue->find(languageCode);
+        if (translationIterator != translations->structValue->end()) buildingPart->structValue->emplace("NAME", translationIterator->second);
+        else {
+          auto shortLanguageCode = BaseLib::HelperFunctions::splitFirst(languageCode, '-').first;
+          translationIterator = translations->structValue->find(shortLanguageCode);
+          if (translationIterator != translations->structValue->end()) buildingPart->structValue->emplace("NAME", translationIterator->second);
+          else {
+            translationIterator = translations->structValue->find("en");
+            if (translationIterator != translations->structValue->end()) buildingPart->structValue->emplace("NAME", translationIterator->second);
+            else {
+              translationIterator = translations->structValue->find("en-US");
+              if (translationIterator != translations->structValue->end()) buildingPart->structValue->emplace("NAME", translationIterator->second);
+              else if (!translations->structValue->empty()) buildingPart->structValue->emplace("NAME", translations->structValue->begin()->second);
+              else buildingPart->structValue->emplace("NAME", std::make_shared<BaseLib::Variable>(""));
+            }
+          }
+        }
+      }
+
+      if (!row.second.at(2)->binaryValue->empty()) {
+        BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*row.second.at(2)->binaryValue);
+        buildingPart->structValue->emplace("METADATA", metadata);
+
+        auto positionIterator = metadata->structValue->find("position");
+        if (positionIterator != metadata->structValue->end()) sortedBuildingParts.emplace(positionIterator->second->integerValue64, buildingPart);
+        else sortedBuildingParts.emplace(buildingPartPos++, buildingPart);
+      } else {
+        buildingPart->structValue->emplace("METADATA", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+        sortedBuildingParts.emplace(buildingPartPos++, buildingPart);
+      }
+    }
+
+    BaseLib::PVariable buildingParts = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    buildingParts->arrayValue->reserve(sortedBuildingParts.size());
+    for (auto &buildingPart: sortedBuildingParts) {
+      buildingParts->arrayValue->emplace_back(buildingPart.second);
+    }
+    return buildingParts;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+bool DatabaseController::buildingPartExists(uint64_t buildingPartId) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingPartId));
+    return !_db.executeCommand("SELECT id FROM buildingParts WHERE id=?", data, false)->empty();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return false;
+}
+
+BaseLib::PVariable DatabaseController::setBuildingPartMetadata(uint64_t buildingPartId, BaseLib::PVariable metadata) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingPartId));
+    if (_db.executeCommand("SELECT id FROM buildingParts WHERE id=?", data, false)->empty()) return BaseLib::Variable::createError(-1, "Unknown building part.");
+
+    std::vector<char> metadataBlob;
+    _rpcEncoder->encodeResponse(metadata, metadataBlob);
+
+    data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+    _db.executeCommand("UPDATE buildingParts SET metadata=? WHERE id=?", data, false);
+    _db.executeCommand("UPDATE buildingParts SET metadata=? WHERE id=?", data, true);
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable DatabaseController::updateBuildingPart(uint64_t buildingPartId, BaseLib::PVariable translations, BaseLib::PVariable metadata) {
+  try {
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(buildingPartId));
+    if (_db.executeCommand("SELECT id FROM buildingParts WHERE id=?", data, false)->empty()) return BaseLib::Variable::createError(-1, "Unknown building part.");
+
+    std::vector<char> translationsBlob;
+    _rpcEncoder->encodeResponse(translations, translationsBlob);
+    data.push_front(std::make_shared<BaseLib::Database::DataColumn>(translationsBlob));
+
+    if (!metadata->structValue->empty()) {
+      std::vector<char> metadataBlob;
+      _rpcEncoder->encodeResponse(metadata, metadataBlob);
+      data.push_front(std::make_shared<BaseLib::Database::DataColumn>(metadataBlob));
+      _db.executeCommand("UPDATE buildingParts SET metadata=?, translations=? WHERE id=?", data, false);
+      _db.executeCommand("UPDATE buildingParts SET metadata=?, translations=? WHERE id=?", data, true);
+    } else {
+      _db.executeCommand("UPDATE buildingParts SET translations=? WHERE id=?", data, false);
+      _db.executeCommand("UPDATE buildingParts SET translations=? WHERE id=?", data, true);
+    }
+
+    return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+//}}}
+
 //{{{ Stories
 BaseLib::PVariable DatabaseController::addRoomToStory(uint64_t storyId, uint64_t roomId) {
   try {
@@ -1922,7 +2310,7 @@ BaseLib::PVariable DatabaseController::addRoomToStory(uint64_t storyId, uint64_t
     bool containsRoom = false;
 
     std::ostringstream roomStream;
-    for (auto &roomString : roomStrings) {
+    for (auto &roomString: roomStrings) {
       auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
       if (room == roomId) containsRoom = true;
       roomStream << std::to_string(room) << ",";
@@ -2005,7 +2393,7 @@ BaseLib::PVariable DatabaseController::getRoomsInStory(BaseLib::PRpcClientInfo c
     std::multimap<int32_t, uint64_t> sortedRooms;
     int32_t pos = 0;
     std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(rows->at(0).at(0)->textValue, ',');
-    for (auto &roomString : roomStrings) {
+    for (auto &roomString: roomStrings) {
       auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
       if (checkAcls && !clientInfo->acls->checkRoomReadAccess(room)) continue;
       if (room != 0) {
@@ -2018,7 +2406,7 @@ BaseLib::PVariable DatabaseController::getRoomsInStory(BaseLib::PRpcClientInfo c
 
     auto rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     rooms->arrayValue->reserve(sortedRooms.size());
-    for (auto &room : sortedRooms) {
+    for (auto &room: sortedRooms) {
       rooms->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(room.second));
     }
     return rooms;
@@ -2057,7 +2445,7 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode) {
     int32_t storyPos = 0;
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, rooms, metadata FROM stories", false);
-    for (auto &row : *rows) {
+    for (auto &row: *rows) {
       BaseLib::PVariable story = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       story->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
       BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);
@@ -2085,7 +2473,7 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode) {
       std::multimap<int32_t, uint64_t> sortedRooms;
       int32_t roomPos = 0;
       std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(row.second.at(2)->textValue, ',');
-      for (auto &roomString : roomStrings) {
+      for (auto &roomString: roomStrings) {
         if (roomString.empty()) continue;
         auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
         if (room != 0) {
@@ -2097,7 +2485,7 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode) {
       }
       BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       rooms->arrayValue->reserve(sortedRooms.size());
-      for (auto &room : sortedRooms) {
+      for (auto &room: sortedRooms) {
         rooms->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(room.second));
       }
       story->structValue->emplace("ROOMS", rooms);
@@ -2117,7 +2505,7 @@ BaseLib::PVariable DatabaseController::getStories(std::string languageCode) {
 
     BaseLib::PVariable stories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     stories->arrayValue->reserve(sortedStories.size());
-    for (auto &story : sortedStories) {
+    for (auto &story: sortedStories) {
       stories->arrayValue->emplace_back(story.second);
     }
     return stories;
@@ -2136,12 +2524,12 @@ BaseLib::PVariable DatabaseController::removeRoomFromStories(uint64_t roomId) {
     if (roomId == 0) return std::make_shared<BaseLib::Variable>(false);
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, rooms FROM stories", false);
 
-    for (auto &i : *rows) {
+    for (auto &i: *rows) {
       std::vector<std::string> roomStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsRoom = false;
 
       std::ostringstream roomStream;
-      for (auto &roomString : roomStrings) {
+      for (auto &roomString: roomStrings) {
         auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
         if (room == roomId) containsRoom = true;
         else roomStream << std::to_string(room) << ",";
@@ -2180,7 +2568,7 @@ BaseLib::PVariable DatabaseController::removeRoomFromStory(uint64_t storyId, uin
     bool containsRoom = false;
 
     std::ostringstream roomStream;
-    for (auto &roomString : roomStrings) {
+    for (auto &roomString: roomStrings) {
       auto room = (uint64_t)BaseLib::Math::getNumber64(roomString);
       if (room == roomId) containsRoom = true;
       else roomStream << std::to_string(room) << ",";
@@ -2389,7 +2777,7 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
     int32_t pos = 0;
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM rooms", false);
-    for (auto &row : *rows) {
+    for (auto &row: *rows) {
       if (checkAcls && !clientInfo->acls->checkRoomReadAccess(row.second.at(0)->intValue)) continue;
       BaseLib::PVariable room = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       room->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
@@ -2429,7 +2817,7 @@ BaseLib::PVariable DatabaseController::getRooms(BaseLib::PRpcClientInfo clientIn
 
     BaseLib::PVariable rooms = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     rooms->arrayValue->reserve(sortedRooms.size());
-    for (auto &room : sortedRooms) {
+    for (auto &room: sortedRooms) {
       rooms->arrayValue->emplace_back(room.second);
     }
     return rooms;
@@ -2570,7 +2958,7 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
     int32_t pos = 0;
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM categories", false);
-    for (auto &row : *rows) {
+    for (auto &row: *rows) {
       if (checkAcls && !clientInfo->acls->checkCategoryReadAccess(row.second.at(0)->intValue)) continue;
       BaseLib::PVariable category = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       category->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
@@ -2610,7 +2998,7 @@ BaseLib::PVariable DatabaseController::getCategories(BaseLib::PRpcClientInfo cli
 
     BaseLib::PVariable categories = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     categories->arrayValue->reserve(sortedCategories.size());
-    for (auto &category : sortedCategories) {
+    for (auto &category: sortedCategories) {
       categories->arrayValue->emplace_back(category.second);
     }
     return categories;
@@ -2733,7 +3121,7 @@ void DatabaseController::createDefaultRoles() {
             _db.executeCommand("DELETE FROM roles", false);
             _db.executeCommand("DELETE FROM roles", true);
 
-            for (auto &roleEntry : *roles->arrayValue) {
+            for (auto &roleEntry: *roles->arrayValue) {
               auto idIterator = roleEntry->structValue->find("id");
               auto translationsIterator = roleEntry->structValue->find("translations");
               if (idIterator == roleEntry->structValue->end() || translationsIterator == roleEntry->structValue->end()) continue;
@@ -2752,7 +3140,7 @@ void DatabaseController::createDefaultRoles() {
               if (typesIterator != roleEntry->structValue->end()) {
                 auto typesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
                 typesArray->arrayValue->reserve(typesIterator->second->arrayValue->size());
-                for (auto &type : *typesIterator->second->arrayValue) {
+                for (auto &type: *typesIterator->second->arrayValue) {
                   auto typeValue = (int32_t)BaseLib::VariableType::tVoid;
                   if (type->stringValue == "bool") typeValue = (int32_t)BaseLib::VariableType::tBoolean;
                   else if (type->stringValue == "int") typeValue = (int32_t)BaseLib::VariableType::tInteger;
@@ -2790,7 +3178,7 @@ void DatabaseController::createDefaultRoles() {
 
               auto metadataIterator = roleEntry->structValue->find("metadata");
               if (metadataIterator != roleEntry->structValue->end()) {
-                for (auto &metadataEntry : *metadataIterator->second->structValue) {
+                for (auto &metadataEntry: *metadataIterator->second->structValue) {
                   if (metadataEntry.first == "addVariables" || metadataEntry.first == "ui") continue;
                   metadata->structValue->emplace(metadataEntry.first, metadataEntry.second);
                 }
@@ -2900,7 +3288,7 @@ BaseLib::PVariable DatabaseController::getRoles(BaseLib::PRpcClientInfo clientIn
     int32_t pos = 0;
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM roles", false);
-    for (auto &row : *rows) {
+    for (auto &row: *rows) {
       if (checkAcls && !clientInfo->acls->checkRoleReadAccess(row.second.at(0)->intValue)) continue;
       BaseLib::PVariable role = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       role->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
@@ -2940,7 +3328,7 @@ BaseLib::PVariable DatabaseController::getRoles(BaseLib::PRpcClientInfo clientIn
 
     BaseLib::PVariable roles = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     roles->arrayValue->reserve(sortedRoles.size());
-    for (auto &role : sortedRoles) {
+    for (auto &role: sortedRoles) {
       roles->arrayValue->emplace_back(role.second);
     }
     return roles;
@@ -3051,7 +3439,7 @@ std::set<std::string> DatabaseController::getAllNodeDataNodes() {
     std::set<std::string> nodeIds;
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT node FROM nodeData", false);
 
-    for (auto &row : *rows) {
+    for (auto &row: *rows) {
       nodeIds.emplace(row.second.at(0)->textValue);
     }
 
@@ -3104,7 +3492,7 @@ BaseLib::PVariable DatabaseController::getNodeData(const std::string &node, cons
 
     if (key.empty()) {
       value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      for (auto &row : *rows) {
+      for (auto &row: *rows) {
         std::string innerKey = row.second.at(0)->textValue;
         lowerCharKey = innerKey;
         BaseLib::HelperFunctions::toLower(lowerCharKey);
@@ -3224,7 +3612,7 @@ BaseLib::PVariable DatabaseController::getAllMetadata(BaseLib::PRpcClientInfo cl
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data, false);
 
     BaseLib::PVariable metadataStruct(new BaseLib::Variable(BaseLib::VariableType::tStruct));
-    for (auto &i : *rows) {
+    for (auto &i: *rows) {
       if (i.second.size() < 2) continue;
       if (checkAcls && !clientInfo->acls->checkVariableReadAccess(peer, -2, i.second.at(0)->textValue)) continue;
       BaseLib::PVariable metadata = _rpcDecoder->decodeResponse(*i.second.at(1)->binaryValue);
@@ -3432,12 +3820,12 @@ void DatabaseController::removeCategoryFromSystemVariables(uint64_t categoryId) 
     if (categoryId == 0) return;
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, categories FROM systemVariables", false);
 
-    for (auto &i : *rows) {
+    for (auto &i: *rows) {
       std::vector<std::string> categoryStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsCategory = false;
 
       std::ostringstream categoryStream;
-      for (auto &categoryString : categoryStrings) {
+      for (auto &categoryString: categoryStrings) {
         uint64_t category = BaseLib::Math::getUnsignedNumber64(categoryString);
         if (category == categoryId) containsCategory = true;
         else categoryStream << std::to_string(category) << ",";
@@ -3463,12 +3851,12 @@ void DatabaseController::removeRoleFromSystemVariables(uint64_t roleId) {
     if (roleId == 0) return;
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT variableID, roles FROM systemVariables", false);
 
-    for (auto &i : *rows) {
+    for (auto &i: *rows) {
       std::vector<std::string> roleStrings = BaseLib::HelperFunctions::splitAll(i.second.at(1)->textValue, ',');
       bool containsRole = false;
 
       std::ostringstream roleStream;
-      for (auto &roleString : roleStrings) {
+      for (auto &roleString: roleStrings) {
         uint64_t role = BaseLib::Math::getUnsignedNumber64(roleString);
         if (role == roleId) containsRole = true;
         else roleStream << std::to_string(role) << ",";
@@ -3632,7 +4020,7 @@ bool DatabaseController::createUser(const std::string &name, const std::vector<u
 
     BaseLib::PVariable groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     groupArray->arrayValue->reserve(groups.size());
-    for (auto &groupId : groups) {
+    for (auto &groupId: groups) {
       groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(groupId));
     }
     std::vector<char> groupBlob;
@@ -3667,7 +4055,7 @@ bool DatabaseController::updateUser(uint64_t id, const std::vector<uint8_t> &pas
   try {
     BaseLib::PVariable groupArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     groupArray->arrayValue->reserve(groups.size());
-    for (auto &groupId : groups) {
+    for (auto &groupId: groups) {
       groupArray->arrayValue->push_back(std::make_shared<BaseLib::Variable>(groupId));
     }
     std::vector<char> groupBlob;
@@ -3812,7 +4200,7 @@ std::vector<uint64_t> DatabaseController::getUsersGroups(uint64_t userId) {
     auto decodedData = _rpcDecoder->decodeResponse(*result->at(0).at(0)->binaryValue);
     std::vector<uint64_t> groups;
     groups.reserve(decodedData->arrayValue->size());
-    for (auto &group : *decodedData->arrayValue) {
+    for (auto &group: *decodedData->arrayValue) {
       groups.push_back(group->integerValue64);
     }
     return groups;
@@ -3990,7 +4378,7 @@ BaseLib::PVariable DatabaseController::getUserData(uint64_t userId, const std::s
 
     if (key.empty()) {
       value = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      for (auto &row : *rows) {
+      for (auto &row: *rows) {
         value->structValue->emplace(row.second.at(0)->textValue, _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue));
       }
     } else {
@@ -4203,7 +4591,7 @@ BaseLib::PVariable DatabaseController::getGroups(std::string languageCode) {
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, acl FROM groups", false);
     groups->arrayValue->reserve(rows->size());
-    for (auto row : *rows) {
+    for (auto row: *rows) {
       BaseLib::PVariable group = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
       group->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
@@ -5145,7 +5533,7 @@ bool DatabaseController::updateVariableProfile(uint64_t profileId, const BaseLib
     auto oldTranslations = _rpcDecoder->decodeResponse(translationsBlob);
     oldTranslations->type = BaseLib::VariableType::tStruct;
 
-    for (auto &translation : *translations->structValue) {
+    for (auto &translation: *translations->structValue) {
       oldTranslations->structValue->emplace(translation.first, translation.second);
     }
 

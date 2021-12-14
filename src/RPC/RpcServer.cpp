@@ -35,6 +35,7 @@
 #include "RpcMethods/VariableProfileRpcMethods.h"
 #include "RpcMethods/NodeBlueRpcMethods.h"
 #include "../GD/GD.h"
+#include "RpcMethods/BuildingPartRpcMethods.h"
 #include <homegear-base/BaseLib.h>
 #include <gnutls/gnutls.h>
 
@@ -270,15 +271,27 @@ RpcServer::RpcServer() {
   }
 
   { // Buildings
+    _rpcMethods->emplace("addBuildingPartToBuilding", std::make_shared<RpcMethods::RPCAddBuildingPartToBuilding>());
     _rpcMethods->emplace("addStoryToBuilding", std::make_shared<RpcMethods::RPCAddStoryToBuilding>());
     _rpcMethods->emplace("createBuilding", std::make_shared<RpcMethods::RPCCreateBuilding>());
     _rpcMethods->emplace("deleteBuilding", std::make_shared<RpcMethods::RPCDeleteBuilding>());
+    _rpcMethods->emplace("getBuildingPartsInBuilding", std::make_shared<RpcMethods::RPCGetBuildingPartsInBuilding>());
     _rpcMethods->emplace("getStoriesInBuilding", std::make_shared<RpcMethods::RPCGetStoriesInBuilding>());
     _rpcMethods->emplace("getBuildingMetadata", std::make_shared<RpcMethods::RPCGetBuildingMetadata>());
     _rpcMethods->emplace("getBuildings", std::make_shared<RpcMethods::RPCGetBuildings>());
+    _rpcMethods->emplace("removeBuildingPartFromBuilding", std::make_shared<RpcMethods::RPCRemoveBuildingPartFromBuilding>());
     _rpcMethods->emplace("removeStoryFromBuilding", std::make_shared<RpcMethods::RPCRemoveStoryFromBuilding>());
     _rpcMethods->emplace("setBuildingMetadata", std::make_shared<RpcMethods::RPCSetBuildingMetadata>());
     _rpcMethods->emplace("updateBuilding", std::make_shared<RpcMethods::RPCUpdateBuilding>());
+  }
+
+  { // Building parts
+    _rpcMethods->emplace("createBuildingPart", std::make_shared<RpcMethods::RPCCreateBuildingPart>());
+    _rpcMethods->emplace("deleteBuildingPart", std::make_shared<RpcMethods::RPCDeleteBuildingPart>());
+    _rpcMethods->emplace("getBuildingPartMetadata", std::make_shared<RpcMethods::RPCGetBuildingPartMetadata>());
+    _rpcMethods->emplace("getBuildingParts", std::make_shared<RpcMethods::RPCGetBuildingParts>());
+    _rpcMethods->emplace("setBuildingPartMetadata", std::make_shared<RpcMethods::RPCSetBuildingPartMetadata>());
+    _rpcMethods->emplace("updateBuildingPart", std::make_shared<RpcMethods::RPCUpdateBuildingPart>());
   }
 
   { // System variables

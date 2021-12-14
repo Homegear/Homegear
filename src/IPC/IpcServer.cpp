@@ -39,6 +39,7 @@
 #include "../RPC/RpcMethods/VariableProfileRpcMethods.h"
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
 #include "../RPC/RpcMethods/MaintenanceRpcMethods.h"
+#include "../RPC/RpcMethods/BuildingPartRpcMethods.h"
 
 namespace Homegear {
 
@@ -176,15 +177,27 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   }
 
   { // Buildings
+    _rpcMethods.emplace("addBuildingPartToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddBuildingPartToBuilding()));
     _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
     _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
     _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
+    _rpcMethods.emplace("getBuildingPartsInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingPartsInBuilding()));
     _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
     _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
     _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
+    _rpcMethods.emplace("removeBuildingPartFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveBuildingPartFromBuilding()));
     _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
     _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
     _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+  }
+
+  { // Building parts
+    _rpcMethods.emplace("createBuildingPart", std::make_shared<RpcMethods::RPCCreateBuildingPart>());
+    _rpcMethods.emplace("deleteBuildingPart", std::make_shared<RpcMethods::RPCDeleteBuildingPart>());
+    _rpcMethods.emplace("getBuildingPartMetadata", std::make_shared<RpcMethods::RPCGetBuildingPartMetadata>());
+    _rpcMethods.emplace("getBuildingParts", std::make_shared<RpcMethods::RPCGetBuildingParts>());
+    _rpcMethods.emplace("setBuildingPartMetadata", std::make_shared<RpcMethods::RPCSetBuildingPartMetadata>());
+    _rpcMethods.emplace("updateBuildingPart", std::make_shared<RpcMethods::RPCUpdateBuildingPart>());
   }
 
   { // Stories

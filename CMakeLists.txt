@@ -128,6 +128,8 @@ set(SOURCE_FILES
         src/RPC/RpcMethods/UiRpcMethods.h
         src/RPC/RpcMethods/BuildingRpcMethods.cpp
         src/RPC/RpcMethods/BuildingRpcMethods.h
+        src/RPC/RpcMethods/BuildingPartRpcMethods.cpp
+        src/RPC/RpcMethods/BuildingPartRpcMethods.h
         src/Node-BLUE/FlowParser.cpp
         src/Node-BLUE/FlowParser.h
         src/RPC/RpcMethods/NodeBlueRpcMethods.cpp
