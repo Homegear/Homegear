@@ -378,6 +378,8 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   void savePeerParameterRoomAsynchronous(BaseLib::Database::DataRow &data) override;
 
+  void savePeerParameterBuildingPartAsynchronous(BaseLib::Database::DataRow &data) override;
+
   void savePeerParameterCategoriesAsynchronous(BaseLib::Database::DataRow &data) override;
 
   void savePeerParameterRolesAsynchronous(BaseLib::Database::DataRow &data) override;

@@ -65,10 +65,11 @@ BaseLib::PVariable RPCDeleteBuildingPart::invoke(BaseLib::PRpcClientInfo clientI
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("deleteBuildingPart"))
+    uint64_t buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAndBuildingPartWriteAccess("deleteBuildingPart", buildingPartId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    uint64_t buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
     auto result = GD::bl->db->deleteBuildingPart(buildingPartId);
     GD::bl->db->removeBuildingPartFromBuildings(buildingPartId);
 
@@ -92,10 +93,12 @@ BaseLib::PVariable RPCGetBuildingPartMetadata::invoke(BaseLib::PRpcClientInfo cl
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getBuildingPartMetadata"))
+    uint64_t buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAndBuildingPartReadAccess("getBuildingPartMetadata", buildingPartId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    return GD::bl->db->getBuildingPartMetadata((uint64_t)parameters->at(0)->integerValue64);
+    return GD::bl->db->getBuildingPartMetadata(buildingPartId);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -120,7 +123,9 @@ BaseLib::PVariable RPCGetBuildingParts::invoke(BaseLib::PRpcClientInfo clientInf
 
     std::string languageCode = parameters->empty() ? "" : parameters->at(0)->stringValue;
 
-    return GD::bl->db->getBuildingParts(languageCode);
+    bool checkAcls = clientInfo->acls->buildingPartsReadSet();
+
+    return GD::bl->db->getBuildingParts(languageCode, checkAcls);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

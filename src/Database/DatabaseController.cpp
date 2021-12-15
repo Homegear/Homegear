@@ -99,7 +99,7 @@ void DatabaseController::initializeDatabase() {
         false);
     _db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON serviceMessages (variableID, familyID, interface, peerID, messageID, messageSubID, timestamp, priority)", false);
     _db.executeCommand(
-        "CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, categories TEXT, roles TEXT, specialType INTEGER, metadata BLOB)",
+        "CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, buildingPart INTEGER, categories TEXT, roles TEXT, specialType INTEGER, metadata BLOB)",
         false);
     _db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName, specialType)", false);
     _db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)", false);
@@ -355,7 +355,7 @@ void DatabaseController::initializeDatabase() {
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.3"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.4"));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, false);
 
@@ -438,7 +438,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
       int64_t versionId = result->at(0).at(0)->intValue;
       std::string version = result->at(0).at(3)->textValue;
 
-      static const std::string kCurrentVersion("0.8.3");
+      static const std::string kCurrentVersion("0.8.4");
 
       if (version == kCurrentVersion) return false; //Up to date
       /*if(version == "0.0.7")
@@ -945,6 +945,23 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
         _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
         version = "0.8.3";
+      }
+      if (version == "0.8.3") {
+        GD::out.printMessage("Converting database from version " + version + " to version 0.8.4...");
+
+        data.clear();
+        _db.executeCommand("ALTER TABLE parameters ADD COLUMN buildingPart INTEGER", factoryDatabase);
+
+        data.clear();
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        //Don't forget to set new version in initializeDatabase!!!
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.4"));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
+        _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
+
+        version = "0.8.4";
       }
 
       if (version != kCurrentVersion) {
@@ -5069,6 +5086,25 @@ void DatabaseController::savePeerParameterRoomAsynchronous(BaseLib::Database::Da
         return;
       }
       std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET room=? WHERE parameterID=?", data);
+      enqueue(0, entry);
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
+void DatabaseController::savePeerParameterBuildingPartAsynchronous(BaseLib::Database::DataRow &data) {
+  try {
+    if (data.size() == 2) {
+      if (data.at(1)->intValue == 0) {
+        GD::out.printError("Error: Could not save building part of peer parameter. Parameter ID is \"0\".");
+        return;
+      }
+      std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE parameters SET buildingPart=? WHERE parameterID=?", data);
       enqueue(0, entry);
     }
   }
