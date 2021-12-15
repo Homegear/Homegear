@@ -154,7 +154,7 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   BaseLib::PVariable getBuildingPartMetadata(uint64_t buildingPartId) override;
 
-  BaseLib::PVariable getBuildingParts(std::string languageCode) override;
+  BaseLib::PVariable getBuildingParts(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) override;
 
   bool buildingPartExists(uint64_t buildingPartId) override;
 

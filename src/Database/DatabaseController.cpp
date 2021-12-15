@@ -2182,13 +2182,14 @@ BaseLib::PVariable DatabaseController::getBuildingPartMetadata(uint64_t building
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
-BaseLib::PVariable DatabaseController::getBuildingParts(std::string languageCode) {
+BaseLib::PVariable DatabaseController::getBuildingParts(BaseLib::PRpcClientInfo clientInfo, std::string languageCode, bool checkAcls) {
   try {
     std::multimap<int32_t, BaseLib::PVariable> sortedBuildingParts;
     int32_t buildingPartPos = 0;
 
     std::shared_ptr<BaseLib::Database::DataTable> rows = _db.executeCommand("SELECT id, translations, metadata FROM buildingParts", false);
     for (auto &row: *rows) {
+      if (checkAcls && !clientInfo->acls->checkBuildingPartReadAccess(row.second.at(0)->intValue)) continue;
       BaseLib::PVariable buildingPart = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       buildingPart->structValue->emplace("ID", std::make_shared<BaseLib::Variable>(row.second.at(0)->intValue));
       BaseLib::PVariable translations = _rpcDecoder->decodeResponse(*row.second.at(1)->binaryValue);

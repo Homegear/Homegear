@@ -93,7 +93,7 @@ BaseLib::PVariable RPCGetBuildingPartMetadata::invoke(BaseLib::PRpcClientInfo cl
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    uint64_t buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
+    auto buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
 
     if (!clientInfo || !clientInfo->acls->checkMethodAndBuildingPartReadAccess("getBuildingPartMetadata", buildingPartId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
@@ -125,7 +125,7 @@ BaseLib::PVariable RPCGetBuildingParts::invoke(BaseLib::PRpcClientInfo clientInf
 
     bool checkAcls = clientInfo->acls->buildingPartsReadSet();
 
-    return GD::bl->db->getBuildingParts(languageCode, checkAcls);
+    return GD::bl->db->getBuildingParts(clientInfo, languageCode, checkAcls);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -143,10 +143,12 @@ BaseLib::PVariable RPCSetBuildingPartMetadata::invoke(BaseLib::PRpcClientInfo cl
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setBuildingPartMetadata"))
+    auto buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAndBuildingPartWriteAccess("setBuildingPartMetadata", buildingPartId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    return GD::bl->db->setBuildingPartMetadata((uint64_t)parameters->at(0)->integerValue64, parameters->at(1));
+    return GD::bl->db->setBuildingPartMetadata(buildingPartId, parameters->at(1));
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -165,13 +167,15 @@ BaseLib::PVariable RPCUpdateBuildingPart::invoke(BaseLib::PRpcClientInfo clientI
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("updateBuildingPart"))
+    auto buildingPartId = (uint64_t)parameters->at(0)->integerValue64;
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAndBuildingPartWriteAccess("updateBuildingPart", buildingPartId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
     BaseLib::PVariable result;
 
-    if (parameters->size() == 3) result = GD::bl->db->updateBuildingPart((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), parameters->at(2));
-    else result = GD::bl->db->updateBuildingPart((uint64_t)parameters->at(0)->integerValue64, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+    if (parameters->size() == 3) result = GD::bl->db->updateBuildingPart(buildingPartId, parameters->at(1), parameters->at(2));
+    else result = GD::bl->db->updateBuildingPart(buildingPartId, parameters->at(1), std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
 
     GD::uiController->requestUiRefresh("");
 

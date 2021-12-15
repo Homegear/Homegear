@@ -810,7 +810,7 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
     if (_shuttingDown) return;
     if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-    bool checkAcls = _scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _scriptEngineClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
     if (checkAcls) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -828,7 +828,7 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
         if (id == 0) {
-          if (_scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
+          if (_scriptEngineClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
             if (systemVariable && _scriptEngineClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
               newVariables->push_back(variables->at(i));
@@ -878,7 +878,7 @@ void ScriptEngineServer::broadcastServiceMessage(const BaseLib::PServiceMessage 
     if (_shuttingDown) return;
     if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
 
-    bool checkAcls = _scriptEngineClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _scriptEngineClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
     if (serviceMessage->peerId > 0) {
@@ -925,7 +925,7 @@ void ScriptEngineServer::broadcastNewDevices(std::vector<uint64_t> &ids, const B
     if (_shuttingDown) return;
 
     if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-    if (_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_scriptEngineClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
@@ -993,7 +993,7 @@ void ScriptEngineServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int
     if (_shuttingDown) return;
 
     if (!_scriptEngineClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-    if (_scriptEngineClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_scriptEngineClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family: families) {
@@ -2098,7 +2098,7 @@ BaseLib::PVariable ScriptEngineServer::peerExists(PScriptEngineClientData &clien
     if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter is not of type integer.");
 
-    if (scriptInfo->clientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (scriptInfo->clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       auto families = GD::familyController->getFamilies();
       for (auto &family: families) {
         auto central = family.second->getCentral();

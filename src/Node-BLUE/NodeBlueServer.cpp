@@ -2614,7 +2614,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
     if (_shuttingDown || _flowsRestarting) return;
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-    bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
     if (id != 0 && id != 0x50000001) {
@@ -2634,7 +2634,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
         if (id == 0) {
-          if (_nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
+          if (_nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
             if (systemVariable && _nodeBlueClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
               newVariables->push_back(variables->at(i));
@@ -2848,7 +2848,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
     if (_shuttingDown || _flowsRestarting) return;
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
 
-    bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
     if (serviceMessage->peerId > 0) {
@@ -2959,7 +2959,7 @@ void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const
     if (_shuttingDown || _flowsRestarting) return;
 
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-    if (_nodeBlueClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
@@ -3029,7 +3029,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     if (_shuttingDown || _flowsRestarting) return;
 
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-    if (_nodeBlueClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {

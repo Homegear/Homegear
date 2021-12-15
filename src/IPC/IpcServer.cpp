@@ -177,18 +177,18 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   }
 
   { // Buildings
-    _rpcMethods.emplace("addBuildingPartToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddBuildingPartToBuilding()));
-    _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
-    _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
-    _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
-    _rpcMethods.emplace("getBuildingPartsInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingPartsInBuilding()));
-    _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
-    _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
-    _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
-    _rpcMethods.emplace("removeBuildingPartFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveBuildingPartFromBuilding()));
-    _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
-    _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
-    _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+    _rpcMethods.emplace("addBuildingPartToBuilding", std::make_shared<RpcMethods::RPCAddBuildingPartToBuilding>());
+    _rpcMethods.emplace("addStoryToBuilding", std::make_shared<RpcMethods::RPCAddStoryToBuilding>());
+    _rpcMethods.emplace("createBuilding", std::make_shared<RpcMethods::RPCCreateBuilding>());
+    _rpcMethods.emplace("deleteBuilding", std::make_shared<RpcMethods::RPCDeleteBuilding>());
+    _rpcMethods.emplace("getBuildingPartsInBuilding", std::make_shared<RpcMethods::RPCGetBuildingPartsInBuilding>());
+    _rpcMethods.emplace("getStoriesInBuilding", std::make_shared<RpcMethods::RPCGetStoriesInBuilding>());
+    _rpcMethods.emplace("getBuildingMetadata", std::make_shared<RpcMethods::RPCGetBuildingMetadata>());
+    _rpcMethods.emplace("getBuildings", std::make_shared<RpcMethods::RPCGetBuildings>());
+    _rpcMethods.emplace("removeBuildingPartFromBuilding", std::make_shared<RpcMethods::RPCRemoveBuildingPartFromBuilding>());
+    _rpcMethods.emplace("removeStoryFromBuilding", std::make_shared<RpcMethods::RPCRemoveStoryFromBuilding>());
+    _rpcMethods.emplace("setBuildingMetadata", std::make_shared<RpcMethods::RPCSetBuildingMetadata>());
+    _rpcMethods.emplace("updateBuilding", std::make_shared<RpcMethods::RPCUpdateBuilding>());
   }
 
   { // Building parts
@@ -546,7 +546,7 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
     if (_shuttingDown) return;
     if (!_dummyClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-    if (_dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
+    if (_dummyClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {
@@ -563,7 +563,7 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
         if (id == 0) {
-          if (_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
+          if (_dummyClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
             if (systemVariable && _dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
               newVariables->push_back(variables->at(i));
@@ -612,7 +612,7 @@ void IpcServer::broadcastServiceMessage(const BaseLib::PServiceMessage &serviceM
     if (_shuttingDown) return;
     if (!_dummyClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
 
-    if (serviceMessage->peerId > 0 && _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet()) {
+    if (serviceMessage->peerId > 0 && _dummyClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {
@@ -656,7 +656,7 @@ void IpcServer::broadcastNewDevices(std::vector<uint64_t> &ids, BaseLib::PVariab
     if (_shuttingDown) return;
 
     if (!_dummyClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-    if (_dummyClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_dummyClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
@@ -729,7 +729,7 @@ void IpcServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t hint
     if (_shuttingDown) return;
 
     if (!_dummyClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-    if (_dummyClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_dummyClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin(); i != families.end(); ++i) {
