@@ -30,7 +30,7 @@
 
 #include "Factory.h"
 #include "../../config.h"
-#include "GD.h"
+#include "Gd.h"
 
 BaseLib::Systems::DeviceFamily* MiscellaneousFactory::createDeviceFamily(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler)
 {

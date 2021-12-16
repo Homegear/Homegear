@@ -45,37 +45,38 @@ class MiscPeer : public BaseLib::Systems::Peer {
  public:
   MiscPeer(uint32_t parentID, IPeerEventSink *eventHandler);
   MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, IPeerEventSink *eventHandler);
-  virtual ~MiscPeer();
+  ~MiscPeer() override;
 
   //Features
-  virtual bool wireless() { return false; }
+  bool wireless() override { return false; }
   //End features
 
-  virtual std::string handleCliCommand(std::string command);
+  void worker();
+  std::string handleCliCommand(std::string command) override;
 
-  virtual bool load(BaseLib::Systems::ICentral *central);
+  bool load(BaseLib::Systems::ICentral *central) override;
   void initProgram();
 
-  virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
-  virtual int32_t getNewFirmwareVersion() { return 0; }
-  virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return "1.0"; }
-  virtual bool firmwareUpdateAvailable() { return false; }
+  int32_t getChannelGroupedWith(int32_t channel) override { return -1; }
+  int32_t getNewFirmwareVersion() override { return 0; }
+  std::string getFirmwareVersionString(int32_t firmwareVersion) override { return "1.0"; }
+  bool firmwareUpdateAvailable() override { return false; }
 
   std::string printConfig();
 
   /**
    * {@inheritDoc}
    */
-  virtual void homegearShuttingDown();
+  void homegearShuttingDown() override;
 
   bool stop();
   void stopScript(bool callStop = true);
 
   //RPC methods
-  virtual PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields);
-  virtual PVariable getParamsetDescription(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, bool checkAcls);
-  virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing = false);
-  virtual PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait);
+  PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields) override;
+  PVariable getParamsetDescription(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, bool checkAcls) override;
+  PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing = false) override;
+  PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait) override;
   //End RPC methods
  protected:
   std::atomic_long _lastScriptFinished;
@@ -91,28 +92,28 @@ class MiscPeer : public BaseLib::Systems::Peer {
 
   void init();
 
-  virtual void loadVariables(BaseLib::Systems::ICentral *central, std::shared_ptr<BaseLib::Database::DataTable> &rows);
-  virtual void saveVariables();
-  virtual void savePeers() {}
+  void loadVariables(BaseLib::Systems::ICentral *central, std::shared_ptr<BaseLib::Database::DataTable> &rows) override;
+  void saveVariables() override;
+  void savePeers() override {}
 
   void runProgram();
   void runScript(int32_t delay = 0);
   void scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode);
 
-  virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
+  std::shared_ptr<BaseLib::Systems::ICentral> getCentral() override;
 
-  virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
+  PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) override;
 
   // {{{ Hooks
   /**
    * {@inheritDoc}
    */
-  virtual bool getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters);
+  bool getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters) override;
 
   /**
    * {@inheritDoc}
    */
-  virtual bool getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters);
+  bool getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters) override;
   // }}}
 };
 

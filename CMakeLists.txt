@@ -8,8 +8,8 @@ include_directories(/usr/include/nodejs-homegear /usr/include/php8-homegear /usr
 set(SOURCE_FILES
         homegear-miscellaneous/src/Factory.cpp
         homegear-miscellaneous/src/Factory.h
-        homegear-miscellaneous/src/GD.cpp
-        homegear-miscellaneous/src/GD.h
+        homegear-miscellaneous/src/Gd.cpp
+        homegear-miscellaneous/src/Gd.h
         homegear-miscellaneous/src/MiscCentral.cpp
         homegear-miscellaneous/src/MiscCentral.h
         homegear-miscellaneous/src/Miscellaneous.cpp
