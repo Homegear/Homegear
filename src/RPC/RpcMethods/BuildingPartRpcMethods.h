@@ -36,6 +36,33 @@
 
 namespace Homegear::RpcMethods {
 
+class RPCAddChannelToBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddChannelToBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddDeviceToBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddDeviceToBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCAddVariableToBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddVariableToBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RPCCreateBuildingPart : public BaseLib::Rpc::RpcMethod {
  public:
   RPCCreateBuildingPart() {
@@ -69,6 +96,60 @@ class RPCGetBuildingParts : public BaseLib::Rpc::RpcMethod {
   RPCGetBuildingParts() {
     addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{});
     addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetChannelsInBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetChannelsInBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetDevicesInBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetDevicesInBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCGetVariablesInBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetVariablesInBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCRemoveChannelFromBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveChannelFromBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCRemoveDeviceFromBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveDeviceFromBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCRemoveVariableFromBuildingPart : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveVariableFromBuildingPart() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger, BaseLib::VariableType::tString, BaseLib::VariableType::tInteger});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
