@@ -355,7 +355,7 @@ void DatabaseController::initializeDatabase() {
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
-      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.4"));
+      data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.5"));
       data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
       _db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, false);
 
@@ -438,7 +438,7 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
       int64_t versionId = result->at(0).at(0)->intValue;
       std::string version = result->at(0).at(3)->textValue;
 
-      static const std::string kCurrentVersion("0.8.4");
+      static const std::string kCurrentVersion("0.8.5");
 
       if (version == kCurrentVersion) return false; //Up to date
       /*if(version == "0.0.7")
@@ -946,22 +946,40 @@ bool DatabaseController::convertDatabase(const std::string &databasePath,
 
         version = "0.8.3";
       }
-      if (version == "0.8.3") {
-        GD::out.printMessage("Converting database from version " + version + " to version 0.8.4...");
+      if (version == "0.8.3" || version == "0.8.4") {
+        GD::out.printMessage("Converting database from version " + version + " to version 0.8.5...");
+
+        auto rows2 = _db.executeCommand("SELECT * FROM parameters", factoryDatabase);
 
         data.clear();
-        _db.executeCommand("ALTER TABLE parameters ADD COLUMN buildingPart INTEGER", factoryDatabase);
+        _db.executeCommand("DROP TABLE parameters", factoryDatabase);
+        _db.executeCommand(
+            "CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB, room INTEGER, buildingPart INTEGER, categories TEXT, roles TEXT, specialType INTEGER, metadata BLOB)",
+            factoryDatabase);
+
+        for (auto &row: *rows2) {
+          data.clear();
+          for (uint32_t column_index = 0; column_index < 9; column_index++) {
+            data.push_back(row.second.at(column_index));
+          }
+          data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
+          for (uint32_t column_index = 10; column_index < 14; column_index++) {
+            data.push_back(row.second.at(column_index - 1));
+          }
+
+          _db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data, factoryDatabase);
+        }
 
         data.clear();
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(versionId));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>(0));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
         //Don't forget to set new version in initializeDatabase!!!
-        data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.4"));
+        data.push_back(std::make_shared<BaseLib::Database::DataColumn>("0.8.5"));
         data.push_back(std::make_shared<BaseLib::Database::DataColumn>());
         _db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data, factoryDatabase);
 
-        version = "0.8.4";
+        version = "0.8.5";
       }
 
       if (version != kCurrentVersion) {
