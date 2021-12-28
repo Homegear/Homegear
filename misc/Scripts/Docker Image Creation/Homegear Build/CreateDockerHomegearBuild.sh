@@ -997,9 +997,9 @@ else
 	HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
-	echo "$HOMEGEARBUILD_SERVERCERT" > /root/.ssh/id_rsa
-	chmod 400 /root/.ssh/id_rsa
-	sed -i -- 's/\\n/\n/g' /root/.ssh/id_rsa
+	echo "$HOMEGEARBUILD_SERVERCERT" > /root/.ssh/id_ed25519
+	chmod 400 /root/.ssh/id_ed25519
+	sed -i -- 's/\\n/\n/g' /root/.ssh/id_ed25519
 	if [ -n "$HOMEGEARBUILD_SERVER_KNOWNHOST_ENTRY" ]; then
 		echo "$HOMEGEARBUILD_SERVER_KNOWNHOST_ENTRY" > /root/.ssh/known_hosts
 		sed -i -- 's/\\n/\n/g' /root/.ssh/known_hosts

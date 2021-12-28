@@ -354,9 +354,9 @@ else
 	NODEBUILD_NIGHTLYSERVERPATH=${NODEBUILD_NIGHTLYSERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
-	echo "$NODEBUILD_SERVERCERT" > /root/.ssh/id_rsa
-	chmod 400 /root/.ssh/id_rsa
-	sed -i -- 's/\\n/\n/g' /root/.ssh/id_rsa
+	echo "$NODEBUILD_SERVERCERT" > /root/.ssh/id_ed25519
+	chmod 400 /root/.ssh/id_ed25519
+	sed -i -- 's/\\n/\n/g' /root/.ssh/id_ed25519
 	if [ -n "$NODEBUILD_SERVER_KNOWNHOST_ENTRY" ]; then
 		echo "$NODEBUILD_SERVER_KNOWNHOST_ENTRY" > /root/.ssh/known_hosts
 		sed -i -- 's/\\n/\n/g' /root/.ssh/known_hosts
