@@ -148,6 +148,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ]  || [ "$distver" ==
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano git
+DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf; update-ca-certificates --fresh
 
 if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr

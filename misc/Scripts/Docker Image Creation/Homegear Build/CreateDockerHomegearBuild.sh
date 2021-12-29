@@ -148,6 +148,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
+DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf; update-ca-certificates --fresh
 
 echo "deb https://homegear.eu/packages/$dist/ $distver/" > $rootfs/etc/apt/sources.list.d/homegear.list
 
