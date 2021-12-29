@@ -223,11 +223,14 @@ buildthreads="<BUILDTHREADS>"
 function createPackage {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
-	revision=$(echo $fullversion | cut -d "-" -f 2).$(date "+%Y%m%d%H%M")
+	revision=$(echo $fullversion | cut -d "-" -f 2)
 	if [ $revision -eq 0 ]; then
 		echo "Error: Could not get revision."
 		exit 1
 	fi
+	date=$(date "+%Y%m%d%H%M%S")
+  fullversion=${fullversion}.${date}
+  revision=${revision}.${date}
 	sourcePath=${3}-$version
 	mv ${1}-${2} $sourcePath
 	[ $? -ne 0 ] && exit 1
@@ -284,11 +287,14 @@ function createPackage {
 function createPackageWithoutAutomake {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
-	revision=$(echo $fullversion | cut -d "-" -f 2).$(date "+%Y%m%d%H%M")
+	revision=$(echo $fullversion | cut -d "-" -f 2)
 	if [ $revision -eq 0 ]; then
 		echo "Error: Could not get revision."
 		exit 1
 	fi
+	date=$(date "+%Y%m%d%H%M%S")
+	fullversion=${fullversion}.${date}
+	revision=${revision}.${date}
 	sourcePath=${3}-$version
 	mv ${1}-${2} $sourcePath
 	date=`LANG=en_US.UTF-8 date +"%a, %d %b %Y %T %z"`

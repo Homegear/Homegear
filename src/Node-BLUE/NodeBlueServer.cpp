@@ -200,10 +200,19 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   }
 
   { // Building parts
+    _rpcMethods.emplace("addChannelToBuildingPart", std::make_shared<RpcMethods::RPCAddChannelToBuildingPart>());
+    _rpcMethods.emplace("addDeviceToBuildingPart", std::make_shared<RpcMethods::RPCAddDeviceToBuildingPart>());
+    _rpcMethods.emplace("addVariableToBuildingPart", std::make_shared<RpcMethods::RPCAddVariableToBuildingPart>());
     _rpcMethods.emplace("createBuildingPart", std::make_shared<RpcMethods::RPCCreateBuildingPart>());
     _rpcMethods.emplace("deleteBuildingPart", std::make_shared<RpcMethods::RPCDeleteBuildingPart>());
     _rpcMethods.emplace("getBuildingPartMetadata", std::make_shared<RpcMethods::RPCGetBuildingPartMetadata>());
     _rpcMethods.emplace("getBuildingParts", std::make_shared<RpcMethods::RPCGetBuildingParts>());
+    _rpcMethods.emplace("getChannelsInBuildingPart", std::make_shared<RpcMethods::RPCGetChannelsInBuildingPart>());
+    _rpcMethods.emplace("getDevicesInBuildingPart", std::make_shared<RpcMethods::RPCGetDevicesInBuildingPart>());
+    _rpcMethods.emplace("getVariablesInBuildingPart", std::make_shared<RpcMethods::RPCGetVariablesInBuildingPart>());
+    _rpcMethods.emplace("removeChannelFromBuildingPart", std::make_shared<RpcMethods::RPCRemoveChannelFromBuildingPart>());
+    _rpcMethods.emplace("removeDeviceFromBuildingPart", std::make_shared<RpcMethods::RPCRemoveDeviceFromBuildingPart>());
+    _rpcMethods.emplace("removeVariableFromBuildingPart", std::make_shared<RpcMethods::RPCRemoveVariableFromBuildingPart>());
     _rpcMethods.emplace("setBuildingPartMetadata", std::make_shared<RpcMethods::RPCSetBuildingPartMetadata>());
     _rpcMethods.emplace("updateBuildingPart", std::make_shared<RpcMethods::RPCUpdateBuildingPart>());
   }
