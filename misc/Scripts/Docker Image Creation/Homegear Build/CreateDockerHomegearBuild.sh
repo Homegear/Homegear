@@ -228,9 +228,6 @@ function createPackage {
 		echo "Error: Could not get revision."
 		exit 1
 	fi
-	date=$(date "+%Y%m%d%H%M%S")
-  fullversion=${fullversion}.${date}
-  revision=${revision}.${date}
 	sourcePath=${3}-$version
 	mv ${1}-${2} $sourcePath
 	[ $? -ne 0 ] && exit 1
@@ -292,9 +289,6 @@ function createPackageWithoutAutomake {
 		echo "Error: Could not get revision."
 		exit 1
 	fi
-	date=$(date "+%Y%m%d%H%M%S")
-	fullversion=${fullversion}.${date}
-	revision=${revision}.${date}
 	sourcePath=${3}-$version
 	mv ${1}-${2} $sourcePath
 	date=`LANG=en_US.UTF-8 date +"%a, %d %b %Y %T %z"`
