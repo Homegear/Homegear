@@ -221,7 +221,7 @@ buildthreads="<BUILDTHREADS>"
 function createPackage {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
-	revision=$(echo $fullversion | cut -d "-" -f 2)
+	revision=$(echo $fullversion | cut -d "-" -f 2).$(date "+%Y%m%d%H%M")
 	if [ $revision -eq 0 ]; then
 		echo "Error: Could not get revision."
 		exit 1
@@ -282,7 +282,7 @@ function createPackage {
 function createPackageWithoutAutomake {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
-	revision=$(echo $fullversion | cut -d "-" -f 2)
+	revision=$(echo $fullversion | cut -d "-" -f 2).$(date "+%Y%m%d%H%M")
 	if [ $revision -eq 0 ]; then
 		echo "Error: Could not get revision."
 		exit 1
