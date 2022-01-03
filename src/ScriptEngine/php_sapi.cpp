@@ -43,8 +43,8 @@
 #if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
-#if PHP_VERSION_ID >= 80100
-#error "PHP 8.1 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
+#if PHP_VERSION_ID >= 80200
+#error "PHP 8.2 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of marked part in hg_stream_open() equals zend_stream_open() in zend_stream.c
@@ -2578,6 +2578,18 @@ int php_homegear_init() {
   php_homegear_sapi_module.php_ini_path_override = ini_path_override;
   php_homegear_sapi_module.phpinfo_as_text = 0;
   php_homegear_sapi_module.php_ini_ignore_cwd = 1;
+
+  /* From sapi/embed/php_embed.c of the PHP source code:
+   * SAPI initialization (SINIT)
+   *
+   * Initialize the SAPI globals (memset to 0). After this point we can set
+   * SAPI globals via the SG() macro.
+   *
+   * Reentrancy startup.
+   *
+   * This also sets 'php_embed_module.ini_entries = NULL' so we cannot
+   * allocate the INI entries until after this call.
+   */
   sapi_startup(&php_homegear_sapi_module);
 
   sapi_ini_entries = (char *)malloc(sizeof(HARDCODED_INI));
