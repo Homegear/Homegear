@@ -32,18 +32,18 @@
 
 #include "Miscellaneous.h"
 #include "MiscCentral.h"
-#include "GD.h"
+#include "Gd.h"
 
 namespace Misc
 {
 
 Miscellaneous::Miscellaneous(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler, MISC_FAMILY_ID, MISC_FAMILY_NAME)
 {
-	GD::bl = bl;
-	GD::family = this;
-	GD::out.init(bl);
-	GD::out.setPrefix("Module Miscellaneous: ");
-	GD::out.printDebug("Debug: Loading module...");
+	Gd::bl = bl;
+	Gd::family = this;
+	Gd::out.init(bl);
+	Gd::out.setPrefix("Module Miscellaneous: ");
+	Gd::out.printDebug("Debug: Loading module...");
 }
 
 Miscellaneous::~Miscellaneous()
@@ -72,11 +72,11 @@ void Miscellaneous::createCentral()
 	try
 	{
 		_central.reset(new MiscCentral(0, "VMC0000001", this));
-		GD::out.printMessage("Created Miscellaneous central with id " + std::to_string(_central->getId()) + ".");
+		Gd::out.printMessage("Created Miscellaneous central with id " + std::to_string(_central->getId()) + ".");
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
 }
 
@@ -107,7 +107,7 @@ PVariable Miscellaneous::getPairingInfo()
 	}
 	catch(const std::exception& ex)
 	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	return Variable::createError(-32500, "Unknown application error.");
 }

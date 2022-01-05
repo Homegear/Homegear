@@ -8,8 +8,8 @@ include_directories(/usr/include/nodejs-homegear /usr/include/php8-homegear /usr
 set(SOURCE_FILES
         homegear-miscellaneous/src/Factory.cpp
         homegear-miscellaneous/src/Factory.h
-        homegear-miscellaneous/src/GD.cpp
-        homegear-miscellaneous/src/GD.h
+        homegear-miscellaneous/src/Gd.cpp
+        homegear-miscellaneous/src/Gd.h
         homegear-miscellaneous/src/MiscCentral.cpp
         homegear-miscellaneous/src/MiscCentral.h
         homegear-miscellaneous/src/Miscellaneous.cpp
@@ -128,6 +128,8 @@ set(SOURCE_FILES
         src/RPC/RpcMethods/UiRpcMethods.h
         src/RPC/RpcMethods/BuildingRpcMethods.cpp
         src/RPC/RpcMethods/BuildingRpcMethods.h
+        src/RPC/RpcMethods/BuildingPartRpcMethods.cpp
+        src/RPC/RpcMethods/BuildingPartRpcMethods.h
         src/Node-BLUE/FlowParser.cpp
         src/Node-BLUE/FlowParser.h
         src/RPC/RpcMethods/NodeBlueRpcMethods.cpp

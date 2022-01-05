@@ -196,7 +196,7 @@ rm $rootfs/php-gpg.key
 chroot $rootfs apt-get update
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.0"
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.1"
 cd $rootfs/PHPBuild
 tar -xf php8*debian.tar.xz
 cd ..
@@ -262,7 +262,7 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php8.0
+apt-get source php8.1
 rm php8*.tar.*
 rm php8*.dsc
 cd php8*

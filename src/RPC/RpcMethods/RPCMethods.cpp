@@ -417,7 +417,7 @@ BaseLib::PVariable RPCAddCategoryToChannel::invoke(BaseLib::PRpcClientInfo clien
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToChannel",
                                                                             parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->categoryExists(parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -466,7 +466,7 @@ BaseLib::PVariable RPCAddCategoryToDevice::invoke(BaseLib::PRpcClientInfo client
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToDevice",
                                                                             (uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -541,7 +541,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
     uint64_t roleId = parameters->at(3)->integerValue64;
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToVariable", roleId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "Unknown role.");
 
@@ -752,7 +752,7 @@ BaseLib::PVariable RPCAddCategoryToSystemVariable::invoke(BaseLib::PRpcClientInf
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToSystemVariable",
                                                                             parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     if (!GD::bl->db->categoryExists(parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -792,7 +792,7 @@ BaseLib::PVariable RPCAddCategoryToVariable::invoke(BaseLib::PRpcClientInfo clie
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("addCategoryToVariable",
                                                                             parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->categoryExists(parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -862,7 +862,7 @@ BaseLib::PVariable RPCAddChannelToRoom::invoke(BaseLib::PRpcClientInfo clientInf
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addChannelToRoom",
                                                                         (uint64_t)parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -965,7 +965,7 @@ BaseLib::PVariable RPCAddDeviceToRoom::invoke(BaseLib::PRpcClientInfo clientInfo
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addDeviceToRoom",
                                                                         (uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -1006,7 +1006,7 @@ BaseLib::PVariable RPCAddLink::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("addLink"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -1172,7 +1172,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
     uint64_t roleId = parameters->at(1)->integerValue64;
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("addRoleToSystemVariable", roleId))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     if (!GD::bl->db->roleExists(roleId)) return BaseLib::Variable::createError(-1, "Unknown role.");
 
@@ -1358,7 +1358,7 @@ BaseLib::PVariable RPCAddSystemVariableToRoom::invoke(BaseLib::PRpcClientInfo cl
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addSystemVariableToRoom",
                                                                         (uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -1396,7 +1396,7 @@ BaseLib::PVariable RPCAddVariableToRoom::invoke(BaseLib::PRpcClientInfo clientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addVariableToRoom",
                                                                         (uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -1590,7 +1590,7 @@ BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("copyConfig"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -1665,7 +1665,7 @@ BaseLib::PVariable RPCCopyConfig::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
             || !central->peerExists((uint64_t)parameters->at(2)->integerValue64))
           continue;
 
-        if (clientInfo->acls->roomsCategoriesRolesDevicesWriteSet()) {
+        if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet()) {
           auto peer1 = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
           auto peer2 = central->getPeer((uint64_t)parameters->at(2)->integerValue64);
           if (!peer1 || !clientInfo->acls->checkDeviceWriteAccess(peer1))
@@ -2030,7 +2030,7 @@ BaseLib::PVariable RPCDeleteDevice::invoke(BaseLib::PRpcClientInfo clientInfo, B
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("deleteDevice"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
@@ -2089,7 +2089,7 @@ BaseLib::PVariable RPCDeleteMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("deleteMetadata"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
@@ -2312,7 +2312,7 @@ BaseLib::PVariable RPCDeleteSystemVariable::invoke(BaseLib::PRpcClientInfo clien
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("deleteSystemVariable"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
     ParameterError::Enum
         error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
     if (error != ParameterError::Enum::noError) return getError(error);
@@ -2369,7 +2369,7 @@ BaseLib::PVariable RPCExecuteMiscellaneousDeviceMethod::invoke(BaseLib::PRpcClie
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("executeMiscellaneousDeviceMethod"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
     ParameterError::Enum error = checkParameters(parameters,
                                                  std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger64,
                                                                                      BaseLib::VariableType::tString,
@@ -2415,7 +2415,7 @@ BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, B
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getAllConfig"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
     if (parameters->size() > 0) {
       ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                    std::vector<
@@ -2436,7 +2436,7 @@ BaseLib::PVariable RPCGetAllConfig::invoke(BaseLib::PRpcClientInfo clientInfo, B
       if (!central) continue;
       if (peerId > 0) {
         if (!central->peerExists(peerId)) continue;
-        if (clientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+        if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
           auto peer = central->getPeer(peerId);
           if (!peer || !clientInfo->acls->checkDeviceReadAccess(peer))
             return BaseLib::Variable::createError(-32603,
@@ -2518,7 +2518,7 @@ BaseLib::PVariable RPCForceConfigUpdate::invoke(BaseLib::PRpcClientInfo clientIn
       auto peer = central->getPeer(peerId);
       if (!peer) return BaseLib::Variable::createError(-2, "Device not found.");
 
-      if (clientInfo->acls->roomsCategoriesRolesDevicesWriteSet()) {
+      if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet()) {
         if (!clientInfo->acls->checkDeviceWriteAccess(peer))
           return BaseLib::Variable::createError(-32603,
                                                 "Unauthorized.");
@@ -2542,7 +2542,7 @@ BaseLib::PVariable RPCGetAllMetadata::invoke(BaseLib::PRpcClientInfo clientInfo,
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getAllMetadata"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
@@ -2636,7 +2636,7 @@ BaseLib::PVariable RPCGetAllSystemVariables::invoke(BaseLib::PRpcClientInfo clie
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getAllSystemVariables"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
     bool returnRoomsCategoriesFlags = false;
     if (parameters->size() > 0) {
       ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -2664,7 +2664,7 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getAllValues"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     if (parameters->size() > 0) {
       ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                    std::vector<
@@ -2714,7 +2714,7 @@ BaseLib::PVariable RPCGetAllValues::invoke(BaseLib::PRpcClientInfo clientInfo, B
       if (!central) continue;
       if (peerId > 0) {
         if (!central->peerExists(peerId)) continue;
-        if (clientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+        if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
           auto peer = central->getPeer(peerId);
           if (!peer || !clientInfo->acls->checkDeviceReadAccess(peer))
             return BaseLib::Variable::createError(-32603,
@@ -2820,7 +2820,7 @@ BaseLib::PVariable RPCGetChannelsInCategory::invoke(BaseLib::PRpcClientInfo clie
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getChannelsInCategory",
                                                                            (uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -2862,7 +2862,7 @@ BaseLib::PVariable RPCGetChannelsInRoom::invoke(BaseLib::PRpcClientInfo clientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getChannelsInRoom",
                                                                        (uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -2896,7 +2896,7 @@ BaseLib::PVariable RPCGetConfigParameter::invoke(BaseLib::PRpcClientInfo clientI
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getConfigParameter"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
@@ -2998,7 +2998,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getDeviceDescription"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
                                                                                                                      BaseLib::VariableType>(
@@ -3101,7 +3101,7 @@ BaseLib::PVariable RPCGetDeviceInfo::invoke(BaseLib::PRpcClientInfo clientInfo, 
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getDeviceInfo"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
     if (!parameters->empty()) {
       ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                    std::vector<
@@ -3194,7 +3194,7 @@ BaseLib::PVariable RPCGetDevicesInCategory::invoke(BaseLib::PRpcClientInfo clien
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getDevicesInCategory",
                                                                            parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->categoryExists(parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -3238,7 +3238,7 @@ BaseLib::PVariable RPCGetDevicesInRoom::invoke(BaseLib::PRpcClientInfo clientInf
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getDevicesInRoom",
                                                                        (uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -3383,7 +3383,7 @@ BaseLib::PVariable RPCGetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getLinkInfo"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -3472,7 +3472,7 @@ BaseLib::PVariable RPCGetLinkPeers::invoke(BaseLib::PRpcClientInfo clientInfo, B
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getLinkPeers"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -3543,7 +3543,7 @@ BaseLib::PVariable RPCGetLinks::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getLinks"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -3646,7 +3646,7 @@ BaseLib::PVariable RPCGetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getMetadata"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -3720,7 +3720,7 @@ BaseLib::PVariable RPCGetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getName"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -3822,7 +3822,7 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo cli
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getParamsetDescription"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -3921,7 +3921,7 @@ BaseLib::PVariable RPCGetParamsetDescription::invoke(BaseLib::PRpcClientInfo cli
         } else {
           if (!central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
 
-          if (clientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+          if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
             auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
             if (!peer || !clientInfo->acls->checkDeviceReadAccess(peer))
               return BaseLib::Variable::createError(-32603,
@@ -3960,7 +3960,7 @@ BaseLib::PVariable RPCGetParamsetId::invoke(BaseLib::PRpcClientInfo clientInfo, 
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getParamsetId"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -4079,7 +4079,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getParamset"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -4164,7 +4164,7 @@ BaseLib::PVariable RPCGetParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
       } else {
         if (!central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
 
-        if (clientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+        if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
           auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
           if (!peer || !clientInfo->acls->checkDeviceReadAccess(peer))
             return BaseLib::Variable::createError(-32603,
@@ -4204,7 +4204,7 @@ BaseLib::PVariable RPCGetPeerId::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getPeerId"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -4282,8 +4282,8 @@ BaseLib::PVariable RPCGetRolesInDevice::invoke(BaseLib::PRpcClientInfo clientInf
 
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getRolesInDevice"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
-    bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkDeviceAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
+    bool checkVariableAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
     for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
@@ -4320,8 +4320,8 @@ BaseLib::PVariable RPCGetRolesInRoom::invoke(BaseLib::PRpcClientInfo clientInfo,
 
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getRolesInRoom"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
-    bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkDeviceAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
+    bool checkVariableAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->roomExists(parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -4466,7 +4466,7 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getServiceMessages"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<BaseLib::VariableType>(),
                                                                                                                  std::vector<BaseLib::VariableType>({BaseLib::VariableType::tBoolean}),
@@ -4595,7 +4595,7 @@ BaseLib::PVariable RPCGetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getSystemVariable"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
 
     ParameterError::Enum
         error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
@@ -4616,7 +4616,7 @@ BaseLib::PVariable RPCGetSystemVariableFlags::invoke(BaseLib::PRpcClientInfo cli
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getSystemVariableFlags"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
 
     ParameterError::Enum
         error = checkParameters(parameters, std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString}));
@@ -4652,7 +4652,7 @@ BaseLib::PVariable RPCGetSystemVariablesInCategory::invoke(BaseLib::PRpcClientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getSystemVariablesInCategory",
                                                                            (uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -4683,7 +4683,7 @@ BaseLib::PVariable RPCGetSystemVariablesInRole::invoke(BaseLib::PRpcClientInfo c
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoleReadAccess("getSystemVariablesInRole",
                                                                        (uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
 
     if (!GD::bl->db->roleExists((uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -4714,7 +4714,7 @@ BaseLib::PVariable RPCGetSystemVariablesInRoom::invoke(BaseLib::PRpcClientInfo c
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomReadAccess("getSystemVariablesInRoom",
                                                                        (uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -4745,8 +4745,8 @@ BaseLib::PVariable RPCGetVariablesInCategory::invoke(BaseLib::PRpcClientInfo cli
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryReadAccess("getVariablesInCategory",
                                                                            parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
-    bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkDeviceAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
+    bool checkVariableAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->categoryExists(parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -4805,8 +4805,8 @@ BaseLib::PVariable RPCGetVariablesInRole::invoke(BaseLib::PRpcClientInfo clientI
     if (!clientInfo
         || !clientInfo->acls->checkMethodAndRoleReadAccess("getVariablesInRole", parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
-    bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkDeviceAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
+    bool checkVariableAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->roleExists(parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -4881,8 +4881,8 @@ BaseLib::PVariable RPCGetVariablesInRoom::invoke(BaseLib::PRpcClientInfo clientI
     if (!clientInfo
         || !clientInfo->acls->checkMethodAndRoomReadAccess("getVariablesInRoom", parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkDeviceAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
-    bool checkVariableAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkDeviceAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
+    bool checkVariableAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!GD::bl->db->roomExists(parameters->at(0)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -5008,7 +5008,7 @@ BaseLib::PVariable RPCGetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("getValue"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tString}),
@@ -5130,7 +5130,7 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
 
     if (parameters->at(0)->integerValue64 == 0) {
       //System variable
-      bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesReadSet();
+      bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet();
 
       return GD::systemVariableController->getVariableDescription(clientInfo,
                                                                   parameters->at(2)->stringValue,
@@ -5138,7 +5138,7 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
                                                                   checkAcls);
     } else {
       //Device variable
-      bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+      bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = families.begin();
@@ -5566,7 +5566,7 @@ BaseLib::PVariable RPCListDevices::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("listDevices"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (parameters->size() > 0) {
       ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -5768,7 +5768,7 @@ BaseLib::PVariable RPCListTeams::invoke(BaseLib::PRpcClientInfo clientInfo, Base
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("listTeams"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
@@ -5906,7 +5906,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("putParamset"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -5999,7 +5999,7 @@ BaseLib::PVariable RPCPutParamset::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
       } else {
         if (!central->peerExists((uint64_t)parameters->at(0)->integerValue64)) continue;
 
-        if (clientInfo->acls->roomsCategoriesRolesDevicesWriteSet()) {
+        if (clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet()) {
           auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
           if (!peer || !clientInfo->acls->checkDeviceWriteAccess(peer))
             return BaseLib::Variable::createError(-32603,
@@ -6050,7 +6050,7 @@ BaseLib::PVariable RPCRemoveCategoryFromChannel::invoke(BaseLib::PRpcClientInfo 
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromChannel",
                                                                             (uint64_t)parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6099,7 +6099,7 @@ BaseLib::PVariable RPCRemoveCategoryFromDevice::invoke(BaseLib::PRpcClientInfo c
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromDevice",
                                                                             parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6149,7 +6149,7 @@ BaseLib::PVariable RPCRemoveCategoryFromSystemVariable::invoke(BaseLib::PRpcClie
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromSystemVariable",
                                                                             parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6191,7 +6191,7 @@ BaseLib::PVariable RPCRemoveCategoryFromVariable::invoke(BaseLib::PRpcClientInfo
     if (!clientInfo || !clientInfo->acls->checkMethodAndCategoryWriteAccess("removeCategoryFromVariable",
                                                                             (uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->categoryExists((uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6263,7 +6263,7 @@ BaseLib::PVariable RPCRemoveChannelFromRoom::invoke(BaseLib::PRpcClientInfo clie
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeChannelFromRoom",
                                                                         (uint64_t)parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(2)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6312,7 +6312,7 @@ BaseLib::PVariable RPCRemoveDeviceFromRoom::invoke(BaseLib::PRpcClientInfo clien
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeDeviceFromRoom",
                                                                         (uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roomExists((uint64_t)parameters->at(1)->integerValue))
       return BaseLib::Variable::createError(-1,
@@ -6353,7 +6353,7 @@ BaseLib::PVariable RPCRemoveLink::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("removeLink"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -6457,7 +6457,7 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("removeRoleFromSystemVariable",
                                                                         parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     if (!GD::bl->db->roleExists((uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6518,7 +6518,7 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoleWriteAccess("removeRoleFromVariable",
                                                                         (uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (!GD::bl->db->roleExists((uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-1,
@@ -6641,7 +6641,7 @@ BaseLib::PVariable RPCRemoveSystemVariableFromRoom::invoke(BaseLib::PRpcClientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeSystemVariableFromRoom",
                                                                         (uint64_t)parameters->at(1)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     uint64_t roomId = (uint64_t)parameters->at(1)->integerValue64;
 
@@ -6680,7 +6680,7 @@ BaseLib::PVariable RPCRemoveVariableFromRoom::invoke(BaseLib::PRpcClientInfo cli
     if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeVariableFromRoom",
                                                                         (uint64_t)parameters->at(3)->integerValue64))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     uint64_t roomId = (uint64_t)parameters->at(3)->integerValue64;
 
@@ -6742,7 +6742,7 @@ BaseLib::PVariable RPCReportValueUsage::invoke(BaseLib::PRpcClientInfo clientInf
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("reportValueUsage"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -6792,7 +6792,7 @@ BaseLib::PVariable RPCRssiInfo::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("rssiInfo"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     if (parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
@@ -7166,7 +7166,7 @@ BaseLib::PVariable RPCSetId::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib:
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setId"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7314,7 +7314,7 @@ BaseLib::PVariable RPCSetInterface::invoke(BaseLib::PRpcClientInfo clientInfo, B
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setInterface"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7384,7 +7384,7 @@ BaseLib::PVariable RPCSetLinkInfo::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setLinkInfo"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7513,7 +7513,7 @@ BaseLib::PVariable RPCSetMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, Ba
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setMetadata"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7598,7 +7598,7 @@ BaseLib::PVariable RPCSetName::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setName"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7726,7 +7726,7 @@ BaseLib::PVariable RPCSetSystemVariable::invoke(BaseLib::PRpcClientInfo clientIn
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setSystemVariable"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7763,7 +7763,7 @@ BaseLib::PVariable RPCSetTeam::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLi
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setTeam"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -7921,7 +7921,7 @@ BaseLib::PVariable RPCSetValue::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setValue"))
       return BaseLib::Variable::createError(-32603,
                                             "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<
@@ -8273,7 +8273,7 @@ BaseLib::PVariable RPCUpdateFirmware::invoke(BaseLib::PRpcClientInfo clientInfo,
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("updateFirmware"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->roomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
                                                                                                                  std::vector<

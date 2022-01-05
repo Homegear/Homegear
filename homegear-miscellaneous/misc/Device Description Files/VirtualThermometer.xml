@@ -3,7 +3,7 @@
 	<supportedDevices>
 		<device id="VirtualThermometer">
 			<description>VirtualThermometer</description>
-			<typeNumber>0xF00B</typeNumber>
+			<typeNumber>0xF00F</typeNumber>
 		</device>
 	</supportedDevices>
 	<properties/>

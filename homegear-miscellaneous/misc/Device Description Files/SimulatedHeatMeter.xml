@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
     <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-        <device id="VirtualWaterMeter">
-            <description>VirtualWaterMeter</description>
-            <typeNumber>0xF00A</typeNumber>
+        <device id="SimulatedHeatMeter">
+            <description>Simulated heat meter</description>
+            <typeNumber>0xF00D</typeNumber>
         </device>
     </supportedDevices>
     <runProgram>
@@ -35,9 +35,13 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
 		{
 			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
 			{
-				if($result["VARIABLE"] == 'TOTAL_VOLUME')
+				if($result["VARIABLE"] == 'TOTAL_HEAT_QUANTITY')
 				{
-					//Set consumption
+				}
+			}
+			else if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"]) {
+				if($result["VARIABLE"] == 'UNREACH' && $result["VALUE"]) {
+					$hg->setValue($peerId, 0, "STICKY_UNREACH", true);
 				}
 			}
 			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
@@ -90,7 +94,7 @@ $mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, 
 		if($secondsWaited >= 60)
 		{
 			$secondsWaited = 0;
-            $hg->setValue($peerId, 1, "TOTAL_VOLUME", "+=".random_int(0, 100));
+			if (!$hg->getValue($peerId, 0, "UNREACH")) $hg->setValue($peerId, 1, "TOTAL_HEAT_QUANTITY", floatval($hg->getValue($peerId, 1, "TOTAL_HEAT_QUANTITY")) + (floatval(random_int(170, 220)) / 1000.0));
 		}
 
 		$event = NULL;
@@ -248,7 +252,7 @@ class HomegearDevice extends HomegearDeviceBase
             <configParameters>config</configParameters>
             <variables>maint_ch0_values</variables>
         </function>
-        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualWaterMeter">
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="SimulatedHeatMeter">
             <variables>custom_ch1_values</variables>
         </function>
     </functions>
@@ -306,20 +310,25 @@ class HomegearDevice extends HomegearDeviceBase
             </parameter>
         </variables>
         <variables id="custom_ch1_values">
-            <parameter id="TOTAL_VOLUME">
+            <parameter id="TOTAL_HEAT_QUANTITY">
                 <properties>
                     <readable>true</readable>
                     <writeable>false</writeable>
                     <addonWriteable>true</addonWriteable>
-                    <unit>l</unit>
+                    <unit>m³</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
                     <roles>
-                        <role>900101</role>
+                        <role>900000</role>
+                        <role>900400</role>
+                        <role>900401</role>
                     </roles>
                 </properties>
-                <logicalInteger>
+                <logicalDecimal>
                     <minimumValue>0</minimumValue>
                     <defaultValue>0</defaultValue>
-                </logicalInteger>
+                </logicalDecimal>
                 <physicalNone>
                     <operationType>store</operationType>
                 </physicalNone>

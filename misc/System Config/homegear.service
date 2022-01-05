@@ -20,4 +20,4 @@ TasksMax=infinity
 LimitRTPRIO=infinity
 LimitRTTIME=infinity
 LimitCORE=infinity
-LimitSTACK=4194304
+LimitSTACK=524288

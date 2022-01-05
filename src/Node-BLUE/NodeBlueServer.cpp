@@ -37,6 +37,7 @@
 #include "../RPC/RpcMethods/NodeBlueRpcMethods.h"
 #include "../RPC/RpcMethods/MaintenanceRpcMethods.h"
 #include "FlowParser.h"
+#include "../RPC/RpcMethods/BuildingPartRpcMethods.h"
 
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/Managers/ProcessManager.h>
@@ -184,15 +185,36 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   }
 
   { // Buildings
+    _rpcMethods.emplace("addBuildingPartToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddBuildingPartToBuilding()));
     _rpcMethods.emplace("addStoryToBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCAddStoryToBuilding()));
     _rpcMethods.emplace("createBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCCreateBuilding()));
     _rpcMethods.emplace("deleteBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCDeleteBuilding()));
+    _rpcMethods.emplace("getBuildingPartsInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingPartsInBuilding()));
     _rpcMethods.emplace("getStoriesInBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetStoriesInBuilding()));
     _rpcMethods.emplace("getBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildingMetadata()));
     _rpcMethods.emplace("getBuildings", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCGetBuildings()));
+    _rpcMethods.emplace("removeBuildingPartFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveBuildingPartFromBuilding()));
     _rpcMethods.emplace("removeStoryFromBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCRemoveStoryFromBuilding()));
     _rpcMethods.emplace("setBuildingMetadata", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetBuildingMetadata()));
     _rpcMethods.emplace("updateBuilding", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCUpdateBuilding()));
+  }
+
+  { // Building parts
+    _rpcMethods.emplace("addChannelToBuildingPart", std::make_shared<RpcMethods::RPCAddChannelToBuildingPart>());
+    _rpcMethods.emplace("addDeviceToBuildingPart", std::make_shared<RpcMethods::RPCAddDeviceToBuildingPart>());
+    _rpcMethods.emplace("addVariableToBuildingPart", std::make_shared<RpcMethods::RPCAddVariableToBuildingPart>());
+    _rpcMethods.emplace("createBuildingPart", std::make_shared<RpcMethods::RPCCreateBuildingPart>());
+    _rpcMethods.emplace("deleteBuildingPart", std::make_shared<RpcMethods::RPCDeleteBuildingPart>());
+    _rpcMethods.emplace("getBuildingPartMetadata", std::make_shared<RpcMethods::RPCGetBuildingPartMetadata>());
+    _rpcMethods.emplace("getBuildingParts", std::make_shared<RpcMethods::RPCGetBuildingParts>());
+    _rpcMethods.emplace("getChannelsInBuildingPart", std::make_shared<RpcMethods::RPCGetChannelsInBuildingPart>());
+    _rpcMethods.emplace("getDevicesInBuildingPart", std::make_shared<RpcMethods::RPCGetDevicesInBuildingPart>());
+    _rpcMethods.emplace("getVariablesInBuildingPart", std::make_shared<RpcMethods::RPCGetVariablesInBuildingPart>());
+    _rpcMethods.emplace("removeChannelFromBuildingPart", std::make_shared<RpcMethods::RPCRemoveChannelFromBuildingPart>());
+    _rpcMethods.emplace("removeDeviceFromBuildingPart", std::make_shared<RpcMethods::RPCRemoveDeviceFromBuildingPart>());
+    _rpcMethods.emplace("removeVariableFromBuildingPart", std::make_shared<RpcMethods::RPCRemoveVariableFromBuildingPart>());
+    _rpcMethods.emplace("setBuildingPartMetadata", std::make_shared<RpcMethods::RPCSetBuildingPartMetadata>());
+    _rpcMethods.emplace("updateBuildingPart", std::make_shared<RpcMethods::RPCUpdateBuildingPart>());
   }
 
   { // Stories
@@ -2601,7 +2623,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
     if (_shuttingDown || _flowsRestarting) return;
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("event")) return;
 
-    bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
     if (id != 0 && id != 0x50000001) {
@@ -2621,7 +2643,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
         if (id == 0) {
-          if (_nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
+          if (_nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
             if (systemVariable && _nodeBlueClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) {
               newVariables->push_back(variables->at(i));
@@ -2835,7 +2857,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
     if (_shuttingDown || _flowsRestarting) return;
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("serviceMessage")) return;
 
-    bool checkAcls = _nodeBlueClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
 
     if (serviceMessage->peerId > 0) {
@@ -2946,7 +2968,7 @@ void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const
     if (_shuttingDown || _flowsRestarting) return;
 
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
-    if (_nodeBlueClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
@@ -3016,7 +3038,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     if (_shuttingDown || _flowsRestarting) return;
 
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("updateDevice")) return;
-    if (_nodeBlueClientInfo->acls->roomsCategoriesRolesDevicesReadSet()) {
+    if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
       for (auto &family : families) {
