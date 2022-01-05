@@ -989,7 +989,7 @@ void Mqtt::queueMessage(const std::string &source, uint64_t peerId, int32_t chan
       jsonObj = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     }
 
-    bool checkAcls = _dummyClientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = _dummyClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
     std::shared_ptr<BaseLib::Systems::Peer> peer;
     if (checkAcls && peerId != 0) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
@@ -1003,7 +1003,7 @@ void Mqtt::queueMessage(const std::string &source, uint64_t peerId, int32_t chan
     for (int32_t i = 0; i < (signed)keys.size(); i++) {
       if (checkAcls) {
         if (peerId == 0) {
-          if (_dummyClientInfo->acls->variablesRoomsCategoriesRolesReadSet()) {
+          if (_dummyClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(keys.at(i));
             if (!systemVariable || !_dummyClientInfo->acls->checkSystemVariableReadAccess(systemVariable)) continue;
           }

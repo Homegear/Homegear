@@ -36,6 +36,16 @@
 
 namespace Homegear::RpcMethods {
 
+class RPCAddBuildingPartToBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCAddBuildingPartToBuilding() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RPCAddStoryToBuilding : public BaseLib::Rpc::RpcMethod {
  public:
   RPCAddStoryToBuilding() {
@@ -66,6 +76,15 @@ class RPCDeleteBuilding : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RPCGetBuildingPartsInBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCGetBuildingPartsInBuilding() {
+    addSignature(BaseLib::VariableType::tArray, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RPCGetStoriesInBuilding : public BaseLib::Rpc::RpcMethod {
  public:
   RPCGetStoriesInBuilding() {
@@ -89,6 +108,16 @@ class RPCGetBuildingMetadata : public BaseLib::Rpc::RpcMethod {
  public:
   RPCGetBuildingMetadata() {
     addSignature(BaseLib::VariableType::tStruct, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
+class RPCRemoveBuildingPartFromBuilding : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCRemoveBuildingPartFromBuilding() {
+    addSignature(BaseLib::VariableType::tVoid,
+                 std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger});
   }
 
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;

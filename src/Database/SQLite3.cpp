@@ -164,7 +164,7 @@ void SQLite3::hotBackup(bool factoryDatabase) {
               GD::out.printError("Error: Cannot copy file: " + backupPath + _backupFilename + '0');
             }
           }
-        } else GD::out.printError(std::string("Error: Can't backup ") + (factoryDatabase ? "factory " : "") + "database: backupPath or _backupFilename is empty.");
+        } else GD::out.printError(std::string("Error: Can't backup ") + (factoryDatabase ? "factory " : "") + "database: backupPath or backupFilename is empty.");
       }
     } else {
       if (factoryDatabase) {

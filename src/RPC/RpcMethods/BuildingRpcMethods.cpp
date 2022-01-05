@@ -33,6 +33,32 @@
 
 namespace Homegear::RpcMethods {
 
+BaseLib::PVariable RPCAddBuildingPartToBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger})
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("addBuildingPartToBuilding"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    auto result = GD::bl->db->addBuildingPartToBuilding((uint64_t)parameters->at(0)->integerValue64,
+                                                        (uint64_t)parameters->at(1)->integerValue64);
+
+    GD::uiController->requestUiRefresh("");
+
+    return result;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCAddStoryToBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -43,8 +69,7 @@ BaseLib::PVariable RPCAddStoryToBuilding::invoke(BaseLib::PRpcClientInfo clientI
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("addStoryToBuilding",
-                                                                        (uint64_t)parameters->at(1)->integerValue64))
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("addStoryToBuilding"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
     auto result = GD::bl->db->addStoryToBuilding((uint64_t)parameters->at(0)->integerValue64,
@@ -122,6 +147,26 @@ BaseLib::PVariable RPCDeleteBuilding::invoke(BaseLib::PRpcClientInfo clientInfo,
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCGetBuildingPartsInBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger})}));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getBuildingPartsInBuilding"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    bool checkAcls = clientInfo->acls->roomsReadSet();
+
+    return GD::bl->db->getBuildingPartsInBuilding(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCGetStoriesInBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -131,8 +176,7 @@ BaseLib::PVariable RPCGetStoriesInBuilding::invoke(BaseLib::PRpcClientInfo clien
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getStoriesInBuilding"))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("getStoriesInBuilding")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
     bool checkAcls = clientInfo->acls->roomsReadSet();
 
     return GD::bl->db->getStoriesInBuilding(clientInfo, (uint64_t)parameters->at(0)->integerValue64, checkAcls);
@@ -195,6 +239,28 @@ BaseLib::PVariable RPCGetBuildingMetadata::invoke(BaseLib::PRpcClientInfo client
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCRemoveBuildingPartFromBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tInteger})}));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("removeBuildingPartFromBuilding")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
+
+    auto result = GD::bl->db->removeBuildingPartFromBuilding((uint64_t)parameters->at(0)->integerValue64, (uint64_t)parameters->at(1)->integerValue64);
+
+    GD::uiController->requestUiRefresh("");
+
+    return result;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCRemoveStoryFromBuilding::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -205,9 +271,7 @@ BaseLib::PVariable RPCRemoveStoryFromBuilding::invoke(BaseLib::PRpcClientInfo cl
                                                                                                              }));
     if (error != ParameterError::Enum::noError) return getError(error);
 
-    if (!clientInfo || !clientInfo->acls->checkMethodAndRoomWriteAccess("removeStoryFromBuilding",
-                                                                        (uint64_t)parameters->at(1)->integerValue64))
-      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("removeStoryFromBuilding")) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
     auto result = GD::bl->db->removeStoryFromBuilding((uint64_t)parameters->at(0)->integerValue64,
                                                       (uint64_t)parameters->at(1)->integerValue64);

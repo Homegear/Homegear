@@ -30,7 +30,7 @@
 
 #include "MiscPeer.h"
 #include "MiscCentral.h"
-#include "GD.h"
+#include "Gd.h"
 
 #include <homegear-base/Managers/ProcessManager.h>
 
@@ -43,20 +43,20 @@ namespace Misc {
 std::shared_ptr<BaseLib::Systems::ICentral> MiscPeer::getCentral() {
   try {
     if (_central) return _central;
-    _central = GD::family->getCentral();
+    _central = Gd::family->getCentral();
     return _central;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return std::shared_ptr<BaseLib::Systems::ICentral>();
 }
 
-MiscPeer::MiscPeer(uint32_t parentID, IPeerEventSink *eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, eventHandler) {
+MiscPeer::MiscPeer(uint32_t parentID, IPeerEventSink *eventHandler) : BaseLib::Systems::Peer(Gd::bl, parentID, eventHandler) {
   init();
 }
 
-MiscPeer::MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, IPeerEventSink *eventHandler) : BaseLib::Systems::Peer(GD::bl, id, -1, serialNumber, parentID, eventHandler) {
+MiscPeer::MiscPeer(int32_t id, std::string serialNumber, uint32_t parentID, IPeerEventSink *eventHandler) : BaseLib::Systems::Peer(Gd::bl, id, -1, serialNumber, parentID, eventHandler) {
   init();
 }
 
@@ -76,22 +76,31 @@ MiscPeer::~MiscPeer() {
     if (_scriptInfo) {
       int32_t i = 0;
       while (_scriptRunning && !_scriptInfo->finished && i < 30) {
-        GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
+        Gd::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         i++;
       }
-      if (i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+      if (i == 30) Gd::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
       _scriptInfo->scriptFinishedCallback = nullptr;
     }
     if (_programPID != -1) {
       kill(_programPID, 15);
-      GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+      Gd::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
     }
     _stopRunProgramThread = true;
     _bl->threadManager.join(_runProgramThread);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void MiscPeer::worker() {
+  try {
+    if (!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -100,10 +109,10 @@ void MiscPeer::homegearShuttingDown() {
     _shuttingDown = true;
     Peer::homegearShuttingDown();
 
-    stopScript(!GD::bl->shuttingDown);
+    stopScript(!Gd::bl->shuttingDown);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -118,11 +127,11 @@ void MiscPeer::stopScript(bool callStop) {
     _stopRunProgramThread = true;
     if (!_rpcDevice->runProgram->script2.empty()) {
       while (_scriptRunning && i < 30) {
-        GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
+        Gd::out.printInfo("Info: Peer " + std::to_string(_peerID) + " Waiting for script to finish...");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         i++;
       }
-      if (i == 30) GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
+      if (i == 30) Gd::out.printError("Error: Script of peer " + std::to_string(_peerID) + " did not finish.");
       std::lock_guard<std::mutex> scriptInfoGuard(_scriptInfoMutex);
       if (_scriptInfo) _scriptInfo->scriptFinishedCallback = nullptr;
     }
@@ -132,11 +141,11 @@ void MiscPeer::stopScript(bool callStop) {
       _programPID = -1;
     }
 
-    if (_programPID != -1) GD::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
+    if (_programPID != -1) Gd::out.printInfo("Info: Waiting for process with pid " + std::to_string(_programPID) + " started by peer " + std::to_string(_peerID) + "...");
     _bl->threadManager.join(_runProgramThread);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -159,20 +168,20 @@ bool MiscPeer::stop() {
     bool noError = true;
     BaseLib::PVariable result = raiseInvokeRpc(methodName, parameters);
     if (result->errorStruct) {
-      GD::out.printError("Error calling stop on peer " + std::to_string(_peerID) + ": " + result->structValue->at("faultString")->stringValue);
+      Gd::out.printError("Error calling stop on peer " + std::to_string(_peerID) + ": " + result->structValue->at("faultString")->stringValue);
       noError = false;
     }
 
     parameters->at(1)->stringValue = "waitForStop";
     result = raiseInvokeRpc(methodName, parameters);
     if (result->errorStruct) {
-      GD::out.printError("Error calling waitForStop on peer " + std::to_string(_peerID) + ": " + result->structValue->at("faultString")->stringValue);
+      Gd::out.printError("Error calling waitForStop on peer " + std::to_string(_peerID) + ": " + result->structValue->at("faultString")->stringValue);
       noError = false;
     }
     return noError;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
 }
@@ -180,22 +189,22 @@ bool MiscPeer::stop() {
 void MiscPeer::runProgram() {
   try {
     if (!_rpcDevice->runProgram) return;
-    while (GD::bl->booting && !_stopRunProgramThread) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    while (Gd::bl->booting && !_stopRunProgramThread) std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     std::string path = _rpcDevice->runProgram->path;
     if (path.empty()) return;
-    if (path.front() != '/') path = GD::bl->settings.scriptPath() + path;
+    if (path.front() != '/') path = Gd::bl->settings.scriptPath() + path;
     std::vector<std::string> arguments = _rpcDevice->runProgram->arguments;
     for (std::vector<std::string>::iterator i = arguments.begin(); i != arguments.end(); ++i) {
-      GD::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
-      GD::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
+      Gd::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
+      Gd::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
     }
     if (_rpcDevice->runProgram->interval == 0) _rpcDevice->runProgram->interval = 10;
     while (!_stopRunProgramThread) {
       _programPID = -1;
-      int64_t startTime = GD::bl->hf.getTime();
+      int64_t startTime = Gd::bl->hf.getTime();
       struct stat statStruct;
       if (stat(path.c_str(), &statStruct) < 0) {
-        GD::out.printError("Error: Could not execute script: " + std::string(strerror(errno)));
+        Gd::out.printError("Error: Could not execute script: " + std::string(strerror(errno)));
         std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
         if (_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
         std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
@@ -207,7 +216,7 @@ void MiscPeer::runProgram() {
       if ((statStruct.st_mode & S_IXOTH) == 0) {
         if (statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0)) {
           if (statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) {
-            GD::out.printError("Error: Could not execute script. No permission or executable bit is not set.");
+            Gd::out.printError("Error: Could not execute script. No permission or executable bit is not set.");
             std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
             if (_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
             continue;
@@ -216,29 +225,29 @@ void MiscPeer::runProgram() {
       }
       if ((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".
       {
-        GD::out.printError("Error: Could not execute script. Executable bit is not set for user or group.");
+        Gd::out.printError("Error: Could not execute script. Executable bit is not set for user or group.");
         std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
         if (_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
         continue;
       }
       if ((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) {
-        GD::out.printError("Error: Could not execute script. The file mode is not set to executable.");
+        Gd::out.printError("Error: Could not execute script. The file mode is not set to executable.");
         std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
         if (_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
         continue;
       }
-      _programPID = BaseLib::ProcessManager::system(path, arguments, GD::bl->fileDescriptorManager.getMax());
+      _programPID = BaseLib::ProcessManager::system(path, arguments, Gd::bl->fileDescriptorManager.getMax());
       if (_programPID < 0) {
-        GD::out.printError("Error: Could not execute script.");
+        Gd::out.printError("Error: Could not execute script.");
         std::this_thread::sleep_for(std::chrono::milliseconds(_rpcDevice->runProgram->interval));
         if (_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
         continue;
       }
-      GD::out.printInfo("Info: Started program " + path + ". PID is " + std::to_string(_programPID) + ".");
+      Gd::out.printInfo("Info: Started program " + path + ". PID is " + std::to_string(_programPID) + ".");
 
       if (_rpcDevice->runProgram->startType == RunProgram::StartType::once) return;
       else if (_rpcDevice->runProgram->startType == RunProgram::StartType::interval) {
-        int64_t totalTimeToSleep = (_rpcDevice->runProgram->interval * 1000) - (GD::bl->hf.getTime() - startTime);
+        int64_t totalTimeToSleep = (_rpcDevice->runProgram->interval * 1000) - (Gd::bl->hf.getTime() - startTime);
         if (totalTimeToSleep < 0) totalTimeToSleep = 0;
         for (int32_t i = 0; i < (totalTimeToSleep / 100) + 1; i++) {
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -250,14 +259,14 @@ void MiscPeer::runProgram() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       }
       if (result == -1) {
-        GD::out.printCritical("Critical error executing waitpid: " + std::string(strerror(errno)) + ". Exiting run program thread of peer " + std::to_string(_peerID));
+        Gd::out.printCritical("Critical error executing waitpid: " + std::string(strerror(errno)) + ". Exiting run program thread of peer " + std::to_string(_peerID));
         _programPID = -1;
         return;
       }
     }
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   _programPID = -1;
 }
@@ -265,22 +274,22 @@ void MiscPeer::runProgram() {
 void MiscPeer::scriptFinished(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, int32_t exitCode) {
   try {
     _scriptRunning = false;
-    if (!_shuttingDown && !GD::bl->shuttingDown && !deleting && !_stopScript) {
-      if (exitCode == 0) GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished with exit code 0. Restarting...");
-      else GD::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting...");
+    if (!_shuttingDown && !Gd::bl->shuttingDown && !deleting && !_stopScript) {
+      if (exitCode == 0) Gd::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished with exit code 0. Restarting...");
+      else Gd::out.printError("Error: Script of peer " + std::to_string(_peerID) + " was killed. Restarting...");
       _bl->threadManager.start(_runProgramThread, true, &MiscPeer::runScript, this, BaseLib::HelperFunctions::getTime() - _lastScriptFinished.load() < 10000 ? 10000 : 0);
       _lastScriptFinished.store(BaseLib::HelperFunctions::getTime());
-    } else GD::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
+    } else Gd::out.printInfo("Info: Script of peer " + std::to_string(_peerID) + " finished.");
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
 void MiscPeer::runScript(int32_t delay) {
   try {
     if (!_rpcDevice->runProgram || _shuttingDown || deleting) return;
-    while (GD::bl->booting && !_stopRunProgramThread) {
+    while (Gd::bl->booting && !_stopRunProgramThread) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       continue;
     }
@@ -296,8 +305,8 @@ void MiscPeer::runScript(int32_t delay) {
     std::string args;
     std::vector<std::string> arguments = _rpcDevice->runProgram->arguments;
     for (std::vector<std::string>::iterator i = arguments.begin(); i != arguments.end(); ++i) {
-      GD::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
-      GD::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
+      Gd::bl->hf.stringReplace(*i, "$PEERID", std::to_string(_peerID));
+      Gd::bl->hf.stringReplace(*i, "$RPCPORT", std::to_string(_bl->rpcPort));
       args += *i + " ";
     }
     BaseLib::HelperFunctions::trim(args);
@@ -318,12 +327,12 @@ void MiscPeer::runScript(int32_t delay) {
     raiseRunScript(_scriptInfo, false);
     _scriptRunning = _scriptInfo->started;
     if (!_scriptRunning && !_bl->shuttingDown) {
-      GD::out.printError("Error: Could not start script of peer " + std::to_string(_peerID) + ".");
+      Gd::out.printError("Error: Could not start script of peer " + std::to_string(_peerID) + ".");
       _scriptInfo->finished = true;
     }
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -385,7 +394,7 @@ std::string MiscPeer::handleCliCommand(std::string command) {
     } else return "Unknown command.\n";
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return "Error executing command. See log file for more details.\n";
 }
@@ -436,7 +445,7 @@ std::string MiscPeer::printConfig() {
     return stringStream.str();
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return "";
 }
@@ -447,7 +456,7 @@ void MiscPeer::loadVariables(BaseLib::Systems::ICentral *central, std::shared_pt
     Peer::loadVariables(central, rows);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -456,9 +465,9 @@ bool MiscPeer::load(BaseLib::Systems::ICentral *central) {
     std::shared_ptr<BaseLib::Database::DataTable> rows;
     loadVariables(central, rows);
 
-    _rpcDevice = GD::family->getRpcDevices()->find(_deviceType, _firmwareVersion, -1);
+    _rpcDevice = Gd::family->getRpcDevices()->find(_deviceType, _firmwareVersion, -1);
     if (!_rpcDevice) {
-      GD::out.printError("Error loading Miscellaneous peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString(_deviceType) + " Firmware version: " + std::to_string(_firmwareVersion));
+      Gd::out.printError("Error loading Miscellaneous peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString(_deviceType) + " Firmware version: " + std::to_string(_firmwareVersion));
       return false;
     }
     initializeTypeString();
@@ -474,7 +483,7 @@ bool MiscPeer::load(BaseLib::Systems::ICentral *central) {
     return true;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
 }
@@ -485,13 +494,13 @@ void MiscPeer::saveVariables() {
     Peer::saveVariables();
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
 void MiscPeer::initProgram() {
   try {
-    if (_rpcDevice->runProgram && !GD::bl->shuttingDown && !deleting && !_shuttingDown) {
+    if (_rpcDevice->runProgram && !Gd::bl->shuttingDown && !deleting && !_shuttingDown) {
       _stopRunProgramThread = true;
       _bl->threadManager.join(_runProgramThread);
       _stopRunProgramThread = false;
@@ -503,7 +512,7 @@ void MiscPeer::initProgram() {
     }
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -515,7 +524,7 @@ PParameterGroup MiscPeer::getParameterSet(int32_t channel, ParameterGroup::Type:
     else if (type == ParameterGroup::Type::Enum::link) return rpcChannel->linkParameters;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return PParameterGroup();
 }
@@ -535,7 +544,7 @@ bool MiscPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter
     }
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
 }
@@ -555,7 +564,7 @@ bool MiscPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter,
     }
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
 }
@@ -569,7 +578,7 @@ PVariable MiscPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<s
     return info;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return PVariable();
 }
@@ -590,7 +599,7 @@ PVariable MiscPeer::getParamsetDescription(BaseLib::PRpcClientInfo clientInfo, i
     return Peer::getParamsetDescription(clientInfo, channel, parameterGroup, checkAcls);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return Variable::createError(-32500, "Unknown application error.");
 }
@@ -640,7 +649,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
         parameter.setBinaryData(value);
         if (parameter.databaseId > 0) saveParameter(parameter.databaseId, value);
         else saveParameter(0, ParameterGroup::Type::Enum::config, channel, i->first, value);
-        GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+        Gd::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
         //Only send to device when parameter is of type config
         if (parameter.rpcParameter->physical->operationType != IPhysical::OperationType::Enum::config && parameter.rpcParameter->physical->operationType != IPhysical::OperationType::Enum::configString) continue;
         changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -661,7 +670,7 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
     return PVariable(new Variable(VariableType::tVoid));
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return Variable::createError(-32500, "Unknown application error.");
 }
@@ -686,6 +695,9 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
     BaseLib::Systems::RpcConfigurationParameter &parameter = valuesCentral[channel][valueKey];
     std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
     std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());
+
+    setLastPacketReceived();
+    serviceMessages->endUnreach();
 
     if (rpcParameter->physical->operationType == IPhysical::OperationType::Enum::store) {
       std::vector<uint8_t> parameterData;
@@ -717,7 +729,7 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
     return Variable::createError(-6, "Only interface type \"store\" is supported for this device family.");
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }

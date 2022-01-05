@@ -29,718 +29,665 @@
 */
 
 #include "MiscCentral.h"
-#include "GD.h"
+#include "Gd.h"
 
 #include <iomanip>
 
 namespace Misc {
 
-MiscCentral::MiscCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, GD::bl, eventHandler)
-{
-	init();
+MiscCentral::MiscCentral(ICentralEventSink *eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, Gd::bl, eventHandler) {
+  init();
 }
 
-MiscCentral::MiscCentral(uint32_t deviceId, std::string serialNumber, ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, GD::bl, deviceId, serialNumber, -1, eventHandler)
-{
-	init();
+MiscCentral::MiscCentral(uint32_t deviceId, std::string serialNumber, ICentralEventSink *eventHandler) : BaseLib::Systems::ICentral(MISC_FAMILY_ID, Gd::bl, deviceId, serialNumber, -1, eventHandler) {
+  init();
 }
 
-MiscCentral::~MiscCentral()
-{
-	dispose();
+MiscCentral::~MiscCentral() {
+  dispose(true);
 }
 
-void MiscCentral::init()
-{
-	if(_initialized) return; //Prevent running init two times
-	_initialized = true;
+void MiscCentral::init() {
+  if (_initialized) return; //Prevent running init two times
+
+  Gd::bl->threadManager.start(_workerThread, true, _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy(), &MiscCentral::worker, this);
+
+  _initialized = true;
 }
 
-void MiscCentral::dispose(bool wait)
-{
-	if(_disposing) return;
-	_disposing = true;
+void MiscCentral::dispose(bool wait) {
+  if (_disposing) return;
+  _disposing = true;
+
+  _stopWorkerThread = true;
+  Gd::out.printDebug("Debug: Waiting for worker thread...");
+  _bl->threadManager.join(_workerThread);
 }
 
-void MiscCentral::loadPeers()
-{
-	try
-	{
-		std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getPeers(_deviceId);
-		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
-		{
-			int32_t peerId = row->second.at(0)->intValue;
-			GD::out.printMessage("Loading Miscellaneous peer " + std::to_string(peerId));
-			std::shared_ptr<MiscPeer> peer(new MiscPeer(peerId, row->second.at(3)->textValue, _deviceId, this));
-			if(!peer->load(this)) continue;
-			if(!peer->getRpcDevice()) continue;
-			_peersMutex.lock();
-			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-			_peersById[peerId] = peer;
-			_peersMutex.unlock();
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	_peersMutex.unlock();
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    	_peersMutex.unlock();
-    }
-}
+void MiscCentral::worker() {
+  try {
+    std::chrono::milliseconds sleepingTime(100);
+    uint32_t counter = 0;
+    uint64_t lastPeer = 0;
 
-void MiscCentral::addPeer(std::shared_ptr<MiscPeer> peer)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peersById.find(peer->getID()) == _peersById.end()) _peersById[peer->getID()] = peer;
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-}
+    while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
+      try {
+        std::this_thread::sleep_for(sleepingTime);
+        if (_stopWorkerThread || Gd::bl->shuttingDown) return;
+        if (counter > 1000) {
+          counter = 0;
 
-void MiscCentral::deletePeer(uint64_t id)
-{
-	try
-	{
-		std::shared_ptr<MiscPeer> peer(getPeer(id));
-		if(!peer) return;
-		peer->deleting = true;
-
-		PVariable deviceAddresses(new Variable(VariableType::tArray));
-		deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber())));
-
-		PVariable deviceInfo(new Variable(VariableType::tStruct));
-		deviceInfo->structValue->insert(StructElement("ID", PVariable(new Variable((int32_t)peer->getID()))));
-		PVariable channels(new Variable(VariableType::tArray));
-		deviceInfo->structValue->insert(StructElement("CHANNELS", channels));
-
-		std::shared_ptr<HomegearDevice> rpcDevice = peer->getRpcDevice();
-		for(Functions::iterator i = rpcDevice->functions.begin(); i != rpcDevice->functions.end(); ++i)
-		{
-			deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
-			channels->arrayValue->push_back(PVariable(new Variable(i->first)));
-		}
-
-        std::vector<uint64_t> deletedIds{ id };
-        raiseRPCDeleteDevices(deletedIds, deviceAddresses, deviceInfo);
-
-        {
+          {
             std::lock_guard<std::mutex> peersGuard(_peersMutex);
-            if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-            if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
+            if (!_peersById.empty()) {
+              int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / _peersById.size();
+              sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
+            }
+          }
         }
 
-        int32_t i = 0;
-        while(peer.use_count() > 1 && i < 600)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            i++;
+        if (!Gd::bl->slaveMode) {
+          //{{{ Execute peer workers
+          std::shared_ptr<MiscPeer> peer;
+
+          {
+            std::lock_guard<std::mutex> peersGuard(_peersMutex);
+            if (!_peersById.empty()) {
+              if (!_peersById.empty()) {
+                auto nextPeer = _peersById.find(lastPeer);
+                if (nextPeer != _peersById.end()) {
+                  nextPeer++;
+                  if (nextPeer == _peersById.end()) nextPeer = _peersById.begin();
+                } else nextPeer = _peersById.begin();
+                lastPeer = nextPeer->first;
+                peer = std::dynamic_pointer_cast<MiscPeer>(nextPeer->second);
+              }
+            }
+          }
+
+          if (peer && !peer->deleting) {
+            peer->worker();
+          }
+          //}}}
+        }
+        counter++;
+      }
+      catch (const std::exception &ex) {
+        Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+      }
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void MiscCentral::loadPeers() {
+  try {
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getPeers(_deviceId);
+    for (auto &row: *rows) {
+      int32_t peerId = row.second.at(0)->intValue;
+      Gd::out.printMessage("Loading Miscellaneous peer " + std::to_string(peerId));
+      std::shared_ptr<MiscPeer> peer(new MiscPeer(peerId, row.second.at(3)->textValue, _deviceId, this));
+      if (!peer->load(this)) continue;
+      if (!peer->getRpcDevice()) continue;
+      _peersMutex.lock();
+      if (!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+      _peersById[peerId] = peer;
+      _peersMutex.unlock();
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _peersMutex.unlock();
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _peersMutex.unlock();
+  }
+}
+
+void MiscCentral::addPeer(std::shared_ptr<MiscPeer> peer) {
+  try {
+    _peersMutex.lock();
+    if (_peersById.find(peer->getID()) == _peersById.end()) _peersById[peer->getID()] = peer;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  _peersMutex.unlock();
+}
+
+void MiscCentral::deletePeer(uint64_t id) {
+  try {
+    std::shared_ptr<MiscPeer> peer(getPeer(id));
+    if (!peer) return;
+    peer->deleting = true;
+
+    PVariable deviceAddresses(new Variable(VariableType::tArray));
+    deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber())));
+
+    PVariable deviceInfo(new Variable(VariableType::tStruct));
+    deviceInfo->structValue->insert(StructElement("ID", PVariable(new Variable((int32_t)peer->getID()))));
+    PVariable channels(new Variable(VariableType::tArray));
+    deviceInfo->structValue->insert(StructElement("CHANNELS", channels));
+
+    std::shared_ptr<HomegearDevice> rpcDevice = peer->getRpcDevice();
+    for (Functions::iterator i = rpcDevice->functions.begin(); i != rpcDevice->functions.end(); ++i) {
+      deviceAddresses->arrayValue->push_back(PVariable(new Variable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
+      channels->arrayValue->push_back(PVariable(new Variable(i->first)));
+    }
+
+    std::vector<uint64_t> deletedIds{id};
+    raiseRPCDeleteDevices(deletedIds, deviceAddresses, deviceInfo);
+
+    {
+      std::lock_guard<std::mutex> peersGuard(_peersMutex);
+      if (_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+      if (_peersById.find(id) != _peersById.end()) _peersById.erase(id);
+    }
+
+    int32_t i = 0;
+    while (peer.use_count() > 1 && i < 600) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      i++;
+    }
+
+    if (i == 600) Gd::out.printError("Error: Peer deletion took too long.");
+
+    peer->stopScript();
+
+    peer->deleteFromDatabase();
+
+    Gd::out.printMessage("Removed Miscellaneous peer " + std::to_string(peer->getID()));
+  }
+  catch (const std::exception &ex) {
+    _peersMutex.unlock();
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    _peersMutex.unlock();
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
+std::shared_ptr<MiscPeer> MiscCentral::getPeer(uint64_t id) {
+  try {
+    _peersMutex.lock();
+    if (_peersById.find(id) != _peersById.end()) {
+      std::shared_ptr<MiscPeer> peer(std::dynamic_pointer_cast<MiscPeer>(_peersById.at(id)));
+      _peersMutex.unlock();
+      return peer;
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  _peersMutex.unlock();
+  return std::shared_ptr<MiscPeer>();
+}
+
+std::shared_ptr<MiscPeer> MiscCentral::getPeer(std::string serialNumber) {
+  try {
+    _peersMutex.lock();
+    if (_peersBySerial.find(serialNumber) != _peersBySerial.end()) {
+      std::shared_ptr<MiscPeer> peer(std::dynamic_pointer_cast<MiscPeer>(_peersBySerial.at(serialNumber)));
+      _peersMutex.unlock();
+      return peer;
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  _peersMutex.unlock();
+  return std::shared_ptr<MiscPeer>();
+}
+
+void MiscCentral::savePeers(bool full) {
+  try {
+    _peersMutex.lock();
+    for (std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i) {
+      //Necessary, because peers can be assigned to multiple virtual devices
+      if (i->second->getParentID() != _deviceId) continue;
+      //We are always printing this, because the init script needs it
+      Gd::out.printMessage("(Shutdown) => Saving Miscellaneous peer " + std::to_string(i->second->getID()));
+      i->second->save(full, full, full);
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  _peersMutex.unlock();
+}
+
+std::string MiscCentral::handleCliCommand(std::string command) {
+  try {
+    std::ostringstream stringStream;
+    std::vector<std::string> arguments;
+    bool showHelp = false;
+    if (command == "help" || command == "h") {
+      stringStream << "List of commands:" << std::endl << std::endl;
+      stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+      stringStream << "peers create (pc)   Creates a new peer" << std::endl;
+      stringStream << "peers list (ls)     List all peers" << std::endl;
+      stringStream << "peers remove (pr)   Remove a peer" << std::endl;
+      stringStream << "peers select (ps)   Select a peer" << std::endl;
+      stringStream << "peers setname (pn)  Name a peer" << std::endl;
+      stringStream << "peers restart (prs) Restarts the peer" << std::endl;
+      stringStream << "unselect (u)        Unselect this device" << std::endl;
+      return stringStream.str();
+    }
+    if (command.compare(0, 12, "peers create") == 0 || command.compare(0, 2, "pc") == 0) {
+      uint32_t deviceType = 0;
+      std::string serialNumber;
+
+      std::stringstream stream(command);
+      std::string element;
+      int32_t offset = (command.at(1) == 'c') ? 0 : 1;
+      int32_t index = 0;
+      while (std::getline(stream, element, ' ')) {
+        if (index < 1 + offset) {
+          index++;
+          continue;
+        } else if (index == 1 + offset) {
+          if (element == "help") break;
+          int32_t temp = BaseLib::Math::getNumber(element, true);
+          if (temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
+          deviceType = temp;
+        } else if (index == 2 + offset) {
+          if (element.length() != 10) return "Invalid serial number. Please provide a serial number with a length of 10 characters.\n";
+          serialNumber = element;
+        }
+        index++;
+      }
+      if (index < 3 + offset) {
+        stringStream << "Description: This command creates a new peer." << std::endl;
+        stringStream << "Usage: peers create DEVICETYPE SERIALNUMBER" << std::endl << std::endl;
+        stringStream << "Parameters:" << std::endl;
+        stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0192" << std::endl;
+        stringStream << "  SERIALNUMBER:\t\tThe 10 character long serial number of the peer to add. Example: 8G647D825Q" << std::endl;
+        return stringStream.str();
+      }
+      if (peerExists(serialNumber)) stringStream << "This peer is already paired to this central." << std::endl;
+      else {
+        std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
+        if (!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
+        try {
+          _peersMutex.lock();
+          if (!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+          _peersMutex.unlock();
+          peer->save(true, true, false);
+          peer->initializeCentralConfig();
+          _peersMutex.lock();
+          _peersById[peer->getID()] = peer;
+          _peersMutex.unlock();
+        }
+        catch (const std::exception &ex) {
+          _peersMutex.unlock();
+          Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+        catch (...) {
+          _peersMutex.unlock();
+          Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         }
 
-        if(i == 600) GD::out.printError("Error: Peer deletion took too long.");
+        PVariable deviceDescriptions(new Variable(VariableType::tArray));
+        deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
+        std::vector<uint64_t> newIds{peer->getID()};
+        raiseRPCNewDevices(newIds, deviceDescriptions);
+        Gd::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+        stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << BaseLib::HelperFunctions::getHexString(deviceType) << " with serial number " << serialNumber << "." << std::dec << std::endl;
+        peer->initProgram();
+      }
+      return stringStream.str();
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "peers remove", "pr", "", 1, arguments, showHelp)) {
+      if (showHelp) {
+        stringStream << "Description: This command removes a peer." << std::endl;
+        stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
+        stringStream << "Parameters:" << std::endl;
+        stringStream << "  PEERID:\tThe id of the peer to remove. Example: 513" << std::endl;
+        return stringStream.str();
+      }
 
-		peer->stopScript();
+      uint64_t peerId = BaseLib::Math::getNumber64(arguments.at(0));
+      if (peerId == 0) return "Invalid id.\n";
 
-		peer->deleteFromDatabase();
+      if (!peerExists(peerId)) stringStream << "This peer is not paired to this central." << std::endl;
+      else {
+        stringStream << "Removing peer " << std::to_string(peerId) << std::endl;
+        deletePeer(peerId);
+      }
+      return stringStream.str();
+    } else if (command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0 || command.compare(0, 2, "ls") == 0) {
+      try {
+        std::string filterType;
+        std::string filterValue;
 
-		GD::out.printMessage("Removed Miscellaneous peer " + std::to_string(peer->getID()));
-	}
-	catch(const std::exception& ex)
-    {
-		_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::shared_ptr<MiscPeer> MiscCentral::getPeer(uint64_t id)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peersById.find(id) != _peersById.end())
-		{
-			std::shared_ptr<MiscPeer> peer(std::dynamic_pointer_cast<MiscPeer>(_peersById.at(id)));
-			_peersMutex.unlock();
-			return peer;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return std::shared_ptr<MiscPeer>();
-}
-
-std::shared_ptr<MiscPeer> MiscCentral::getPeer(std::string serialNumber)
-{
-	try
-	{
-		_peersMutex.lock();
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
-		{
-			std::shared_ptr<MiscPeer> peer(std::dynamic_pointer_cast<MiscPeer>(_peersBySerial.at(serialNumber)));
-			_peersMutex.unlock();
-			return peer;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return std::shared_ptr<MiscPeer>();
-}
-
-void MiscCentral::savePeers(bool full)
-{
-	try
-	{
-		_peersMutex.lock();
-		for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i)
-		{
-			//Necessary, because peers can be assigned to multiple virtual devices
-			if(i->second->getParentID() != _deviceId) continue;
-			//We are always printing this, because the init script needs it
-			GD::out.printMessage("(Shutdown) => Saving Miscellaneous peer " + std::to_string(i->second->getID()));
-			i->second->save(full, full, full);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-	_peersMutex.unlock();
-}
-
-std::string MiscCentral::handleCliCommand(std::string command)
-{
-	try
-	{
-		std::ostringstream stringStream;
-		std::vector<std::string> arguments;
-		bool showHelp = false;
-		if(command == "help" || command == "h")
-		{
-			stringStream << "List of commands:" << std::endl << std::endl;
-			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "peers create (pc)   Creates a new peer" << std::endl;
-			stringStream << "peers list (ls)     List all peers" << std::endl;
-			stringStream << "peers remove (pr)   Remove a peer" << std::endl;
-			stringStream << "peers select (ps)   Select a peer" << std::endl;
-			stringStream << "peers setname (pn)  Name a peer" << std::endl;
-			stringStream << "peers restart (prs) Restarts the peer" << std::endl;
-			stringStream << "unselect (u)        Unselect this device" << std::endl;
-			return stringStream.str();
-		}
-		if(command.compare(0, 12, "peers create") == 0 || command.compare(0, 2, "pc") == 0)
-		{
-			uint32_t deviceType = 0;
-			std::string serialNumber;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'c') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					int32_t temp = BaseLib::Math::getNumber(element, true);
-					if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
-					deviceType = temp;
-				}
-				else if(index == 2 + offset)
-				{
-					if(element.length() != 10) return "Invalid serial number. Please provide a serial number with a length of 10 characters.\n";
-					serialNumber = element;
-				}
-				index++;
-			}
-			if(index < 3 + offset)
-			{
-				stringStream << "Description: This command creates a new peer." << std::endl;
-				stringStream << "Usage: peers create DEVICETYPE SERIALNUMBER" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0192" << std::endl;
-				stringStream << "  SERIALNUMBER:\t\tThe 10 character long serial number of the peer to add. Example: 8G647D825Q" << std::endl;
-				return stringStream.str();
-			}
-			if(peerExists(serialNumber)) stringStream << "This peer is already paired to this central." << std::endl;
-			else
-			{
-				std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
-				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
-				try
-				{
-					_peersMutex.lock();
-					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-					_peersMutex.unlock();
-					peer->save(true, true, false);
-					peer->initializeCentralConfig();
-					_peersMutex.lock();
-					_peersById[peer->getID()] = peer;
-					_peersMutex.unlock();
-				}
-				catch(const std::exception& ex)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
-
-				PVariable deviceDescriptions(new Variable(VariableType::tArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
-                std::vector<uint64_t> newIds{ peer->getID() };
-				raiseRPCNewDevices(newIds, deviceDescriptions);
-				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
-				stringStream << "Added peer " + std::to_string(peer->getID()) + " of type 0x" << BaseLib::HelperFunctions::getHexString(deviceType) << " with serial number " << serialNumber << "." << std::dec << std::endl;
-				peer->initProgram();
-			}
-			return stringStream.str();
-		}
-        else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers remove", "pr", "", 1, arguments, showHelp))
-        {
-            if(showHelp)
-            {
-                stringStream << "Description: This command removes a peer." << std::endl;
-                stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
-                stringStream << "Parameters:" << std::endl;
-                stringStream << "  PEERID:\tThe id of the peer to remove. Example: 513" << std::endl;
-                return stringStream.str();
+        std::stringstream stream(command);
+        std::string element;
+        int32_t offset = (command.at(1) == 'l' || command.at(1) == 's') ? 0 : 1;
+        int32_t index = 0;
+        while (std::getline(stream, element, ' ')) {
+          if (index < 1 + offset) {
+            index++;
+            continue;
+          } else if (index == 1 + offset) {
+            if (element == "help") {
+              index = -1;
+              break;
             }
+            filterType = BaseLib::HelperFunctions::toLower(element);
+          } else if (index == 2 + offset) {
+            filterValue = element;
+            if (filterType == "name") BaseLib::HelperFunctions::toLower(filterValue);
+          }
+          index++;
+        }
+        if (index == -1) {
+          stringStream << "Description: This command lists information about all peers." << std::endl;
+          stringStream << "Usage: peers list [FILTERTYPE] [FILTERVALUE]" << std::endl << std::endl;
+          stringStream << "Parameters:" << std::endl;
+          stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
+          stringStream << "  FILTERVALUE:\tDepends on the filter type. If a number is required, it has to be in hexadecimal format." << std::endl << std::endl;
+          stringStream << "Filter types:" << std::endl;
+          stringStream << "  ID: Filter by id." << std::endl;
+          stringStream << "      FILTERVALUE: The id of the peer to filter (e. g. 513)." << std::endl;
+          stringStream << "  SERIAL: Filter by serial number." << std::endl;
+          stringStream << "      FILTERVALUE: The serial number of the peer to filter (e. g. JEQ0554309)." << std::endl;
+          stringStream << "  NAME: Filter by name." << std::endl;
+          stringStream << "      FILTERVALUE: The part of the name to search for (e. g. \"1st floor\")." << std::endl;
+          stringStream << "  TYPE: Filter by device type." << std::endl;
+          stringStream << "      FILTERVALUE: The 2 byte device type in hexadecimal format." << std::endl;
+          return stringStream.str();
+        }
 
-			uint64_t peerId = BaseLib::Math::getNumber64(arguments.at(0));
-            if(peerId == 0)  return "Invalid id.\n";
+        if (_peersById.empty()) {
+          stringStream << "No peers are paired to this central." << std::endl;
+          return stringStream.str();
+        }
+        std::string bar(" │ ");
+        const int32_t idWidth = 8;
+        const int32_t nameWidth = 25;
+        const int32_t serialWidth = 13;
+        const int32_t typeWidth1 = 4;
+        const int32_t typeWidth2 = 25;
+        std::string nameHeader("Name");
+        nameHeader.resize(nameWidth, ' ');
+        std::string typeStringHeader("Type String");
+        typeStringHeader.resize(typeWidth2, ' ');
+        stringStream << std::setfill(' ')
+                     << std::setw(idWidth) << "ID" << bar
+                     << nameHeader << bar
+                     << std::setw(serialWidth) << "Serial Number" << bar
+                     << std::setw(typeWidth1) << "Type" << bar
+                     << typeStringHeader
+                     << std::endl;
+        stringStream << "─────────┼───────────────────────────┼───────────────┼──────┼───────────────────────────" << std::endl;
+        stringStream << std::setfill(' ')
+                     << std::setw(idWidth) << " " << bar
+                     << std::setw(nameWidth) << " " << bar
+                     << std::setw(serialWidth) << " " << bar
+                     << std::setw(typeWidth1) << " " << bar
+                     << std::setw(typeWidth2)
+                     << std::endl;
+        _peersMutex.lock();
+        for (std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i) {
+          if (filterType == "id") {
+            uint64_t id = BaseLib::Math::getNumber(filterValue, false);
+            if (i->second->getID() != id) continue;
+          } else if (filterType == "name") {
+            std::string name = i->second->getName();
+            if ((signed)BaseLib::HelperFunctions::toLower(name).find(filterValue) == (signed)std::string::npos) continue;
+          } else if (filterType == "serial") {
+            if (i->second->getSerialNumber() != filterValue) continue;
+          } else if (filterType == "type") {
+            int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
+            if ((int32_t)i->second->getDeviceType() != deviceType) continue;
+          }
 
-			if(!peerExists(peerId)) stringStream << "This peer is not paired to this central." << std::endl;
-			else
-			{
-				stringStream << "Removing peer " << std::to_string(peerId) << std::endl;
-				deletePeer(peerId);
-			}
-			return stringStream.str();
-		}
-		else if(command.compare(0, 10, "peers list") == 0 || command.compare(0, 2, "pl") == 0 || command.compare(0, 2, "ls") == 0)
-		{
-			try
-			{
-				std::string filterType;
-				std::string filterValue;
+          stringStream << std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar;
+          std::string name = i->second->getName();
+          size_t nameSize = BaseLib::HelperFunctions::utf8StringSize(name);
+          if (nameSize > (unsigned)nameWidth) {
+            name = BaseLib::HelperFunctions::utf8Substring(name, 0, nameWidth - 3);
+            name += "...";
+          } else name.resize(nameWidth + (name.size() - nameSize), ' ');
+          stringStream << name << bar
+                       << std::setw(serialWidth) << i->second->getSerialNumber() << bar
+                       << std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType(), 4) << bar;
+          if (i->second->getRpcDevice()) {
+            PSupportedDevice type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
+            std::string typeID;
+            if (type) typeID = type->id;
+            if (typeID.size() > (unsigned)typeWidth2) {
+              typeID.resize(typeWidth2 - 3);
+              typeID += "...";
+            } else typeID.resize(typeWidth2, ' ');
+            stringStream << typeID;
+          } else stringStream << std::setw(typeWidth2);
+          stringStream << std::endl << std::dec;
+        }
+        _peersMutex.unlock();
+        stringStream << "─────────┴───────────────────────────┴───────────────┴──────┴───────────────────────────" << std::endl;
 
-				std::stringstream stream(command);
-				std::string element;
-				int32_t offset = (command.at(1) == 'l' || command.at(1) == 's') ? 0 : 1;
-				int32_t index = 0;
-				while(std::getline(stream, element, ' '))
-				{
-					if(index < 1 + offset)
-					{
-						index++;
-						continue;
-					}
-					else if(index == 1 + offset)
-					{
-						if(element == "help")
-						{
-							index = -1;
-							break;
-						}
-						filterType = BaseLib::HelperFunctions::toLower(element);
-					}
-					else if(index == 2 + offset)
-					{
-						filterValue = element;
-						if(filterType == "name") BaseLib::HelperFunctions::toLower(filterValue);
-					}
-					index++;
-				}
-				if(index == -1)
-				{
-					stringStream << "Description: This command lists information about all peers." << std::endl;
-					stringStream << "Usage: peers list [FILTERTYPE] [FILTERVALUE]" << std::endl << std::endl;
-					stringStream << "Parameters:" << std::endl;
-					stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
-					stringStream << "  FILTERVALUE:\tDepends on the filter type. If a number is required, it has to be in hexadecimal format." << std::endl << std::endl;
-					stringStream << "Filter types:" << std::endl;
-					stringStream << "  ID: Filter by id." << std::endl;
-					stringStream << "      FILTERVALUE: The id of the peer to filter (e. g. 513)." << std::endl;
-					stringStream << "  SERIAL: Filter by serial number." << std::endl;
-					stringStream << "      FILTERVALUE: The serial number of the peer to filter (e. g. JEQ0554309)." << std::endl;
-					stringStream << "  NAME: Filter by name." << std::endl;
-					stringStream << "      FILTERVALUE: The part of the name to search for (e. g. \"1st floor\")." << std::endl;
-					stringStream << "  TYPE: Filter by device type." << std::endl;
-					stringStream << "      FILTERVALUE: The 2 byte device type in hexadecimal format." << std::endl;
-					return stringStream.str();
-				}
+        return stringStream.str();
+      }
+      catch (const std::exception &ex) {
+        _peersMutex.unlock();
+        Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+      }
+      catch (...) {
+        _peersMutex.unlock();
+        Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+      }
+    } else if (command.compare(0, 13, "peers setname") == 0 || command.compare(0, 2, "pn") == 0) {
+      uint64_t peerID = 0;
+      std::string name;
 
-				if(_peersById.empty())
-				{
-					stringStream << "No peers are paired to this central." << std::endl;
-					return stringStream.str();
-				}
-				std::string bar(" │ ");
-				const int32_t idWidth = 8;
-				const int32_t nameWidth = 25;
-				const int32_t serialWidth = 13;
-				const int32_t typeWidth1 = 4;
-				const int32_t typeWidth2 = 25;
-				std::string nameHeader("Name");
-				nameHeader.resize(nameWidth, ' ');
-				std::string typeStringHeader("Type String");
-				typeStringHeader.resize(typeWidth2, ' ');
-				stringStream << std::setfill(' ')
-					<< std::setw(idWidth) << "ID" << bar
-					<< nameHeader << bar
-					<< std::setw(serialWidth) << "Serial Number" << bar
-					<< std::setw(typeWidth1) << "Type" << bar
-					<< typeStringHeader
-					<< std::endl;
-				stringStream << "─────────┼───────────────────────────┼───────────────┼──────┼───────────────────────────" << std::endl;
-				stringStream << std::setfill(' ')
-					<< std::setw(idWidth) << " " << bar
-					<< std::setw(nameWidth) << " " << bar
-					<< std::setw(serialWidth) << " " << bar
-					<< std::setw(typeWidth1) << " " << bar
-					<< std::setw(typeWidth2)
-					<< std::endl;
-				_peersMutex.lock();
-				for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersById.begin(); i != _peersById.end(); ++i)
-				{
-					if(filterType == "id")
-					{
-						uint64_t id = BaseLib::Math::getNumber(filterValue, false);
-						if(i->second->getID() != id) continue;
-					}
-					else if(filterType == "name")
-					{
-						std::string name = i->second->getName();
-						if((signed)BaseLib::HelperFunctions::toLower(name).find(filterValue) == (signed)std::string::npos) continue;
-					}
-					else if(filterType == "serial")
-					{
-						if(i->second->getSerialNumber() != filterValue) continue;
-					}
-					else if(filterType == "type")
-					{
-						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
-						if((int32_t)i->second->getDeviceType() != deviceType) continue;
-					}
+      std::stringstream stream(command);
+      std::string element;
+      int32_t offset = (command.at(1) == 'n') ? 0 : 1;
+      int32_t index = 0;
+      while (std::getline(stream, element, ' ')) {
+        if (index < 1 + offset) {
+          index++;
+          continue;
+        } else if (index == 1 + offset) {
+          if (element == "help") break;
+          else {
+            peerID = BaseLib::Math::getNumber(element, false);
+            if (peerID == 0) return "Invalid id.\n";
+          }
+        } else if (index == 2 + offset) name = element;
+        else name += ' ' + element;
+        index++;
+      }
+      if (index == 1 + offset) {
+        stringStream << "Description: This command sets or changes the name of a peer to identify it more easily." << std::endl;
+        stringStream << "Usage: peers setname PEERID NAME" << std::endl << std::endl;
+        stringStream << "Parameters:" << std::endl;
+        stringStream << "  PEERID:\tThe id of the peer to set the name for. Example: 513" << std::endl;
+        stringStream << "  NAME:\tThe name to set. Example: \"1st floor light switch\"." << std::endl;
+        return stringStream.str();
+      }
 
-					stringStream << std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar;
-					std::string name = i->second->getName();
-					size_t nameSize = BaseLib::HelperFunctions::utf8StringSize(name);
-					if(nameSize > (unsigned)nameWidth)
-					{
-						name = BaseLib::HelperFunctions::utf8Substring(name, 0, nameWidth - 3);
-						name += "...";
-					}
-					else name.resize(nameWidth + (name.size() - nameSize), ' ');
-					stringStream << name << bar
-						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
-						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType(), 4) << bar;
-					if(i->second->getRpcDevice())
-					{
-						PSupportedDevice type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
-						std::string typeID;
-						if(type) typeID = type->id;
-						if(typeID.size() > (unsigned)typeWidth2)
-						{
-							typeID.resize(typeWidth2 - 3);
-							typeID += "...";
-						}
-						else typeID.resize(typeWidth2, ' ');
-						stringStream << typeID;
-					}
-					else stringStream << std::setw(typeWidth2);
-					stringStream << std::endl << std::dec;
-				}
-				_peersMutex.unlock();
-				stringStream << "─────────┴───────────────────────────┴───────────────┴──────┴───────────────────────────" << std::endl;
+      if (!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+      else {
+        std::shared_ptr<MiscPeer> peer = getPeer(peerID);
+        peer->setName(name);
+        stringStream << "Name set to \"" << name << "\"." << std::endl;
+      }
+      return stringStream.str();
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "peers restart", "prs", "", 1, arguments, showHelp)) {
+      if (showHelp) {
+        stringStream << "Description: This command restarts the peer." << std::endl;
+        stringStream << "Usage: peers restart PEERID" << std::endl << std::endl;
+        stringStream << "Parameters:" << std::endl;
+        stringStream << "  PEERID: The ID of the peer to restart. Example: 513" << std::endl;
+        return stringStream.str();
+      }
 
-				return stringStream.str();
-			}
-			catch(const std::exception& ex)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-		}
-		else if(command.compare(0, 13, "peers setname") == 0 || command.compare(0, 2, "pn") == 0)
-		{
-			uint64_t peerID = 0;
-			std::string name;
+      uint64_t peerId = BaseLib::Math::getNumber64(arguments.at(0));
+      if (peerId == 0) return "Invalid peer ID.\n";
 
-			std::stringstream stream(command);
-			std::string element;
-			int32_t offset = (command.at(1) == 'n') ? 0 : 1;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 1 + offset)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1 + offset)
-				{
-					if(element == "help") break;
-					else
-					{
-						peerID = BaseLib::Math::getNumber(element, false);
-						if(peerID == 0) return "Invalid id.\n";
-					}
-				}
-				else if(index == 2 + offset) name = element;
-				else name += ' ' + element;
-				index++;
-			}
-			if(index == 1 + offset)
-			{
-				stringStream << "Description: This command sets or changes the name of a peer to identify it more easily." << std::endl;
-				stringStream << "Usage: peers setname PEERID NAME" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PEERID:\tThe id of the peer to set the name for. Example: 513" << std::endl;
-				stringStream << "  NAME:\tThe name to set. Example: \"1st floor light switch\"." << std::endl;
-				return stringStream.str();
-			}
+      auto peer = getPeer(peerId);
+      if (!peer) return "Unknown peer.\n";
 
-			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
-			else
-			{
-				std::shared_ptr<MiscPeer> peer = getPeer(peerID);
-				peer->setName(name);
-				stringStream << "Name set to \"" << name << "\"." << std::endl;
-			}
-			return stringStream.str();
-		}
-		else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers restart", "prs", "", 1, arguments, showHelp))
-		{
-			if(showHelp)
-			{
-				stringStream << "Description: This command restarts the peer." << std::endl;
-				stringStream << "Usage: peers restart PEERID" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PEERID: The ID of the peer to restart. Example: 513" << std::endl;
-				return stringStream.str();
-			}
+      peer->stopScript();
 
-			uint64_t peerId = BaseLib::Math::getNumber64(arguments.at(0));
-			if(peerId == 0) return "Invalid peer ID.\n";
+      std::unique_lock<std::mutex> lockGuard(_peersMutex);
+      if (_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+      if (_peersById.find(peerId) != _peersById.end()) _peersById.erase(peerId);
+      lockGuard.unlock();
 
-			auto peer = getPeer(peerId);
-            if(!peer) return "Unknown peer.\n";
+      int32_t i = 0;
+      while (peer.use_count() > 1 && i < 600) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        i++;
+      }
+      if (i == 600) Gd::out.printError("Error: Peer deletion took too long.");
 
-            peer->stopScript();
+      Gd::family->reloadRpcDevices();
+      peer->setRpcDevice(Gd::family->getRpcDevices()->find(peer->getDeviceType(), 0x10, -1));
+      if (!peer->getRpcDevice()) return "RPC device could not be found anymore. Check for errors in the XML file. Please note the device still exists in the database and will be loaded on module restart once the error is fixed.\n";
 
-            std::unique_lock<std::mutex> lockGuard(_peersMutex);
-            if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-            if(_peersById.find(peerId) != _peersById.end()) _peersById.erase(peerId);
-            lockGuard.unlock();
+      lockGuard.lock();
+      if (!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+      _peersById[peer->getID()] = peer;
+      lockGuard.unlock();
 
-            int32_t i = 0;
-            while(peer.use_count() > 1 && i < 600)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                i++;
-            }
-            if(i == 600) GD::out.printError("Error: Peer deletion took too long.");
+      peer->initProgram();
 
-			GD::family->reloadRpcDevices();
-            peer->setRpcDevice(GD::family->getRpcDevices()->find(peer->getDeviceType(), 0x10, -1));
-            if(!peer->getRpcDevice()) return "RPC device could not be found anymore. Check for errors in the XML file. Please note the device still exists in the database and will be loaded on module restart once the error is fixed.\n";
+      raiseRPCUpdateDevice(peerId, 0, peer->getSerialNumber() + ":" + std::to_string(0), 0);
 
-            lockGuard.lock();
-            if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-            _peersById[peer->getID()] = peer;
-            lockGuard.unlock();
-
-            peer->initProgram();
-
-            raiseRPCUpdateDevice(peerId, 0, peer->getSerialNumber() + ":" + std::to_string(0), 0);
-
-			stringStream << "Peer restarted." << std::endl;
-			return stringStream.str();
-		}
-		else return "Unknown command.\n";
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "Error executing command. See log file for more details.\n";
+      stringStream << "Peer restarted." << std::endl;
+      return stringStream.str();
+    } else return "Unknown command.\n";
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<MiscPeer> MiscCentral::createPeer(uint32_t deviceType, std::string serialNumber, bool save)
-{
-	try
-	{
-		std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceId, this));
-		peer->setDeviceType(deviceType);
-		peer->setSerialNumber(serialNumber);
-		peer->setRpcDevice(GD::family->getRpcDevices()->find(deviceType, 0x10, -1));
-		if(!peer->getRpcDevice()) return std::shared_ptr<MiscPeer>();
-		if(save) peer->save(true, true, false); //Save and create peerID
-		return peer;
-	}
-    catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::shared_ptr<MiscPeer>();
+std::shared_ptr<MiscPeer> MiscCentral::createPeer(uint32_t deviceType, std::string serialNumber, bool save) {
+  try {
+    std::shared_ptr<MiscPeer> peer(new MiscPeer(_deviceId, this));
+    peer->setDeviceType(deviceType);
+    peer->setSerialNumber(serialNumber);
+    peer->setRpcDevice(Gd::family->getRpcDevices()->find(deviceType, 0x10, -1));
+    if (!peer->getRpcDevice()) return std::shared_ptr<MiscPeer>();
+    if (save) peer->save(true, true, false); //Save and create peerID
+    return peer;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return std::shared_ptr<MiscPeer>();
 }
 
-PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId)
-{
-	try
-	{
-		if(serialNumber.size() < 10 || serialNumber.size() > 20) return Variable::createError(-1, "The serial number needs to have a size between 10 and 20.");
-		if(peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
+PVariable MiscCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) {
+  try {
+    if (serialNumber.size() < 10 || serialNumber.size() > 20) return Variable::createError(-1, "The serial number needs to have a size between 10 and 20.");
+    if (peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
 
-		std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
-		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
+    std::shared_ptr<MiscPeer> peer = createPeer(deviceType, serialNumber, false);
+    if (!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
-		try
-		{
-			peer->save(true, true, false);
-			peer->initializeCentralConfig();
-			std::lock_guard<std::mutex> peersGuard(_peersMutex);
-			_peersById[peer->getID()] = peer;
-			_peersBySerial[serialNumber] = peer;
-		}
-		catch(const std::exception& ex)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-
-		PVariable deviceDescriptions(new Variable(VariableType::tArray));
-		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
-        std::vector<uint64_t> newIds{ peer->getID() };
-		raiseRPCNewDevices(newIds, deviceDescriptions);
-		GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + " with serial number " + serialNumber + ".");
-		peer->initProgram();
-
-		return PVariable(new Variable((uint32_t)peer->getID()));
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    try {
+      peer->save(true, true, false);
+      peer->initializeCentralConfig();
+      std::lock_guard<std::mutex> peersGuard(_peersMutex);
+      _peersById[peer->getID()] = peer;
+      _peersBySerial[serialNumber] = peer;
     }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    catch (const std::exception &ex) {
+      Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    return Variable::createError(-32500, "Unknown application error.");
+    catch (...) {
+      Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+
+    PVariable deviceDescriptions(new Variable(VariableType::tArray));
+    deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
+    std::vector<uint64_t> newIds{peer->getID()};
+    raiseRPCNewDevices(newIds, deviceDescriptions);
+    Gd::out.printMessage("Added peer " + std::to_string(peer->getID()) + " with serial number " + serialNumber + ".");
+    peer->initProgram();
+
+    return PVariable(new Variable((uint32_t)peer->getID()));
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags)
-{
-	try
-	{
-		if(serialNumber.empty()) return Variable::createError(-2, "Unknown device.");
+PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) {
+  try {
+    if (serialNumber.empty()) return Variable::createError(-2, "Unknown device.");
 
-		uint64_t peerId = 0;
+    uint64_t peerId = 0;
 
-		{
-			std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
-			if(!peer) return PVariable(new Variable(VariableType::tVoid));
-			peerId = peer->getID();
-		}
-
-		return deleteDevice(clientInfo, peerId, flags);
-	}
-	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+      std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
+      if (!peer) return PVariable(new Variable(VariableType::tVoid));
+      peerId = peer->getID();
     }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return Variable::createError(-32500, "Unknown application error.");
+
+    return deleteDevice(clientInfo, peerId, flags);
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags)
-{
-	try
-	{
-		if(peerId == 0) return Variable::createError(-2, "Unknown device.");
+PVariable MiscCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) {
+  try {
+    if (peerId == 0) return Variable::createError(-2, "Unknown device.");
 
-		{
-			std::shared_ptr<MiscPeer> peer = getPeer(peerId);
-			if(!peer) return PVariable(new Variable(VariableType::tVoid));
-		}
-
-		deletePeer(peerId);
-
-		if(peerExists(peerId)) return Variable::createError(-1, "Error deleting peer. See log for more details.");
-
-		return PVariable(new Variable(VariableType::tVoid));
-	}
-	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+      std::shared_ptr<MiscPeer> peer = getPeer(peerId);
+      if (!peer) return PVariable(new Variable(VariableType::tVoid));
     }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return Variable::createError(-32500, "Unknown application error.");
+
+    deletePeer(peerId);
+
+    if (peerExists(peerId)) return Variable::createError(-1, "Error deleting peer. See log for more details.");
+
+    return PVariable(new Variable(VariableType::tVoid));
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return Variable::createError(-32500, "Unknown application error.");
 }
 }

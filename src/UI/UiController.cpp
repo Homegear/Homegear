@@ -921,7 +921,7 @@ BaseLib::PVariable UiController::getAllUiElements(const BaseLib::PRpcClientInfo 
   try {
     std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     auto uiElements = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     uiElements->arrayValue->reserve(_uiElements.size());
@@ -1054,7 +1054,7 @@ BaseLib::PVariable UiController::getUiElement(const BaseLib::PRpcClientInfo &cli
     auto elementIterator = _uiElements.find(databaseId);
     if (elementIterator == _uiElements.end()) return BaseLib::Variable::createError(-2, "Unknown element.");
 
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     auto &uiElement = elementIterator->second;
 
@@ -1163,7 +1163,7 @@ BaseLib::PVariable UiController::getUiElementsInRoom(const BaseLib::PRpcClientIn
     std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
     if (clientInfo->acls->roomsReadSet() && !clientInfo->acls->checkRoomReadAccess(roomId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     auto roomIterator = _uiElementsByRoom.find(roomId);
     if (roomIterator == _uiElementsByRoom.end()) return BaseLib::Variable::createError(-1, "Unknown room.");
@@ -1246,7 +1246,7 @@ BaseLib::PVariable UiController::getUiElementsInCategory(const BaseLib::PRpcClie
     std::lock_guard<std::mutex> uiElementsGuard(_uiElementsMutex);
 
     if (clientInfo->acls->categoriesReadSet() && !clientInfo->acls->checkCategoryReadAccess(categoryId)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesReadSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesReadSet();
 
     auto categoryIterator = _uiElementsByCategory.find(categoryId);
     if (categoryIterator == _uiElementsByCategory.end()) return BaseLib::Variable::createError(-1, "Unknown category.");

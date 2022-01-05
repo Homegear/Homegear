@@ -148,6 +148,8 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates binutils debhelper devscripts ssh equivs nano python wget
+DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
+DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
 if [ "$distver" == "stretch" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libpython3.5-stdlib
@@ -225,9 +227,9 @@ else
 	SERVERPATH=${SERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
-	echo "$SERVERCERT" > /root/.ssh/id_rsa
-	chmod 400 /root/.ssh/id_rsa
-	sed -i -- 's/\\n/\n/g' /root/.ssh/id_rsa
+	echo "$SERVERCERT" > /root/.ssh/id_ed25519
+	chmod 400 /root/.ssh/id_ed25519
+	sed -i -- 's/\\n/\n/g' /root/.ssh/id_ed25519
 	if [ -n "$SERVER_KNOWNHOST_ENTRY" ]; then
 		echo "$SERVER_KNOWNHOST_ENTRY" > /root/.ssh/known_hosts
 		sed -i -- 's/\\n/\n/g' /root/.ssh/known_hosts

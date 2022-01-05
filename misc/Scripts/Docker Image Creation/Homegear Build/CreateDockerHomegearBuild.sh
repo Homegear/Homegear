@@ -148,6 +148,8 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
+DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
+DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
 echo "deb https://homegear.eu/packages/$dist/ $distver/" > $rootfs/etc/apt/sources.list.d/homegear.list
 
@@ -222,7 +224,8 @@ function createPackage {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
-	if [ $revision -eq 0 ]; then
+	revision=$(echo $revision | cut -d "." -f 1)
+	if [ -z "$revision" ]; then
 		echo "Error: Could not get revision."
 		exit 1
 	fi
@@ -283,7 +286,8 @@ function createPackageWithoutAutomake {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
-	if [ $revision -eq 0 ]; then
+	revision=$(echo $revision | cut -d "." -f 1)
+	if [ -z "$revision" ]; then
 		echo "Error: Could not get revision."
 		exit 1
 	fi
@@ -763,169 +767,6 @@ chmod 755 $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackage.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackage.sh
 
-cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
-#!/bin/bash
-
-distributionVersion="<DISTVER>"
-
-/build/CreateDebianPackage.sh dev $1
-
-cd /build
-
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
-	if [[ -n $1 ]]; then
-		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
-			echo "Error: Some or all packages from gitit.de could not be created."
-			exit 1
-		fi
-	fi
-	if test -f /build/UploadRepository.sh; then
-		/build/UploadRepository.sh
-	fi
-else
-	echo "Error: Some or all packages could not be created."
-	exit 1
-fi
-
-function cleanUp {
-	rm ${1}_*.build
-	rm ${1}_*.changes
-	rm ${1}_*.debian.tar.?z
-	rm ${1}_*.dsc
-	rm ${1}_*.orig.tar.gz
-	mv ${1}_*.deb ${1}.deb
-}
-
-function cleanUp2 {
-	rm ${1}_*.build
-	rm ${1}_*.changes
-	rm ${1}_*.debian.tar.?z
-	rm ${1}_*.dsc
-	rm ${1}_*.orig.tar.gz
-	rm ${1}-dbgsym*.deb
-	mv ${1}_*.deb ${1}.deb
-}
-
-cleanUp libhomegear-base
-cleanUp libhomegear-node
-cleanUp libhomegear-ipc
-cleanUp python3-homegear
-cleanUp homegear
-cleanUp homegear-nodes-core
-cleanUp homegear-nodes-ui
-cleanUp homegear-homematicbidcos
-cleanUp homegear-homematicwired
-cleanUp homegear-insteon
-cleanUp homegear-max
-cleanUp homegear-philipshue
-cleanUp homegear-sonos
-cleanUp homegear-kodi
-cleanUp homegear-ipcam
-cleanUp homegear-intertechno
-cleanUp homegear-nanoleaf
-cleanUp homegear-ccu
-cleanUp homegear-velux-klf200
-cleanUp homegear-loxone
-cleanUp homegear-influxdb
-cleanUp homegear-gateway
-cleanUp homegear-management
-cleanUp homegear-ui
-cleanUp binrpc
-if [[ -n $1 ]]; then
-	cleanUp homegear-adminui
-
-	cleanUp2 homegear-easy-licensing
-	cleanUp2 homegear-licensing
-
-	cleanUp2 homegear-nodes-extra
-	cleanUp2 homegear-beckhoff
-	cleanUp2 homegear-knx
-	cleanUp2 homegear-enocean
-	cleanUp2 homegear-easycam
-	cleanUp2 homegear-easyled
-	cleanUp2 homegear-easyled2
-	cleanUp2 homegear-rsl
-	cleanUp2 homegear-rs2w
-	cleanUp2 homegear-mbus
-	cleanUp2 homegear-zwave
-	cleanUp2 homegear-zigbee
-	cleanUp2 homegear-abi
-	cleanUp2 homegear-freeathome
-	cleanUp2 homegear-klafs
-	cleanUp2 homegear-webssh
-	cleanUp2 homegear-dc-connector
-	cleanUp2 mellonbot
-	cleanUp2 homegear-cloudconnect
-	cleanUp2 ibs-ssh
-	cleanUp2 doorctrl
-	cleanUp2 doorbell
-	cleanUp2 ltp08-connector
-fi
-EOF
-echo "isodate=\`date +%Y%m%d\`
-	mv libhomegear-base.deb libhomegear-base_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv libhomegear-node.deb libhomegear-node_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv libhomegear-ipc.deb libhomegear-ipc_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv python3-homegear.deb python3-homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear.deb homegear_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-nodes-core.deb homegear-nodes-core_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-nodes-ui.deb homegear-nodes-ui_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-homematicbidcos.deb homegear-homematicbidcos_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-homematicwired.deb homegear-homematicwired_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-insteon.deb homegear-insteon_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-max.deb homegear-max_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-philipshue.deb homegear-philipshue_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-sonos.deb homegear-sonos_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-kodi.deb homegear-kodi_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-ipcam.deb homegear-ipcam_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-intertechno.deb homegear-intertechno_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-nanoleaf.deb homegear-nanoleaf_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-ccu.deb homegear-ccu_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-loxone.deb homegear-loxone_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-influxdb.deb homegear-influxdb_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-gateway.deb homegear-gateway_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-management.deb homegear-management_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-ui.deb homegear-ui_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv binrpc.deb binrpc_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	mv homegear-velux-klf200.deb homegear-velux-klf200_\$[isodate]_${distlc}_${distver}_${arch}.deb
-
-	if [[ -n \$1 ]]; then
-		mv homegear-adminui.deb homegear-adminui_\$[isodate]_${distlc}_${distver}_${arch}.deb
-
-		mv homegear-easy-licensing.deb homegear-easy-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-licensing.deb homegear-licensing_\$[isodate]_${distlc}_${distver}_${arch}.deb
-
-		mv homegear-nodes-extra.deb homegear-nodes-extra_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-knx.deb homegear-knx_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-enocean.deb homegear-enocean_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-easycam.deb homegear-easycam_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-easyled.deb homegear-easyled_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-easyled2.deb homegear-easyled2_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-rsl.deb homegear-rsl_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-rs2w.deb homegear-rs2w_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-mbus.deb homegear-mbus_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-zwave.deb homegear-zwave_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-zigbee.deb homegear-zigbee_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-beckhoff.deb homegear-beckhoff_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-abi.deb homegear-abi_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-freeathome.deb homegear-freeathome_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-klafs.deb homegear-klafs_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-webssh.deb homegear-webssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-dc-connector.deb homegear-dc-connector_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv mellonbot.deb mellonbot_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv homegear-cloudconnect.deb homegear-cloudconnect_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv ibs-ssh.deb ibs-ssh_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv doorctrl.deb doorctrl_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv doorbell.deb doorbell_\$[isodate]_${distlc}_${distver}_${arch}.deb
-		mv ltp08-connector.deb ltp08-connector_\$[isodate]_${distlc}_${distver}_${arch}.deb
-	fi
-	if test -f /build/UploadNightly.sh; then
-		/build/UploadNightly.sh
-	fi
-" >> $rootfs/build/CreateDebianPackageNightly.sh
-chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
-sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
-
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
@@ -980,6 +821,33 @@ EOF
 chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageTesting.sh
 
+cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
+#!/bin/bash
+
+distributionVersion="<DISTVER>"
+
+/build/CreateDebianPackage.sh dev $1
+
+cd /build
+
+if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-ipcam_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
+	if [[ -n $1 ]]; then
+		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-easycam_*.deb || test ! -f homegear-easyled_*.deb || test ! -f homegear-easyled2_*.deb || test ! -f homegear-rsl_*.deb || test ! -f homegear-rs2w_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-freeathome_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f ibs-ssh_*.deb; then
+			echo "Error: Some or all packages from gitit.de could not be created."
+			exit 1
+		fi
+	fi
+	if test -f /build/UploadRepository.sh; then
+		/build/UploadRepository.sh
+	fi
+else
+	echo "Error: Some or all packages could not be created."
+	exit 1
+fi
+EOF
+chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
+sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
+
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
 #!/bin/bash
 sed -i '$ d' /root/.bashrc >/dev/null
@@ -988,18 +856,17 @@ if [ -n "$HOMEGEARBUILD_THREADS" ]; then
 else
 	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackage.sh
 fi
-if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_REPOSITORYSERVERPATH" || -z "$HOMEGEARBUILD_NIGHTLYSERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
+if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_SERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
 	/bin/bash
 	exit 0
 else
-	HOMEGEARBUILD_REPOSITORYSERVERPATH=${HOMEGEARBUILD_REPOSITORYSERVERPATH%/}
-	HOMEGEARBUILD_NIGHTLYSERVERPATH=${HOMEGEARBUILD_NIGHTLYSERVERPATH%/}
+	HOMEGEARBUILD_SERVERPATH=${HOMEGEARBUILD_SERVERPATH%/}
 	echo "Testing connection..."
 	mkdir -p /root/.ssh
-	echo "$HOMEGEARBUILD_SERVERCERT" > /root/.ssh/id_rsa
-	chmod 400 /root/.ssh/id_rsa
-	sed -i -- 's/\\n/\n/g' /root/.ssh/id_rsa
+	echo "$HOMEGEARBUILD_SERVERCERT" > /root/.ssh/id_ed25519
+	chmod 400 /root/.ssh/id_ed25519
+	sed -i -- 's/\\n/\n/g' /root/.ssh/id_ed25519
 	if [ -n "$HOMEGEARBUILD_SERVER_KNOWNHOST_ENTRY" ]; then
 		echo "$HOMEGEARBUILD_SERVER_KNOWNHOST_ENTRY" > /root/.ssh/known_hosts
 		sed -i -- 's/\\n/\n/g' /root/.ssh/known_hosts
@@ -1019,9 +886,9 @@ if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
-		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_REPOSITORYSERVERPATH}
+		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_SERVERPATH}
 		if [ \$? -eq 0 ]; then
-			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_REPOSITORYSERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_REPOSITORYSERVERPATH}/\${filename}\"
+			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_SERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_SERVERPATH}/\${filename}\"
 			if [ \$? -eq 0 ]; then
 				echo "Packages uploaded successfully."
 				exit 0
@@ -1034,31 +901,6 @@ fi
 " > /build/UploadRepository.sh
 chmod 755 /build/UploadRepository.sh
 
-echo "#!/bin/bash
-
-set -x
-
-cd /build
-if [ \$(ls /build | grep -c \"\\.deb\$\") -ne 0 ]; then
-	path=\`mktemp -p / -u\`".tar.gz"
-	tar -zcpf \${path} *.deb
-	if test -f \${path}; then
-		mv \${path} \${path}.uploading
-		filename=\$(basename \$path)
-		scp -P $HOMEGEARBUILD_SERVERPORT \${path}.uploading ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME}:${HOMEGEARBUILD_NIGHTLYSERVERPATH}
-		if [ \$? -eq 0 ]; then
-			ssh -p $HOMEGEARBUILD_SERVERPORT ${HOMEGEARBUILD_SERVERUSER}@${HOMEGEARBUILD_SERVERNAME} \"mv ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}.uploading ${HOMEGEARBUILD_NIGHTLYSERVERPATH}/\${filename}\"
-			if [ \$? -eq 0 ]; then
-				echo "Packages uploaded successfully."
-				exit 0
-			else
-				exit \$?
-			fi
-		fi
-	fi
-fi
-" > /build/UploadNightly.sh
-chmod 755 /build/UploadNightly.sh
 rm /FirstStart.sh
 
 if [ "$HOMEGEARBUILD_TYPE" = "stable" ]; then

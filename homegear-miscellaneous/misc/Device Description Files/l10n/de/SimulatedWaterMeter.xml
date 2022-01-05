@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDeviceTranslation lang="de">
+	<supportedDevices>
+		<device id="SimulatedWaterMeter">
+			<description>Simulierter Wasserzähler</description>
+			<longDescription>Dieses Gerät ist ein für Testzwecke in PHP geschriebener virtueller Wasserzähler. Der Zählerstand wird ungefähr alle 60 Sekunden aktualisiert.</longDescription>
+		</device>
+	</supportedDevices>
+	<parameterGroups>
+		<variables id="maint_ch0_values">
+			<parameter id="UNREACH">
+				<label>Nicht erreichbar</label>
+				<description>Wird auf "true" gesetzt, wenn das Gerät nicht erreichbar ist.</description>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<label>Nicht-erreichbar-Flag</label>
+				<description>Wird auf "true" gesetzt, wenn das Gerät nicht erreichbar ist und bleibt "true", bis die Variable manuell zurückgesetzt wird.</description>
+			</parameter>
+		</variables>
+		<variables id="custom_ch1_values">
+			<parameter id="TOTAL_VOLUME">
+				<label>Zählerstand</label>
+				<description>Der Zählerstand gemessen in Litern (l).</description>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDeviceTranslation>

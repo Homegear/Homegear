@@ -245,7 +245,7 @@ bool VariableProfileManager::setValue(const BaseLib::PRpcClientInfo &clientInfo,
   try {
     //{{{ This is basically a reimplementation of setValue(). We need this to check the ACLs, because we switch clientInfo when calling setValue on the central.
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("setValue")) return false;
-    bool checkAcls = clientInfo->acls->variablesRoomsCategoriesRolesDevicesWriteSet();
+    bool checkAcls = clientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesDevicesWriteSet();
 
     if (peerId == 0 && channel < 0) //System variable?
     {

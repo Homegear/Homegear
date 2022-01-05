@@ -38,38 +38,43 @@
 #include <mutex>
 #include <string>
 
-namespace Misc
-{
+namespace Misc {
 
-class MiscCentral : public BaseLib::Systems::ICentral
-{
-public:
-	MiscCentral(ICentralEventSink* eventHandler);
-	MiscCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
-	virtual ~MiscCentral();
-	virtual void dispose(bool wait = true);
+class MiscCentral : public BaseLib::Systems::ICentral {
+ public:
+  explicit MiscCentral(ICentralEventSink *eventHandler);
+  MiscCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink *eventHandler);
+  ~MiscCentral() override;
+  void dispose(bool wait) override;
 
-	std::string handleCliCommand(std::string command);
-	uint64_t getPeerIdFromSerial(std::string& serialNumber) { std::shared_ptr<MiscPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+  std::string handleCliCommand(std::string command) override;
+  uint64_t getPeerIdFromSerial(std::string &serialNumber) override {
+    std::shared_ptr<MiscPeer> peer = getPeer(serialNumber);
+    if (peer) return peer->getID(); else return 0;
+  }
 
-	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) { return true; }
+  bool onPacketReceived(std::string &senderID, std::shared_ptr<BaseLib::Systems::Packet> packet) override { return true; }
 
-	virtual void addPeer(std::shared_ptr<MiscPeer> peer);
-	std::shared_ptr<MiscPeer> getPeer(uint64_t id);
-	std::shared_ptr<MiscPeer> getPeer(std::string serialNumber);
+  void addPeer(std::shared_ptr<MiscPeer> peer);
+  std::shared_ptr<MiscPeer> getPeer(uint64_t id);
+  std::shared_ptr<MiscPeer> getPeer(std::string serialNumber);
 
-	virtual BaseLib::PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId);
-	virtual BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags);
-	virtual BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags);
-protected:
-	std::shared_ptr<MiscPeer> createPeer(uint32_t deviceType, std::string serialNumber, bool save = true);
-	void deletePeer(uint64_t id);
-	virtual void init();
+  BaseLib::PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) override;
+  BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) override;
+  BaseLib::PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerID, int32_t flags) override;
+ protected:
+  std::atomic_bool _stopWorkerThread{false};
+  std::thread _workerThread;
 
-	virtual void loadPeers();
-	virtual void savePeers(bool full);
-	virtual void loadVariables() {}
-	virtual void saveVariables() {}
+  std::shared_ptr<MiscPeer> createPeer(uint32_t deviceType, std::string serialNumber, bool save = true);
+  void deletePeer(uint64_t id);
+  void init();
+  void worker();
+
+  void loadPeers() override;
+  void savePeers(bool full) override;
+  void loadVariables() override {}
+  void saveVariables() override {}
 };
 
 }

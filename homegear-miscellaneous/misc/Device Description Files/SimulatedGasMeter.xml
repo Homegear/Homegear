@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+    <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <device id="SimulatedGasMeter">
+            <description>Simulated gas meter</description>
+            <typeNumber>0xF00B</typeNumber>
+        </device>
+    </supportedDevices>
+    <runProgram>
+        <startType>permanent</startType>
+        <script2>
+            <![CDATA[<?php
+use parallel\{Channel,Runtime,Events,Events\Event};
+
+$eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel, Channel $eventChannel)
+{
+	$hg = new \Homegear\Homegear();
+
+	if($hg->registerThread($scriptId) === false)
+	{
+		$hg->log(2, 'Could not register thread.');
+		return false;
+	}
+
+	$hg->subscribePeer($peerId);
+
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->setBlocking(false);
+
+	while(true)
+	{
+		$result = $hg->pollEvent();
+		if($result)
+		{
+			if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"] && $result["EVENTSOURCE"] != 'device-'.$peerId)
+			{
+				if($result["VARIABLE"] == 'TOTAL_VOLUME')
+				{
+				}
+			}
+			else if($result["TYPE"] == "event" && $result["PEERID"] == $peerId && $result["EVENTSOURCE"]) {
+				if($result["VARIABLE"] == 'UNREACH' && $result["VALUE"]) {
+					$hg->setValue($peerId, 0, "STICKY_UNREACH", true);
+				}
+			}
+			else if($result["TYPE"] == "updateDevice" && $result["PEERID"] == $peerId)
+			{
+				$eventChannel->send(['name' => 'updateDevice', 'value' => true]);
+			}
+		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event && $event->source == 'eventHomegearChannelPeer'.$peerId)
+			{
+				$events->addChannel($homegearChannel);
+				if($event->type == Event\Type::Read)
+				{
+					if(is_array($event->value) && count($event->value) > 0)
+					{
+						if($event->value['name'] == 'stop') return true; //Stop
+					}
+				}
+				else if($event->type == Event\Type::Close) return true; //Stop
+			}
+		}
+		while($event);
+	}
+};
+
+$mainThread = function(string $scriptId, int $peerId, Channel $homegearChannel, Channel $eventChannel)
+{
+	$hg = new \Homegear\Homegear();
+
+	if($hg->registerThread($scriptId) === false)
+	{
+		$hg->log(2, 'Could not register thread.');
+		return false;
+	}
+
+	$interval = 60;
+	$secondsWaited = 0;
+	$events = new Events();
+	$events->addChannel($homegearChannel);
+	$events->addChannel($eventChannel);
+	//$events->setTimeout(1000000);
+	$events->setBlocking(false);
+
+	while(true)
+	{
+		if($secondsWaited >= 60)
+		{
+			$secondsWaited = 0;
+			if (!$hg->getValue($peerId, 0, "UNREACH")) $hg->setValue($peerId, 1, "TOTAL_VOLUME", floatval($hg->getValue($peerId, 1, "TOTAL_VOLUME")) + (floatval(random_int(0, 50)) / 1000.0));
+		}
+
+		$event = NULL;
+		do
+		{
+			$event = $events->poll();
+			if($event)
+			{
+				if($event->source == 'mainHomegearChannelPeer'.$peerId)
+				{
+					$events->addChannel($homegearChannel);
+					if($event->type == Event\Type::Read)
+					{
+						if(is_array($event->value) && count($event->value) > 0)
+						{
+							if($event->value['name'] == 'stop') return true; //Stop
+						}
+					}
+					else if($event->type == Event\Type::Close) return true; //Stop
+				}
+				else if($event->source == 'eventChannelPeer'.$peerId)
+				{
+					$events->addChannel($eventChannel);
+					if($event->type == Event\Type::Read)
+					{
+						if(is_array($event->value) && count($event->value) > 0)
+						{
+							if($event->value['name'] == 'updateDevice' || $event->value['name'] == 'request')
+							{
+								$secondsWaited = $interval;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		while($event);
+
+		$secondsWaited++;
+		if($secondsWaited >= $interval) continue;
+		sleep(1);
+	}
+
+	return true;
+};
+
+class HomegearDevice extends HomegearDeviceBase
+{
+	private $hg = NULL;
+	private $peerId = NULL;
+	private $mainRuntime = NULL;
+	private $mainFuture = NULL;
+	private $mainHomegearChannel = NULL; //Channel to pass Homegear events to main thread
+	private $eventRuntime = NULL;
+	private $eventFuture = NULL;
+	private $eventHomegearChannel = NULL; //Channel to pass events to event thread
+	private $eventChannel = NULL; //Channel to pass events from event thread to main thread
+
+	function __construct()
+	{
+		$this->hg = new \Homegear\Homegear();
+	}
+
+	function __destruct()
+	{
+		$this->stop();
+		$this->waitForStop();
+	}
+
+	public function init($peerId) : bool
+	{
+		$this->peerId = $peerId;
+		return true;
+	}
+
+	public function start() : bool
+	{
+	    $this->mainRuntime = new Runtime();
+		$this->eventRuntime = new Runtime();
+
+        $this->mainHomegearChannel = Channel::make('mainHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventHomegearChannel = Channel::make('eventHomegearChannelPeer'.$this->peerId, Channel::Infinite);
+		$this->eventChannel = Channel::make('eventChannelPeer'.$this->peerId, Channel::Infinite);
+
+        global $mainThread;
+		$this->mainFuture = $this->mainRuntime->run($mainThread, [$this->hg->getScriptId(), $this->peerId, $this->mainHomegearChannel, $this->eventChannel]);
+
+		global $eventThread;
+		$this->eventFuture = $this->eventRuntime->run($eventThread, [$this->hg->getScriptId(), $this->peerId, $this->eventHomegearChannel, $this->eventChannel]);
+
+		return true;
+	}
+
+	public function stop()
+	{
+		if($this->eventHomegearChannel) $this->eventHomegearChannel->send(['name' => 'stop', 'value' => true]);
+		if($this->mainHomegearChannel) $this->mainHomegearChannel->send(['name' => 'stop', 'value' => true]);
+	}
+
+	public function waitForStop()
+	{
+		if($this->eventFuture)
+		{
+			$this->eventFuture->value();
+			$this->eventFuture = NULL;
+		}
+
+		if($this->mainFuture)
+		{
+			$this->mainFuture->value();
+			$this->mainFuture = NULL;
+		}
+
+		if($this->mainHomegearChannel)
+		{
+			$this->mainHomegearChannel->close();
+			$this->mainHomegearChannel = NULL;
+		}
+
+		if($this->eventHomegearChannel)
+		{
+			$this->eventHomegearChannel->close();
+			$this->eventHomegearChannel = NULL;
+		}
+
+		if($this->eventChannel)
+		{
+			$this->eventChannel->close();
+			$this->eventChannel = NULL;
+		}
+
+		if($this->eventRuntime)
+		{
+			$this->eventRuntime->close();
+			$this->eventRuntime = NULL;
+		}
+
+		if($this->mainRuntime)
+		{
+			$this->mainRuntime->close();
+			$this->mainRuntime = NULL;
+		}
+	}
+}
+]]>
+        </script2>
+    </runProgram>
+    <properties/>
+    <functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+            <properties>
+                <internal>true</internal>
+            </properties>
+            <configParameters>config</configParameters>
+            <variables>maint_ch0_values</variables>
+        </function>
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="SimulatedGasMeter">
+            <variables>custom_ch1_values</variables>
+        </function>
+    </functions>
+    <parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <configParameters id="config"/>
+        <variables id="maint_ch0_values">
+            <parameter id="LOWBAT">
+                <properties>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean>
+                    <defaultValue>false</defaultValue>
+                </logicalBoolean>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="RSSI_PEER">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalInteger>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="UNREACH">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalBoolean>
+                    <operationType>internal</operationType>
+                </physicalBoolean>
+            </parameter>
+            <parameter id="STICKY_UNREACH">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                    <sticky>true</sticky>
+                </properties>
+                <logicalBoolean/>
+                <physicalBoolean>
+                    <operationType>internal</operationType>
+                </physicalBoolean>
+            </parameter>
+        </variables>
+        <variables id="custom_ch1_values">
+            <parameter id="TOTAL_VOLUME">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>false</writeable>
+                    <addonWriteable>true</addonWriteable>
+                    <unit>m³</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                    <roles>
+                        <role>900000</role>
+                        <role>900300</role>
+                        <role>900301</role>
+                    </roles>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+        </variables>
+    </parameterGroups>
+</homegearDevice>

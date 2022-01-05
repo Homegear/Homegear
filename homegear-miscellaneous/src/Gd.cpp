@@ -28,30 +28,11 @@
  * files in the program, then also delete it here.
 */
 
-#ifndef GD_H_
-#define GD_H_
-
-#define MISC_FAMILY_ID 254
-#define MISC_FAMILY_NAME "Miscellaneous"
-
-#include <homegear-base/BaseLib.h>
-#include "Miscellaneous.h"
+#include "Gd.h"
 
 namespace Misc
 {
-
-class GD
-{
-public:
-	virtual ~GD();
-
-	static BaseLib::SharedObjects* bl;
-	static Miscellaneous* family;
-	static BaseLib::Output out;
-private:
-	GD();
-};
-
+	BaseLib::SharedObjects* Gd::bl = nullptr;
+	Miscellaneous* Gd::family = nullptr;
+	BaseLib::Output Gd::out;
 }
-
-#endif /* GD_H_ */

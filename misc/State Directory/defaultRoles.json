@@ -444,6 +444,20 @@
         }
     },
     {
+        "id": "20.30.00",
+        "translations": {
+            "en-US": "heat pump",
+            "de-DE": "Wärmepumpe"
+        }
+    },
+	{
+        "id": "20.40.00",
+        "translations": {
+            "en-US": "pump",
+            "de-DE": "Pumpe"
+        }
+    },
+    {
         "id": "30.00.00",
         "translations": {
             "en-US": "security",
@@ -521,6 +535,27 @@
                 ],
                 "roleIdsOut": []
             }
+        }
+    },
+    {
+        "id": "30.20.00",
+        "translations": {
+            "en-US": "SHE system",
+            "de-DE": "RWA-Anlage"
+        }
+    },
+    {
+        "id": "30.30.00",
+        "translations": {
+            "en-US": "emergency light",
+            "de-DE": "Notlicht"
+        }
+    },
+	{
+        "id": "30.40.00",
+        "translations": {
+            "en-US": "pumping station",
+            "de-DE": "Hebeanlage"
         }
     },
     {
@@ -1489,6 +1524,96 @@
         "translations": {
             "en-US": "device offline",
             "de-DE": "Gerät offline"
+        }
+    },
+	{
+        "id": "80.01.00",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "operating notification",
+            "de-DE": "Betriebsmeldungen"
+        }
+    },
+	{
+        "id": "80.01.01",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "operation",
+            "de-DE": "Betrieb"
+        }
+    },
+	{
+        "id": "80.01.02",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "emergency operation",
+            "de-DE": "Notbetrieb"
+        }
+    },
+	{
+        "id": "80.02.00",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "faults",
+            "de-DE": "Störungen"
+        }
+    },
+	{
+        "id": "80.02.01",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "collective fault",
+            "de-DE": "Sammelstörung"
+        }
+    },
+	{
+        "id": "80.02.02",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "fault",
+            "de-DE": "Störung"
+        }
+    },
+	{
+        "id": "80.03.00",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "alerts",
+            "de-DE": "Alarme"
+        }
+    },
+	{
+        "id": "80.03.01",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "collective alert",
+            "de-DE": "Sammelalarm"
+        }
+    },
+	{
+        "id": "80.03.02",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "alert",
+            "de-DE": "Alarm"
         }
     },
     {

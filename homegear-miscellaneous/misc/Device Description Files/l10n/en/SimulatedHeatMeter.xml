@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDeviceTranslation lang="en">
+	<supportedDevices>
+		<device id="SimulatedHeatMeter">
+			<description>Simulated heat meter</description>
+			<longDescription>This device is a virtual heat meter written for testing purposes in PHP. It updates it's meter reading roughly every 60 seconds.</longDescription>
+		</device>
+	</supportedDevices>
+	<parameterGroups>
+		<variables id="maint_ch0_values">
+			<parameter id="UNREACH">
+				<label>Unreachable</label>
+				<description>Set to "true" when the device is unreachable.</description>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<label>Sticky unreachable</label>
+				<description>Set to "true" when the device is unreachable. It stays "true" until reset manually.</description>
+			</parameter>
+		</variables>
+		<variables id="custom_ch1_values">
+			<parameter id="TOTAL_HEAT_QUANTITY">
+				<label>Meter reading</label>
+				<description>The total heat quantity measured in MWh.</description>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDeviceTranslation>
