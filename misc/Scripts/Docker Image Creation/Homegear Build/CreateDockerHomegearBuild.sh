@@ -224,7 +224,7 @@ function createPackage {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
-	revision=$(echo revision | cut -d "." -f 1)
+	revision=$(echo $revision | cut -d "." -f 1)
 	if [ -z "$revision" ]; then
 		echo "Error: Could not get revision."
 		exit 1
@@ -286,7 +286,7 @@ function createPackageWithoutAutomake {
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
-	revision=$(echo revision | cut -d "." -f 1)
+	revision=$(echo $revision | cut -d "." -f 1)
 	if [ -z "$revision" ]; then
 		echo "Error: Could not get revision."
 		exit 1
