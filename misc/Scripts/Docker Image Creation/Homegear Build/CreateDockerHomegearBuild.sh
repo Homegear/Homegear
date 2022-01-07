@@ -151,7 +151,11 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-h
 DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
 DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
-echo "deb https://apt.homegear.eu/${distlc}/${distver}/homegear/stable/ ${distver} main" > $rootfs/etc/apt/sources.list.d/homegear.list
+repodist=$distlc
+if [[ $distlc == "raspbian" ]]; then
+  repodist="raspberry_pi_os"
+fi
+echo "deb https://apt.homegear.eu/${repodist}/${distver}/homegear/stable/ ${distver} main" > $rootfs/etc/apt/sources.list.d/homegear.list
 
 wget -P $rootfs https://apt.homegear.eu/Release.key
 chroot $rootfs apt-key add Release.key
