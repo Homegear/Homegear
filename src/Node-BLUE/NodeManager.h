@@ -105,6 +105,10 @@ class NodeManager {
     std::string codeDirectory;
     bool local = true;
     std::string modulePath;
+    /**
+     * Vector to preserve the order defined in package.json. This is required for providing the HTML frontend code where the order matters.
+     */
+    std::vector<std::string> nodesOrdered;
     std::map<NodeType, PNodeInfo> nodes; //Nodes are displayed in the frontend in this order, so we need an ordered map
     std::unordered_map<std::string, PNodeInfo> nodesByFilePrefix;
   };
@@ -166,7 +170,7 @@ class NodeManager {
   /**
    * Returns the content of a single *.hni files.
    */
-  std::string getFrontendCode(const std::string &type);
+  std::string getFrontendCode(const std::string &module, const std::string &filePrefix);
 
   NodeCodeType getNodeCodeType(const std::string &type);
 

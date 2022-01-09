@@ -1777,7 +1777,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
     } else if (path.compare(0, 16, "node-blue/nodes/") == 0 && path.size() > 16) {
       auto id = path.substr(16);
       auto idPair = BaseLib::HelperFunctions::splitLast(id, '/');
-      contentString = _nodeManager->getFrontendCode(idPair.second);
+      contentString = _nodeManager->getFrontendCode(idPair.first, idPair.second);
       responseEncoding = "text/html";
     } else if (path.compare(0, 18, "node-blue/locales/") == 0) {
       if (!loginValid) return "unauthorized";
