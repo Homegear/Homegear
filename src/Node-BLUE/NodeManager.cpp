@@ -407,12 +407,15 @@ BaseLib::PVariable NodeManager::getNodesAddedInfo(const std::string &module) {
 
     auto moduleInfoArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     moduleInfoArray->arrayValue->reserve(moduleInfo->nodes.size());
-    for (auto &node : moduleInfo->nodes) {
+    for (auto &nodeType : moduleInfo->nodesOrdered) {
+      auto nodeIterator = moduleInfo->nodes.find(nodeType);
+      if (nodeIterator == moduleInfo->nodes.end()) continue;
+      auto &node = nodeIterator->second;
       auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.second->nodeSet));
-      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.second->type));
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node->nodeSet));
+      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node->type));
       auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-      typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
+      typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(nodeIterator->first));
       nodeListEntry->structValue->emplace("types", typesEntry);
       nodeListEntry->structValue->emplace("added", std::make_shared<BaseLib::Variable>(true));
       nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
