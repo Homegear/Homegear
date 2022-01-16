@@ -28,7 +28,7 @@
 
 var path = require("path");
 var fs = require("fs-extra");
-var sass = require("node-sass");
+var sass = require("sass");
 
 module.exports = function(grunt) {
 
@@ -52,8 +52,10 @@ module.exports = function(grunt) {
     if (nonHeadless) {
         process.env.NODE_RED_NON_HEADLESS = true;
     }
+    const pkg = grunt.file.readJSON('package.json');
+    process.env.NODE_RED_PACKAGE_VERSION = pkg.version;
     grunt.initConfig({
-        pkg: grunt.file.readJSON('package.json'),
+        pkg: pkg,
         paths: {
             dist: ".dist"
         },
@@ -147,6 +149,7 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/jquery-addons.js",
                     "packages/node_modules/@node-red/editor-client/src/js/red.js",
                     "packages/node_modules/@node-red/editor-client/src/js/events.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/hooks.js",
                     "packages/node_modules/@node-red/editor-client/src/js/i18n.js",
                     "packages/node_modules/@node-red/editor-client/src/js/settings.js",
                     "packages/node_modules/@node-red/editor-client/src/js/user.js",
@@ -154,6 +157,7 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/text/bidi.js",
                     "packages/node_modules/@node-red/editor-client/src/js/text/format.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/state.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/plugins.js",
                     "packages/node_modules/@node-red/editor-client/src/js/nodes.js",
                     "packages/node_modules/@node-red/editor-client/src/js/font-awesome.js",
                     "packages/node_modules/@node-red/editor-client/src/js/homegear-ui-icons.js",
@@ -171,7 +175,7 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/ui/common/stack.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/common/typedInput.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/common/toggleButton.js",
-                    "packages/node_modules/@node-red/editor-client/src/js/ui/common/colorPicker.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/ui/common/autoComplete.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/actions.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/deploy.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/diff.js",
@@ -179,6 +183,7 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/ui/workspaces.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/statusBar.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/view.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/ui/view-annotations.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/view-navigator.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/view-tools.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/sidebar.js",
@@ -190,7 +195,9 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/ui/tab-context.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/palette-editor.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/editor.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/ui/editors/panes/*.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/editors/*.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/ui/editors/code-editors/*.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/event-log.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/tray.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/clipboard.js",
@@ -206,7 +213,8 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/src/js/ui/projects/projectSettings.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/projects/projectUserSettings.js",
                     "packages/node_modules/@node-red/editor-client/src/js/ui/projects/tab-versionControl.js",
-                    "packages/node_modules/@node-red/editor-client/src/js/ui/touch/radialMenu.js"
+                    "packages/node_modules/@node-red/editor-client/src/js/ui/touch/radialMenu.js",
+                    "packages/node_modules/@node-red/editor-client/src/js/ui/tour/*.js"
                 ],
                 dest: "packages/node_modules/@node-red/editor-client/public/red/red.js"
             },
@@ -221,8 +229,9 @@ module.exports = function(grunt) {
                         "node_modules/dompurify/dist/purify.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/d3/d3.v3.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/homegear-ws/homegear-ws.js",
-                        "packages/node_modules/@node-red/editor-client/src/vendor/select2/js/select2.js",
-                        "packages/node_modules/@node-red/editor-client/src/vendor/i18next/i18next.min.js",
+                        "node_modules/i18next/i18next.min.js",
+                        "node_modules/i18next-http-backend/i18nextHttpBackend.min.js",
+                        "node_modules/jquery-i18next/jquery-i18next.min.js",
                         "node_modules/jsonata/jsonata-es5.min.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/jsonata/formatter.js",
                         "packages/node_modules/@node-red/editor-client/src/vendor/ace/ace.js",
@@ -296,7 +305,9 @@ module.exports = function(grunt) {
                     "packages/node_modules/@node-red/editor-client/public/index.html",
                     "packages/node_modules/@node-red/editor-client/public/favicon.ico",
                     //"packages/node_modules/@node-red/editor-client/public/icons",
-                    "packages/node_modules/@node-red/editor-client/public/vendor"
+                    "packages/node_modules/@node-red/editor-client/public/vendor",
+                    "packages/node_modules/@node-red/editor-client/public/types/node",
+                    "packages/node_modules/@node-red/editor-client/public/types/node-red",
                 ]
             },
             release: {
@@ -331,6 +342,12 @@ module.exports = function(grunt) {
                     'packages/node_modules/@node-red/editor-client/src/js/keymap.json'
                 ],
                 tasks: ['jsonlint:keymaps','copy:build']
+            },
+            tours: {
+                files: [
+                    'packages/node_modules/@node-red/editor-client/src/tours/**/*.js'
+                ],
+                tasks: ['copy:build']
             },
             misc: {
                 files: [
@@ -392,10 +409,23 @@ module.exports = function(grunt) {
                         src: [
                             'ace/**',
                             'jquery/css/base/**',
-                            'font-awesome/**'
+                            'font-awesome/**',
+                            'monaco/dist/**',
+                            'monaco/types/extraLibs.js',
+                            'monaco/style.css',
+                            'monaco/monaco-bootstrap.js'
                         ],
                         expand: true,
                         dest: 'packages/node_modules/@node-red/editor-client/public/vendor/'
+                    },
+                    {
+                        cwd: 'packages/node_modules/@node-red/editor-client/src',
+                        src: [
+                            'types/node/*.ts',
+                            'types/node-red/*.ts',
+                        ],
+                        expand: true,
+                        dest: 'packages/node_modules/@node-red/editor-client/public/'
                     },
                     {
                         cwd: 'packages/node_modules/@node-red/editor-client/src/icons',
@@ -470,6 +500,12 @@ module.exports = function(grunt) {
                     {
                         src: 'packages/node_modules/@node-red/editor-client/locales/de/signin.json',
                         dest: 'packages/node_modules/@node-red/editor-client/public/static/locales/de/signin'
+                    },
+                    {
+                        cwd: 'packages/node_modules/@node-red/editor-client/src/tours',
+                        src: '**',
+                        expand: true,
+                        dest: 'packages/node_modules/@node-red/editor-client/public/red/tours/'
                     }
                 ]
             }
@@ -531,11 +567,13 @@ module.exports = function(grunt) {
                     'packages/node_modules/@node-red/runtime/lib/hooks.js',
                     'packages/node_modules/@node-red/util/**/*.js',
                     'packages/node_modules/@node-red/editor-api/lib/index.js',
-                    'packages/node_modules/@node-red/editor-api/lib/auth/index.js'
+                    'packages/node_modules/@node-red/editor-api/lib/auth/index.js',
+                    'packages/node_modules/@node-red/registry/lib/index.js'
                 ],
                 options: {
                     destination: 'docs',
-                    configure: './jsdoc.json'
+                    configure: './jsdoc.json',
+                    fred: "hi there"
                 }
             },
             _editor: {
@@ -614,7 +652,7 @@ module.exports = function(grunt) {
     grunt.registerMultiTask('attachCopyright', function() {
         var files = this.data.src;
         var copyright = "/**\n"+
-            " * Copyright JS Foundation and other contributors, http://js.foundation\n"+
+            " * Copyright OpenJS Foundation and other contributors, https://openjsf.org/\n"+
             " *\n"+
             " * Licensed under the Apache License, Version 2.0 (the \"License\");\n"+
             " * you may not use this file except in compliance with the License.\n"+

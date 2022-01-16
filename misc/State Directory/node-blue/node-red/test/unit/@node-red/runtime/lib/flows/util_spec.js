@@ -16,7 +16,6 @@
 
 var should = require("should");
 var sinon = require("sinon");
-var when = require("when");
 var clone = require("clone");
 var NR_TEST_UTILS = require("nr-test-utils");
 var flowUtil = NR_TEST_UTILS.require("@node-red/runtime/lib/flows/util");
@@ -27,7 +26,7 @@ describe('flows/util', function() {
     var getType;
 
     before(function() {
-        getType = sinon.stub(typeRegistry,"get",function(type) {
+        getType = sinon.stub(typeRegistry,"get").callsFake(function(type) {
             return type!=='missing';
         });
     });

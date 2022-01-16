@@ -7,7 +7,9 @@
 .sessions.json
 .settings
 .tern-project
+.i18n-editor-metadata
 *.backup
+*.bak
 *_cred*
 coverage
 credentials.json
@@ -23,5 +25,9 @@ docs
 !packages/node_modules/**/docs
 .vscode
 .nyc_output
+<<<<<<< HEAD
 package-lock.json
 .idea
+=======
+sync.ffs_db
+>>>>>>> 2.2.0-beta.1

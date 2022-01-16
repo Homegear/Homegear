@@ -17,7 +17,6 @@
 var should = require("should");
 var fs = require('fs-extra');
 var path = require('path');
-var when = require("when");
 var sinon = require('sinon');
 var inherits = require("util").inherits;
 
@@ -47,11 +46,11 @@ describe("red/nodes/index", function() {
     var testCredentials = {"tab1":{"b":1, "c":"2", "d":"$(foo)"}};
     var storage = {
         getFlows: function() {
-            return when({red:123,flows:testFlows,credentials:testCredentials});
+            return Promise.resolve({red:123,flows:testFlows,credentials:testCredentials});
         },
         saveFlows: function(conf) {
             should.deepEqual(testFlows, conf.flows);
-            return when.resolve(123);
+            return Promise.resolve(123);
         }
     };
 
@@ -178,16 +177,16 @@ describe("red/nodes/index", function() {
 
             var userDir = path.join(__dirname,".testUserHome");
             before(function(done) {
-                sinon.stub(log,"log",function(){});
+                sinon.stub(log,"log").callsFake(function(){});
                 fs.remove(userDir,function(err) {
                     fs.mkdir(userDir,function() {
-                        sinon.stub(index, 'load', function() {
-                            return when.promise(function(resolve,reject){
+                        sinon.stub(index, 'load').callsFake(function() {
+                            return new Promise(function(resolve,reject){
                                 resolve([]);
                             });
                         });
-                        sinon.stub(localfilesystem, 'getCredentials', function() {
-                            return when.promise(function(resolve,reject) {
+                        sinon.stub(localfilesystem, 'getCredentials').callsFake(function() {
+                            return new Promise(function(resolve,reject) {
                                 resolve({"tab1":{"b":1,"c":2}});
                             });
                         }) ;
@@ -272,7 +271,7 @@ describe("red/nodes/index", function() {
         var randomNodeInfo = {id:"5678",types:["random"]};
 
         beforeEach(function() {
-            sinon.stub(registry,"getNodeInfo",function(id) {
+            sinon.stub(registry,"getNodeInfo").callsFake(function(id) {
                 if (id == "test") {
                     return {id:"1234",types:["test"]};
                 } else if (id == "doesnotexist") {
@@ -281,8 +280,8 @@ describe("red/nodes/index", function() {
                     return randomNodeInfo;
                 }
             });
-            sinon.stub(registry,"disableNode",function(id) {
-                return when.resolve(randomNodeInfo);
+            sinon.stub(registry,"disableNode").callsFake(function(id) {
+                return Promise.resolve(randomNodeInfo);
             });
         });
         afterEach(function() {
@@ -344,7 +343,7 @@ describe("red/nodes/index", function() {
         };
 
         before(function() {
-            sinon.stub(registry,"getNodeInfo",function(id) {
+            sinon.stub(registry,"getNodeInfo").callsFake(function(id) {
                 if (id == "node-red/foo") {
                     return {id:"1234",types:["test"]};
                 } else if (id == "doesnotexist") {
@@ -353,7 +352,7 @@ describe("red/nodes/index", function() {
                     return randomNodeInfo;
                 }
             });
-            sinon.stub(registry,"getModuleInfo",function(module) {
+            sinon.stub(registry,"getModuleInfo").callsFake(function(module) {
                 if (module == "node-red") {
                     return {nodes:[{name:"foo"}]};
                 } else if (module == "doesnotexist") {
@@ -362,7 +361,7 @@ describe("red/nodes/index", function() {
                     return randomModuleInfo;
                 }
             });
-            sinon.stub(registry,"removeModule",function(id) {
+            sinon.stub(registry,"removeModule").callsFake(function(id) {
                 return randomModuleInfo;
             });
         });

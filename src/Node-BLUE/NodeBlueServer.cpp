@@ -1728,6 +1728,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
 
     std::string contentString;
     if (path.compare(0, 18, "node-blue/context/") == 0 && path.size() > 18) {
+      if (!loginValid) return "unauthorized";
       auto subpath = path.substr(18);
       auto subpathParts = BaseLib::HelperFunctions::splitAll(subpath, '/');
       std::string dataId;
@@ -1775,6 +1776,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       contentString = _nodeManager->getNodeLocales(language);
       responseEncoding = "application/json";
     } else if (path.compare(0, 16, "node-blue/nodes/") == 0 && path.size() > 16) {
+      if (!loginValid) return "unauthorized";
       auto id = path.substr(16);
       auto idPair = BaseLib::HelperFunctions::splitLast(id, '/');
       contentString = _nodeManager->getFrontendCode(idPair.first, idPair.second);
@@ -1784,7 +1786,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       std::string localePath = _webroot + "static/locales/";
       std::string language = "en";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
-      for (auto &arg : args) {
+      for (auto &arg: args) {
         auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
         if (argPair.first == "lng") {
           if (BaseLib::Io::directoryExists(localePath + argPair.second)) language = argPair.second;
@@ -1800,7 +1802,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         contentString.clear();
         auto decodedExtraContent = BaseLib::Rpc::JsonDecoder::decode(extraContent);
 
-        for (auto &element : *decodedExtraContent->structValue) {
+        for (auto &element: *decodedExtraContent->structValue) {
           auto subelementIterator = decodedContent->structValue->find(element.first);
           if (subelementIterator == decodedContent->structValue->end()) {
             decodedContent->structValue->emplace(element.first, element.second);
@@ -1808,7 +1810,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
           }
 
           if (element.second->type == BaseLib::VariableType::tStruct) {
-            for (auto &subelement : *element.second->structValue) {
+            for (auto &subelement: *element.second->structValue) {
               auto subsubelementIterator = subelementIterator->second->structValue->find(subelement.first);
               if (subsubelementIterator == subelementIterator->second->structValue->end()) {
                 subelementIterator->second->structValue->emplace(subelement.first, subelement.second);
@@ -1816,7 +1818,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
               }
 
               if (subelement.second->type == BaseLib::VariableType::tStruct) {
-                for (auto &subsubelement : *subelement.second->structValue) {
+                for (auto &subsubelement: *subelement.second->structValue) {
                   auto subsubsubelementIterator = subsubelementIterator->second->structValue->find(subsubelement.first);
                   if (subsubsubelementIterator == subsubelementIterator->second->structValue->end()) {
                     subsubelementIterator->second->structValue->emplace(subsubelement.first, subsubelement.second);
@@ -1824,7 +1826,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
                   }
 
                   if (subsubelement.second->type == BaseLib::VariableType::tStruct) {
-                    for (auto &subsubsubelement : *subsubelement.second->structValue) {
+                    for (auto &subsubsubelement: *subsubelement.second->structValue) {
                       auto subsubsubsubelementIterator = subsubsubelementIterator->second->structValue->find(subsubsubelement.first);
                       if (subsubsubsubelementIterator == subsubsubelementIterator->second->structValue->end()) {
                         subsubsubelementIterator->second->structValue->emplace(subsubsubelement.first, subsubsubelement.second);
@@ -1832,7 +1834,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
                       }
 
                       if (subsubsubelement.second->type == BaseLib::VariableType::tStruct) {
-                        for (auto &subsubsubsubelement : *subsubsubelement.second->structValue) {
+                        for (auto &subsubsubsubelement: *subsubsubelement.second->structValue) {
                           auto subsubsubsubsubelementIterator = subsubsubsubelementIterator->second->structValue->find(subsubsubsubelement.first);
                           if (subsubsubsubsubelementIterator == subsubsubsubelementIterator->second->structValue->end()) {
                             subsubsubsubelementIterator->second->structValue->emplace(subsubsubsubelement.first, subsubsubsubelement.second);
@@ -1862,6 +1864,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       }
       responseEncoding = "application/json";
     } else if (path.compare(0, 22, "node-blue/credentials/") == 0 && path.size() > 22) {
+      if (!loginValid) return "unauthorized";
       auto id = path.substr(2);
       auto idPair = BaseLib::HelperFunctions::splitLast(id, '/');
       auto credentials = _nodeBlueCredentials->getCredentials(idPair.second, false);
@@ -1908,6 +1911,11 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       }
       responseEncoding = "application/json";
     } else if (path == "node-blue/plugins") {
+      if (!loginValid) return "unauthorized";
+      responseEncoding = "text/html";
+      contentString = "\n";
+    } else if (path.compare(0, 26, "node-blue/plugins/messages") == 0) {
+      if (!loginValid) return "unauthorized";
       responseEncoding = "application/json";
       contentString = "{}";
     } else if (path == "node-blue/nodes") {
