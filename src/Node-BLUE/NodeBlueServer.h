@@ -135,7 +135,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
 
-  BaseLib::PVariable getNodeVariable(const std::string& nodeId, const std::string& topic);
+  BaseLib::PVariable getNodeVariable(const std::string &nodeId, const std::string &topic);
 
   void setNodeVariable(const std::string &nodeId, const std::string &topic, const BaseLib::PVariable &value);
 
@@ -259,7 +259,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable send(PNodeBlueClientData &clientData, std::vector<char> &data);
 
-  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, const std::string& methodName, const BaseLib::PArray &parameters, bool wait);
+  BaseLib::PVariable sendRequest(PNodeBlueClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters, bool wait);
 
   void sendResponse(PNodeBlueClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable);
 
@@ -275,7 +275,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   void getMaxThreadCounts();
 
-  bool checkIntegrity(const std::string& flowsFile);
+  bool checkIntegrity(const std::string &flowsFile);
 
   void backupFlows();
 
@@ -298,6 +298,8 @@ class NodeBlueServer : public BaseLib::IQueue {
   std::string deploy(BaseLib::Http &http);
 
   std::string installNode(BaseLib::Http &http);
+
+  void parseEnvironmentVariables(const BaseLib::PVariable &env, BaseLib::PVariable &output);
 
   static std::string getNodeBlueFormatFromVariableType(const BaseLib::PVariable &variable);
 

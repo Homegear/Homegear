@@ -402,13 +402,13 @@ bool NodeBlueServer::lifetick() {
     std::vector<PNodeBlueClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto result = sendRequest(client, "lifetick", std::make_shared<BaseLib::Array>(), true);
       if (result->errorStruct || !result->booleanValue) return false;
     }
@@ -431,7 +431,7 @@ void NodeBlueServer::collectGarbage() {
     {
       std::lock_guard<std::mutex> processGuard(_processMutex);
       bool emptyProcess = false;
-      for (auto &process : _processes) {
+      for (auto &process: _processes) {
         if (process.second->flowCount() == 0 && BaseLib::HelperFunctions::getTime() - process.second->lastExecution > 60000 && process.second->getClientData() && !process.second->getClientData()->closed) {
           if (emptyProcess) closeClientConnection(process.second->getClientData());
           else emptyProcess = true;
@@ -444,7 +444,7 @@ void NodeBlueServer::collectGarbage() {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       try {
         clientsToRemove.reserve(_clients.size());
-        for (auto &client : _clients) {
+        for (auto &client: _clients) {
           if (client.second->closed) clientsToRemove.push_back(client.second);
         }
       }
@@ -455,7 +455,7 @@ void NodeBlueServer::collectGarbage() {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
       }
     }
-    for (auto &i : clientsToRemove) {
+    for (auto &i: clientsToRemove) {
       {
         std::lock_guard<std::mutex> stateGuard(_stateMutex);
         _clients.erase(i->id);
@@ -475,7 +475,7 @@ void NodeBlueServer::getMaxThreadCounts() {
   try {
     _maxThreadCounts.clear();
     auto threadCounts = _nodeManager->getMaxThreadCounts();
-    for (auto &entry : threadCounts) {
+    for (auto &entry: threadCounts) {
       _maxThreadCounts[entry.first] = entry.second;
     }
   }
@@ -583,7 +583,7 @@ bool NodeBlueServer::start() {
     }
     _webroot = GD::bl->settings.nodeBluePath() + "www/";
     _anonymousPaths = BaseLib::HelperFunctions::splitAll(GD::bl->settings.nodeBlueUriPathsExcludedFromLogin(), ',');
-    for (auto &element : _anonymousPaths) {
+    for (auto &element: _anonymousPaths) {
       BaseLib::HelperFunctions::trim(element);
       if (element.empty()) {
         _anonymousPaths.clear();
@@ -654,12 +654,12 @@ void NodeBlueServer::homegearReloading() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "reload", parameters, false);
     }
@@ -785,14 +785,14 @@ BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     auto nodeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
       auto result = sendRequest(client, "getNodesWithFixedInputs", parameters, true);
       if (result->errorStruct) continue;
@@ -921,13 +921,13 @@ void NodeBlueServer::enableNodeEvents() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "enableNodeEvents", parameters, false);
     }
@@ -949,13 +949,13 @@ void NodeBlueServer::disableNodeEvents() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "disableNodeEvents", parameters, false);
     }
@@ -965,6 +965,46 @@ void NodeBlueServer::disableNodeEvents() {
   }
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+}
+
+void NodeBlueServer::parseEnvironmentVariables(const BaseLib::PVariable &env, BaseLib::PVariable &output) {
+  try {
+    for (auto &entry: *env->arrayValue) {
+      auto nameIterator = entry->structValue->find("name");
+      auto valueIterator = entry->structValue->find("value");
+      auto typeIterator = entry->structValue->find("type");
+      if (nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end()) {
+        if (typeIterator->second->stringValue == "bool") {
+          valueIterator->second->type = BaseLib::VariableType::tBoolean;
+          valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
+        } else if (typeIterator->second->stringValue == "float" || typeIterator->second->stringValue == "num") {
+          valueIterator->second->type = BaseLib::VariableType::tFloat;
+          valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
+        } else if (typeIterator->second->stringValue == "int") {
+          valueIterator->second->type = BaseLib::VariableType::tInteger64;
+          valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
+        } else if (typeIterator->second->stringValue == "array") {
+          try {
+            valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+          }
+          catch (const std::exception &) {
+          }
+          valueIterator->second->type = BaseLib::VariableType::tArray;
+        } else if (typeIterator->second->stringValue == "struct") {
+          try {
+            valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
+          }
+          catch (const std::exception &) {
+          }
+          valueIterator->second->type = BaseLib::VariableType::tStruct;
+        }
+        output->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
+      }
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
 }
 
@@ -984,91 +1024,28 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
     auto subflowInfoIterator = subflowInfos.find(subflowId);
     if (subflowInfoIterator == subflowInfos.end()) {
       _out.printError("Error: Could not find subflow info with for subflow with id " + subflowId);
-      return std::set<std::string>();
+      return {};
     }
 
     //{{{ Get environment variables
+    BaseLib::PVariable environmentVariables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
     auto environmentVariablesIterator = subflowNode->structValue->find("env");
     auto defaultEnvironmentVariables = subflowInfoIterator->second->structValue->find("env");
 
-    BaseLib::PVariable environmentVariables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     if (environmentVariablesIterator != subflowNode->structValue->end()) {
-      for (auto &entry : *environmentVariablesIterator->second->arrayValue) {
-        auto nameIterator = entry->structValue->find("name");
-        auto valueIterator = entry->structValue->find("value");
-        auto typeIterator = entry->structValue->find("type");
-        if (nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end()) {
-          if (typeIterator->second->stringValue == "bool") {
-            valueIterator->second->type = BaseLib::VariableType::tBoolean;
-            valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
-          } else if (typeIterator->second->stringValue == "float" || typeIterator->second->stringValue == "num") {
-            valueIterator->second->type = BaseLib::VariableType::tFloat;
-            valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
-          } else if (typeIterator->second->stringValue == "int") {
-            valueIterator->second->type = BaseLib::VariableType::tInteger64;
-            valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
-          } else if (typeIterator->second->stringValue == "array") {
-            try {
-              valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
-            }
-            catch (const std::exception &) {
-            }
-            valueIterator->second->type = BaseLib::VariableType::tArray;
-          } else if (typeIterator->second->stringValue == "struct") {
-            try {
-              valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
-            }
-            catch (const std::exception &) {
-            }
-            valueIterator->second->type = BaseLib::VariableType::tStruct;
-          }
-          environmentVariables->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
-        }
-      }
+      parseEnvironmentVariables(environmentVariablesIterator->second, environmentVariables);
     }
 
     if (defaultEnvironmentVariables != subflowInfoIterator->second->structValue->end()) {
-      for (auto &entry : *defaultEnvironmentVariables->second->arrayValue) {
-        auto nameIterator = entry->structValue->find("name");
-        auto valueIterator = entry->structValue->find("value");
-        auto typeIterator = entry->structValue->find("type");
-        if (nameIterator != entry->structValue->end() && valueIterator != entry->structValue->end() && typeIterator != entry->structValue->end()) {
-          if (environmentVariables->structValue->find(nameIterator->second->stringValue) == environmentVariables->structValue->end()) {
-            if (typeIterator->second->stringValue == "bool") {
-              valueIterator->second->type = BaseLib::VariableType::tBoolean;
-              valueIterator->second->booleanValue = (valueIterator->second->stringValue == "true");
-            } else if (typeIterator->second->stringValue == "float" || typeIterator->second->stringValue == "num") {
-              valueIterator->second->type = BaseLib::VariableType::tFloat;
-              valueIterator->second->floatValue = BaseLib::Math::getDouble(valueIterator->second->stringValue);
-            } else if (typeIterator->second->stringValue == "int") {
-              valueIterator->second->type = BaseLib::VariableType::tInteger64;
-              valueIterator->second->integerValue64 = BaseLib::Math::getNumber64(valueIterator->second->stringValue);
-            } else if (typeIterator->second->stringValue == "array") {
-              try {
-                valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
-              }
-              catch (const std::exception &) {
-              }
-              valueIterator->second->type = BaseLib::VariableType::tArray;
-            } else if (typeIterator->second->stringValue == "struct") {
-              try {
-                valueIterator->second = BaseLib::Rpc::JsonDecoder::decode(valueIterator->second->stringValue);
-              }
-              catch (const std::exception &) {
-              }
-              valueIterator->second->type = BaseLib::VariableType::tStruct;
-            }
-            environmentVariables->structValue->emplace(nameIterator->second->stringValue, valueIterator->second);
-          }
-        }
-      }
+      parseEnvironmentVariables(defaultEnvironmentVariables->second, environmentVariables);
     }
     //}}}
 
     //Copy subflow, prefix all subflow node IDs and wires with subflow ID and identify subsubflows
     std::unordered_map<std::string, BaseLib::PVariable> subflow;
     nodesToAdd.reserve(subflowNodes.size());
-    for (auto &subflowElement : subflowNodes) {
+    for (auto &subflowElement: subflowNodes) {
       BaseLib::PVariable subflowNode2 = std::make_shared<BaseLib::Variable>();
       *subflowNode2 = *subflowElement.second;
       subflowNode2->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode2->structValue->at("id")->stringValue;
@@ -1082,8 +1059,8 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
 
       auto subflowNodeWiresIterator = subflowNode2->structValue->find("wires");
       if (subflowNodeWiresIterator == subflowNode2->structValue->end()) continue;
-      for (auto &output : *subflowNodeWiresIterator->second->arrayValue) {
-        for (auto &wire : *output->arrayValue) {
+      for (auto &output: *subflowNodeWiresIterator->second->arrayValue) {
+        for (auto &wire: *output->arrayValue) {
           auto idIterator = wire->structValue->find("id");
           if (idIterator == wire->structValue->end()) continue;
           idIterator->second->stringValue = subflowIdPrefix + idIterator->second->stringValue;
@@ -1102,7 +1079,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         auto &element = wiresOutIterator->second->arrayValue->at(outputIndex);
         auto innerIterator = element->structValue->find("wires");
         if (innerIterator == element->structValue->end()) continue;
-        for (auto &wireIterator : *innerIterator->second->arrayValue) {
+        for (auto &wireIterator: *innerIterator->second->arrayValue) {
           auto wireIdIterator = wireIterator->structValue->find("id");
           if (wireIdIterator == wireIterator->structValue->end()) continue;
 
@@ -1120,7 +1097,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
           auto &targetNodeWireOutput = targetNodeWiresIterator->second->arrayValue->at(outputIndex);
 
           if (wireIdIterator->second->stringValue == subflowId) {
-            for (const auto &targetNodeWire : *targetNodeWireOutput->arrayValue) {
+            for (const auto &targetNodeWire: *targetNodeWireOutput->arrayValue) {
               auto targetNodeWireIdIterator = targetNodeWire->structValue->find("id");
               if (targetNodeWireIdIterator == targetNodeWire->structValue->end()) continue;
 
@@ -1158,7 +1135,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         auto wiresInWiresIterator = wiresInIterator->second->arrayValue->at(i)->structValue->find("wires");
         if (wiresInWiresIterator != wiresInIterator->second->arrayValue->at(i)->structValue->end()) {
           wiresIn.back()->reserve(wiresInIterator->second->arrayValue->at(i)->structValue->size());
-          for (auto &wiresInWire : *wiresInWiresIterator->second->arrayValue) {
+          for (auto &wiresInWire: *wiresInWiresIterator->second->arrayValue) {
             auto wiresInWireIdIterator = wiresInWire->structValue->find("id");
             if (wiresInWireIdIterator == wiresInWire->structValue->end()) continue;
 
@@ -1177,12 +1154,12 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         }
       }
 
-      for (auto &node2 : flowNodes) {
+      for (auto &node2: flowNodes) {
         auto node2WiresIterator = node2.second->structValue->find("wires");
         if (node2WiresIterator == node2.second->structValue->end()) continue;
-        for (auto &node2WiresOutput : *node2WiresIterator->second->arrayValue) {
+        for (auto &node2WiresOutput: *node2WiresIterator->second->arrayValue) {
           bool rebuildArray = false;
-          for (auto &node2Wire : *node2WiresOutput->arrayValue) {
+          for (auto &node2Wire: *node2WiresOutput->arrayValue) {
             auto node2WireIdIterator = node2Wire->structValue->find("id");
             if (node2WireIdIterator == node2Wire->structValue->end()) continue;
 
@@ -1193,7 +1170,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
           }
           if (rebuildArray) {
             BaseLib::PArray wireArray = std::make_shared<BaseLib::Array>();
-            for (auto &node2Wire : *node2WiresOutput->arrayValue) {
+            for (auto &node2Wire: *node2WiresOutput->arrayValue) {
               auto node2WireIdIterator = node2Wire->structValue->find("id");
               if (node2WireIdIterator == node2Wire->structValue->end()) continue;
 
@@ -1253,7 +1230,8 @@ void NodeBlueServer::startFlows() {
     std::unordered_map<std::string, std::set<std::string>> subflowNodeIds;
     std::set<std::string> allNodeIds;
     std::set<std::string> disabledFlows;
-    for (auto &element : *flows->arrayValue) {
+    std::unordered_map<std::string, BaseLib::PVariable> flowsEnvironmentVariables;
+    for (auto &element: *flows->arrayValue) {
       auto idIterator = element->structValue->find("id");
       if (idIterator == element->structValue->end()) {
         _out.printError("Error: Flow element has no id.");
@@ -1269,7 +1247,16 @@ void NodeBlueServer::startFlows() {
         continue;
       } else if (typeIterator->second->stringValue == "tab") {
         auto disabledIterator = element->structValue->find("disabled");
-        if (disabledIterator != element->structValue->end() && disabledIterator->second->booleanValue) disabledFlows.emplace(idIterator->second->stringValue);
+        if (disabledIterator != element->structValue->end() && disabledIterator->second->booleanValue) {
+          disabledFlows.emplace(idIterator->second->stringValue);
+        } else {
+          auto envIterator = element->structValue->find("env");
+          if (envIterator != element->structValue->end()) {
+            auto environmentVariables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            parseEnvironmentVariables(envIterator->second, environmentVariables);
+            flowsEnvironmentVariables.emplace(idIterator->second->stringValue, environmentVariables);
+          }
+        }
         continue;
       }
 
@@ -1314,17 +1301,17 @@ void NodeBlueServer::startFlows() {
     //}}}
 
     //{{{ Insert subflows
-    for (auto &subflowNodeIdsInner : subflowNodeIds) {
+    for (auto &subflowNodeIdsInner: subflowNodeIds) {
       if (subflowInfos.find(subflowNodeIdsInner.first) != subflowInfos.end()) continue; //Don't process nodes of subflows
 
-      for (const auto &subflowNodeId : subflowNodeIdsInner.second) {
+      for (const auto &subflowNodeId: subflowNodeIdsInner.second) {
         std::set<std::string> processedSubflows;
 
         std::set<std::string> subsubflows;
         subsubflows.emplace(subflowNodeId);
         while (!subsubflows.empty()) {
           std::set<std::string> newSubsubflows;
-          for (auto &subsubflowNodeId : subsubflows) {
+          for (auto &subsubflowNodeId: subsubflows) {
             auto &innerFlowNodes = flowNodes.at(subflowNodeIdsInner.first);
             auto subflowNodeIterator = innerFlowNodes.find(subsubflowNodeId);
             if (subflowNodeIterator == innerFlowNodes.end()) {
@@ -1340,7 +1327,7 @@ void NodeBlueServer::startFlows() {
             std::set<std::string> returnedSubsubflows = insertSubflows(subflowNodeIterator->second, subflowInfos, innerFlowNodes, subflowNodesIterator->second, allNodeIds);
             processedSubflows.emplace(subsubflowNodeId);
             bool abort = false;
-            for (auto &returnedSubsubflow : returnedSubsubflows) {
+            for (auto &returnedSubsubflow: returnedSubsubflows) {
               if (processedSubflows.find(returnedSubsubflow) != processedSubflows.end()) {
                 _out.printError("Error: Subflow recursion detected. Aborting processing subflows for flow with ID: " + subflowNodeIdsInner.first);
                 abort = true;
@@ -1365,16 +1352,36 @@ void NodeBlueServer::startFlows() {
     //Only reserve memory when there are any Node-RED nodes.
     if (!hasNoderedFlowsFile && _nodeManager->nodeRedRequired()) nodeRedFlow->arrayValue->reserve(flowNodes.size());
 
-    for (auto &element : flowNodes) {
+    for (auto &element: flowNodes) {
       if (subflowInfos.find(element.first) != subflowInfos.end()) continue;
       BaseLib::PVariable nodeRedFlowNodes = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       if (!hasNoderedFlowsFile) nodeRedFlowNodes->arrayValue->reserve(element.second.size());
       BaseLib::PVariable flow = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       flow->arrayValue->reserve(element.second.size());
       uint32_t maxThreadCount = 0;
-      for (auto &node : element.second) {
+      BaseLib::PVariable environmentVariables;
+
+      {
+        auto flowsEnvironmentVariablesIterator = flowsEnvironmentVariables.find(element.first);
+        if (flowsEnvironmentVariablesIterator != flowsEnvironmentVariables.end()) {
+          environmentVariables = flowsEnvironmentVariablesIterator->second;
+        }
+      }
+      for (auto &node: element.second) {
         if (!node.second) continue;
         flow->arrayValue->push_back(node.second);
+
+        //{{{ Insert environment variables
+        if (environmentVariables) {
+          auto envIterator = node.second->structValue->find("env");
+          if (envIterator != node.second->structValue->end()) {
+            envIterator->second->structValue->insert(environmentVariables->structValue->begin(), environmentVariables->structValue->end());
+          } else {
+            node.second->structValue->emplace("env", environmentVariables);
+          }
+        }
+        //}}}
+
         auto typeIterator = node.second->structValue->find("type");
         if (typeIterator != node.second->structValue->end()) {
           if (typeIterator->second->stringValue.compare(0, 8, "subflow:") == 0) continue;
@@ -1439,7 +1446,7 @@ void NodeBlueServer::startFlows() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
@@ -1447,7 +1454,7 @@ void NodeBlueServer::startFlows() {
 
     auto startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Starting nodes.");
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "startNodes", parameters, true);
     }
@@ -1456,7 +1463,7 @@ void NodeBlueServer::startFlows() {
 
     startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Calling \"configNodesStarted\".");
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "configNodesStarted", parameters, true);
     }
@@ -1465,7 +1472,7 @@ void NodeBlueServer::startFlows() {
 
     startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Calling \"startUpComplete\".");
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "startUpComplete", parameters, true);
     }
@@ -1475,14 +1482,14 @@ void NodeBlueServer::startFlows() {
     { //Remove node data of non-existant nodes
       std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
       std::string dataKey;
-      for (auto &nodeId : nodeData) {
+      for (auto &nodeId: nodeData) {
         if (allNodeIds.find(nodeId) == allNodeIds.end() && flowNodes.find(nodeId) == flowNodes.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
       }
     }
 
     { //Remove UI elements of non-existant nodes
       auto nodeUiElements = GD::uiController->getAllNodeUiElements();
-      for (auto &nodeId : nodeUiElements) {
+      for (auto &nodeId: nodeUiElements) {
         if (allNodeIds.find(nodeId.first) == allNodeIds.end() && flowNodes.find(nodeId.first) == flowNodes.end()) GD::uiController->removeNodeUiElements(nodeId.first);
       }
     }
@@ -1501,12 +1508,12 @@ void NodeBlueServer::sendShutdown() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
       sendRequest(client, "shutdown", parameters, false);
     }
@@ -1536,12 +1543,12 @@ bool NodeBlueServer::sendReset() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
       auto result = sendRequest(client, "reset", parameters, true);
       if (result->errorStruct) {
@@ -1574,7 +1581,7 @@ void NodeBlueServer::closeClientConnections() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         clients.push_back(client.second);
         closeClientConnection(client.second);
         std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -1587,7 +1594,7 @@ void NodeBlueServer::closeClientConnections() {
     }
 
     while (!_clients.empty()) {
-      for (auto &client : clients) {
+      for (auto &client: clients) {
         std::unique_lock<std::mutex> waitLock(client->waitMutex);
         waitLock.unlock();
         client->requestConditionVariable.notify_all();
@@ -1615,14 +1622,14 @@ void NodeBlueServer::stopNodes() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     int64_t startTime = BaseLib::HelperFunctions::getTime();
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "stopNodes", parameters, true);
     }
@@ -1630,7 +1637,7 @@ void NodeBlueServer::stopNodes() {
     _out.printInfo("Info: Calling stop took " + std::to_string(duration) + "ms.");
 
     startTime = BaseLib::HelperFunctions::getTime();
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "waitForNodesStopped", parameters, true);
     }
@@ -1707,7 +1714,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
 #else
   try {
     bool loginValid = false;
-    for (auto &element : _anonymousPaths) {
+    for (auto &element: _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -1745,7 +1752,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         auto innerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
         if (key.empty()) {
-          for (auto &innerNodeData : *nodeData->structValue) {
+          for (auto &innerNodeData: *nodeData->structValue) {
             auto innerInnerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             innerInnerContextData->structValue->emplace("msg", innerNodeData.second);
             innerInnerContextData->structValue->emplace("format", std::make_shared<BaseLib::Variable>(getNodeBlueFormatFromVariableType(innerNodeData.second)));
@@ -1766,7 +1773,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       if (!loginValid) return "unauthorized";
       std::string language = "en";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
-      for (auto &arg : args) {
+      for (auto &arg: args) {
         auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
         if (argPair.first == "lng") {
           language = argPair.second;
@@ -1969,11 +1976,11 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
           auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           responseJson->arrayValue->reserve(directories.size() + files.size());
 
-          for (auto &directory : directories) {
+          for (auto &directory: directories) {
             responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
           }
 
-          for (auto &file : files) {
+          for (auto &file: files) {
             auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
             responseJson->arrayValue->push_back(fileEntry);
@@ -2046,7 +2053,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
 #else
   try {
     bool loginValid = false;
-    for (auto &element : _anonymousPaths) {
+    for (auto &element: _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -2269,7 +2276,7 @@ std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
 
   {
     auto contentTypeParts = BaseLib::HelperFunctions::splitAll(http.getHeader().contentTypeFull, ';');
-    for (auto &part : contentTypeParts) {
+    for (auto &part: contentTypeParts) {
       BaseLib::HelperFunctions::trim(part);
       auto pair = BaseLib::HelperFunctions::splitFirst(part, '=');
       BaseLib::HelperFunctions::toLower(pair.first);
@@ -2294,7 +2301,7 @@ std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
   std::string header(data.data(), headerEnd - data.data());
   auto headerLines = BaseLib::HelperFunctions::splitAll(header, '\n');
   std::string contentType;
-  for (auto &line : headerLines) {
+  for (auto &line: headerLines) {
     auto pair = BaseLib::HelperFunctions::splitFirst(line, ':');
     BaseLib::HelperFunctions::trim(pair.first);
     BaseLib::HelperFunctions::toLower(pair.first);
@@ -2394,7 +2401,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
 #else
   try {
     bool loginValid = false;
-    for (auto &element : _anonymousPaths) {
+    for (auto &element: _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -2494,7 +2501,7 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
 #else
   try {
     bool loginValid = false;
-    for (auto &element : _anonymousPaths) {
+    for (auto &element: _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -2554,9 +2561,9 @@ BaseLib::PVariable NodeBlueServer::getVariablesInRole(BaseLib::PRpcClientInfo cl
     auto inputChannels = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     auto outputChannels = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMapMutex);
-    for (auto &nodeInfo : _nodeInfoMap) {
+    for (auto &nodeInfo: _nodeInfoMap) {
       if (peerId == 0 || peerId == 0x50000001) {
-        for (auto &output : nodeInfo.second.outputRoles) {
+        for (auto &output: nodeInfo.second.outputRoles) {
           if (output.second == roleId) {
             if (!clientInfo->acls->checkNodeBlueVariableWriteAccess(nodeInfo.first, output.first)) continue;
 
@@ -2599,14 +2606,14 @@ uint32_t NodeBlueServer::flowCount() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     uint32_t count = 0;
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       BaseLib::PVariable response = sendRequest(client, "flowCount", parameters, true);
       count += response->integerValue;
@@ -2636,7 +2643,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
 
     if (id != 0 && id != 0x50000001) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (peer) break;
@@ -2678,13 +2685,13 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       if (peer) {
         metadata->structValue->emplace("name", std::make_shared<BaseLib::Variable>(peer->getName()));
@@ -2694,7 +2701,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
           auto categories = peer->getCategories(-1);
           auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           categoryArray->arrayValue->reserve(categories.size());
-          for (auto category : categories) {
+          for (auto category: categories) {
             categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
           }
           metadata->structValue->emplace("categories", categoryArray);
@@ -2708,7 +2715,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
             auto categories = peer->getCategories(channel);
             auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categoryArray->arrayValue->reserve(categories.size());
-            for (auto category : categories) {
+            for (auto category: categories) {
               categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
             }
             metadata->structValue->emplace("channelCategories", categoryArray);
@@ -2717,7 +2724,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
           auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
           metadata->structValue->emplace("variableMetadata", variableMetadata);
 
-          for (auto &variable : *variables) {
+          for (auto &variable: *variables) {
             auto room = peer->getVariableRoom(channel, variable);
             variableMetadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(room));
 
@@ -2725,7 +2732,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
               auto categories = peer->getVariableCategories(channel, variable);
               auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
               categoryArray->arrayValue->reserve(categories.size());
-              for (auto category : categories) {
+              for (auto category: categories) {
                 categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
               }
               variableMetadata->structValue->emplace("categories", categoryArray);
@@ -2734,7 +2741,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
             {
               auto roles = peer->getVariableRoles(channel, variable);
               auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-              for (auto &role : roles) {
+              for (auto &role: roles) {
                 auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
                 roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
@@ -2750,7 +2757,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
         auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
         metadata->structValue->emplace("variableMetadata", variableMetadata);
 
-        for (auto &variable : *variables) {
+        for (auto &variable: *variables) {
           auto systemVariable = GD::systemVariableController->getInternal(variable);
           if (!systemVariable) continue;
 
@@ -2758,13 +2765,13 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
 
           auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           categoryArray->arrayValue->reserve(systemVariable->categories.size());
-          for (auto category : systemVariable->categories) {
+          for (auto category: systemVariable->categories) {
             categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
           }
           variableMetadata->structValue->emplace("categories", categoryArray);
 
           auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-          for (auto &role : systemVariable->roles) {
+          for (auto &role: systemVariable->roles) {
             auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
             roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
@@ -2804,13 +2811,13 @@ void NodeBlueServer::broadcastFlowVariableEvent(std::string &flowId, std::string
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(flowId));
@@ -2837,13 +2844,13 @@ void NodeBlueServer::broadcastGlobalVariableEvent(std::string &variable, BaseLib
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(variable));
@@ -2870,7 +2877,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
 
     if (serviceMessage->peerId > 0) {
       auto families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(serviceMessage->peerId);
         if (peer) break;
@@ -2886,13 +2893,13 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       if (peer) {
         metadata->structValue->emplace("name", std::make_shared<BaseLib::Variable>(peer->getName()));
@@ -2902,7 +2909,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
           auto categories = peer->getCategories(-1);
           auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           categoryArray->arrayValue->reserve(categories.size());
-          for (auto category : categories) {
+          for (auto category: categories) {
             categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
           }
           metadata->structValue->emplace("categories", categoryArray);
@@ -2916,7 +2923,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
             auto categories = peer->getCategories(serviceMessage->channel);
             auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categoryArray->arrayValue->reserve(categories.size());
-            for (auto category : categories) {
+            for (auto category: categories) {
               categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
             }
             metadata->structValue->emplace("channelCategories", categoryArray);
@@ -2933,7 +2940,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
               auto categories = peer->getVariableCategories(serviceMessage->channel, serviceMessage->variable);
               auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
               categoryArray->arrayValue->reserve(categories.size());
-              for (auto category : categories) {
+              for (auto category: categories) {
                 categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
               }
               variableMetadata->structValue->emplace("categories", categoryArray);
@@ -2942,7 +2949,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
             {
               auto roles = peer->getVariableRoles(serviceMessage->channel, serviceMessage->variable);
               auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-              for (auto &role : roles) {
+              for (auto &role: roles) {
                 auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
                 roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
@@ -2978,11 +2985,11 @@ void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
     if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
         {
-          for (auto id : ids) {
+          for (auto id: ids) {
             auto peer = central->getPeer((uint64_t)id);
             if (!peer || !_nodeBlueClientInfo->acls->checkDeviceReadAccess(peer)) return;
           }
@@ -2994,13 +3001,13 @@ void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastNewDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastNewDevices\". Queue is full.");
@@ -3021,13 +3028,13 @@ void NodeBlueServer::broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastDeleteDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastDeleteDevices\". Queue is full.");
@@ -3049,7 +3056,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (!peer || !_nodeBlueClientInfo->acls->checkDeviceReadAccess(peer)) return;
@@ -3060,13 +3067,13 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       BaseLib::PArray parameters(new BaseLib::Array{std::make_shared<BaseLib::Variable>(id), std::make_shared<BaseLib::Variable>(channel), std::make_shared<BaseLib::Variable>(hint)});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUpdateDevice", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
@@ -3086,13 +3093,13 @@ void NodeBlueServer::broadcastStatus(const std::string &nodeId, const BaseLib::P
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
@@ -3115,14 +3122,14 @@ void NodeBlueServer::broadcastError(const std::string &nodeId, int32_t level, co
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     bool handled = false;
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
@@ -3162,13 +3169,13 @@ void NodeBlueServer::broadcastVariableProfileStateChanged(uint64_t profileId, bo
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
@@ -3193,13 +3200,13 @@ void NodeBlueServer::broadcastUiNotificationCreated(uint64_t uiNotificationId) {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
 
@@ -3222,13 +3229,13 @@ void NodeBlueServer::broadcastUiNotificationRemoved(uint64_t uiNotificationId) {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
 
@@ -3251,13 +3258,13 @@ void NodeBlueServer::broadcastUiNotificationAction(uint64_t uiNotificationId, co
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
@@ -3283,13 +3290,13 @@ void NodeBlueServer::broadcastRawPacketEvent(int32_t familyId, const std::string
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client : _clients) {
+      for (auto &client: _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client : clients) {
+    for (auto &client: clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(familyId));
@@ -3576,7 +3583,7 @@ void NodeBlueServer::mainThread() {
         {
           std::lock_guard<std::mutex> stateGuard(_stateMutex);
           clients.reserve(_clients.size());
-          for (auto &client : _clients) {
+          for (auto &client: _clients) {
             if (client.second->closed) continue;
             if (client.second->fileDescriptor->descriptor == -1) {
               client.second->closed = true;
@@ -3591,7 +3598,7 @@ void NodeBlueServer::mainThread() {
         maxfd = _serverFileDescriptor->descriptor;
         FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 
-        for (auto &client : clients) {
+        for (auto &client: clients) {
           int32_t descriptor = client->fileDescriptor->descriptor;
           if (descriptor == -1) continue; //Never pass -1 to FD_SET => undefined behaviour. This is just a safety precaution, because the file descriptor manager is locked and descriptors shouldn't be modified.
           FD_SET(descriptor, &readFileDescriptor);
@@ -3673,7 +3680,7 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount) {
     std::lock_guard<std::mutex> processGuard(_newProcessMutex);
     {
       std::lock_guard<std::mutex> processGuard2(_processMutex);
-      for (auto &process : _processes) {
+      for (auto &process: _processes) {
         if (process.second->getClientData()->closed) continue;
         if (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || process.second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
           process.second->lastExecution = BaseLib::HelperFunctions::getTime();
@@ -3875,7 +3882,7 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, const std::unordered_m
 
     {
       std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
-      for (auto &node : flowNodes) {
+      for (auto &node: flowNodes) {
         auto type = node.second->structValue->at("type")->stringValue;
         _nodeInfoMap.emplace(node.first, NodeServerInfo{clientData->id, type, _nodeManager->getNodeCodeType(type)});
       }
@@ -3899,7 +3906,7 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, const std::unordered_m
 
       {
         std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
-        for (auto &node : flowNodes) {
+        for (auto &node: flowNodes) {
           _nodeInfoMap.erase(node.first);
         }
       }
@@ -3956,7 +3963,7 @@ BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string &tab, const 
       }
 
       auto nodeIdReplacementStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      for (auto &entry : nodeIdReplacementMap) {
+      for (auto &entry: nodeIdReplacementMap) {
         nodeIdReplacementStruct->structValue->emplace(entry.first, std::make_shared<BaseLib::Variable>(entry.second));
       }
 
@@ -4348,7 +4355,7 @@ BaseLib::PVariable NodeBlueServer::registerUiNodeRoles(PNodeBlueClientData &clie
     auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
     if (nodeInfoIterator == _nodeInfoMap.end()) return std::make_shared<BaseLib::Variable>();
 
-    for (auto &role : *roles) {
+    for (auto &role: *roles) {
       if (role.first.at(0) == 'o') {
         nodeInfoIterator->second.outputRoles.emplace(BaseLib::Math::getUnsignedNumber(role.first.substr(1)), role.second->integerValue);
       }
