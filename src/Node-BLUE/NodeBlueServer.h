@@ -133,7 +133,7 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getNodeCredentialTypes(const std::string &nodeId);
 
-  void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
+  void setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes, bool fromIpcServer);
 
   BaseLib::PVariable getNodeVariable(const std::string &nodeId, const std::string &topic);
 

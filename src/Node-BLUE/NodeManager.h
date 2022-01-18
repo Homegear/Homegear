@@ -182,7 +182,7 @@ class NodeManager {
 
   std::string getNodeLocales(std::string &language);
 
-  void registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes);
+  void registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes, bool fromIpcServer);
 
   /**
    * Loads a node. The node needs to be in Homegear's node path.

@@ -639,11 +639,18 @@ BaseLib::PVariable NodeManager::getNodeCredentialTypes(const std::string &type) 
   return std::make_shared<BaseLib::Variable>();
 }
 
-void NodeManager::registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes) {
+void NodeManager::registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes, bool fromIpcServer) {
   try {
     auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
     if (nodeInfoIterator == _nodeInfoByNodeType.end()) {
+      if (fromIpcServer && (type == "http proxy" || type == "http request")) return; //Ignore
       GD::out.printWarning("Warning: Could not register credential types. Node type " + type + " is unknown.");
+      return;
+    }
+
+    if (fromIpcServer && nodeInfoIterator->second->codeType != NodeCodeType::javascript) {
+      //Ignore registrations from Node-PINK core nodes as core node registrations are handled by Node-BLUE.
+      GD::out.printDebug("Debug: Not registering credential types for Node-PINK type " + type + " as this type already exists in Node-BLUE.");
       return;
     }
 

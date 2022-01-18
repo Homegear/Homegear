@@ -828,8 +828,8 @@ BaseLib::PVariable NodeBlueServer::getNodeCredentialTypes(const std::string &nod
   return _nodeManager->getNodeCredentialTypes(type);
 }
 
-void NodeBlueServer::setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes) {
-  _nodeManager->registerCredentialTypes(type, credentialTypes);
+void NodeBlueServer::setNodeCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes, bool fromIpcServer) {
+  _nodeManager->registerCredentialTypes(type, credentialTypes, fromIpcServer);
 }
 
 BaseLib::PVariable NodeBlueServer::getNodeVariable(const std::string &nodeId, const std::string &topic) {
@@ -4385,7 +4385,7 @@ BaseLib::PVariable NodeBlueServer::setCredentialTypes(PNodeBlueClientData &clien
   try {
     if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects exactly two parameters.");
 
-    _nodeManager->registerCredentialTypes(parameters->at(0)->stringValue, parameters->at(1));
+    _nodeManager->registerCredentialTypes(parameters->at(0)->stringValue, parameters->at(1), false);
 
     return std::make_shared<BaseLib::Variable>();
   }
