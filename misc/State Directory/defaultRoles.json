@@ -444,13 +444,64 @@
         }
     },
     {
+        "id": "20.20.02",
+        "translations": {
+            "en-US": "Outside Air",
+            "de-DE": "Außenluft"
+        }
+    },
+    {
+        "id": "20.20.03",
+        "translations": {
+            "en-US": "Supply Air",
+            "de-DE": "Zuluft"
+        }
+    },
+    {
+        "id": "20.20.04",
+        "translations": {
+            "en-US": "Extract Air",
+            "de-DE": "Abluft"
+        }
+    },
+    {
+        "id": "20.20.05",
+        "translations": {
+            "en-US": "Exhaust Air",
+            "de-DE": "Fortluft"
+        }
+    },
+    {
+        "id": "20.20.06",
+        "translations": {
+            "en-US": "Fire Damper",
+            "de-DE": "Brandschutzklappe"
+        }
+    },
+    {
+        "id": "20.20.07",
+        "translations": {
+            "en-US": "differential pressure",
+            "de-DE": "Differenzdruck"
+        }
+    },
+    {
+        "id": "20.20.08",
+        "translations": {
+            "en-US": "co-no System",
+            "de-DE": "co-no Anlage"
+        }
+    },
+    
+    
+    {
         "id": "20.30.00",
         "translations": {
             "en-US": "heat pump",
             "de-DE": "Wärmepumpe"
         }
     },
-	{
+    {
         "id": "20.40.00",
         "translations": {
             "en-US": "pump",
@@ -551,7 +602,7 @@
             "de-DE": "Notlicht"
         }
     },
-	{
+    {
         "id": "30.40.00",
         "translations": {
             "en-US": "pumping station",
@@ -1526,7 +1577,7 @@
             "de-DE": "Gerät offline"
         }
     },
-	{
+    {
         "id": "80.01.00",
         "types": [
             "bool"
@@ -1536,7 +1587,7 @@
             "de-DE": "Betriebsmeldungen"
         }
     },
-	{
+    {
         "id": "80.01.01",
         "types": [
             "bool"
@@ -1546,7 +1597,7 @@
             "de-DE": "Betrieb"
         }
     },
-	{
+    {
         "id": "80.01.02",
         "types": [
             "bool"
@@ -1556,7 +1607,17 @@
             "de-DE": "Notbetrieb"
         }
     },
-	{
+    {
+        "id": "80.01.03",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "active",
+            "de-DE": "Aktiv"
+        }
+    },
+    {
         "id": "80.02.00",
         "types": [
             "bool"
@@ -1566,7 +1627,7 @@
             "de-DE": "Störungen"
         }
     },
-	{
+    {
         "id": "80.02.01",
         "types": [
             "bool"
@@ -1576,7 +1637,7 @@
             "de-DE": "Sammelstörung"
         }
     },
-	{
+    {
         "id": "80.02.02",
         "types": [
             "bool"
@@ -1586,7 +1647,7 @@
             "de-DE": "Störung"
         }
     },
-	{
+    {
         "id": "80.03.00",
         "types": [
             "bool"
@@ -1596,7 +1657,7 @@
             "de-DE": "Alarme"
         }
     },
-	{
+    {
         "id": "80.03.01",
         "types": [
             "bool"
@@ -1606,7 +1667,7 @@
             "de-DE": "Sammelalarm"
         }
     },
-	{
+    {
         "id": "80.03.02",
         "types": [
             "bool"
@@ -1614,6 +1675,16 @@
         "translations": {
             "en-US": "alert",
             "de-DE": "Alarm"
+        }
+    },
+    {
+        "id": "80.03.03",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "en-US": "fire alert",
+            "de-DE": "Feueralarm"
         }
     },
     {
@@ -1709,6 +1780,29 @@
     },
     {
         "id": "90.04.02",
+        "translations": {
+            "en-US": "Consumption",
+            "de-DE": "Verbrauch"
+        },
+        "aggregation": "count"
+    },
+    {
+        "id": "90.05.00",
+        "translations": {
+            "en-US": "Cooling energy meter",
+            "de-DE": "Kältemengenzähler"
+        }
+    },
+    {
+        "id": "90.05.01",
+        "translations": {
+            "en-US": "Meter reading",
+            "de-DE": "Zählerstand"
+        },
+        "aggregation": "meter"
+    },
+    {
+        "id": "90.05.02",
         "translations": {
             "en-US": "Consumption",
             "de-DE": "Verbrauch"
