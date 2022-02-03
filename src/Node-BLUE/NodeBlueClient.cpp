@@ -1302,7 +1302,7 @@ void NodeBlueClient::setInputValue(const std::string &nodeType, const std::strin
     }
 
     element.push_front(std::move(inputValue));
-    while (element.size() > 10) element.pop_back();
+    while (element.size() > GD::bl->settings.nodeBlueFrontendHistorySize()) element.pop_back();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
