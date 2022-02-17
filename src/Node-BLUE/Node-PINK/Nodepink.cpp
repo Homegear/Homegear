@@ -321,6 +321,7 @@ void Nodepink::event(const BaseLib::PArray &parameters) {
           } else GD::nodeBlueServer->nodeOutput(nodeId, 0, message, synchronous);
         }
       } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "frontend-event") {
+        if (parameters->at(2)->structValue->at("topic")->stringValue == "notification/runtime-deploy") return; //Ignore
         GD::rpcClient->broadcastNodeEvent("", parameters->at(2)->structValue->at("topic")->stringValue, parameters->at(2)->structValue->at("data"), parameters->at(2)->structValue->at("retain")->booleanValue);
       } else if (parameters->size() >= 3 && parameters->at(1)->stringValue == "error") {
         GD::nodeBlueServer->broadcastError(parameters->at(2)->structValue->at("nodeId")->stringValue, parameters->at(2)->structValue->at("level")->integerValue, parameters->at(2)->structValue->at("message"));

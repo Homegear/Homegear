@@ -164,6 +164,13 @@ describe("@node-red/util/util", function() {
             var v2 = util.getMessageProperty({a:"foo"},"a");
             v2.should.eql("foo");
         });
+        it('retrieves a nested property', function() {
+            var v = util.getMessageProperty({a:"foo",b:{foo:1,bar:2}},"msg.b[msg.a]");
+            v.should.eql(1);
+            var v2 = util.getMessageProperty({a:"bar",b:{foo:1,bar:2}},"b[msg.a]");
+            v2.should.eql(2);
+        });
+
         it('should return undefined if property does not exist', function() {
             var v = util.getMessageProperty({a:"foo"},"msg.b");
             should.not.exist(v);
@@ -331,7 +338,18 @@ describe("@node-red/util/util", function() {
             msg.a[0].should.eql(1);
             msg.a[1].should.eql(3);
         })
-
+        it('handles nested message property references', function() {
+            var obj = {a:"foo",b:{}};
+            var result = util.setObjectProperty(obj,"b[msg.a]","bar");
+            result.should.be.true();
+            obj.b.should.have.property("foo","bar");
+        });
+        it('handles nested message property references', function() {
+            var obj = {a:"foo",b:{"foo":[0,0,0]}};
+            var result = util.setObjectProperty(obj,"b[msg.a][2]","bar");
+            result.should.be.true();
+            obj.b.foo.should.eql([0,0,"bar"])
+        });
     });
 
     describe('evaluateNodeProperty', function() {
@@ -459,12 +477,23 @@ describe("@node-red/util/util", function() {
             // console.log(result);
             result.should.eql(expected);
         }
-
-        function testInvalid(input) {
+        function testABCWithMessage(input,msg,expected) {
+            var result = util.normalisePropertyExpression(input,msg);
+            // console.log("+",input);
+            // console.log(result);
+            result.should.eql(expected);
+        }
+        function testInvalid(input,msg) {
             /*jshint immed: false */
             (function() {
-                util.normalisePropertyExpression(input);
+                util.normalisePropertyExpression(input,msg);
             }).should.throw();
+        }
+        function testToString(input,msg,expected) {
+            var result = util.normalisePropertyExpression(input,msg,true);
+            console.log("+",input);
+            console.log(result);
+            result.should.eql(expected);
         }
         it('pass a.b.c',function() { testABC('a.b.c',['a','b','c']); })
         it('pass a["b"]["c"]',function() { testABC('a["b"]["c"]',['a','b','c']); })
@@ -479,11 +508,24 @@ describe("@node-red/util/util", function() {
         it("pass 'a.b'[1]",function() { testABC("'a.b'[1]",['a.b',1]); })
         it("pass 'a.b'.c",function() { testABC("'a.b'.c",['a.b','c']); })
 
+        it("pass a[msg.b]",function() { testABC("a[msg.b]",["a",["msg","b"]]); })
+        it("pass a[msg[msg.b]]",function() { testABC("a[msg[msg.b]]",["a",["msg",["msg","b"]]]); })
+        it("pass a[msg.b]",function() { testABC("a[msg.b]",["a",["msg","b"]]); })
+        it("pass a[msg.b]",function() { testABC("a[msg.b]",["a",["msg","b"]]); })
+        it("pass a[msg['b]\"[']]",function() { testABC("a[msg['b]\"[']]",["a",["msg","b]\"["]]); })
+        it("pass a[msg['b][']]",function() { testABC("a[msg['b][']]",["a",["msg","b]["]]); })
+        it("pass b[msg.a][2]",function() { testABC("b[msg.a][2]",["b",["msg","a"],2])})
+
+        it("pass b[msg.a][2] (with message)",function() { testABCWithMessage("b[msg.a][2]",{a: "foo"},["b","foo",2])})
 
         it('pass a.$b.c',function() { testABC('a.$b.c',['a','$b','c']); })
         it('pass a["$b"].c',function() { testABC('a["$b"].c',['a','$b','c']); })
         it('pass a._b.c',function() { testABC('a._b.c',['a','_b','c']); })
         it('pass a["_b"].c',function() { testABC('a["_b"].c',['a','_b','c']); })
+
+        it("pass a['a.b[0]'].c",function() { testToString("a['a.b[0]'].c",null,'a["a.b[0]"]["c"]'); })
+        it("pass a.b.c",function() { testToString("a.b.c",null,'a["b"]["c"]'); })
+        it('pass a[msg.c][0]["fred"]',function() { testToString('a[msg.c][0]["fred"]',{c:"123"},'a["123"][0]["fred"]'); })
 
         it("fail a'b'.c",function() { testInvalid("a'b'.c"); })
         it("fail a['b'.c",function() { testInvalid("a['b'.c"); })
@@ -505,6 +547,12 @@ describe("@node-red/util/util", function() {
         it("fail a['']",function() { testInvalid("a['']"); })
         it("fail 'a.b'c",function() { testInvalid("'a.b'c"); })
         it("fail <blank>",function() { testInvalid("");})
+        it("fail a[b]",function() { testInvalid("a[b]"); })
+        it("fail a[msg.]",function() { testInvalid("a[msg.]"); })
+        it("fail a[msg[]",function() { testInvalid("a[msg[]"); })
+        it("fail a[msg.[]]",function() { testInvalid("a[msg.[]]"); })
+        it("fail a[msg['af]]",function() { testInvalid("a[msg['af]]"); })
+        it("fail b[msg.undefined][2] (with message)",function() { testInvalid("b[msg.undefined][2]",{})})
 
     });
 
@@ -720,6 +768,36 @@ describe("@node-red/util/util", function() {
             result.format.should.eql("string[10]");
             result.msg.should.eql('123456...');
         });
+
+        it('encodes Map', function() {
+            const m = new Map();
+            m.set("a",1);
+            m.set("b",2);
+            var msg = {msg:m};
+            var result = util.encodeObject(msg);
+            result.format.should.eql("map");
+            var resultJson = JSON.parse(result.msg);
+            resultJson.should.have.property("__enc__",true);
+            resultJson.should.have.property("type","map");
+            resultJson.should.have.property("data",{"a":1,"b":2});
+            resultJson.should.have.property("length",2)
+        });
+
+        it('encodes Set', function() {
+            const m = new Set();
+            m.add("a");
+            m.add("b");
+            var msg = {msg:m};
+            var result = util.encodeObject(msg);
+            result.format.should.eql("set[2]");
+            var resultJson = JSON.parse(result.msg);
+            resultJson.should.have.property("__enc__",true);
+            resultJson.should.have.property("type","set");
+            resultJson.should.have.property("data",["a","b"]);
+            resultJson.should.have.property("length",2)
+        });
+
+
         describe('encode object', function() {
             it('object', function() {
                 var msg = { msg:{"foo":"bar"} };
@@ -752,7 +830,34 @@ describe("@node-red/util/util", function() {
                 resultJson.b.should.have.property("__enc__", true);
                 resultJson.b.should.have.property("type", "undefined");
             });
-
+            it('object with Map property', function() {
+                const m = new Map();
+                m.set("a",1);
+                m.set("b",2);
+                var msg = {msg:{"aMap":m}};
+                var result = util.encodeObject(msg);
+                result.format.should.eql("Object");
+                var resultJson = JSON.parse(result.msg);
+                resultJson.should.have.property("aMap");
+                resultJson.aMap.should.have.property("__enc__",true);
+                resultJson.aMap.should.have.property("type","map");
+                resultJson.aMap.should.have.property("data",{"a":1,"b":2});
+                resultJson.aMap.should.have.property("length",2)
+            });
+            it('object with Set property', function() {
+                const m = new Set();
+                m.add("a");
+                m.add("b");
+                var msg = {msg:{"aSet":m}};
+                var result = util.encodeObject(msg);
+                result.format.should.eql("Object");
+                var resultJson = JSON.parse(result.msg);
+                resultJson.should.have.property("aSet");
+                resultJson.aSet.should.have.property("__enc__",true);
+                resultJson.aSet.should.have.property("type","set");
+                resultJson.aSet.should.have.property("data",["a","b"]);
+                resultJson.aSet.should.have.property("length",2)
+            });
             it('constructor of IncomingMessage', function() {
                 function IncomingMessage(){};
                 var msg = { msg:new IncomingMessage() };
@@ -983,4 +1088,5 @@ describe("@node-red/util/util", function() {
 
         });
     });
+
 });

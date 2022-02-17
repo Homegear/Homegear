@@ -117,7 +117,7 @@ void NodeManager::clearManagerModuleInfo() {
 
 NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::string &directory) {
   auto packageJsonPath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory).append("package.json");
-  if (!BaseLib::Io::fileExists(packageJsonPath)) return PManagerModuleInfo();
+  if (!BaseLib::Io::fileExists(packageJsonPath)) return {};
 
   auto managerModuleInfo = std::make_shared<ManagerModuleInfo>();
   managerModuleInfo->modulePath = GD::bl->settings.nodeBluePath().append("nodes/").append(directory);
@@ -127,7 +127,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
     packageJson = BaseLib::Rpc::JsonDecoder::decode(BaseLib::Io::getFileContent(packageJsonPath));
   } catch (const std::exception &ex) {
     GD::out.printError("Error decoding " + packageJsonPath + ". Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-    return PManagerModuleInfo();
+    return {};
   }
 
   managerModuleInfo->module = directory.substr(0, directory.size() - 1);
@@ -135,14 +135,14 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
   auto jsonIterator = packageJson->structValue->find("name");
   if (jsonIterator == packageJson->structValue->end() || jsonIterator->second->stringValue.empty()) {
     GD::out.printError("Error decoding " + packageJsonPath + ": Property \"name\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-    return PManagerModuleInfo();
+    return {};
   }
   managerModuleInfo->name = jsonIterator->second->stringValue;
 
   jsonIterator = packageJson->structValue->find("version");
   if (jsonIterator == packageJson->structValue->end() || jsonIterator->second->stringValue.empty()) {
     GD::out.printError("Error decoding " + packageJsonPath + ": Property \"version\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-    return PManagerModuleInfo();
+    return {};
   }
   managerModuleInfo->version = jsonIterator->second->stringValue;
 
@@ -151,16 +151,17 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
     jsonIterator = packageJson->structValue->find("node-red");
     if (jsonIterator == packageJson->structValue->end()) {
       GD::out.printError("Error decoding " + packageJsonPath + ": Property \"node-blue\" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.");
-      return PManagerModuleInfo();
+      return {};
     }
   }
 
   auto nodesJsonIterator = jsonIterator->second->structValue->find("nodes");
   if (nodesJsonIterator == jsonIterator->second->structValue->end()) {
     GD::out.printError("Error decoding " + packageJsonPath + R"(: Property "node-blue\nodes" is missing. Please fix the error in the JSON file otherwise the nodes in that directory won't work.)");
-    return PManagerModuleInfo();
+    return {};
   }
   auto nodesJson = nodesJsonIterator->second;
+  managerModuleInfo->nodesOrdered.reserve(nodesJson->structValue->size());
 
   auto localIterator = jsonIterator->second->structValue->find("local");
   if (localIterator != jsonIterator->second->structValue->end()) managerModuleInfo->local = localIterator->second->booleanValue;
@@ -168,13 +169,15 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
   auto maxThreadCountsJsonIterator = jsonIterator->second->structValue->find("maxThreadCounts");
   auto maxThreadCountsJson = (maxThreadCountsJsonIterator == jsonIterator->second->structValue->end() ? std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct) : maxThreadCountsJsonIterator->second);
 
-  for (auto &node : *nodesJson->structValue) {
+  for (auto &propertyName : *nodesJson->arrayValue) {
     try {
+      auto node = nodesJson->structValue->find(propertyName->stringValue);
+      if (node == nodesJson->structValue->end()) continue;
       auto nodeInfo = std::make_shared<NodeInfo>();
-      nodeInfo->type = node.first; //Node type and node set are always the same in Homegear. For Node-RED they can differ (see .js section below)
-      nodeInfo->nodeSet = node.first;
+      nodeInfo->type = node->first; //Node type and node set are always the same in Homegear. For Node-RED they can differ (see .js section below)
+      nodeInfo->nodeSet = node->first;
       nodeInfo->isUiNode = (directory == "ui/");
-      auto filename = node.second->stringValue;
+      auto filename = node->second->stringValue;
       //Possible file extensions are: ".so", ".s.hgn", ".s.php", ".hgn", ".php" and ".py"
       auto dotPosition = filename.find_first_of('.'); //Don't use find_last_of (because e.g. for .s.php)!
       if (dotPosition == std::string::npos) continue;
@@ -203,25 +206,25 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
 
       if (extension == ".so") {
         nodeInfo->codeType = NodeCodeType::cpp;
-        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node->first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError(R"(Error: It is mandatory for C++ nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for C++ nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node->first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
       } else if (extension == ".s.php") {
         nodeInfo->codeType = NodeCodeType::statefulPhp;
-        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node->first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError(R"(Error: It is mandatory for stateful PHP nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for stateful PHP nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node->first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
       } else if (extension == ".s.hgn") {
         nodeInfo->codeType = NodeCodeType::statefulPhpEncrypted;
-        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node.first);
+        auto maxThreadCountsIterator = maxThreadCountsJson->structValue->find(node->first);
         if (maxThreadCountsIterator == maxThreadCountsJson->structValue->end()) {
-          GD::out.printError(R"(Error: It is mandatory for stateful PHP nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node.first + "\" in " + packageJsonPath);
+          GD::out.printError(R"(Error: It is mandatory for stateful PHP nodes to define "maxThreadCounts" for every node in package.json. No entry was found for ")" + node->first + "\" in " + packageJsonPath);
           continue;
         }
         nodeInfo->maxThreadCount = maxThreadCountsIterator->second->integerValue;
@@ -277,6 +280,7 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
                   GD::out.printError("Error: Node type \"" + nodeInfoNode->type + "\" is used more than once. That is not allowed.");
                 } else {
                   managerModuleInfo->nodes.emplace(nodeInfoNode->type, nodeInfoNode);
+                  managerModuleInfo->nodesOrdered.push_back(nodeInfoNode->type);
                   managerModuleInfo->nodesByFilePrefix.emplace(nodeInfoNode->filePrefix, nodeInfoNode);
                   _managerModuleInfoByNodeType.emplace(nodeInfoNode->type, managerModuleInfo);
                   _nodeInfoByNodeType.emplace(nodeInfoNode->type, nodeInfoNode);
@@ -299,12 +303,13 @@ NodeManager::PManagerModuleInfo NodeManager::fillManagerModuleInfo(const std::st
         nodeInfo->codeType = NodeCodeType::none;
       } else continue; //Unsupported type
 
-      if (_managerModuleInfoByNodeType.find(node.first) != _managerModuleInfoByNodeType.end()) {
-        GD::out.printError("Error: Node type \"" + node.first + "\" is used more than once. That is not allowed.");
+      if (_managerModuleInfoByNodeType.find(node->first) != _managerModuleInfoByNodeType.end()) {
+        GD::out.printError("Error: Node type \"" + node->first + "\" is used more than once. That is not allowed.");
         continue;
       }
 
       managerModuleInfo->nodes.emplace(nodeInfo->type, nodeInfo);
+      managerModuleInfo->nodesOrdered.push_back(nodeInfo->type);
       managerModuleInfo->nodesByFilePrefix.emplace(nodeInfo->filePrefix, nodeInfo);
       _managerModuleInfoByNodeType.emplace(nodeInfo->type, managerModuleInfo);
       _nodeInfoByNodeType.emplace(nodeInfo->type, nodeInfo);
@@ -402,12 +407,15 @@ BaseLib::PVariable NodeManager::getNodesAddedInfo(const std::string &module) {
 
     auto moduleInfoArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
     moduleInfoArray->arrayValue->reserve(moduleInfo->nodes.size());
-    for (auto &node : moduleInfo->nodes) {
+    for (auto &nodeType : moduleInfo->nodesOrdered) {
+      auto nodeIterator = moduleInfo->nodes.find(nodeType);
+      if (nodeIterator == moduleInfo->nodes.end()) continue;
+      auto &node = nodeIterator->second;
       auto nodeListEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node.second->nodeSet));
-      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node.second->type));
+      nodeListEntry->structValue->emplace("id", std::make_shared<BaseLib::Variable>(moduleInfo->module + "/" + node->nodeSet));
+      nodeListEntry->structValue->emplace("name", std::make_shared<BaseLib::Variable>(node->type));
       auto typesEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-      typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(node.first));
+      typesEntry->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(nodeIterator->first));
       nodeListEntry->structValue->emplace("types", typesEntry);
       nodeListEntry->structValue->emplace("added", std::make_shared<BaseLib::Variable>(true));
       nodeListEntry->structValue->emplace("enabled", std::make_shared<BaseLib::Variable>(true));
@@ -528,17 +536,20 @@ std::string NodeManager::getFrontendCode() {
         if (code.size() + content.size() > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
         code.append(content);
       } else {
-        for (auto &node : module.second->nodes) {
+        for (auto &nodeType : module.second->nodesOrdered) {
+          auto nodeIterator = module.second->nodes.find(nodeType);
+          if (nodeIterator == module.second->nodes.end()) continue;
+          auto &node = nodeIterator->second;
           content.clear();
-          if (BaseLib::Io::fileExists(module.second->codeDirectory + node.second->filePrefix + ".hni")) {
-            content = BaseLib::Io::getFileContent(module.second->codeDirectory + node.second->filePrefix + ".hni");
-          } else if (BaseLib::Io::fileExists(module.second->codeDirectory + node.second->filePrefix + ".html")) {
-            content = BaseLib::Io::getFileContent(module.second->codeDirectory + node.second->filePrefix + ".html");
+          if (BaseLib::Io::fileExists(module.second->codeDirectory + node->filePrefix + ".hni")) {
+            content = BaseLib::Io::getFileContent(module.second->codeDirectory + node->filePrefix + ".hni");
+          } else if (BaseLib::Io::fileExists(module.second->codeDirectory + node->filePrefix + ".html")) {
+            content = BaseLib::Io::getFileContent(module.second->codeDirectory + node->filePrefix + ".html");
           }
 
           if (code.size() + content.size() + 1024 > code.capacity()) code.reserve(code.size() + content.size() + (1 * 1024 * 1024));
           //The following line helps the frontend to split module code. This is essential on HTML errors (e. g. missing closing tags).
-          code.append("<!-- --- [red-module:" + module.second->module + "/" + node.second->nodeSet + "] --- -->\r\n");
+          code.append("<!-- --- [red-module:" + module.second->module + "/" + node->nodeSet + "] --- -->\r\n");
           code.append(content);
         }
       }
@@ -547,19 +558,19 @@ std::string NodeManager::getFrontendCode() {
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::string();
+  return {};
 }
 
-std::string NodeManager::getFrontendCode(const std::string &type) {
+std::string NodeManager::getFrontendCode(const std::string &module, const std::string &filePrefix) {
   try {
     std::string code;
     code.reserve(1 * 1024 * 1024);
     std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
-    auto moduleInfoIterator = _managerModuleInfoByNodeType.find(type);
-    if (moduleInfoIterator == _managerModuleInfoByNodeType.end()) return "";
+    auto moduleInfoIterator = _managerModuleInfo.find(module);
+    if (moduleInfoIterator == _managerModuleInfo.end()) return "";
 
-    auto nodeInfoIterator = moduleInfoIterator->second->nodes.find(type);
-    if (nodeInfoIterator == moduleInfoIterator->second->nodes.end()) return "";
+    auto nodeInfoIterator = moduleInfoIterator->second->nodesByFilePrefix.find(filePrefix);
+    if (nodeInfoIterator == moduleInfoIterator->second->nodesByFilePrefix.end()) return "";
     auto node = nodeInfoIterator->second;
 
     std::string content;
@@ -577,7 +588,7 @@ std::string NodeManager::getFrontendCode(const std::string &type) {
   } catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::string();
+  return {};
 }
 
 NodeManager::NodeCodeType NodeManager::getNodeCodeType(const std::string &type) {
@@ -628,11 +639,18 @@ BaseLib::PVariable NodeManager::getNodeCredentialTypes(const std::string &type) 
   return std::make_shared<BaseLib::Variable>();
 }
 
-void NodeManager::registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes) {
+void NodeManager::registerCredentialTypes(const std::string &type, const BaseLib::PVariable &credentialTypes, bool fromIpcServer) {
   try {
     auto nodeInfoIterator = _nodeInfoByNodeType.find(type);
     if (nodeInfoIterator == _nodeInfoByNodeType.end()) {
+      if (fromIpcServer && (type == "http proxy" || type == "http request")) return; //Ignore
       GD::out.printWarning("Warning: Could not register credential types. Node type " + type + " is unknown.");
+      return;
+    }
+
+    if (fromIpcServer && nodeInfoIterator->second->codeType != NodeCodeType::javascript) {
+      //Ignore registrations from Node-PINK core nodes as core node registrations are handled by Node-BLUE.
+      GD::out.printDebug("Debug: Not registering credential types for Node-PINK type " + type + " as this type already exists in Node-BLUE.");
       return;
     }
 
