@@ -1679,7 +1679,7 @@ BaseLib::PVariable IpcServer::setNodeCredentialTypes(PIpcClientData &clientData,
     if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
     if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
 
-    GD::nodeBlueServer->setNodeCredentialTypes(parameters->at(0)->stringValue, parameters->at(1));
+    GD::nodeBlueServer->setNodeCredentialTypes(parameters->at(0)->stringValue, parameters->at(1), true);
 
     return std::make_shared<BaseLib::Variable>();
   }

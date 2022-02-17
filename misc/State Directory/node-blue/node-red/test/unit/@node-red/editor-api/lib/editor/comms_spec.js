@@ -18,7 +18,6 @@ var should = require("should");
 var sinon = require("sinon");
 const stoppable = require('stoppable');
 
-var when = require("when");
 var http = require('http');
 var express = require('express');
 var app = express();
@@ -29,7 +28,7 @@ var NR_TEST_UTILS = require("nr-test-utils");
 var comms = NR_TEST_UTILS.require("@node-red/editor-api/lib/editor/comms");
 var Users = NR_TEST_UTILS.require("@node-red/editor-api/lib/auth/users");
 var Tokens = NR_TEST_UTILS.require("@node-red/editor-api/lib/auth/tokens");
-
+var Strategies = NR_TEST_UTILS.require("@node-red/editor-api/lib/auth/strategies");
 var address = '127.0.0.1';
 var listenPort = 0; // use ephemeral port
 
@@ -59,7 +58,7 @@ describe("api/editor/comms", function() {
         var url;
         var port;
         before(function(done) {
-            sinon.stub(Users,"default",function() { return when.resolve(null);});
+            sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -114,7 +113,6 @@ describe("api/editor/comms", function() {
                 connections[0].send('topic3', 'correct');
             });
             ws.on('message', function(msg) {
-                console.log(msg);
                 msg.should.equal('[{"topic":"topic3","data":"correct"}]');
                 ws.close();
                 done();
@@ -127,7 +125,7 @@ describe("api/editor/comms", function() {
         var url;
         var port;
         before(function(done) {
-            sinon.stub(Users,"default",function() { return Promise.resolve(null);});
+            sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {disableEditor:true}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -165,7 +163,7 @@ describe("api/editor/comms", function() {
         var url;
         var port;
         before(function(done) {
-            sinon.stub(Users,"default",function() { return when.resolve(null);});
+            sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {httpAdminRoot:"/adminPath"}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -203,7 +201,7 @@ describe("api/editor/comms", function() {
         var url;
         var port;
         before(function(done) {
-            sinon.stub(Users,"default",function() { return when.resolve(null);});
+            sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {httpAdminRoot:"/adminPath/"}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -241,7 +239,7 @@ describe("api/editor/comms", function() {
         var url;
         var port;
         before(function(done) {
-            sinon.stub(Users,"default",function() { return when.resolve(null);});
+            sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {httpAdminRoot:"adminPath"}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -279,7 +277,7 @@ describe("api/editor/comms", function() {
         var url;
         var port;
         before(function(done) {
-            sinon.stub(Users,"default",function() { return when.resolve(null);});
+            sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {webSocketKeepAliveTime: 100}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -344,33 +342,49 @@ describe("api/editor/comms", function() {
         var getUser;
         var getToken;
         var getUserToken;
+        var getUserTokenHeader;
+        var authenticateUserToken;
+        var onSessionExpiry;
+        var onSessionExpiryCallback;
+
         before(function(done) {
-            getDefaultUser = sinon.stub(Users,"default",function() { return when.resolve(null);});
-            getUser = sinon.stub(Users,"get", function(username) {
+            getDefaultUser = sinon.stub(Users,"default").callsFake(function() { return Promise.resolve(null);});
+            getUser = sinon.stub(Users,"get").callsFake(function(username) {
                 if (username == "fred") {
-                    return when.resolve({permissions:"read"});
+                    return Promise.resolve({permissions:"read"});
                 } else {
-                    return when.resolve(null);
+                    return Promise.resolve(null);
                 }
             });
-            getUserToken = sinon.stub(Users,"tokens", function(token) {
+            getUserToken = sinon.stub(Users,"tokens").callsFake(function(token) {
                 if (token == "abcde") {
-                    return when.resolve({user:"wilma", permissions:"*"})
+                    return Promise.resolve({user:"wilma", permissions:"*"})
                 } else {
-                    return when.resolve(null);
+                    return Promise.resolve(null);
                 }
             });
-            getToken = sinon.stub(Tokens,"get",function(token) {
+            getToken = sinon.stub(Tokens,"get").callsFake(function(token) {
                 if (token == "1234") {
-                    return when.resolve({user:"fred",scope:["*"]});
+                    return Promise.resolve({user:"fred",scope:["*"]});
                 } else if (token == "5678") {
-                    return when.resolve({user:"barney",scope:["*"]});
+                    return Promise.resolve({user:"barney",scope:["*"]});
                 } else {
-                    return when.resolve(null);
+                    return Promise.resolve(null);
                 }
             });
-
-
+            getUserTokenHeader = sinon.stub(Users,"tokenHeader").callsFake(function() {
+                return "custom-header"
+            })
+            authenticateUserToken = sinon.stub(Strategies, "authenticateUserToken").callsFake(async function(req) {
+                var token = req.headers['custom-header'];
+                if (token === "knock-knock") {
+                    return {user:"fred",scope:["*"]}
+                }
+                throw new Error("Invalid user");
+            })
+            onSessionExpiry = sinon.stub(Tokens,"onSessionExpiry").callsFake(function(cb) {
+                onSessionExpiryCallback = cb;
+            });
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {adminAuth:{}}, {comms: mockComms});
             server.listen(listenPort, address);
@@ -386,6 +400,9 @@ describe("api/editor/comms", function() {
             getUser.restore();
             getToken.restore();
             getUserToken.restore();
+            getUserTokenHeader.restore();
+            authenticateUserToken.restore();
+            onSessionExpiry.restore();
             comms.stop();
             server.stop(done);
         });
@@ -423,6 +440,32 @@ describe("api/editor/comms", function() {
             ws.on('close', function() {
                 try {
                     received.should.equal(2);
+                    done();
+                } catch(err) {
+                    done(err);
+                }
+            });
+        });
+        it('allows connections that do authenticate - header-provided-token',function(done) {
+            var ws = new WebSocket(url,{
+                headers: { "custom-header": "knock-knock" }
+            });
+            var received = 0;
+            ws.on('open', function() {
+                ws.send('{"subscribe":"foo"}');
+                connections.should.have.length(1);
+                connections[0].send('foo', 'correct');
+            });
+            ws.on('message', function(msg) {
+                received++;
+                if (received == 1) {
+                    msg.should.equal('[{"topic":"foo","data":"correct"}]');
+                    ws.close();
+                }
+            });
+            ws.on('close', function() {
+                try {
+                    received.should.equal(1);
                     done();
                 } catch(err) {
                     done(err);
@@ -476,6 +519,50 @@ describe("api/editor/comms", function() {
                 done();
             });
         });
+        it('rejects connections for invalid token - header-provided-token',function(done) {
+            var ws = new WebSocket(url,{
+                headers: { "custom-header": "bad token" }
+            });
+            var received = 0;
+            ws.on('open', function() {
+                ws.send('{"subscribe":"foo"}');
+            });
+            ws.on('error', function() {
+                done();
+            })
+        });
+
+        it("expires websocket sessions", function(done) {
+            var ws = new WebSocket(url);
+            var received = 0;
+            ws.on('open', function() {
+                ws.send('{"auth":"1234"}');
+            });
+            ws.on('message', function(msg) {
+                received++;
+                if (received == 3) {
+                    msg.should.equal('{"auth":"fail"}');
+                } else if (received == 1) {
+                    msg.should.equal('{"auth":"ok"}');
+                    ws.send('{"subscribe":"foo"}');
+                    connections[0].send('foo', 'correct');
+                } else {
+                    msg.should.equal('[{"topic":"foo","data":"correct"}]');
+                    setTimeout(function() {
+                        onSessionExpiryCallback({accessToken:"1234"})
+                    },50);
+                }
+            });
+
+            ws.on('close', function() {
+                try {
+                    received.should.equal(3);
+                    done();
+                } catch(err) {
+                    done(err);
+                }
+            });
+        })
     });
 
     describe('authentication required, anonymous enabled',function() {
@@ -484,7 +571,7 @@ describe("api/editor/comms", function() {
         var port;
         var getDefaultUser;
         before(function(done) {
-            getDefaultUser = sinon.stub(Users,"default",function() { return when.resolve({permissions:"read"});});
+            getDefaultUser = sinon.stub(Users,"default").callsFake(function() { return Promise.resolve({permissions:"read"});});
             server = stoppable(http.createServer(function(req,res){app(req,res)}));
             comms.init(server, {adminAuth:{}}, {comms: mockComms});
             server.listen(listenPort, address);

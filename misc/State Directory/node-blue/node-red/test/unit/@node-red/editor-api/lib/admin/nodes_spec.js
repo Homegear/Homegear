@@ -19,7 +19,6 @@ var request = require('supertest');
 var express = require('express');
 var bodyParser = require('body-parser');
 var sinon = require('sinon');
-var when = require('when');
 
 var NR_TEST_UTILS = require("nr-test-utils");
 
@@ -42,7 +41,7 @@ describe("api/admin/nodes", function() {
         app.put(/\/nodes\/((@[^\/]+\/)?[^\/]+)\/([^\/]+)$/,nodes.putSet);
         app.get("/getIcons",nodes.getIcons);
         app.delete(/\/nodes\/((@[^\/]+\/)?[^\/]+)$/,nodes.delete);
-        sinon.stub(apiUtil,"determineLangFromHeaders", function() {
+        sinon.stub(apiUtil,"determineLangFromHeaders").callsFake(function() {
             return "en-US";
         });
     });

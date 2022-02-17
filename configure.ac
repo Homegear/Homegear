@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT(homegear, m4_esyscmd_s([./getVersion.sh]), sathya@laufers.net)
+AC_INIT(homegear, m4_esyscmd_s([/bin/sh getVersion.sh]), sathya@laufers.net)
 AC_CONFIG_AUX_DIR(cfg)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/main.cpp])
@@ -73,13 +73,13 @@ AC_CHECK_LIB([curl], [curl_easy_send], [AM_CONDITIONAL(HAVE_CURL, true)], [AM_CO
 AC_CHECK_HEADERS([php8-homegear/main/php_config.h], [AM_CONDITIONAL(HAVE_PHP_HEADERS, true)], [AM_CONDITIONAL(HAVE_PHP_HEADERS, false)])
 AC_CHECK_HEADERS([enchant-2/enchant.h], [AM_CONDITIONAL(HAVE_ENCHANT2_HEADERS, true)], [AM_CONDITIONAL(HAVE_ENCHANT2_HEADERS, false)])
 
-AC_DEFINE_UNQUOTED([LIBHOMEGEARNODE_VERSION], [`./getVersionNodeLib.sh`], [Define libhomegear-node version])
-AC_DEFINE_UNQUOTED([LIBHOMEGEARIPC_VERSION], [`./getVersionIpcLib.sh`], [Define libhomegear-ipc version])
+AC_DEFINE_UNQUOTED([LIBHOMEGEARNODE_VERSION], [`/bin/sh getVersionNodeLib.sh`], [Define libhomegear-node version])
+AC_DEFINE_UNQUOTED([LIBHOMEGEARIPC_VERSION], [`/bin/sh getVersionIpcLib.sh`], [Define libhomegear-ipc version])
 
-AC_DEFINE_UNQUOTED([GITCOMMITSHABASE], [`./getGitCommitBase.sh`], [Define git commit SHA of libhomegear-base])
-AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`./getGitCommitHomegear.sh`], [Define git commit SHA of Homegear])
-AC_DEFINE_UNQUOTED([GITBRANCHBASE], [`./getGitBranchBase.sh`], [Define git branch of libhomegear-base])
-AC_DEFINE_UNQUOTED([GITBRANCHHOMEGEAR], [`./getGitBranchHomegear.sh`], [Define git branch of Homegear])
+AC_DEFINE_UNQUOTED([GITCOMMITSHABASE], [`/bin/sh getGitCommitBase.sh`], [Define git commit SHA of libhomegear-base])
+AC_DEFINE_UNQUOTED([GITCOMMITSHAHOMEGEAR], [`/bin/sh getGitCommitHomegear.sh`], [Define git commit SHA of Homegear])
+AC_DEFINE_UNQUOTED([GITBRANCHBASE], [`/bin/sh getGitBranchBase.sh`], [Define git branch of libhomegear-base])
+AC_DEFINE_UNQUOTED([GITBRANCHHOMEGEAR], [`/bin/sh getGitBranchHomegear.sh`], [Define git branch of Homegear])
 
 AC_ARG_WITH([scriptengine], [AS_HELP_STRING([--without-scriptengine], [Compile without script engine (removes the requirement for PHP)])], [with_scriptengine=no], [])
 AS_IF([test "x$with_scriptengine" = "xno"], [
