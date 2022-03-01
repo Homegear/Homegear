@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
         <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-                <device id="VirtualPumpingStation">
-                        <description>VirtualPumpingStation</description>
-                        <typeNumber>0xF014</typeNumber>
+                <device id="VirtualElevator">
+                        <description>VirtualElevator</description>
+                        <typeNumber>0xF018</typeNumber>
                 </device>
         </supportedDevices>
         <properties/>
@@ -15,7 +15,7 @@
                         <configParameters>config</configParameters>
                         <variables>maint_ch0_values</variables>
                 </function>
-                <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualPumpingStation">
+                <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualElevator">
                         <variables>custom_ch1_values</variables>
                 </function>
         </functions>
@@ -114,36 +114,6 @@
                                 </physicalNone>
                         </parameter>
                         <parameter id="ALARM">
-                                <properties>
-                                        <readable>true</readable>
-                                        <writeable>true</writeable>
-                                </properties>
-                                <logicalBoolean/>
-                                <physicalNone>
-                                        <operationType>store</operationType>
-                                </physicalNone>
-                        </parameter>
-                        <parameter id="FLOOD_ALARM">
-                                <properties>
-                                        <readable>true</readable>
-                                        <writeable>true</writeable>
-                                </properties>
-                                <logicalBoolean/>
-                                <physicalNone>
-                                        <operationType>store</operationType>
-                                </physicalNone>
-                        </parameter>
-                        <parameter id="PUMP_1_FAULT">
-                                <properties>
-                                        <readable>true</readable>
-                                        <writeable>true</writeable>
-                                </properties>
-                                <logicalBoolean/>
-                                <physicalNone>
-                                        <operationType>store</operationType>
-                                </physicalNone>
-                        </parameter>
-                        <parameter id="PUMP_2_FAULT">
                                 <properties>
                                         <readable>true</readable>
                                         <writeable>true</writeable>

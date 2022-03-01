@@ -103,6 +103,26 @@
                                         <operationType>store</operationType>
                                 </physicalNone>
                         </parameter>
+                        <parameter id="COLLECTIVE_ALARM">
+                                <properties>
+                                        <readable>true</readable>
+                                        <writeable>true</writeable>
+                                </properties>
+                                <logicalBoolean/>
+                                <physicalNone>
+                                        <operationType>store</operationType>
+                                </physicalNone>
+                        </parameter>
+                        <parameter id="ALARM">
+                                <properties>
+                                        <readable>true</readable>
+                                        <writeable>true</writeable>
+                                </properties>
+                                <logicalBoolean/>
+                                <physicalNone>
+                                        <operationType>store</operationType>
+                                </physicalNone>
+                        </parameter>
                 </variables>
         </parameterGroups>
 </homegearDevice>

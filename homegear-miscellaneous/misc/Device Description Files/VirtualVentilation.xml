@@ -36,6 +36,16 @@
             </parameter>
         </variables>
         <variables id="custom_ch1_values">
+            <parameter id="ACTIVE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
             <parameter id="FAULT">
                 <properties>
                     <readable>true</readable>
@@ -48,6 +58,28 @@
                 </physicalNone>
             </parameter>
             <parameter id="COLLECTIVE_FAULT">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="ALARM">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="COLLECTIVE_ALARM">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -133,6 +165,28 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
+            <parameter id="FIRE_DAMPER_COLLECTIVE_FAULT">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="FIRE_DAMPER_STATUS">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
             <parameter id="CONO_SYSTEM_FAULT">
                 <properties>
                     <readable>true</readable>
@@ -145,6 +199,17 @@
                 </physicalNone>
             </parameter>
             <parameter id="FIRE_ALARM">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+           <parameter id="FILTER_ALARM">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>

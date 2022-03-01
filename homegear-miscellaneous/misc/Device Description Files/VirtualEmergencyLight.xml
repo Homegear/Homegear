@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
         <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-                <device id="VirtualPumpingStation">
-                        <description>VirtualPumpingStation</description>
-                        <typeNumber>0xF014</typeNumber>
+                <device id="VirtualEmergencyLight">
+                        <description>VirtualEmergencyLight</description>
+                        <typeNumber>0xF020</typeNumber>
                 </device>
         </supportedDevices>
         <properties/>
@@ -15,7 +15,7 @@
                         <configParameters>config</configParameters>
                         <variables>maint_ch0_values</variables>
                 </function>
-                <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualPumpingStation">
+                <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualEmergencyLight">
                         <variables>custom_ch1_values</variables>
                 </function>
         </functions>
@@ -123,7 +123,7 @@
                                         <operationType>store</operationType>
                                 </physicalNone>
                         </parameter>
-                        <parameter id="FLOOD_ALARM">
+                        <parameter id="BATTERY_OPERATION">
                                 <properties>
                                         <readable>true</readable>
                                         <writeable>true</writeable>
@@ -133,7 +133,7 @@
                                         <operationType>store</operationType>
                                 </physicalNone>
                         </parameter>
-                        <parameter id="PUMP_1_FAULT">
+                        <parameter id="EMERGENCY_OPERATION">
                                 <properties>
                                         <readable>true</readable>
                                         <writeable>true</writeable>
@@ -143,7 +143,27 @@
                                         <operationType>store</operationType>
                                 </physicalNone>
                         </parameter>
-                        <parameter id="PUMP_2_FAULT">
+                        <parameter id="CHARGER_FAULT">
+                                <properties>
+                                        <readable>true</readable>
+                                        <writeable>true</writeable>
+                                </properties>
+                                <logicalBoolean/>
+                                <physicalNone>
+                                        <operationType>store</operationType>
+                                </physicalNone>
+                        </parameter>
+                        <parameter id="MAIN_POWER_WATCHDOG_OK">
+                                <properties>
+                                        <readable>true</readable>
+                                        <writeable>true</writeable>
+                                </properties>
+                                <logicalBoolean/>
+                                <physicalNone>
+                                        <operationType>store</operationType>
+                                </physicalNone>
+                        </parameter>
+                        <parameter id="VENTILATOR_ACTIVE">
                                 <properties>
                                         <readable>true</readable>
                                         <writeable>true</writeable>

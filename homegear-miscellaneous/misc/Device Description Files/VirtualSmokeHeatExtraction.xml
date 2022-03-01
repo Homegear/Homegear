@@ -123,6 +123,26 @@
                                         <operationType>store</operationType>
                                 </physicalNone>
                         </parameter>
+					    <parameter id="OPEN">
+                                <properties>
+                                        <readable>true</readable>
+                                        <writeable>true</writeable>
+                                </properties>
+                                <logicalBoolean/>
+                                <physicalNone>
+                                        <operationType>store</operationType>
+                                </physicalNone>
+                        </parameter>
+					    <parameter id="CLOSE">
+                                <properties>
+                                        <readable>true</readable>
+                                        <writeable>true</writeable>
+                                </properties>
+                                <logicalBoolean/>
+                                <physicalNone>
+                                        <operationType>store</operationType>
+                                </physicalNone>
+                        </parameter>
                 </variables>
         </parameterGroups>
 </homegearDevice>
