@@ -683,11 +683,17 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
     if (valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return Variable::createError(-5, "Unknown parameter.");
     PParameter rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
     if (!rpcParameter) return Variable::createError(-5, "Unknown parameter.");
-    if (rpcParameter->service) {
+    if (rpcParameter->service || rpcParameter->serviceInverted) {
+      uint8_t serviceValue = 0;
+      if (value->type == VariableType::tBoolean) {
+        serviceValue = rpcParameter->serviceInverted ? !value->booleanValue : value->booleanValue;
+      } else {
+        serviceValue = rpcParameter->serviceInverted ? !value->integerValue : value->integerValue;
+      }
       if (channel == 0 && value->type == VariableType::tBoolean) {
-        if (serviceMessages->set(valueKey, value->booleanValue)) return std::make_shared<BaseLib::Variable>();
-      } else if (value->type == VariableType::tBoolean) serviceMessages->set(valueKey, value->booleanValue, channel);
-      else if (value->type == VariableType::tInteger || value->type == VariableType::tInteger64) serviceMessages->set(valueKey, value->integerValue, channel);
+        if (serviceMessages->set(valueKey, serviceValue)) return std::make_shared<BaseLib::Variable>();
+      } else if (value->type == VariableType::tBoolean) serviceMessages->set(valueKey, serviceValue, channel);
+      else if (value->type == VariableType::tInteger || value->type == VariableType::tInteger64) serviceMessages->set(valueKey, serviceValue, channel);
     }
     if (rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
     if (!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && clientInfo->addon && clientInfo->peerId == _peerID)) return Variable::createError(-6, "parameter is read only");
