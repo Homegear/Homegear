@@ -404,9 +404,8 @@ std::string MiscPeer::printConfig() {
     std::ostringstream stringStream;
     stringStream << "MASTER" << std::endl;
     stringStream << "{" << std::endl;
-    for (std::unordered_map < uint32_t, std::unordered_map < std::string, BaseLib::Systems::RpcConfigurationParameter >> ::iterator i = configCentral.begin(); i != configCentral.end();
-    ++i)
-    {
+    for (std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter >>::iterator i = configCentral.begin(); i != configCentral.end();
+         ++i) {
       stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
       stringStream << "\t{" << std::endl;
       for (std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j) {
@@ -414,7 +413,7 @@ std::string MiscPeer::printConfig() {
         if (!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
         std::vector<uint8_t> parameterData = j->second.getBinaryData();
         for (std::vector<uint8_t>::const_iterator k = parameterData.begin(); k != parameterData.end(); ++k) {
-          stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t) * k << " ";
+          stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
         }
         stringStream << std::endl;
       }
@@ -424,9 +423,8 @@ std::string MiscPeer::printConfig() {
 
     stringStream << "VALUES" << std::endl;
     stringStream << "{" << std::endl;
-    for (std::unordered_map < uint32_t, std::unordered_map < std::string, BaseLib::Systems::RpcConfigurationParameter >> ::iterator i = valuesCentral.begin(); i != valuesCentral.end();
-    ++i)
-    {
+    for (std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter >>::iterator i = valuesCentral.begin(); i != valuesCentral.end();
+         ++i) {
       stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
       stringStream << "\t{" << std::endl;
       for (std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j) {
@@ -434,7 +432,7 @@ std::string MiscPeer::printConfig() {
         if (!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
         std::vector<uint8_t> parameterData = j->second.getBinaryData();
         for (std::vector<uint8_t>::const_iterator k = parameterData.begin(); k != parameterData.end(); ++k) {
-          stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t) * k << " ";
+          stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
         }
         stringStream << std::endl;
       }
@@ -620,10 +618,10 @@ PVariable MiscPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t chan
     if (!central) return Variable::createError(-32500, "Could not get central.");
 
     if (type == ParameterGroup::Type::Enum::config) {
-      std::map < int32_t, std::map < int32_t, std::vector < uint8_t>>> changedParameters;
+      std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> changedParameters;
       //allParameters is necessary to temporarily store all values. It is used to set changedParameters.
       //This is necessary when there are multiple variables per index and not all of them are changed.
-      std::map < int32_t, std::map < int32_t, std::vector < uint8_t>>> allParameters;
+      std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> allParameters;
       for (Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i) {
         if (i->first.empty() || !i->second) continue;
         std::vector<uint8_t> value;
@@ -688,7 +686,8 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
     if (rpcParameter->service) {
       if (channel == 0 && value->type == VariableType::tBoolean) {
         if (serviceMessages->set(valueKey, value->booleanValue)) return std::make_shared<BaseLib::Variable>();
-      } else if (value->type == VariableType::tInteger) serviceMessages->set(valueKey, value->integerValue, channel);
+      } else if (value->type == VariableType::tBoolean) serviceMessages->set(valueKey, value->booleanValue, channel);
+      else if (value->type == VariableType::tInteger || value->type == VariableType::tInteger64) serviceMessages->set(valueKey, value->integerValue, channel);
     }
     if (rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
     if (!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && clientInfo->addon && clientInfo->peerId == _peerID)) return Variable::createError(-6, "parameter is read only");
