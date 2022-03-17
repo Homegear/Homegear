@@ -68,7 +68,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="ALARM">
+            <parameter id="ALARM">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -94,7 +94,6 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -126,7 +125,6 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -180,7 +178,6 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -209,7 +206,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-           <parameter id="FILTER_ALARM">
+            <parameter id="FILTER_ALARM">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
