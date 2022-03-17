@@ -78,6 +78,7 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
+                    <serviceInverted>true</serviceInverted>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
