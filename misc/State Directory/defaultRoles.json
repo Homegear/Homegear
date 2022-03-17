@@ -1850,5 +1850,12 @@
             "en-US": "Barometric pressure",
             "de-DE": "Luftdruck"
         }
+    },
+    {
+        "id": "02.00.00",
+        "translations": {
+            "en-US": "ibs home client",
+            "de-DE": "ibs-home-Client"
+        }
     }
 ]
