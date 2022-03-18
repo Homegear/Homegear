@@ -1854,8 +1854,22 @@
     {
         "id": "02.00.00",
         "translations": {
+            "en-US": "Digital infrastructure",
+            "de-DE": "Digitale Infrastruktur"
+        }
+    },
+    {
+        "id": "02.01.00",
+        "translations": {
             "en-US": "ibs home client",
             "de-DE": "ibs-home-Client"
+        }
+    },
+    {
+        "id": "02.02.00",
+        "translations": {
+            "en-US": "ibs home communication module",
+            "de-DE": "ibs-home-Kommunikationsmodul"
         }
     }
 ]
