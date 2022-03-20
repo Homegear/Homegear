@@ -8,4 +8,7 @@ l10n.common.serviceMessage.alarm: "Der Gerätealarm wurde ausgelöst"
 l10n.common.serviceMessage.active: "Das Gerät ist inaktiv"
 l10n.common.serviceMessage.fault: "Das Gerät hat eine Störung"
 l10n.common.serviceMessage.collective_fault: "Eine Sammelstörung ist aufgetreten"
+l10n.common.serviceMessage.highLoad: "Das Gerät hat eine hohe Auslastung"
+l10n.common.serviceMessage.lowMemory: "Das Gerät hat nur noch wenig verfügbaren Arbeitsspeicher"
+l10n.common.serviceMessage.backupAlive: "Das Backupsystem ist offline"
 # }}}

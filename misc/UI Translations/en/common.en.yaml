@@ -8,4 +8,7 @@ l10n.common.serviceMessage.alarm: "The device's alarm was triggered"
 l10n.common.serviceMessage.active: "The device is inactive"
 l10n.common.serviceMessage.fault: "A device fault occurred"
 l10n.common.serviceMessage.collective_fault: "A collective fault occurred"
+l10n.common.serviceMessage.highLoad: "The device has a high load"
+l10n.common.serviceMessage.lowMemory: "The device is low on memory"
+l10n.common.serviceMessage.backupAlive: "The backup system is offline"
 # }}}
