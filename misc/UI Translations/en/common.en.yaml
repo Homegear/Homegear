@@ -5,5 +5,7 @@ l10n.common.serviceMessage.stickyUnreach: 'Device was offline'
 l10n.common.serviceMessage.configPending: 'Device has pending configuration'
 l10n.common.serviceMessage.lowbat: "The device's battery is nearly empty"
 l10n.common.serviceMessage.alarm: "The device's alarm was triggered"
+l10n.common.serviceMessage.active: "The device is inactive"
 l10n.common.serviceMessage.fault: "A device fault occurred"
+l10n.common.serviceMessage.collective_fault: "A collective fault occurred"
 # }}}
