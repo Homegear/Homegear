@@ -11,4 +11,5 @@ l10n.common.serviceMessage.collective_fault: "A collective fault occurred"
 l10n.common.serviceMessage.highLoad: "The device has a high load"
 l10n.common.serviceMessage.lowMemory: "The device is low on memory"
 l10n.common.serviceMessage.backupOffline: "The backup system is offline"
+l10n.common.serviceMessage.fire_damper_collective_fault: "A collective fault of the fire damper occured"
 # }}}

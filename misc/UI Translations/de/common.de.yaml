@@ -11,4 +11,5 @@ l10n.common.serviceMessage.collective_fault: "Eine Sammelstörung ist aufgetrete
 l10n.common.serviceMessage.highLoad: "Das Gerät hat eine hohe Auslastung"
 l10n.common.serviceMessage.lowMemory: "Das Gerät hat nur noch wenig verfügbaren Arbeitsspeicher"
 l10n.common.serviceMessage.backupOffline: "Das Backupsystem ist offline"
+l10n.common.serviceMessage.fire_damper_collective_fault: "Sammelstörung der Brandschutzklappe"
 # }}}
