@@ -1787,6 +1787,17 @@
         }
     },
     {
+        "id": "80.03.04",
+        "types": [
+            "bool"
+        ],
+        "translations": {
+            "de-CH": "Flutalarm",
+            "de-DE": "Flutalarm",
+            "en-US": "flood alert"
+        }
+    },
+    {
         "id": "90.00.00",
         "translations": {
             "de-CH": "Zähler",
