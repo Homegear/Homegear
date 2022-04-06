@@ -2,8 +2,9 @@
     {
         "id": "10.00.00",
         "translations": {
-            "en-US": "light",
-            "de-DE": "Licht"
+            "de-CH": "Licht",
+            "de-DE": "Licht",
+            "en-US": "light"
         }
     },
     {
@@ -13,8 +14,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "light - state",
-            "de-DE": "Licht - Status"
+            "de-CH": "Licht - Status",
+            "de-DE": "Licht - Status",
+            "en-US": "light - state"
         },
         "ui": {
             "simpleCreationInfo": [
@@ -92,8 +94,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "light - brightness",
-            "de-DE": "Licht - Helligkeit"
+            "de-CH": "Licht - Helligkeit",
+            "de-DE": "Licht - Helligkeit",
+            "en-US": "light - brightness"
         },
         "ui": {
             "simpleCreationInfo": [
@@ -142,8 +145,9 @@
     {
         "id": "10.20.00",
         "translations": {
-            "en-US": "light - color",
-            "de-DE": "Licht - Farbe"
+            "de-CH": "Licht - Farbe",
+            "de-DE": "Licht - Farbe",
+            "en-US": "light - color"
         }
     },
     {
@@ -152,8 +156,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "light - color - RGB",
-            "de-DE": "Licht - Farbe - RGB"
+            "de-CH": "Licht - Farbe - RGB",
+            "de-DE": "Licht - Farbe - RGB",
+            "en-US": "light - color - RGB"
         }
     },
     {
@@ -163,8 +168,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "light - color - hue",
-            "de-DE": "Licht - Farbe - Farbton"
+            "de-CH": "Licht - Farbe - Farbton",
+            "de-DE": "Licht - Farbe - Farbton",
+            "en-US": "light - color - hue"
         }
     },
     {
@@ -174,15 +180,17 @@
             "float"
         ],
         "translations": {
-            "en-US": "light - color - saturation",
-            "de-DE": "Licht - Farbe - Sättigung"
+            "de-CH": "Licht - Farbe - Sättigung",
+            "de-DE": "Licht - Farbe - Sättigung",
+            "en-US": "light - color - saturation"
         }
     },
     {
         "id": "10.20.04",
         "translations": {
-            "en-US": "light - color - XY",
-            "de-DE": "Licht - Farbe - XY"
+            "de-CH": "Licht - Farbe - XY",
+            "de-DE": "Licht - Farbe - XY",
+            "en-US": "light - color - XY"
         }
     },
     {
@@ -192,8 +200,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "light - cold white/warm white",
-            "de-DE": "Licht - Kaltweiß/warmweiß"
+            "de-CH": "Licht - Kaltweiss/warmweiss",
+            "de-DE": "Licht - Kaltweiß/warmweiß",
+            "en-US": "light - cold white/warm white"
         }
     },
     {
@@ -203,22 +212,25 @@
             "float"
         ],
         "translations": {
-            "en-US": "light - color temperature white",
-            "de-DE": "Licht - Farbtemperatur weiß"
+            "de-CH": "Licht - Farbtemperatur weiss",
+            "de-DE": "Licht - Farbtemperatur weiß",
+            "en-US": "light - color temperature white"
         }
     },
     {
         "id": "20.00.00",
         "translations": {
-            "en-US": "HVAC",
-            "de-DE": "HLK"
+            "de-CH": "HLK",
+            "de-DE": "HLK",
+            "en-US": "HVAC"
         }
     },
     {
         "id": "20.10.00",
         "translations": {
-            "en-US": "heating",
-            "de-DE": "Heizung"
+            "de-CH": "Heizung",
+            "de-DE": "Heizung",
+            "en-US": "heating"
         }
     },
     {
@@ -227,8 +239,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "heating - current temperature",
-            "de-DE": "Heizung - Ist-Temperatur"
+            "de-CH": "Heizung - Ist-Temperatur",
+            "de-DE": "Heizung - Ist-Temperatur",
+            "en-US": "heating - current temperature"
         }
     },
     {
@@ -237,8 +250,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "heating - setpoint temperature",
-            "de-DE": "Heizung - Soll-Temperatur"
+            "de-CH": "Heizung - Soll-Temperatur",
+            "de-DE": "Heizung - Soll-Temperatur",
+            "en-US": "heating - setpoint temperature"
         },
         "addVariables": [
             {
@@ -361,8 +375,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "heating - temperature mode",
-            "de-DE": "Heizung - Temperaturmodus"
+            "de-CH": "Heizung - Temperaturmodus",
+            "de-DE": "Heizung - Temperaturmodus",
+            "en-US": "heating - temperature mode"
         },
         "ui": {
             "roleProfileValues": {
@@ -381,8 +396,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "heating - comfort temperature",
-            "de-DE": "Heizung - Komforttemperatur"
+            "de-CH": "Heizung - Komforttemperatur",
+            "de-DE": "Heizung - Komforttemperatur",
+            "en-US": "heating - comfort temperature"
         }
     },
     {
@@ -391,8 +407,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "heating - eco temperature",
-            "de-DE": "Heizung - Absenktemperatur"
+            "de-CH": "Heizung - Absenktemperatur",
+            "de-DE": "Heizung - Absenktemperatur",
+            "en-US": "heating - eco temperature"
         }
     },
     {
@@ -401,22 +418,25 @@
             "float"
         ],
         "translations": {
-            "en-US": "heating - frost protection temperature",
-            "de-DE": "Heizung - Frostschutztemperatur"
+            "de-CH": "Heizung - Frostschutztemperatur",
+            "de-DE": "Heizung - Frostschutztemperatur",
+            "en-US": "heating - frost protection temperature"
         }
     },
     {
         "id": "20.20.00",
         "translations": {
-            "en-US": "ventilation",
-            "de-DE": "Lüftung"
+            "de-CH": "Lüftung",
+            "de-DE": "Lüftung",
+            "en-US": "ventilation"
         }
     },
     {
         "id": "20.20.01",
         "translations": {
-            "en-US": "ventilation level",
-            "de-DE": "Lüftungsstufe"
+            "de-CH": "Lüftungsstufe",
+            "de-DE": "Lüftungsstufe",
+            "en-US": "ventilation level"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -446,80 +466,97 @@
     {
         "id": "20.20.02",
         "translations": {
-            "en-US": "Outside Air",
-            "de-DE": "Außenluft"
+            "de-CH": "Aussenluft",
+            "de-DE": "Außenluft",
+            "en-US": "outside air"
         }
     },
     {
         "id": "20.20.03",
         "translations": {
-            "en-US": "Supply Air",
-            "de-DE": "Zuluft"
+            "de-CH": "Zuluft",
+            "de-DE": "Zuluft",
+            "en-US": "supply air"
         }
     },
     {
         "id": "20.20.04",
         "translations": {
-            "en-US": "Extract Air",
-            "de-DE": "Abluft"
+            "de-CH": "Abluft",
+            "de-DE": "Abluft",
+            "en-US": "extract air"
         }
     },
     {
         "id": "20.20.05",
         "translations": {
-            "en-US": "Exhaust Air",
-            "de-DE": "Fortluft"
+            "de-CH": "Fortluft",
+            "de-DE": "Fortluft",
+            "en-US": "exhaust air"
         }
     },
     {
         "id": "20.20.06",
         "translations": {
-            "en-US": "Fire Damper",
-            "de-DE": "Brandschutzklappe"
+            "de-CH": "Brandschutzklappe",
+            "de-DE": "Brandschutzklappe",
+            "en-US": "fire damper"
         }
     },
     {
         "id": "20.20.07",
         "translations": {
-            "en-US": "differential pressure",
-            "de-DE": "Differenzdruck"
+            "de-CH": "Differenzdruck",
+            "de-DE": "Differenzdruck",
+            "en-US": "differential pressure"
         }
     },
     {
         "id": "20.20.08",
         "translations": {
-            "en-US": "co-no System",
-            "de-DE": "co-no Anlage"
+            "de-CH": "co-no-Anlage",
+            "de-DE": "co-no-Anlage",
+            "en-US": "co-no System"
         }
     },
-
-
     {
         "id": "20.30.00",
         "translations": {
-            "en-US": "heat pump",
-            "de-DE": "Wärmepumpe"
+            "de-CH": "Wärmepumpe",
+            "de-DE": "Wärmepumpe",
+            "en-US": "heat pump"
         }
     },
     {
         "id": "20.40.00",
         "translations": {
-            "en-US": "pump",
-            "de-DE": "Pumpe"
+            "de-CH": "Pumpe",
+            "de-DE": "Pumpe",
+            "en-US": "pump"
+        }
+    },
+    {
+        "id": "20.50.00",
+        "translations": {
+            "de-CH": "Pelletkessel",
+            "de-DE": "Pelletkessel",
+            "en-US": "pellet boiler"
         }
     },
     {
         "id": "30.00.00",
         "translations": {
-            "en-US": "security",
-            "de-DE": "Sicherheit"
+            "de-CH": "Sicherheit",
+            "de-DE": "Sicherheit",
+            "en-US": "security"
         }
     },
     {
         "id": "30.10.00",
         "translations": {
-            "en-US": "security - contact sensor",
-            "de-DE": "Sicherheit - Kontaktsensor"
+            "de-CH": "Sicherheit - Kontaktsensor",
+            "de-DE": "Sicherheit - Kontaktsensor",
+            "en-US": "security - contact sensor"
         }
     },
     {
@@ -529,8 +566,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "security - Door state",
-            "de-DE": "Sicherheit - Türzustand"
+            "de-CH": "Sicherheit - Türstatus",
+            "de-DE": "Sicherheit - Türstatus",
+            "en-US": "security - door state"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -551,8 +589,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "security - Window state",
-            "de-DE": "Sicherheit - Fensterzustand"
+            "de-CH": "Sicherheit - Fensterzustand",
+            "de-DE": "Sicherheit - Fensterzustand",
+            "en-US": "security - window state"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -573,8 +612,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "security - Door lock",
-            "de-DE": "Sicherheit - Türschloss"
+            "de-CH": "Sicherheit - Türschloss",
+            "de-DE": "Sicherheit - Türschloss",
+            "en-US": "security - door lock"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -591,29 +631,33 @@
     {
         "id": "30.20.00",
         "translations": {
-            "en-US": "SHE system",
-            "de-DE": "RWA-Anlage"
+            "de-CH": "RWA-Anlage",
+            "de-DE": "RWA-Anlage",
+            "en-US": "SHE system"
         }
     },
     {
         "id": "30.30.00",
         "translations": {
-            "en-US": "emergency light",
-            "de-DE": "Notlicht"
+            "de-CH": "Notlicht",
+            "de-DE": "Notlicht",
+            "en-US": "emergency light"
         }
     },
     {
         "id": "30.40.00",
         "translations": {
-            "en-US": "pumping station",
-            "de-DE": "Hebeanlage"
+            "de-CH": "Lösch mich",
+            "de-DE": "Lösch mich",
+            "en-US": "Delete me"
         }
     },
     {
         "id": "40.00.00",
         "translations": {
-            "en-US": "socket",
-            "de-DE": "Steckdose"
+            "de-CH": "Steckdose",
+            "de-DE": "Steckdose",
+            "en-US": "socket"
         }
     },
     {
@@ -623,8 +667,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "socket - state",
-            "de-DE": "Steckdose - Zustand"
+            "de-CH": "Steckdose - Status",
+            "de-DE": "Steckdose - Status",
+            "en-US": "socket - state"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -652,15 +697,17 @@
     {
         "id": "50.00.00",
         "translations": {
-            "en-US": "shading",
-            "de-DE": "Beschattung"
+            "de-CH": "Beschattung",
+            "de-DE": "Beschattung",
+            "en-US": "shading"
         }
     },
     {
         "id": "50.10.00",
         "translations": {
-            "en-US": "shading - blind",
-            "de-DE": "Beschattung - Rollladen"
+            "de-CH": "Beschattung - Rollladen",
+            "de-DE": "Beschattung - Rollladen",
+            "en-US": "shading - blind"
         },
         "ui": {
             "simpleCreationInfo": [
@@ -751,8 +798,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - blind - up",
-            "de-DE": "Beschattung - hoch"
+            "de-CH": "Beschattung - hoch",
+            "de-DE": "Beschattung - hoch",
+            "en-US": "shading - blind - up"
         },
         "uiRef": 501000,
         "ui": {
@@ -771,8 +819,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - blind - down",
-            "de-DE": "Beschattung - runter"
+            "de-CH": "Beschattung - runter",
+            "de-DE": "Beschattung - runter",
+            "en-US": "shading - blind - down"
         },
         "uiRef": 501000,
         "ui": {
@@ -791,8 +840,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - blind - stop",
-            "de-DE": "Beschattung - Stopp"
+            "de-CH": "Beschattung - Stopp",
+            "de-DE": "Beschattung - Stopp",
+            "en-US": "shading - blind - stop"
         },
         "uiRef": 501000
     },
@@ -803,8 +853,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "shading - blind - position",
-            "de-DE": "Beschattung - Position"
+            "de-CH": "Beschattung - Position",
+            "de-DE": "Beschattung - Position",
+            "en-US": "shading - blind - position"
         },
         "uiRef": 501000,
         "ui": {
@@ -824,8 +875,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - blind - up and down",
-            "de-DE": "Beschattung - hoch und runter"
+            "de-CH": "Beschattung - hoch und runter",
+            "de-DE": "Beschattung - hoch und runter",
+            "en-US": "shading - blind - up and down"
         },
         "uiRef": 501000
     },
@@ -836,8 +888,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - blind - step",
-            "de-DE": "Beschattung - Stufe"
+            "de-CH": "Beschattung - Schritt",
+            "de-DE": "Beschattung - Schritt",
+            "en-US": "shading - blind - step"
         },
         "uiRef": 501000
     },
@@ -848,8 +901,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "shading - slats - position",
-            "de-DE": "Beschattung - Lamellenposition"
+            "de-CH": "Beschattung - Lamellenposition",
+            "de-DE": "Beschattung - Lamellenposition",
+            "en-US": "shading - slats - position"
         },
         "uiRef": 501000
     },
@@ -860,16 +914,18 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - windalert",
-            "de-DE": "Beschattung - Windalarm"
+            "de-CH": "Beschattung - Windalarm",
+            "de-DE": "Beschattung - Windalarm",
+            "en-US": "shading - windalert"
         },
         "uiRef": 501000
     },
     {
         "id": "50.20.00",
         "translations": {
-            "en-US": "shading - awning",
-            "de-DE": "Beschattung - Markise"
+            "de-CH": "Beschattung - Markise",
+            "de-DE": "Beschattung - Markise",
+            "en-US": "shading - awning"
         },
         "ui": {
             "simpleCreationInfo": [
@@ -963,8 +1019,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - awning - retract",
-            "de-DE": "Beschattung - Markise - einfahren"
+            "de-CH": "Beschattung - Markise - einfahren",
+            "de-DE": "Beschattung - Markise - einfahren",
+            "en-US": "shading - awning - retract"
         },
         "uiRef": 502000,
         "ui": {
@@ -983,8 +1040,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - awning - extend",
-            "de-DE": "Beschattung - Markise - ausfahren"
+            "de-CH": "Beschattung - Markise - ausfahren",
+            "de-DE": "Beschattung - Markise - ausfahren",
+            "en-US": "shading - awning - extend"
         },
         "uiRef": 502000,
         "ui": {
@@ -1003,8 +1061,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - awning - stop",
-            "de-DE": "Beschattung - Markise - Stopp"
+            "de-CH": "Beschattung - Markise - Stopp",
+            "de-DE": "Beschattung - Markise - Stopp",
+            "en-US": "shading - awning - stop"
         },
         "uiRef": 502000
     },
@@ -1015,8 +1074,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "shading - awning - position",
-            "de-DE": "Beschattung - Markise - Position"
+            "de-CH": "Beschattung - Markise - Position",
+            "de-DE": "Beschattung - Markise - Position",
+            "en-US": "shading - awning - position"
         },
         "uiRef": 502000,
         "ui": {
@@ -1036,8 +1096,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - awning - retract and extend",
-            "de-DE": "Beschattung - Markise - einfahren und ausfahren"
+            "de-CH": "Beschattung - Markise - einfahren und ausfahren",
+            "de-DE": "Beschattung - Markise - einfahren und ausfahren",
+            "en-US": "shading - awning - retract and extend"
         },
         "uiRef": 502000
     },
@@ -1048,8 +1109,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - awning - step",
-            "de-DE": "Beschattung - Markise - Stufe"
+            "de-CH": "Beschattung - Markise - Stufe",
+            "de-DE": "Beschattung - Markise - Stufe",
+            "en-US": "shading - awning - step"
         },
         "uiRef": 502000
     },
@@ -1060,8 +1122,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "shading - slats - position",
-            "de-DE": "Beschattung - Markise - Lamellenposition"
+            "de-CH": "Beschattung - Markise - Lamellenposition",
+            "de-DE": "Beschattung - Markise - Lamellenposition",
+            "en-US": "shading - slats - position"
         },
         "uiRef": 502000
     },
@@ -1072,16 +1135,18 @@
             "int"
         ],
         "translations": {
-            "en-US": "shading - awning - windalert",
-            "de-DE": "Beschattung - Markise - Windalarm"
+            "de-CH": "Beschattung - Markise - Windalarm",
+            "de-DE": "Beschattung - Markise - Windalarm",
+            "en-US": "shading - awning - windalert"
         },
         "uiRef": 502000
     },
     {
         "id": "60.00.00",
         "translations": {
-            "en-US": "window",
-            "de-DE": "Fenster"
+            "de-CH": "Fenster",
+            "de-DE": "Fenster",
+            "en-US": "window"
         },
         "ui": {
             "simpleCreationInfo": [
@@ -1110,8 +1175,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "window - up",
-            "de-DE": "Fenster - hoch"
+            "de-CH": "Fenster - hoch",
+            "de-DE": "Fenster - hoch",
+            "en-US": "window - up"
         },
         "uiRef": 600000,
         "ui": {
@@ -1130,8 +1196,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "window - down",
-            "de-DE": "Fenster - runter"
+            "de-CH": "Fenster - runter",
+            "de-DE": "Fenster - runter",
+            "en-US": "window - down"
         },
         "uiRef": 600000,
         "ui": {
@@ -1150,8 +1217,9 @@
             "int"
         ],
         "translations": {
-            "en-US": "window - stop",
-            "de-DE": "Fenster - Stopp"
+            "de-CH": "Fenster - Stopp",
+            "de-DE": "Fenster - Stopp",
+            "en-US": "window - stop"
         },
         "uiRef": 600000
     },
@@ -1162,8 +1230,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "window - position",
-            "de-DE": "Fenster - Position"
+            "de-CH": "Fenster - Position",
+            "de-DE": "Fenster - Position",
+            "en-US": "window - position"
         },
         "uiRef": 600000,
         "ui": {
@@ -1179,8 +1248,9 @@
     {
         "id": "70.00.00",
         "translations": {
-            "en-US": "weather",
-            "de-DE": "Wetter"
+            "de-CH": "Wetter",
+            "de-DE": "Wetter",
+            "en-US": "weather"
         }
     },
     {
@@ -1189,8 +1259,9 @@
             "string"
         ],
         "translations": {
-            "en-US": "weather - city",
-            "de-DE": "Wetter - Stadt"
+            "de-CH": "Wetter - Stadt",
+            "de-DE": "Wetter - Stadt",
+            "en-US": "weather - city"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1215,8 +1286,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - cloudcoverage",
-            "de-DE": "Wetter - Bewölkung"
+            "de-CH": "Wetter - Bewölkung",
+            "de-DE": "Wetter - Bewölkung",
+            "en-US": "weather - cloudcoverage"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1240,8 +1312,9 @@
             "string"
         ],
         "translations": {
-            "en-US": "weather - datetime",
-            "de-DE": "Wetter - Datum Zeit"
+            "de-CH": "Wetter - Datum u. Zeit",
+            "de-DE": "Wetter - Datum u. Zeit",
+            "en-US": "weather - datetime"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1266,8 +1339,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - humidity",
-            "de-DE": "Wetter - Luftfeuchtigkeit"
+            "de-CH": "Wetter - Luftfeuchtigkeit",
+            "de-DE": "Wetter - Luftfeuchtigkeit",
+            "en-US": "weather - humidity"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1292,8 +1366,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - pressure",
-            "de-DE": "Wetter - Luftdruck"
+            "de-CH": "Wetter - Luftdruck",
+            "de-DE": "Wetter - Luftdruck",
+            "en-US": "weather - pressure"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1318,8 +1393,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - rain forecast 3h",
-            "de-DE": "Wetter - Regenvorhersage 3h"
+            "de-CH": "Wetter - Regenvorhersage 3h",
+            "de-DE": "Wetter - Regenvorhersage 3h",
+            "en-US": "weather - rain forecast 3h"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1344,8 +1420,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - snow forecast 3h",
-            "de-DE": "Wetter - Schneevorhersage 3h"
+            "de-CH": "Wetter - Schneevorhersage 3h",
+            "de-DE": "Wetter - Schneevorhersage 3h",
+            "en-US": "weather - snow forecast 3h"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1369,8 +1446,9 @@
             "string"
         ],
         "translations": {
-            "en-US": "weather - sunrise",
-            "de-DE": "Wetter - Sonnenaufgang"
+            "de-CH": "Wetter - Sonnenaufgang",
+            "de-DE": "Wetter - Sonnenaufgang",
+            "en-US": "weather - sunrise"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1394,8 +1472,9 @@
             "string"
         ],
         "translations": {
-            "en-US": "weather - sunset",
-            "de-DE": "Wetter - Sonnenuntergang"
+            "de-CH": "Wetter - Sonnenuntergang",
+            "de-DE": "Wetter - Sonnenuntergang",
+            "en-US": "weather - sunset"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1419,8 +1498,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - temperature",
-            "de-DE": "Wetter - Temperatur"
+            "de-CH": "Wetter - Temperatur",
+            "de-DE": "Wetter - Temperatur",
+            "en-US": "weather - temperature"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1444,8 +1524,9 @@
             "string"
         ],
         "translations": {
-            "en-US": "weather - weather",
-            "de-DE": "Wetter - Wetter"
+            "de-CH": "Wetter - Wetter",
+            "de-DE": "Wetter - Wetter",
+            "en-US": "weather - weather"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1469,8 +1550,9 @@
             "string"
         ],
         "translations": {
-            "en-US": "weather - wind direction",
-            "de-DE": "Wetter - Windrichtung"
+            "de-CH": "Wetter - Windrichtung",
+            "de-DE": "Wetter - Windrichtung",
+            "en-US": "weather - wind direction"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1494,8 +1576,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - wind gust",
-            "de-DE": "Wetter - Windböen"
+            "de-CH": "Wetter - Windböen",
+            "de-DE": "Wetter - Windböen",
+            "en-US": "weather - wind gust"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1519,8 +1602,9 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - wind speed",
-            "de-DE": "Wetter - Windgeschwindigkeit"
+            "de-CH": "Wetter - Windgeschwindigkeit",
+            "de-DE": "Wetter - Windgeschwindigkeit",
+            "en-US": "weather - wind speed"
         },
         "ui": {
             "simpleCreationInfo": {
@@ -1545,16 +1629,18 @@
             "float"
         ],
         "translations": {
-            "en-US": "weather - VOC",
-            "de-DE": "Wetter - VOC"
+            "de-CH": "Wetter - VOC",
+            "de-DE": "Wetter - VOC",
+            "en-US": "weather - VOC"
         }
 
     },
     {
         "id": "80.00.00",
         "translations": {
-            "en-US": "service",
-            "de-DE": "Service"
+            "de-CH": "Service",
+            "de-DE": "Service",
+            "en-US": "service"
         }
     },
     {
@@ -1563,8 +1649,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "low battery",
-            "de-DE": "Batterie schwach"
+            "de-CH": "Batterie schwach",
+            "de-DE": "Batterie schwach",
+            "en-US": "low battery"
         }
     },
     {
@@ -1573,8 +1660,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "device offline",
-            "de-DE": "Gerät offline"
+            "de-CH": "Gerät offline",
+            "de-DE": "Gerät offline",
+            "en-US": "device offline"
         }
     },
     {
@@ -1583,8 +1671,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "operating notification",
-            "de-DE": "Betriebsmeldungen"
+            "de-CH": "Betriebsmeldungen",
+            "de-DE": "Betriebsmeldungen",
+            "en-US": "operating notification"
         }
     },
     {
@@ -1593,8 +1682,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "operation",
-            "de-DE": "Betrieb"
+            "de-CH": "Betrieb",
+            "de-DE": "Betrieb",
+            "en-US": "operation"
         }
     },
     {
@@ -1603,8 +1693,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "emergency operation",
-            "de-DE": "Notbetrieb"
+            "de-CH": "Notbetrieb",
+            "de-DE": "Notbetrieb",
+            "en-US": "emergency operation"
         }
     },
     {
@@ -1613,8 +1704,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "active",
-            "de-DE": "Aktiv"
+            "de-CH": "Aktiv",
+            "de-DE": "Aktiv",
+            "en-US": "active"
         }
     },
     {
@@ -1623,8 +1715,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "faults",
-            "de-DE": "Störungen"
+            "de-CH": "Störungen",
+            "de-DE": "Störungen",
+            "en-US": "faults"
         }
     },
     {
@@ -1633,8 +1726,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "collective fault",
-            "de-DE": "Sammelstörung"
+            "de-CH": "Sammelstörung",
+            "de-DE": "Sammelstörung",
+            "en-US": "collective fault"
         }
     },
     {
@@ -1643,8 +1737,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "fault",
-            "de-DE": "Störung"
+            "de-CH": "Störung",
+            "de-DE": "Störung",
+            "en-US": "fault"
         }
     },
     {
@@ -1653,8 +1748,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "alerts",
-            "de-DE": "Alarme"
+            "de-CH": "Alarme",
+            "de-DE": "Alarme",
+            "en-US": "alerts"
         }
     },
     {
@@ -1663,8 +1759,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "collective alert",
-            "de-DE": "Sammelalarm"
+            "de-CH": "Sammelalarm",
+            "de-DE": "Sammelalarm",
+            "en-US": "collective alert"
         }
     },
     {
@@ -1673,8 +1770,9 @@
             "bool"
         ],
         "translations": {
-            "en-US": "alert",
-            "de-DE": "Alarm"
+            "de-CH": "Alarm",
+            "de-DE": "Alarm",
+            "en-US": "alert"
         }
     },
     {
@@ -1683,193 +1781,283 @@
             "bool"
         ],
         "translations": {
-            "en-US": "fire alert",
-            "de-DE": "Feueralarm"
+            "de-CH": "Feueralarm",
+            "de-DE": "Feueralarm",
+            "en-US": "fire alert"
         }
     },
     {
         "id": "90.00.00",
         "translations": {
-            "en-US": "meters",
-            "de-DE": "Zähler"
+            "de-CH": "Zähler",
+            "de-DE": "Zähler",
+            "en-US": "meters"
         }
     },
     {
         "id": "90.01.00",
         "translations": {
-            "en-US": "Water meter",
-            "de-DE": "Wasserzähler"
+            "de-CH": "Wasserzähler",
+            "de-DE": "Wasserzähler",
+            "en-US": "Water meter"
         }
     },
     {
         "id": "90.01.01",
         "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
+            "de-CH": "Zählerstand",
+            "de-DE": "Zählerstand",
+            "en-US": "Meter reading"
         },
         "aggregation": "meter"
     },
     {
         "id": "90.01.02",
         "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
+            "de-CH": "Verbrauch",
+            "de-DE": "Verbrauch",
+            "en-US": "Consumption"
         },
         "aggregation": "count"
     },
     {
         "id": "90.02.00",
         "translations": {
-            "en-US": "Power meter",
-            "de-DE": "Stromzähler"
+            "de-CH": "Stromzähler",
+            "de-DE": "Stromzähler",
+            "en-US": "Power meter"
         }
     },
     {
         "id": "90.02.01",
         "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
+            "de-CH": "Zählerstand",
+            "de-DE": "Zählerstand",
+            "en-US": "Meter reading"
         },
         "aggregation": "meter"
     },
     {
         "id": "90.02.02",
         "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
+            "de-CH": "Verbrauch",
+            "de-DE": "Verbrauch",
+            "en-US": "Consumption"
         },
         "aggregation": "count"
     },
     {
         "id": "90.03.00",
         "translations": {
-            "en-US": "Gas meter",
-            "de-DE": "Gaszähler"
+            "de-CH": "Gaszähler",
+            "de-DE": "Gaszähler",
+            "en-US": "Gas meter"
         }
     },
     {
         "id": "90.03.01",
         "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
+            "de-CH": "Zählerstand",
+            "de-DE": "Zählerstand",
+            "en-US": "Meter reading"
         },
         "aggregation": "meter"
     },
     {
         "id": "90.03.02",
         "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
+            "de-CH": "Verbrauch",
+            "de-DE": "Verbrauch",
+            "en-US": "Consumption"
         },
         "aggregation": "count"
     },
     {
         "id": "90.04.00",
         "translations": {
-            "en-US": "Heat meter",
-            "de-DE": "Wärmemengenzähler"
+            "de-CH": "Wärmemengenzähler",
+            "de-DE": "Wärmemengenzähler",
+            "en-US": "Heat meter"
         }
     },
     {
         "id": "90.04.01",
         "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
+            "de-CH": "Zählerstand",
+            "de-DE": "Zählerstand",
+            "en-US": "Meter reading"
         },
         "aggregation": "meter"
     },
     {
         "id": "90.04.02",
         "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
+            "de-CH": "Verbrauch",
+            "de-DE": "Verbrauch",
+            "en-US": "Consumption"
         },
         "aggregation": "count"
     },
     {
         "id": "90.05.00",
         "translations": {
-            "en-US": "Cooling energy meter",
-            "de-DE": "Kältemengenzähler"
+            "de-CH": "Kältemengenzähler",
+            "de-DE": "Kältemengenzähler",
+            "en-US": "Cooling energy meter"
         }
     },
     {
         "id": "90.05.01",
         "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
+            "de-CH": "Zählerstand",
+            "de-DE": "Zählerstand",
+            "en-US": "Meter reading"
         },
         "aggregation": "meter"
     },
     {
         "id": "90.05.02",
         "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
+            "de-CH": "Verbrauch",
+            "de-DE": "Verbrauch",
+            "en-US": "Consumption"
         },
         "aggregation": "count"
     },
     {
         "id": "01.00.00",
         "translations": {
-            "en-US": "Environment sensors",
-            "de-DE": "Umgebungssensoren"
+            "de-CH": "Umgebungssensoren",
+            "de-DE": "Umgebungssensoren",
+            "en-US": "Environment sensors"
         }
     },
     {
         "id": "01.00.01",
         "translations": {
-            "en-US": "Temperature",
-            "de-DE": "Temperatur"
+            "de-CH": "Temperatur",
+            "de-DE": "Temperatur",
+            "en-US": "Temperature"
         }
     },
     {
         "id": "01.00.02",
         "translations": {
-            "en-US": "Humidity",
-            "de-DE": "Luftfeuchtigkeit"
+            "de-CH": "Luftfeuchtigkeit",
+            "de-DE": "Luftfeuchtigkeit",
+            "en-US": "Humidity"
         }
     },
     {
         "id": "01.00.03",
         "translations": {
-            "en-US": "CO2",
-            "de-DE": "CO2"
+            "de-CH": "CO2",
+            "de-DE": "CO2",
+            "en-US": "CO2"
         }
     },
     {
         "id": "01.00.04",
         "translations": {
-            "en-US": "VOC",
-            "de-DE": "VOC"
+            "de-CH": "VOC",
+            "de-DE": "VOC",
+            "en-US": "VOC"
         }
     },
     {
         "id": "01.00.05",
         "translations": {
-            "en-US": "Barometric pressure",
-            "de-DE": "Luftdruck"
+            "de-CH": "Luftdruck",
+            "de-DE": "Luftdruck",
+            "en-US": "Barometric pressure"
         }
     },
     {
         "id": "02.00.00",
         "translations": {
-            "en-US": "Digital infrastructure",
-            "de-DE": "Digitale Infrastruktur"
+            "de-CH": "Digitale Infrastruktur",
+            "de-DE": "Digitale Infrastruktur",
+            "en-US": "Digital infrastructure"
         }
     },
     {
         "id": "02.01.00",
         "translations": {
-            "en-US": "ibs home client",
-            "de-DE": "ibs-home-Client"
+            "de-CH": "ibs-home-Client",
+            "de-DE": "ibs-home-Client",
+            "en-US": "ibs home client"
         }
     },
     {
         "id": "02.02.00",
         "translations": {
-            "en-US": "ibs home communication module",
-            "de-DE": "ibs-home-Kommunikationsmodul"
+            "de-CH": "ibs-home-Kommunikationsmodul",
+            "de-DE": "ibs-home-Kommunikationsmodul",
+            "en-US": "ibs home communication module"
+        }
+    },
+    {
+        "id": "03.00.00",
+        "translations": {
+            "de-CH": "Sanitärtechnik",
+            "de-DE": "Sanitärtechnik",
+            "en-US": "sanitary devices"
+        }
+    },
+    {
+        "id": "03.01.00",
+        "translations": {
+            "de-CH": "Hebeanlage",
+            "de-DE": "Hebeanlage",
+            "en-US": "pumping station"
+        }
+    },
+    {
+        "id": "03.02.00",
+        "translations": {
+            "de-CH": "Druckerhöhungsanlage",
+            "de-DE": "Druckerhöhungsanlage",
+            "en-US": "pressure booster station"
+        }
+    },
+    {
+        "id": "03.03.00",
+        "translations": {
+            "de-CH": "Rückstauklappe",
+            "de-DE": "Rückstauklappe",
+            "en-US": "backflow trap"
+        }
+    },
+    {
+        "id": "04.00.00",
+        "translations": {
+            "de-CH": "Fördertechnik",
+            "de-DE": "Fördertechnik",
+            "en-US": "conveying equipment"
+        }
+    },
+    {
+        "id": "04.01.00",
+        "translations": {
+            "de-CH": "Personenaufzug",
+            "de-DE": "Personenaufzug",
+            "en-US": "passenger elevator"
+        }
+    },
+    {
+        "id": "04.02.00",
+        "translations": {
+            "de-CH": "Lastenaufzug",
+            "de-DE": "Lastenaufzug",
+            "en-US": "goods elevator"
+        }
+    },
+    {
+        "id": "04.03.00",
+        "translations": {
+            "de-CH": "Autoaufzug",
+            "de-DE": "Autoaufzug",
+            "en-US": "car elevator"
         }
     }
 ]
