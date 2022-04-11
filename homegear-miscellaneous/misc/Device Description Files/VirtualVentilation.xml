@@ -219,6 +219,175 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
+                        <parameter id="OUTSIDE_AIR_HUMIDITY">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>%</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="OUTSIDE_AIR_TEMPERATURE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>°C</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>-273.2</minimumValue>
+                    <maximumValue>1000.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="EXHAUST_AIR_HUMIDITY">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>%</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="EXHAUST_AIR_TEMPERATURE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>°C</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>-273.2</minimumValue>
+                    <maximumValue>1000.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="EXTRACT_AIR_HUMIDITY">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>%</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="EXTRACT_AIR_TEMPERATURE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>°C</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>-273.2</minimumValue>
+                    <maximumValue>1000.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="SUPPLY_AIR_HUMIDITY">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>%</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>100.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="SUPPLY_AIR_TEMPERATURE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>°C</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>-273.2</minimumValue>
+                    <maximumValue>1000.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+                        <parameter id="OUTSIDE_TEMPERATURE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>°C</unit>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>-273.2</minimumValue>
+                    <maximumValue>1000.0</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="FAN_LEVEL">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <maximumValue>3</maximumValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
         </variables>
     </parameterGroups>
 </homegearDevice>
