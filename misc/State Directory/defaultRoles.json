@@ -423,6 +423,50 @@
             "en-US": "heating - frost protection temperature"
         }
     },
+	{
+        "id": "20.10.07",
+        "types": [
+            "float"
+        ],
+        "translations": {
+            "de-CH": "Heizung - Warmwassertemperatur",
+            "de-DE": "Heizung - Warmwassertemperatur",
+            "en-US": "heating - warm water temperature"
+        }
+    },
+	{
+        "id": "20.10.08",
+        "types": [
+            "float"
+        ],
+        "translations": {
+            "de-CH": "Heizung - Warmwasser Solltemperatur",
+            "de-DE": "Heizung - Warmwasser Solltemperatur",
+            "en-US": "heating - warm water setpoint temperature"
+        }
+    },
+	{
+        "id": "20.10.09",
+        "types": [
+            "float"
+        ],
+        "translations": {
+            "de-CH": "Heizung - Außentemperatur",
+            "de-DE": "Heizung - Aussentemperatur",
+            "en-US": "heating - outside temperature"
+        }
+    },
+	{
+        "id": "20.10.10",
+        "types": [
+            "int"
+        ],
+        "translations": {
+            "de-CH": "Heizung - Betriebsstunden",
+            "de-DE": "Heizung - Betriebsstunden",
+            "en-US": "heating - operating hours"
+        }
+    },
     {
         "id": "20.20.00",
         "translations": {
