@@ -681,9 +681,10 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
     if (valueKey.empty()) return Variable::createError(-5, "Value key is empty.");
     if (valuesCentral.find(channel) == valuesCentral.end()) return Variable::createError(-2, "Unknown channel.");
     if (valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return Variable::createError(-5, "Unknown parameter.");
-    PParameter rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+    BaseLib::Systems::RpcConfigurationParameter &parameter = valuesCentral[channel][valueKey];
+    auto rpcParameter = parameter.rpcParameter;
     if (!rpcParameter) return Variable::createError(-5, "Unknown parameter.");
-    if (rpcParameter->service || rpcParameter->serviceInverted) {
+    if (rpcParameter->service || rpcParameter->serviceInverted || parameter.hasServiceRole()) {
       uint8_t serviceValue = 0;
       if (value->type == VariableType::tBoolean) {
         serviceValue = rpcParameter->serviceInverted ? !value->booleanValue : value->booleanValue;
@@ -697,7 +698,6 @@ PVariable MiscPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channe
     }
     if (rpcParameter->logical->type == ILogical::Type::tAction && !value->booleanValue) return Variable::createError(-5, "Parameter of type action cannot be set to \"false\".");
     if (!rpcParameter->writeable && clientInfo->id != -1 && !(rpcParameter->addonWriteable && clientInfo->addon && clientInfo->peerId == _peerID)) return Variable::createError(-6, "parameter is read only");
-    BaseLib::Systems::RpcConfigurationParameter &parameter = valuesCentral[channel][valueKey];
     std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
     std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());
 
