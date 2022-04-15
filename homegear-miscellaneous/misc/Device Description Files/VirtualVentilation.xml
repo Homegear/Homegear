@@ -40,7 +40,6 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <serviceInverted>true</serviceInverted>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -95,6 +94,7 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
+                    <service>true</service>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -126,6 +126,7 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
+                    <service>true</service>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -179,6 +180,7 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
+                    <serviceInverted>true</serviceInverted>
                 </properties>
                 <logicalBoolean/>
                 <physicalNone>
@@ -219,7 +221,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="OUTSIDE_AIR_HUMIDITY">
+            <parameter id="OUTSIDE_AIR_HUMIDITY">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -236,7 +238,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="OUTSIDE_AIR_TEMPERATURE">
+            <parameter id="OUTSIDE_AIR_TEMPERATURE">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -253,7 +255,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="EXHAUST_AIR_HUMIDITY">
+            <parameter id="EXHAUST_AIR_HUMIDITY">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -270,7 +272,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="EXHAUST_AIR_TEMPERATURE">
+            <parameter id="EXHAUST_AIR_TEMPERATURE">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -287,7 +289,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="EXTRACT_AIR_HUMIDITY">
+            <parameter id="EXTRACT_AIR_HUMIDITY">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -304,7 +306,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="EXTRACT_AIR_TEMPERATURE">
+            <parameter id="EXTRACT_AIR_TEMPERATURE">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -321,7 +323,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="SUPPLY_AIR_HUMIDITY">
+            <parameter id="SUPPLY_AIR_HUMIDITY">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -338,7 +340,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="SUPPLY_AIR_TEMPERATURE">
+            <parameter id="SUPPLY_AIR_TEMPERATURE">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
@@ -355,7 +357,7 @@
                     <operationType>store</operationType>
                 </physicalNone>
             </parameter>
-                        <parameter id="OUTSIDE_TEMPERATURE">
+            <parameter id="OUTSIDE_TEMPERATURE">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
