@@ -508,6 +508,14 @@
     }
   },
   {
+    "id": "20.10.16",
+    "translations": {
+      "de-CH": "Heizung - Betriebsmeldung",
+      "de-DE": "Heizung - Betriebsmeldung",
+      "en-US": "heating - operating notification"
+    }
+  },
+  {
     "id": "20.20.00",
     "translations": {
       "de-CH": "Lüftung",
@@ -705,6 +713,46 @@
       "de-CH": "Aussentemperatur",
       "de-DE": "Außentemperatur",
       "en-US": "outside temperature"
+    }
+  },
+  {
+    "id": "20.20.22",
+    "translations": {
+      "de-CH": "Betriebsmeldung",
+      "de-DE": "Betriebsmeldung",
+      "en-US": "operating notification"
+    }
+  },
+  {
+    "id": "20.20.23",
+    "translations": {
+      "de-CH": "Zuluftventilator",
+      "de-DE": "Zuluftventilator",
+      "en-US": "supply air ventilator"
+    }
+  },
+  {
+    "id": "20.20.24",
+    "translations": {
+      "de-CH": "Fortluftventilator",
+      "de-DE": "Fortluftventilator",
+      "en-US": "exhaust air ventilator"
+    }
+  },
+  {
+    "id": "20.20.25",
+    "translations": {
+      "de-CH": "Zuluft Differenzdruck",
+      "de-DE": "Zuluft Differenzdruck",
+      "en-US": "supply air differential pressure"
+    }
+  },
+  {
+    "id": "20.20.26",
+    "translations": {
+      "de-CH": "Fortluft Differenzdruck",
+      "de-DE": "Fortluft Differenzdruck",
+      "en-US": "exhaust air differential pressure"
     }
   },
   {
