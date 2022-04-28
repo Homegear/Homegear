@@ -5,5 +5,16 @@ l10n.common.serviceMessage.stickyUnreach: 'Device was offline'
 l10n.common.serviceMessage.configPending: 'Device has pending configuration'
 l10n.common.serviceMessage.lowbat: "The device's battery is nearly empty"
 l10n.common.serviceMessage.alarm: "The device's alarm was triggered"
+l10n.common.serviceMessage.collective_alarm: "The device's collective alarm was triggered"
+l10n.common.serviceMessage.active: "The device is inactive"
 l10n.common.serviceMessage.fault: "A device fault occurred"
+l10n.common.serviceMessage.collective_fault: "A collective fault occurred"
+l10n.common.serviceMessage.highLoad: "The device has a high load"
+l10n.common.serviceMessage.lowMemory: "The device is low on memory"
+l10n.common.serviceMessage.backupOffline: "The backup system is offline"
+l10n.common.serviceMessage.fire_alarm: "Fire alarm"
+l10n.common.serviceMessage.outside_air_ventilator_active: "The outside air ventilator is inactive"
+l10n.common.serviceMessage.exhaust_air_ventilator_active: "The exhaust air ventilator is inactive"
+l10n.common.serviceMessage.fire_damper_status: "A fault of the fire damper occurred"
+l10n.common.serviceMessage.fire_damper_collective_fault: "A collective fault of the fire damper occurred"
 # }}}
