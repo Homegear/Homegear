@@ -469,13 +469,13 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
         _lastQueueSlowErrorCounter = 0;
         _out.printWarning(
-            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
-                + std::to_string(_lastQueueSlowErrorCounter));
+            "Warning: Queue entry of queue " + std::to_string(index) + " was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: " + std::to_string(_lastQueueSlowErrorCounter));
       }
     }
 
     if (index == 0) //IPC request
     {
+      auto start_time = BaseLib::HelperFunctions::getTime();
       _processingThreadCount1++;
       try {
         if (_processingThreadCount1 == _threadCount) _processingThreadCountMaxReached1 = BaseLib::HelperFunctions::getTime();
@@ -510,8 +510,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached1 = 0;
       _processingThreadCount1--;
+      if (BaseLib::HelperFunctions::getTime() - start_time > 2000) {
+        _lastQueueSlowErrorCounter++;
+        if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+          _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+          _lastQueueSlowErrorCounter = 0;
+          _out.printInfo("Info: Processing of IPC method call to " + queueEntry->methodName + " took " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms.");
+        }
+      }
     } else if (index == 1) //IPC response
     {
+      auto start_time = BaseLib::HelperFunctions::getTime();
       _processingThreadCount2++;
       try {
         if (_processingThreadCount2 == _threadCount) _processingThreadCountMaxReached2 = BaseLib::HelperFunctions::getTime();
@@ -553,8 +562,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached2 = 0;
       _processingThreadCount2--;
+      if (BaseLib::HelperFunctions::getTime() - start_time > 2000) {
+        _lastQueueSlowErrorCounter++;
+        if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+          _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+          _lastQueueSlowErrorCounter = 0;
+          _out.printInfo("Info: Processing of IPC method response took " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms.");
+        }
+      }
     } else //Node output
     {
+      auto start_time = BaseLib::HelperFunctions::getTime();
       _processingThreadCount3++;
       try {
         if (_processingThreadCount3 == _threadCount) _processingThreadCountMaxReached3 = BaseLib::HelperFunctions::getTime();
@@ -613,6 +631,14 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached3 = 0;
       _processingThreadCount3--;
+      if (BaseLib::HelperFunctions::getTime() - start_time > 2000) {
+        _lastQueueSlowErrorCounter++;
+        if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+          _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+          _lastQueueSlowErrorCounter = 0;
+          _out.printInfo("Info: Processing of node input took " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms (node: " + queueEntry->nodeInfo->id + ", input: " + std::to_string(queueEntry->targetPort) + ").");
+        }
+      }
     }
   }
   catch (const std::exception &ex) {
