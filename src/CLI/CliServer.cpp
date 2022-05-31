@@ -559,6 +559,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "reloadroles (rrl)    Delete all roles and recreate them from \"defaultRoles.json\"." << std::endl;
       stringStream << "threads              Prints the current thread count" << std::endl;
       stringStream << "load (ld)            Prints the current load" << std::endl;
+      stringStream << "nodeproctimes (npt)  Prints the time required for every node input to process incoming data" << std::endl;
       stringStream << "slavemode (sm)       Enables slave mode when in a master/slave installation" << std::endl;
 #ifndef NO_SCRIPTENGINE
       stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
@@ -964,6 +965,9 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       auto load2 = GD::nodeBlueServer->getLoad();
       load1->structValue->insert(load2->structValue->begin(), load2->structValue->end());
       stringStream << BaseLib::Rpc::JsonEncoder::encode(GD::nodeBlueServer->getLoad()) << std::endl;
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "nodeproctimes", "npt", "", 0, arguments, showHelp)) {
+      stringStream << BaseLib::Rpc::JsonEncoder::encode(GD::nodeBlueServer->getNodeProcessingTimes()) << std::endl;
       return std::make_shared<BaseLib::Variable>(stringStream.str());
     } else if (BaseLib::HelperFunctions::checkCliCommand(command, "slavemode", "sm", "", 1, arguments, showHelp)) {
       if (showHelp) {

@@ -473,6 +473,38 @@ BaseLib::PVariable NodeBlueServer::getLoad() {
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable NodeBlueServer::getNodeProcessingTimes() {
+  try {
+    auto result = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+    std::vector<PNodeBlueClientData> clients;
+
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      for (auto &client: _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client: clients) {
+      auto result2 = sendRequest(client, "getNodeProcessingTimes", std::make_shared<BaseLib::Array>(), true);
+      if (result2->errorStruct) continue;
+
+      result->structValue->emplace("Node-BLUE client " + std::to_string(client->pid), result2);
+    }
+
+    return result;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 void NodeBlueServer::collectGarbage() {
   try {
     _lastGarbageCollection = BaseLib::HelperFunctions::getTime();

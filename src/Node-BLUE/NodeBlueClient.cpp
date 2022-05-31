@@ -66,6 +66,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("nodeOutput", std::bind(&NodeBlueClient::nodeOutput, this, std::placeholders::_1));
   _localRpcMethods.emplace("invokeNodeMethod", std::bind(&NodeBlueClient::invokeExternalNodeMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&NodeBlueClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getNodeProcessingTimes", std::bind(&NodeBlueClient::getNodeProcessingTimes, this, std::placeholders::_1));
   _localRpcMethods.emplace("getNodesWithFixedInputs", std::bind(&NodeBlueClient::getNodesWithFixedInputs, this, std::placeholders::_1));
   _localRpcMethods.emplace("getFlowVariable", std::bind(&NodeBlueClient::getFlowVariable, this, std::placeholders::_1));
   _localRpcMethods.emplace("getNodeVariable", std::bind(&NodeBlueClient::getNodeVariable, this, std::placeholders::_1));
@@ -470,7 +471,8 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
         _lastQueueSlowErrorCounter = 0;
         _out.printWarning(
-            "Warning: Queue entry of queue " + std::to_string(index) + " was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: " + std::to_string(_lastQueueSlowErrorCounter));
+            "Warning: Queue entry of queue " + std::to_string(index) + " was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time)
+                + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: " + std::to_string(_lastQueueSlowErrorCounter));
       }
     }
 
@@ -632,12 +634,15 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached3 = 0;
       _processingThreadCount3--;
-      if (BaseLib::HelperFunctions::getTime() - start_time > 2000) {
+      auto processing_time = BaseLib::HelperFunctions::getTime() - start_time;
+      if (queueEntry->targetPort + 1 >= queueEntry->nodeInfo->processingTimes.size()) queueEntry->nodeInfo->processingTimes.resize(queueEntry->targetPort + 1);
+      queueEntry->nodeInfo->processingTimes.at(queueEntry->targetPort) = processing_time;
+      if (processing_time > 2000) {
         _lastQueueSlowErrorCounter++;
         if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
           _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
           _lastQueueSlowErrorCounter = 0;
-          _out.printInfo("Info: Processing of node input took " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms (node: " + queueEntry->nodeInfo->id + ", input: " + std::to_string(queueEntry->targetPort) + ").");
+          _out.printInfo("Info: Processing of node input took " + std::to_string(processing_time) + "ms (node: " + queueEntry->nodeInfo->id + ", input: " + std::to_string(queueEntry->targetPort) + ").");
         }
       }
     }
@@ -1554,7 +1559,9 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
         for (auto &wireOut: output) {
           auto nodeIterator = flow->nodes.find(wireOut.id);
           if (nodeIterator == flow->nodes.end()) continue;
-          if (nodeIterator->second->wiresIn.size() <= wireOut.port) nodeIterator->second->wiresIn.resize(wireOut.port + 1);
+          if (nodeIterator->second->wiresIn.size() <= wireOut.port) {
+            nodeIterator->second->wiresIn.resize(wireOut.port + 1);
+          }
           Flows::Wire wire;
           wire.id = node.second->id;
           wire.port = static_cast<uint32_t>(outputIndex);
@@ -2099,6 +2106,46 @@ Flows::PVariable NodeBlueClient::getNodesWithFixedInputs(Flows::PArray &paramete
     }
 
     return nodeStruct;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::getNodeProcessingTimes(Flows::PArray &parameters) {
+  try {
+    std::multimap<uint32_t, const Flows::PNodeInfo> resultMap;
+
+    {
+      std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+      for (const auto &node: _nodes) {
+        if (!node.second || node.second->processingTimes.empty()) continue;
+        auto maxTime = *std::max_element(node.second->processingTimes.begin(), node.second->processingTimes.end());
+        resultMap.emplace(maxTime, node.second);
+      }
+    }
+
+    auto resultArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+    resultArray->arrayValue->reserve(resultMap.size());
+
+    for (auto &element : resultMap) {
+      auto nodeStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+      nodeStruct->structValue->emplace("id", std::make_shared<Flows::Variable>(element.second->id));
+      nodeStruct->structValue->emplace("type", std::make_shared<Flows::Variable>(element.second->type));
+
+      auto processingTimeArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+      processingTimeArray->arrayValue->reserve(element.second->processingTimes.size());
+      for (auto &time : element.second->processingTimes) {
+        processingTimeArray->arrayValue->emplace_back(std::make_shared<Flows::Variable>(time));
+      }
+      nodeStruct->structValue->emplace("processingTimes", processingTimeArray);
+
+      resultArray->arrayValue->emplace_back(nodeStruct);
+    }
+
+    return resultArray;
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

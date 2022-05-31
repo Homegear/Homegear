@@ -57,6 +57,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   BaseLib::PVariable getLoad();
 
+  BaseLib::PVariable getNodeProcessingTimes();
+
   bool start();
 
   void stop();

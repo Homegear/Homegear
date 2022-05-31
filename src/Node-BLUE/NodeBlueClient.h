@@ -342,6 +342,8 @@ class NodeBlueClient : public BaseLib::IQueue {
 
   Flows::PVariable getNodesWithFixedInputs(Flows::PArray &parameters);
 
+  Flows::PVariable getNodeProcessingTimes(Flows::PArray &parameters);
+
   Flows::PVariable getNodeVariable(Flows::PArray &parameters);
 
   Flows::PVariable getFlowVariable(Flows::PArray &parameters);
