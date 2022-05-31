@@ -53,6 +53,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("reload", std::bind(&NodeBlueClient::reload, this, std::placeholders::_1));
   _localRpcMethods.emplace("shutdown", std::bind(&NodeBlueClient::shutdown, this, std::placeholders::_1));
   _localRpcMethods.emplace("lifetick", std::bind(&NodeBlueClient::lifetick, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getLoad", std::bind(&NodeBlueClient::getLoad, this, std::placeholders::_1));
   _localRpcMethods.emplace("startFlow", std::bind(&NodeBlueClient::startFlow, this, std::placeholders::_1));
   _localRpcMethods.emplace("startNodes", std::bind(&NodeBlueClient::startNodes, this, std::placeholders::_1));
   _localRpcMethods.emplace("configNodesStarted", std::bind(&NodeBlueClient::configNodesStarted, this, std::placeholders::_1));
@@ -1425,6 +1426,33 @@ Flows::PVariable NodeBlueClient::lifetick(Flows::PArray &parameters) {
     }
 
     return std::make_shared<Flows::Variable>(true);
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::getLoad(Flows::PArray &parameters) {
+  try {
+    auto loadStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+    for (int32_t i = 0; i < _queueCount; i++) {
+      auto queueStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+      queueStruct->structValue->emplace("Max load", std::make_shared<Flows::Variable>(maxThreadLoad(i)));
+      queueStruct->structValue->emplace("Max load 1m", std::make_shared<Flows::Variable>(maxThreadLoad1m(i)));
+      queueStruct->structValue->emplace("Max load 10m", std::make_shared<Flows::Variable>(maxThreadLoad10m(i)));
+      queueStruct->structValue->emplace("Max load 1h", std::make_shared<Flows::Variable>(maxThreadLoad1h(i)));
+      queueStruct->structValue->emplace("Max latency", std::make_shared<Flows::Variable>(maxWait(i)));
+      queueStruct->structValue->emplace("Max latency 1m", std::make_shared<Flows::Variable>(maxWait1m(i)));
+      queueStruct->structValue->emplace("Max latency 10m", std::make_shared<Flows::Variable>(maxWait10m(i)));
+      queueStruct->structValue->emplace("Max latency 1h", std::make_shared<Flows::Variable>(maxWait1h(i)));
+
+      loadStruct->structValue->emplace("Queue " + std::to_string(i + 1), queueStruct);
+    }
+
+    return loadStruct;
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

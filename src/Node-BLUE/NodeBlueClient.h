@@ -278,6 +278,12 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable lifetick(Flows::PArray &parameters);
 
   /**
+   * Returns load metrics.
+   * @param parameters Irrelevant for this method.
+   */
+  Flows::PVariable getLoad(Flows::PArray &parameters);
+
+  /**
    * Starts a new flow.
    * @param parameters
    */

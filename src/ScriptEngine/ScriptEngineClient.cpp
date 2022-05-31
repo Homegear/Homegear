@@ -73,6 +73,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
   _localRpcMethods.emplace("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1));
   _localRpcMethods.emplace("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1));
   _localRpcMethods.emplace("lifetick", std::bind(&ScriptEngineClient::lifetick, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getLoad", std::bind(&ScriptEngineClient::getLoad, this, std::placeholders::_1));
   _localRpcMethods.emplace("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1));
   _localRpcMethods.emplace("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1));
@@ -1361,6 +1362,33 @@ BaseLib::PVariable ScriptEngineClient::lifetick(BaseLib::PArray &parameters) {
   }
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::getLoad(BaseLib::PArray &parameters) {
+  try {
+    auto loadStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+    for (int32_t i = 0; i < _queueCount; i++) {
+      auto queueStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+      queueStruct->structValue->emplace("Max load", std::make_shared<BaseLib::Variable>(maxThreadLoad(i)));
+      queueStruct->structValue->emplace("Max load 1m", std::make_shared<BaseLib::Variable>(maxThreadLoad1m(i)));
+      queueStruct->structValue->emplace("Max load 10m", std::make_shared<BaseLib::Variable>(maxThreadLoad10m(i)));
+      queueStruct->structValue->emplace("Max load 1h", std::make_shared<BaseLib::Variable>(maxThreadLoad1h(i)));
+      queueStruct->structValue->emplace("Max latency", std::make_shared<BaseLib::Variable>(maxWait(i)));
+      queueStruct->structValue->emplace("Max latency 1m", std::make_shared<BaseLib::Variable>(maxWait1m(i)));
+      queueStruct->structValue->emplace("Max latency 10m", std::make_shared<BaseLib::Variable>(maxWait10m(i)));
+      queueStruct->structValue->emplace("Max latency 1h", std::make_shared<BaseLib::Variable>(maxWait1h(i)));
+
+      loadStruct->structValue->emplace("Queue " + std::to_string(i + 1), queueStruct);
+    }
+
+    return loadStruct;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

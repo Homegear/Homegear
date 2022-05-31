@@ -442,6 +442,55 @@ bool ScriptEngineServer::lifetick() {
   return false;
 }
 
+BaseLib::PVariable ScriptEngineServer::getLoad() {
+  try {
+    auto loadStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+    auto serverStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+    for (int32_t i = 0; i < _queueCount; i++) {
+      auto queueStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+      queueStruct->structValue->emplace("Max load", std::make_shared<BaseLib::Variable>(maxThreadLoad(i)));
+      queueStruct->structValue->emplace("Max load 1m", std::make_shared<BaseLib::Variable>(maxThreadLoad1m(i)));
+      queueStruct->structValue->emplace("Max load 10m", std::make_shared<BaseLib::Variable>(maxThreadLoad10m(i)));
+      queueStruct->structValue->emplace("Max load 1h", std::make_shared<BaseLib::Variable>(maxThreadLoad1h(i)));
+      queueStruct->structValue->emplace("Max latency", std::make_shared<BaseLib::Variable>(maxWait(i)));
+      queueStruct->structValue->emplace("Max latency 1m", std::make_shared<BaseLib::Variable>(maxWait1m(i)));
+      queueStruct->structValue->emplace("Max latency 10m", std::make_shared<BaseLib::Variable>(maxWait10m(i)));
+      queueStruct->structValue->emplace("Max latency 1h", std::make_shared<BaseLib::Variable>(maxWait1h(i)));
+
+      serverStruct->structValue->emplace("Queue " + std::to_string(i + 1), queueStruct);
+    }
+    loadStruct->structValue->emplace("Script engine server", serverStruct);
+
+    std::vector<PScriptEngineClientData> clients;
+
+    {
+      std::lock_guard<std::mutex> stateGuard(_stateMutex);
+      for (auto &client: _clients) {
+        if (client.second->closed) continue;
+        clients.push_back(client.second);
+      }
+    }
+
+    for (auto &client: clients) {
+      auto result = sendRequest(client, "getLoad", std::make_shared<BaseLib::Array>(), true);
+      if (result->errorStruct) continue;
+
+      loadStruct->structValue->emplace("Script engine client " + std::to_string(client->pid), result);
+    }
+
+    return loadStruct;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 void ScriptEngineServer::collectGarbage() {
   try {
     _lastGargabeCollection = GD::bl->hf.getTime();

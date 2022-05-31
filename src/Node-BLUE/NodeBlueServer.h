@@ -55,6 +55,8 @@ class NodeBlueServer : public BaseLib::IQueue {
 
   bool lifetick();
 
+  BaseLib::PVariable getLoad();
+
   bool start();
 
   void stop();
