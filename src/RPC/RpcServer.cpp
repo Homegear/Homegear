@@ -1782,9 +1782,9 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
 
     struct sockaddr_storage clientInfo;
     socklen_t addressSize = sizeof(addressSize);
-    fileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor,
+    fileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor,
                                                               (struct sockaddr *)&clientInfo,
-                                                              &addressSize));
+                                                              &addressSize, SOCK_CLOEXEC));
     if (!fileDescriptor) return fileDescriptor;
 
     getpeername(fileDescriptor->descriptor, (struct sockaddr *)&clientInfo, &addressSize);
@@ -1934,14 +1934,8 @@ void RpcServer::getSocketDescriptor() {
     int32_t error = 0;
     for (struct addrinfo *info = serverInfo; info != 0; info = info->ai_next) {
       _serverFileDescriptor =
-          GD::bl->fileDescriptorManager.add(socket(info->ai_family, info->ai_socktype, info->ai_protocol));
+          GD::bl->fileDescriptorManager.add(socket(info->ai_family, info->ai_socktype | SOCK_CLOEXEC | SOCK_NONBLOCK, info->ai_protocol));
       if (_serverFileDescriptor->descriptor == -1) continue;
-      if (!(fcntl(_serverFileDescriptor->descriptor, F_GETFL) & O_NONBLOCK)) {
-        if (fcntl(_serverFileDescriptor->descriptor,
-                  F_SETFL,
-                  fcntl(_serverFileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
-          throw BaseLib::Exception("Error: Could not set socket options.");
-      }
       if (setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1)
         throw BaseLib::Exception("Error: Could not set socket options.");
       if (bind(_serverFileDescriptor->descriptor.load(), info->ai_addr, info->ai_addrlen) == -1) {

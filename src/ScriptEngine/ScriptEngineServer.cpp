@@ -1561,7 +1561,7 @@ void ScriptEngineServer::mainThread() {
       if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown) {
         sockaddr_un clientAddress;
         socklen_t addressSize = sizeof(addressSize);
-        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize));
+        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize, SOCK_CLOEXEC));
         if (!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
         _out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
 
@@ -1760,7 +1760,7 @@ bool ScriptEngineServer::getFileDescriptor(bool deleteOldSocket) {
       }
     } else if (BaseLib::Io::fileExists(_socketPath)) return false;
 
-    _serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
+    _serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0));
     if (_serverFileDescriptor->descriptor == -1) {
       _out.printCritical("Critical: Couldn't create socket: " + _socketPath + ". The script engine won't work. Error: " + strerror(errno));
       return false;

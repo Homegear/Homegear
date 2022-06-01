@@ -2287,7 +2287,7 @@ ZEND_FUNCTION(hg_i2c_open)
     }
     if(device.empty()) RETURN_FALSE;
 
-    int32_t descriptor = open(device.c_str(), O_RDWR);
+    int32_t descriptor = open(device.c_str(), O_RDWR | O_CLOEXEC);
     if(descriptor == -1) RETURN_FALSE;
     if (ioctl(descriptor, I2C_SLAVE, address) == -1)
     {

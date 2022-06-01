@@ -404,7 +404,7 @@ std::shared_ptr<BaseLib::FileDescriptor> UPnP::getSocketDescriptor() {
       return std::shared_ptr<BaseLib::FileDescriptor>();
     }
     if (_address.empty()) return std::shared_ptr<BaseLib::FileDescriptor>();
-    auto socketDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_INET, SOCK_DGRAM, 0));
+    auto socketDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
     if (socketDescriptor->descriptor == -1) {
       _out.printError("Error: Could not create socket.");
       return std::shared_ptr<BaseLib::FileDescriptor>();

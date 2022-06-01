@@ -1306,7 +1306,7 @@ void IpcServer::mainThread() {
       if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown) {
         sockaddr_un clientAddress;
         socklen_t addressSize = sizeof(addressSize);
-        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize));
+        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize, SOCK_CLOEXEC));
         if (!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 
         int32_t clientId = -1;
@@ -1436,7 +1436,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket) {
       }
     } else if (BaseLib::Io::fileExists(_socketPath)) return false;
 
-    _serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
+    _serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0));
     if (_serverFileDescriptor->descriptor == -1) {
       _out.printCritical("Critical: Couldn't create socket: " + _socketPath + ". Flows won't work. Error: " + strerror(errno));
       return false;
@@ -1447,7 +1447,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket) {
       _out.printCritical("Critical: Couldn't set socket options: " + _socketPath + ". Flows won't work correctly. Error: " + strerror(errno));
       return false;
     }
-    sockaddr_un serverAddress;
+    sockaddr_un serverAddress{};
     serverAddress.sun_family = AF_LOCAL;
     //104 is the size on BSD systems - slightly smaller than in Linux
     if (_socketPath.length() > 104) {
