@@ -319,14 +319,15 @@ void NodeBlueClient::start() {
     uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.nodeBlueProcessingThreadCountNodes();
     if (flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
     _threadCount = flowsProcessingThreadCountNodes;
+    _out.printMessage("Thread count set to: " + std::to_string(_threadCount));
 
     _processingThreadCount1 = 0;
     _processingThreadCount2 = 0;
     _processingThreadCount3 = 0;
 
-    startQueue(0, false, _threadCount, 0, SCHED_OTHER);
-    startQueue(1, false, _threadCount, 0, SCHED_OTHER);
-    startQueue(2, false, _threadCount, 0, SCHED_OTHER);
+    startQueue(0, false, _threadCount / 2, 0, SCHED_OTHER);
+    startQueue(1, false, _threadCount / 2, 0, SCHED_OTHER);
+    startQueue(2, false, _threadCount * 2, 0, SCHED_OTHER);
 
     if (GD::bl->settings.nodeBlueWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&NodeBlueClient::watchdog, this);
 
