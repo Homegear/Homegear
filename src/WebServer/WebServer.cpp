@@ -28,16 +28,16 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
     std::string path = http.getHeader().path;
 
     BaseLib::EventHandlers eventHandlers = getEventHandlers();
-    for (BaseLib::EventHandlers::const_iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i) {
-      i->second->lock();
+    for (const auto &eventHandler: eventHandlers) {
+      eventHandler.second->lock();
       try {
-        if (i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: Calling onGet event handler.");
-        if (i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)i->second->handler())->onGet(_serverInfo, http, socket, path)) {
-          i->second->unlock();
-          if (i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler handled event.");
+        if (eventHandler.second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: Calling onGet event handler.");
+        if (eventHandler.second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)eventHandler.second->handler())->onGet(_serverInfo, http, socket, path)) {
+          eventHandler.second->unlock();
+          if (eventHandler.second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler handled event.");
           return;
         }
-        if (i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler did not handle event.");
+        if (eventHandler.second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler did not handle event.");
       }
       catch (const std::exception &ex) {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -45,7 +45,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       catch (...) {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
       }
-      i->second->unlock();
+      eventHandler.second->unlock();
     }
 
     std::vector<char> content;
@@ -605,7 +605,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
   }
 }
 
-void WebServer::getError(int32_t code, const std::string& codeDescription, const std::string& longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders) {
+void WebServer::getError(int32_t code, const std::string &codeDescription, const std::string &longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders) {
   try {
     std::string contentString =
         "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear "
@@ -656,7 +656,7 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, Base
 
     {
       std::lock_guard<std::mutex> sendHeaderGuard(_sendHeaderHookMutex);
-      for (auto &hook : _sendHeaderHooks) {
+      for (auto &hook: _sendHeaderHooks) {
         hook.second(scriptInfo->http, headers);
       }
     }
@@ -669,8 +669,8 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, Base
       output.append("Content-Encoding: gzip\r\n");
     }
 
-    for (auto &headerArray : *headers->structValue) {
-      for (auto &header : *headerArray.second->arrayValue) {
+    for (auto &headerArray: *headers->structValue) {
+      for (auto &header: *headerArray.second->arrayValue) {
         if (output.size() + headerArray.first.size() + header->stringValue.size() + 6 > output.capacity()) output.reserve(output.capacity() + 1024 + headerArray.first.size() + header->stringValue.size() + 6);
         output.append(headerArray.first + ": " + header->stringValue + "\r\n");
       }
