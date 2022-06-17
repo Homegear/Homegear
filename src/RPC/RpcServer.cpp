@@ -576,7 +576,15 @@ void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
         try {
           auto userMapJson = BaseLib::Rpc::JsonDecoder::decode(content);
           for (auto &element: *userMapJson->structValue) {
-            cloudUserMap.emplace(element.first, element.second->stringValue);
+            if (element.first == "*") {
+              _cloudUserMap["system-provider"].emplace(element.first, element.second->stringValue);
+              _cloudUserMap["system-distributor"].emplace(element.first, element.second->stringValue);
+              _cloudUserMap["business-partner"].emplace(element.first, element.second->stringValue);
+              _cloudUserMap["end-user"].emplace(element.first, element.second->stringValue);
+            } else {
+              auto name_pair = BaseLib::HelperFunctions::splitFirst(element.first, '/');
+              _cloudUserMap[name_pair.first].emplace(name_pair.second, element.second->stringValue);
+            }
           }
         }
         catch (const std::exception &ex) {
@@ -1590,17 +1598,23 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 if (firstHttpPacket) {
                   firstHttpPacket = false;
                   auto header = http.getHeader();
-                  auto headerIterator = header.fields.find("ibs-userid");
-                  if (headerIterator != header.fields.end()) {
-                    auto userMapIterator = cloudUserMap.find(headerIterator->second);
-                    if (userMapIterator == cloudUserMap.end()) userMapIterator = cloudUserMap.find("*");
-                    if (userMapIterator != cloudUserMap.end()) {
-                      if (client->acls->fromUser(userMapIterator->second)) {
-                        client->user = userMapIterator->second;
-                        client->authenticated = true;
-                        _out.printInfo("Info: Client successfully authorized as user [" + client->user
-                                           + "] using cloud authentication. Cloud user ID is: "
-                                           + userMapIterator->first);
+                  auto userTypeIterator = header.fields.find("ibs-user-type");
+                  if (userTypeIterator != header.fields.end() && !userTypeIterator->second.empty() && userTypeIterator->second != "unknown") {
+                    auto userMapIterator = _cloudUserMap.find(userTypeIterator->second);
+                    if (userMapIterator != _cloudUserMap.end()) {
+                      auto userIdIterator = header.fields.find("ibs-userid");
+                      if (userIdIterator != header.fields.end()) {
+                        auto userMapIterator2 = userMapIterator->second.find(userIdIterator->second);
+                        if (userMapIterator2 == userMapIterator->second.end()) userMapIterator2 = userMapIterator->second.find("*");
+                        if (userMapIterator2 != userMapIterator->second.end()) {
+                          if (client->acls->fromUser(userMapIterator2->second)) {
+                            client->user = userMapIterator2->second;
+                            client->authenticated = true;
+                            _out.printInfo("Info: Client successfully authorized as user [" + client->user
+                                               + "] using cloud authentication. Cloud user ID is: "
+                                               + userMapIterator->first);
+                          }
+                        }
                       }
                     }
                   }

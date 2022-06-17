@@ -141,7 +141,7 @@ class RpcServer {
   std::pair<int64_t, bool> _lifetick1;
   std::mutex _lifetick2Mutex;
   std::pair<int64_t, bool> _lifetick2;
-  std::unordered_map<std::string, std::string> cloudUserMap;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::string>> _cloudUserMap;
 
   void collectGarbage();
 
