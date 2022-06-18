@@ -1932,7 +1932,7 @@ void RpcServer::getSocketDescriptor() {
     hostInfo.ai_family = AF_UNSPEC;
     hostInfo.ai_socktype = SOCK_STREAM;
     hostInfo.ai_flags = AI_PASSIVE;
-    std::array<char, 100> buffer;
+    std::array<char, 100> buffer{};
     std::string port = std::to_string(_info->port);
     int32_t result;
     if ((result = getaddrinfo(_info->interface.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0) {
