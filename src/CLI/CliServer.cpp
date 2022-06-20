@@ -586,12 +586,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
 #endif
       stringStream << "Done." << std::endl;
       return std::make_shared<BaseLib::Variable>(stringStream.str());
-    }
-      //Todo: Deprecated. Remove beginning of 2021.
-    else if (BaseLib::HelperFunctions::checkCliCommand(command, "disconnect", "dcr", "", 0, arguments, showHelp)) {
-      GD::rpcClient->disconnectRega();
-      stringStream << "RegaHss socket closed." << std::endl;
-      return std::make_shared<BaseLib::Variable>(stringStream.str());
     } else if (BaseLib::HelperFunctions::checkCliCommand(command, "debuglevel", "dl", "", 1, arguments, showHelp)) {
       int32_t debugLevel = 3;
 

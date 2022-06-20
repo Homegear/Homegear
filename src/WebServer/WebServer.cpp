@@ -62,7 +62,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
 
     bool isDirectory = false;
     BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/") {
+    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/" || path == "web-ssh" || path == "web-ssh/") {
       if (!path.empty() && path.back() != '/') {
         path = '/' + path + '/';
         std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
@@ -74,6 +74,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       if (path == "node-blue/") path = "node-blue/index.php";
       else if (path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
       else if (path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+      else if (path.compare(0, 8, "web-ssh/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs"))) {}
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -111,7 +112,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       }
     }
 
-    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0) {
+    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0 && path.compare(0, 8, "web-ssh/") != 0) {
       GD::out.printWarning("Warning: Requested URL not found: " + path);
       getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
       send(socket, content);
@@ -142,6 +143,17 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
 
             if (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
             else path = "admin/index.hgs";
+          }
+        }
+      } else if (path.compare(0, 8, "web-ssh/") == 0 && path.size() > 8) {
+        if (!BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + path.substr(8))) {
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) {
+            http.setRedirectUrl('/' + path);
+            http.setRedirectQueryString(http.getHeader().args);
+            http.setRedirectStatus(200);
+
+            if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) path = "web-ssh/index.php";
+            else path = "web-ssh/index.hgs";
           }
         }
       }
@@ -208,6 +220,24 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
           }
         } else fullPath = GD::bl->settings.uiPath() + path.substr(3);
         contentPath = GD::bl->settings.uiPath();
+      } else if (path.compare(0, 8, "web-ssh/") == 0) {
+        if (path == "web-ssh/") {
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) {
+            fullPath = GD::bl->settings.webSshPath() + "index.php";
+            relativePath += "index.php";
+            ending = "php";
+          } else if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) {
+            fullPath = GD::bl->settings.webSshPath() + "index.hgs";
+            relativePath += "index.hgs";
+            ending = "hgs";
+          } else {
+            getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+            send(socket, content);
+            socket->close();
+            return;
+          }
+        } else fullPath = GD::bl->settings.webSshPath() + path.substr(8);
+        contentPath = GD::bl->settings.webSshPath();
       } else fullPath = _serverInfo->contentPath + path;
 
 #ifndef NO_SCRIPTENGINE
@@ -286,11 +316,11 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
     std::string path = http.getHeader().path;
 
     BaseLib::EventHandlers eventHandlers = getEventHandlers();
-    for (BaseLib::EventHandlers::const_iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i) {
-      i->second->lock();
+    for (const auto &eventHandler: eventHandlers) {
+      eventHandler.second->lock();
       try {
-        if (i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)i->second->handler())->onPost(_serverInfo, http, socket, path)) {
-          i->second->unlock();
+        if (eventHandler.second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)eventHandler.second->handler())->onPost(_serverInfo, http, socket, path)) {
+          eventHandler.second->unlock();
           return;
         }
       }
@@ -300,14 +330,14 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       catch (...) {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
       }
-      i->second->unlock();
+      eventHandler.second->unlock();
     }
 
     if (!path.empty() && path.front() == '/') path = path.substr(1);
 
     bool isDirectory = false;
     BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/") {
+    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/" || path == "web-ssh" || path == "web-ssh/") {
       if (!path.empty() && path.back() != '/') {
         path = '/' + path + '/';
         std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
@@ -319,6 +349,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       if (path == "node-blue/") path = "node-blue/index.php";
       else if (path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
       else if (path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+      else if (path.compare(0, 8, "web-ssh/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs"))) {}
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -354,7 +385,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       }
     }
 
-    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0) {
+    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0 && path.compare(0, 8, "web-ssh/") != 0) {
       getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
       send(socket, content);
       socket->close();
@@ -382,6 +413,17 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
 
           if (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php")) path = "admin/index.php";
           else path = "admin/index.hgs";
+        }
+      }
+    } else if (path.compare(0, 8, "web-ssh/") == 0 && path.size() > 6) {
+      if (!BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + path.substr(8))) {
+        if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) {
+          http.setRedirectUrl('/' + path);
+          http.setRedirectQueryString(http.getHeader().args);
+          http.setRedirectStatus(200);
+
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) path = "web-ssh/index.php";
+          else path = "web-ssh/index.hgs";
         }
       }
     }
@@ -437,6 +479,18 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
           }
         } else fullPath = GD::bl->settings.uiPath() + path.substr(3);
         contentPath = GD::bl->settings.uiPath();
+      } else if (path.compare(0, 8, "web-ssh/") == 0) {
+        if (path == "web-ssh/") {
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) fullPath = GD::bl->settings.webSshPath() + "index.php";
+          else if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) fullPath = GD::bl->settings.webSshPath() + "index.hgs";
+          else {
+            getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+            send(socket, content);
+            socket->close();
+            return;
+          }
+        } else fullPath = GD::bl->settings.webSshPath() + path.substr(8);
+        contentPath = GD::bl->settings.webSshPath();
       } else fullPath = _serverInfo->contentPath + path;
       BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
       scriptInfo->socket = socket;

@@ -412,6 +412,29 @@ IpcServer::~IpcServer() {
   if (!_stopServer) stop();
 }
 
+std::vector<PIpcClientData> IpcServer::GetClientsForRpcMethod(const std::string &rpc_method) {
+  try {
+    std::vector<PIpcClientData> clientData;
+
+    {
+      std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+      auto clientIterator = _clientsByRpcMethods.find(rpc_method);
+      if (clientIterator == _clientsByRpcMethods.end()) {
+        return {};
+      }
+      clientData.reserve(clientIterator->second.second.size());
+      for (auto &client : clientIterator->second.second) {
+        clientData.push_back(client.second);
+      }
+    }
+
+    return clientData;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return {};
+}
+
 bool IpcServer::lifetick() {
   try {
     {
@@ -548,6 +571,23 @@ void IpcServer::homegearShuttingDown() {
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+}
+
+std::string IpcServer::generateWebSshToken() {
+  try {
+    auto clientData = GetClientsForRpcMethod("websshInput");
+    if (clientData.empty()) return "";
+
+    auto parameters = std::make_shared<BaseLib::Array>();
+    BaseLib::PVariable result = sendRequest(clientData.front(), "websshGenerateToken", parameters);
+
+    if (result->errorStruct) _out.printError("Error generating web SSH token: " + result->structValue->at("faultString")->stringValue);
+    return result->stringValue;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return "";
 }
 
 void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values) {
@@ -977,19 +1017,8 @@ BaseLib::PVariable IpcServer::callRpcMethod(const BaseLib::PRpcClientInfo &clien
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    std::vector<PIpcClientData> clientData;
-    {
-      std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
-      auto clientIterator = _clientsByRpcMethods.find(methodName);
-      if (clientIterator == _clientsByRpcMethods.end()) {
-        _out.printError("Warning: RPC method not found: " + methodName);
-        return BaseLib::Variable::createError(-32601, "Requested method not found.");
-      }
-      clientData.reserve(clientIterator->second.second.size());
-      for (auto &client : clientIterator->second.second) {
-        clientData.push_back(client.second);
-      }
-    }
+    auto clientData = GetClientsForRpcMethod(methodName);
+    if (clientData.empty()) return BaseLib::Variable::createError(-32601, "Requested method not found.");
 
     BaseLib::PVariable responses;
     BaseLib::PVariable responseStruct;
@@ -1057,7 +1086,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
         if (methodIterator == _rpcMethods.end()) {
           if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
             auto hgdcMethodName = methodName.substr(4);
-            hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+            hgdcMethodName.at(0) = (char)(uint8_t)std::tolower(hgdcMethodName.at(0));
             auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters->at(2)->arrayValue);
             sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
             return;
@@ -1709,10 +1738,11 @@ BaseLib::PVariable IpcServer::noderedEvent(PIpcClientData &clientData, int32_t t
 
 BaseLib::PVariable IpcServer::ptyOutput(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
   try {
-    if (parameters->empty()) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
-    if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+    if (parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
 
-    GD::rpcClient->broadcastPtyOutput(parameters->at(0)->stringValue);
+    GD::rpcClient->broadcastPtyOutput(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
 
     return std::make_shared<BaseLib::Variable>();
   }

@@ -1183,7 +1183,7 @@ int main(int argc, char *argv[]) {
           std::vector<std::string> subdirs = GD::bl->io.getDirectories(currentPath, true);
           for (std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j) {
             std::string subdir = currentPath + *j;
-            if (subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.nodeBluePath() && subdir != GD::bl->settings.adminUiPath() && subdir != GD::bl->settings.uiPath() && subdir != GD::bl->settings.nodeBlueDataPath()
+            if (subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.nodeBluePath() && subdir != GD::bl->settings.adminUiPath() && subdir != GD::bl->settings.uiPath() && subdir != GD::bl->settings.webSshPath() && subdir != GD::bl->settings.nodeBlueDataPath()
                 && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath()) {
               if (chown(subdir.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
             }
@@ -1195,7 +1195,7 @@ int main(int argc, char *argv[]) {
           }
           for (std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j) {
             std::string subdir = currentPath + *j;
-            if (subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.nodeBluePath() || subdir == GD::bl->settings.adminUiPath() || subdir == GD::bl->settings.uiPath() || subdir == GD::bl->settings.nodeBlueDataPath()
+            if (subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.nodeBluePath() || subdir == GD::bl->settings.adminUiPath() || subdir == GD::bl->settings.uiPath() || subdir == GD::bl->settings.webSshPath() || subdir == GD::bl->settings.nodeBlueDataPath()
                 || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath())
               continue;
             if (chmod(subdir.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
@@ -1272,6 +1272,17 @@ int main(int argc, char *argv[]) {
         }
         if (chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
         if (chmod(currentPath.c_str(), GD::bl->settings.uiPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+        currentPath = GD::bl->settings.webSshPath();
+        if (!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+        localUserId = GD::bl->hf.userId(GD::bl->settings.webSshPathUser());
+        localGroupId = GD::bl->hf.groupId(GD::bl->settings.webSshPathGroup());
+        if (((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1) {
+          localUserId = userId;
+          localGroupId = groupId;
+        }
+        if (chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+        if (chmod(currentPath.c_str(), GD::bl->settings.webSshPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
         if (GD::bl->settings.socketPath() != GD::bl->settings.dataPath() && GD::bl->settings.socketPath() != GD::executablePath) {
           currentPath = GD::bl->settings.socketPath();

@@ -61,8 +61,8 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
   _lifetick2.first = 0;
   _lifetick2.second = true;
 
-  _rpcDecoder = std::unique_ptr<BaseLib::Rpc::RpcDecoder>(new BaseLib::Rpc::RpcDecoder(GD::bl.get(), false, true));
-  _rpcEncoder = std::unique_ptr<BaseLib::Rpc::RpcEncoder>(new BaseLib::Rpc::RpcEncoder(GD::bl.get(), true, true));
+  _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, true);
+  _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
   _scriptEngineClientInfo = std::make_shared<BaseLib::RpcClientInfo>();
   _scriptEngineClientInfo->scriptEngineServer = true;
   _scriptEngineClientInfo->initInterfaceId = "scriptEngine";
@@ -337,6 +337,7 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
     _rpcMethods.emplace("disableMaintenanceMode", std::make_shared<RpcMethods::RpcDisableMaintenanceMode>());
   }
 
+  _localRpcMethods.emplace("generateWebSshToken", std::bind(&ScriptEngineServer::generateWebSshToken, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   _localRpcMethods.emplace("scriptOutput", std::bind(&ScriptEngineServer::scriptOutput, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   _localRpcMethods.emplace("scriptHeaders", std::bind(&ScriptEngineServer::scriptHeaders, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   _localRpcMethods.emplace("peerExists", std::bind(&ScriptEngineServer::peerExists, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -404,7 +405,7 @@ bool ScriptEngineServer::lifetick() {
     {
       std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
       if (!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000) {
-        GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
+        _out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
         return false;
       }
     }
@@ -412,7 +413,7 @@ bool ScriptEngineServer::lifetick() {
     {
       std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
       if (!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000) {
-        GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
+        _out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
         return false;
       }
     }
@@ -434,10 +435,10 @@ bool ScriptEngineServer::lifetick() {
     return true;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return false;
 }
@@ -483,10 +484,10 @@ BaseLib::PVariable ScriptEngineServer::getLoad() {
     return loadStruct;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -1378,7 +1379,7 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData &clientData,
       int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, &data.at(0) + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
       if (sentBytes <= 0) {
         if (errno == EAGAIN) continue;
-        if (clientData->fileDescriptor->descriptor != -1) GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+        if (clientData->fileDescriptor->descriptor != -1) _out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
         return BaseLib::Variable::createError(-32500, "Unknown application error.");
       }
       totallySentBytes += sentBytes;
@@ -1617,7 +1618,7 @@ PScriptEngineProcess ScriptEngineServer::getFreeProcess(bool nodeProcess, uint32
     std::lock_guard<std::mutex> processGuard(_newProcessMutex);
 
     if (nodeProcess && GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount + 1 > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
-      GD::out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
+      _out.printError("Error: Could not get script process for node, because maximum number of threads in node is greater than the number of threads allowed per process.");
       return std::shared_ptr<ScriptEngineProcess>();
     }
 
@@ -1817,7 +1818,7 @@ std::string ScriptEngineServer::checkSessionId(const std::string &sessionId) {
     if (!client) {
       PScriptEngineProcess process = getFreeProcess(false, 0);
       if (!process) {
-        GD::out.printError("Error: Could not check session ID. Could not get free process.");
+        _out.printError("Error: Could not check session ID. Could not get free process.");
         return "";
       }
       client = process->getClientData();
@@ -1826,7 +1827,7 @@ std::string ScriptEngineServer::checkSessionId(const std::string &sessionId) {
     parameters->push_back(std::make_shared<BaseLib::Variable>(sessionId));
     BaseLib::PVariable result = sendRequest(client, "checkSessionId", parameters, true);
     if (result->errorStruct) {
-      GD::out.printError("Error: checkSessionId returned: " + result->structValue->at("faultString")->stringValue);
+      _out.printError("Error: checkSessionId returned: " + result->structValue->at("faultString")->stringValue);
       return "";
     }
     return result->stringValue;
@@ -2019,10 +2020,10 @@ BaseLib::PVariable ScriptEngineServer::getAllScripts() {
     return array;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
@@ -2033,10 +2034,10 @@ void ScriptEngineServer::unregisterNode(std::string nodeId) {
     _nodeClientIdMap.erase(nodeId);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
 }
 
@@ -2046,14 +2047,23 @@ void ScriptEngineServer::unregisterDevice(uint64_t peerId) {
     _deviceClientIdMap.erase(peerId);
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   catch (...) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
 }
 
 // {{{ RPC methods
+BaseLib::PVariable ScriptEngineServer::generateWebSshToken(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters) {
+  try {
+    return std::make_shared<BaseLib::Variable>(GD::ipcServer->generateWebSshToken());
+  } catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineClientData &clientData, BaseLib::PArray &parameters) {
   try {
     pid_t pid = parameters->at(0)->integerValue;
@@ -2092,7 +2102,7 @@ BaseLib::PVariable ScriptEngineServer::registerScriptEngineClient(PScriptEngineC
 
 BaseLib::PVariable ScriptEngineServer::scriptFinished(PScriptEngineClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() < 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->empty()) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
 
     int32_t exitCode = parameters->at(0)->integerValue;
     std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -2652,7 +2662,7 @@ BaseLib::PVariable ScriptEngineServer::verifyOauthKey(PScriptEngineClientData &c
     auto key = parameters->at(0)->stringValue;
 
     if (GD::bl->settings.oauthCertPath().empty() || GD::bl->settings.oauthKeyPath().empty()) {
-      GD::out.printError("Error: No OAuth certificates specified in \"main.conf\".");
+      _out.printError("Error: No OAuth certificates specified in \"main.conf\".");
       return BaseLib::Variable::createError(-1, "No OAuth certificates specified in \"main.conf\".");
     }
     std::string publicKey = BaseLib::Io::getFileContent(GD::bl->settings.oauthCertPath());

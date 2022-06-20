@@ -53,6 +53,8 @@ class IpcServer : public BaseLib::IQueue {
 
   void homegearShuttingDown();
 
+  std::string generateWebSshToken();
+
   void broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values);
 
   void broadcastServiceMessage(const BaseLib::PServiceMessage &serviceMessage);
@@ -144,6 +146,8 @@ class IpcServer : public BaseLib::IQueue {
   std::pair<int64_t, bool> _lifetick2;
 
   void collectGarbage();
+
+  std::vector<PIpcClientData> GetClientsForRpcMethod(const std::string &rpc_method);
 
   bool getFileDescriptor(bool deleteOldSocket = false);
 

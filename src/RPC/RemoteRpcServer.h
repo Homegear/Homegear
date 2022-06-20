@@ -52,7 +52,7 @@ class RemoteRpcServer {
  public:
   std::shared_ptr<ClientSettings::Settings> settings;
 
-  int32_t creationTime = 0;
+  int64_t creationTime = 0;
   std::atomic_bool removed;
   std::atomic_bool initialized;
   bool useSSL = false;
