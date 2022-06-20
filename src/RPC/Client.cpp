@@ -894,7 +894,6 @@ void Client::broadcastPtyOutput(const std::string &token, const std::string &out
       if (!server.second->getServerClientInfo()->acls->checkEventServerMethodAccess("ptyOutput")) {
         continue;
       }
-      GD::out.printInfo("Moin " + server.second->getServerClientInfo()->webSocketClientId + " hg-web-ssh-" + token);
       if (BaseLib::HelperFunctions::compareConstant(server.second->getServerClientInfo()->webSocketClientId, "hg-web-ssh-" + token) != 0) continue;
       std::shared_ptr<std::list<BaseLib::PVariable>> parameters(new std::list<BaseLib::PVariable>());
       parameters->push_back(std::make_shared<BaseLib::Variable>(output));
