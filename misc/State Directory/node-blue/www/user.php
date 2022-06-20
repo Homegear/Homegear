@@ -36,7 +36,7 @@ class User
 
         if(!isset($_SESSION['locale']))
         {
-            $settings = hg_get_user_metadata($username);
+            $settings = hg_get_user_metadata($_SESSION['user']);
             if (is_array($settings) && isset($settings['locale'])) $_SESSION['locale'] = array($settings['locale']);
         }
 
