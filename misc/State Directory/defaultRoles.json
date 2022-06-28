@@ -2167,6 +2167,30 @@
     "aggregation": "count"
   },
   {
+    "id": "90.04.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.04.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Flow temperature"
+    }
+  },
+  {
+    "id": "90.04.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
     "id": "90.05.00",
     "translations": {
       "de-CH": "Kältemengenzähler",
