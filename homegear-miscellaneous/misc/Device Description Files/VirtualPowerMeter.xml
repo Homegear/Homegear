@@ -41,6 +41,7 @@
                     <readable>true</readable>
                     <writeable>true</writeable>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -58,6 +59,7 @@
                     <readable>true</readable>
                     <writeable>true</writeable>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -75,6 +77,7 @@
                     <readable>true</readable>
                     <writeable>true</writeable>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -92,6 +95,7 @@
                     <readable>true</readable>
                     <writeable>true</writeable>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -109,6 +113,7 @@
                     <readable>true</readable>
                     <writeable>true</writeable>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
