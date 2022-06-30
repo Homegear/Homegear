@@ -2065,9 +2065,9 @@
   {
     "id": "90.01.00",
     "translations": {
-      "de-CH": "Wasserzähler",
-      "de-DE": "Wasserzähler",
-      "en-US": "Water meter"
+      "de-CH": "Generischer Wasserzähler",
+      "de-DE": "Generischer Wasserzähler",
+      "en-US": "Generic water meter"
     }
   },
   {
@@ -2209,6 +2209,84 @@
   },
   {
     "id": "90.05.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.06.00",
+    "translations": {
+      "de-CH": "Warmwasserzähler",
+      "de-DE": "Warmwasserzähler",
+      "en-US": "Hot water meter"
+    }
+  },
+  {
+    "id": "90.06.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.06.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.07.00",
+    "translations": {
+      "de-CH": "Kaltwasserzähler",
+      "de-DE": "Kaltwasserzähler",
+      "en-US": "Cold water meter"
+    }
+  },
+  {
+    "id": "90.07.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.07.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.08.00",
+    "translations": {
+      "de-CH": "Abwasserzähler",
+      "de-DE": "Abwasserzähler",
+      "en-US": "Waste water meter"
+    }
+  },
+  {
+    "id": "90.08.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.08.02",
     "translations": {
       "de-CH": "Verbrauch",
       "de-DE": "Verbrauch",
