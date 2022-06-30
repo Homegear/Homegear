@@ -12,19 +12,20 @@ $testPackets = [
     "21450216" => "685B5B6808007216024521B5151902AC0000000C78160245210403284904000403FBA604008410032849040084200300000000841003FBA6040084200300000000042BF6FFFFFF04ABFF011A00000004ABFF022900000004ABFF03B2FFFFFF6D16"
 ];
 
-if ($argc < 2) {
-    die('Please specify the file name to import.'.PHP_EOL);
-}
-
 $testMode = false;
 if ($argc >= 3 && $argv[2] == '1') {
     $testMode = true;
     echo "Test mode enabled.".PHP_EOL;
 }
 
-//Load JSON configuration file
-$config = JsonUtil::Load($argv[1]);
-if ($config === false) die('Could not load config file.'.PHP_EOL);
+if ($argc >= 2) {
+	//Load JSON configuration file
+	$config = JsonUtil::Load($argv[1]);
+	if ($config === false) die('Could not load config file.'.PHP_EOL);
+} else {
+	$config = JsonUtil::Decode($hg->getData('deviceConfig'));
+	if ($config === false) die('Could not load config.'.PHP_EOL);
+}
 
 if (!isset($config['devices'])) die('Configuration file does not contain property "devices".'.PHP_EOL);
 

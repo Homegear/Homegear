@@ -15,7 +15,7 @@ class JsonUtil
         return json_decode(self::StripComments($contents), true);
     }
 
-    public static function decode(string $string): string
+    public static function Decode(string $string): string
     {
         return json_decode(self::StripComments($string), true);
     }
