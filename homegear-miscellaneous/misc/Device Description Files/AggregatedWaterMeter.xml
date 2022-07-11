@@ -50,7 +50,7 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
 				    $data['active'] = false;
 				}
 				$config = $hg->getParamset($peerId, 0, "MASTER");
-                foreach($config['PEERS'] as $meterPeerId) {
+                foreach($config['PEERS'] as $meterPeerId => $data) {
                     if (!isset($peerData[$meterPeerId])) {
                         $peerInfo = [];
                         $roles = [900101, 900601, 900701, 900801];
@@ -76,6 +76,8 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
                                     if ($description['UNIT_CODE'] == 82) $peerInfo['scaleFactor'] = 0.001;
                                     $peerInfo['channel'] = $channel;
                                     $peerInfo['variable'] = $variable;
+                                    $peerInfo['direction'] = 1;
+                                    if (isset($data['direction']) && $data['direction'] === 0) $peerInfo['direction'] = 0;
                                     $peerInfo['active'] = true;
                                 }
                             }
@@ -325,7 +327,7 @@ class HomegearDevice extends HomegearDeviceBase
                         <rpcBinary/>
                     </casts>
                 </properties>
-                <logicalArray/>
+                <logicalStruct/>
                 <physicalNone>
                     <operationType>config</operationType>
                 </physicalNone>
