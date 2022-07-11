@@ -25,7 +25,44 @@ class Device
             if ($deviceExists) {
                 $peerId = $peerIds[0];
                 \Homegear\Homegear::invokeFamilyMethod(Util::MBUS_FAMILY_ID, "setPrimaryAddress", [$peerId, $primaryAddress]);
-            } else $peerId = \Homegear\Homegear::createDevice($familyId, -1, $device['secondaryAddress'], $primaryAddress, -1, "");
+            } else {
+                $peerId = \Homegear\Homegear::createDevice($familyId, -1, $device['secondaryAddress'], $primaryAddress, -1, '');
+                if (is_array($peerId)) throw new DeviceException('Could not create device: '.$peerId['faultString']);
+            }
+        } else if ($familyId == Util::MISC_FAMILY_ID) {
+            if (!isset($device['id'])) throw new DeviceException('At least one device does not have a "id" property');
+            if (!isset($device['role'])) throw new DeviceException('At least one device does not have a "role" property');
+            $role = intval($device['role']);
+            $peerIds = \Homegear\Homegear::getPeerId(1, $device['id']);
+            $deviceExists = count($peerIds) > 0;
+            if ($deviceExists) {
+                $peerId = $peerIds[0];
+            } else {
+                $roleTypeIdMap = [
+                    900100 => 0xF01A,
+                    900200 => 0xF01B,
+                    900300 => 0xF01C,
+                    900400 => 0xF01D,
+                    900500 => 0xF01E,
+                    900600 => 0xF01A,
+                    900700 => 0xF01A,
+                    900800 => 0xF01A
+                ];
+                if (!isset($roleTypeIdMap[$role])) throw new DeviceException('Unknown role.');
+                $peerId = \Homegear\Homegear::createDevice($familyId, $roleTypeIdMap[$role], $device['id'], -1, -1, '');
+            }
+            if ($role == 900101 || $role == 900601 || $role == 900701 || $role == 900801) {
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900100);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900101);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900600);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900601);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900700);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900701);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900800);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900801);
+                \Homegear\Homegear::addRoleToVariable($peerId, 1, "VOLUME", $role);
+            }
+            //All other meter roles are defined by their XML file
         } else throw new DeviceException('Unknown family.');
         return $peerId;
     }
@@ -35,6 +72,9 @@ class Device
      */
     public static function ApplySettings(int $peerId, array $device)
     {
+        if (!isset($device['family'])) throw new DeviceException('At least one device does not have a "family" property');
+        $familyId = Util::GetFamilyId($device['family']);
+
         //Delete all device categories
         $deviceDescription = \Homegear\Homegear::getDeviceDescription($peerId, -1, ['CATEGORIES', 'CHANNELS']);
         if (isset($deviceDescription['CATEGORIES'])) {
@@ -57,6 +97,38 @@ class Device
                     \Homegear\Homegear::removeVariableFromBuildingPart($peerId, $channel, $variable, $variableDescription['BUILDING_PART']);
                 }
             }
+        }
+
+        //Remove from all virtual meters
+        $types = ['0xF01A', '0xF01B', '0xF01C', '0xF01D', '0xF01E'];
+        foreach ($types as $type) {
+            $peerIds = \Homegear\Homegear::getPeerId(3, $type);
+            foreach ($peerIds as $virtualPeerId) {
+                $config = \Homegear\Homegear::getParamset($virtualPeerId, 0, "MASTER");
+                if (!isset($config['PEERS']) || !is_array($config['PEERS'])) continue;
+                if (isset($config['PEERS'][$peerId])) {
+                    unset($config['PEERS'][$peerId]);
+                    \Homegear\Homegear::putParamset($virtualPeerId, 0, "MASTER", $config);
+                }
+            }
+        }
+
+        //Add to virtual meter
+        if (isset($device['meterGroup']) && $familyId != Util::MISC_FAMILY_ID) {
+            if (!isset($device['meterGroup']['virtualMeterId'])) throw new DeviceException('Property meterGroup\virtualMeterId is missing.');
+            $peerIds = \Homegear\Homegear::getPeerId(1, $device['meterGroup']['virtualMeterId']);
+            if (count($peerIds) == 0) throw new DeviceException('Virtual meter ID ' . $device['meterGroup']['virtualMeterId'] . ' is unknown.');
+            $virtualPeerId = $peerIds[0];
+            $config = \Homegear\Homegear::getParamset($virtualPeerId, 0, "MASTER");
+            if (!isset($config['PEERS'])) throw new DeviceException('Virtual meter is missing configuration parameter "PEERS".');
+            if (isset($device['meterGroup']['operation']) && $device['meterGroup']['operation'] != 'add' && $device['meterGroup']['operation'] != 'subtract') {
+                throw new DeviceException('Property meterGroup\operation has invalid value.');
+            }
+            if (!is_array($config['PEERS'])) $config['PEERS'] = [];
+            $direction = 1;
+            if (isset($device['meterGroup']['operation']) && $device['meterGroup']['operation'] == 'subtract') $direction = 0;
+            $config['PEERS'][$peerId] = ['direction' => $direction];
+            \Homegear\Homegear::putParamset($virtualPeerId, 0, "MASTER", $config);
         }
 
         //Set equipment ID

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
     <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-        <device id="WaterMeter">
-            <description>Water meter</description>
-            <typeNumber>0xF01A</typeNumber>
+        <device id="GasMeter">
+            <description>Gas meter</description>
+            <typeNumber>0xF01C</typeNumber>
         </device>
     </supportedDevices>
     <runProgram>
@@ -49,7 +49,7 @@ $eventThread = function(string $scriptId, int $peerId, Channel $homegearChannel,
                     $meterPeerId = intval($meterPeerId);
                     if (!isset($peerData[$meterPeerId])) {
                         $peerInfo = [];
-                        $roles = [900101, 900601, 900701, 900801];
+                        $roles = [900301];
                         foreach($roles as $role) {
                             $variables = $hg->getVariablesInRole($role, $meterPeerId);
                             foreach($variables as $channel => $channelValue) {
@@ -413,6 +413,11 @@ class HomegearDevice extends HomegearDeviceBase
                     <casts>
                         <rpcBinary/>
                     </casts>
+                    <roles>
+                        <role>900000</role>
+                        <role>900300</role>
+                        <role>900301</role>
+                    </roles>
                 </properties>
                 <logicalDecimal>
                     <minimumValue>0.0</minimumValue>

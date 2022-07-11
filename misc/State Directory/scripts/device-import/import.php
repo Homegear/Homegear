@@ -15,19 +15,19 @@ $testPackets = [
 $testMode = false;
 if ($argc >= 3 && $argv[2] == '1') {
     $testMode = true;
-    echo "Test mode enabled.".PHP_EOL;
+    echo "Test mode enabled." . PHP_EOL;
 }
 
 if ($argc >= 2) {
-	//Load JSON configuration file
-	$config = JsonUtil::Load($argv[1]);
-	if ($config === false) die('Could not load config file.'.PHP_EOL);
+    //Load JSON configuration file
+    $config = JsonUtil::Load($argv[1]);
+    if ($config === false) die('Could not load config file.' . PHP_EOL);
 } else {
-	$config = JsonUtil::Decode($hg->getData('deviceConfig'));
-	if ($config === false) die('Could not load config.'.PHP_EOL);
+    $config = JsonUtil::Decode($hg->getData('deviceConfig'));
+    if ($config === false) die('Could not load config.' . PHP_EOL);
 }
 
-if (!isset($config['devices'])) die('Configuration file does not contain property "devices".'.PHP_EOL);
+if (!isset($config['devices'])) die('Configuration file does not contain property "devices".' . PHP_EOL);
 
 //Iterate over every device in config
 try {
@@ -35,32 +35,36 @@ try {
         //Step one: Precreate the devices with the provided information:
         $peerId = Device::CreateOrReturn($device);
 
+        $familyId = Util::GetFamilyId($device['family']);
+
         //Step two: Poll M-Bus device
-        if ($testMode) {
-            $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
-        } else {
-            if (isset($device['primaryAddress'])) {
-                $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']]]);
+        if ($familyId == Util::MBUS_FAMILY_ID) {
+            if ($testMode) {
+                $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
             } else {
-                $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']]]);
+                if (isset($device['primaryAddress'])) {
+                    $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']]]);
+                } else {
+                    $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']]]);
+                }
             }
-        }
-        //Homegear might need some time to reload the device description files
-        for ($i = 0; $i < 10; $i++) {
-            $result = $hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED');
-            if (is_int($result) && $result >= time() - 60) {
-                break;
+            //Homegear might need some time to reload the device description files
+            for ($i = 0; $i < 10; $i++) {
+                $result = $hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED');
+                if (is_int($result) && $result >= time() - 60) {
+                    break;
+                }
+                sleep(1);
             }
-            sleep(1);
-        }
-        if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') < time() - 60) {
-            print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
-            continue;
+            if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') < time() - 60) {
+                print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
+                continue;
+            }
         }
 
         //Step three: Apply settings
         Device::ApplySettings($peerId, $device);
     }
 } catch (Exception $e) {
-    die('Error importing device: ' . $e->getMessage().PHP_EOL);
+    die('Error importing device: ' . $e->getMessage() . PHP_EOL);
 }

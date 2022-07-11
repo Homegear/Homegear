@@ -7,6 +7,7 @@ class UtilException extends Exception
 class Util
 {
     public const MBUS_FAMILY_ID = 23;
+    public const MISC_FAMILY_ID = 254;
 
     public static function GetOrCreateTelemetryCategory(): int
     {
@@ -86,7 +87,8 @@ class Util
      */
     public static function GetFamilyId(string $name): int
     {
-        if ($name == "mbus" || $name == "m-bus") return Util::MBUS_FAMILY_ID;
+        if ($name == 'mbus' || $name == 'm-bus') return Util::MBUS_FAMILY_ID;
+        else if ($name == 'misc') return Util::MISC_FAMILY_ID;
 
         throw new UtilException('Unknown device family.');
     }

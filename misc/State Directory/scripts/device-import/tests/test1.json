@@ -2,6 +2,19 @@
   "version": 1,
   "devices": [
     {
+      "family": "misc",
+      "id": "VIRT000001",
+      "role": 900200,
+      "name": "Energiezähler Elektro Gesamt",
+      "equipmentId": "AMW44_01_00_92_ELM01",
+      "section": "Primary facilities",
+      "location": "60:18301.1",
+      "roles": {
+        "800002": {},
+        "900201": {}
+      }
+    },
+    {
       "name": "Wasserzähler Frischwasser Gesamt",
       "equipmentId": "AMW44_01_00_91_SWM01",
       "family": "mbus",
@@ -46,6 +59,9 @@
       "secondaryAddress": "21450217",
       "tags": [],
       "section": "Primary facilities",
+      "meterGroup": {
+        "virtualMeterId": "VIRT000001"
+      },
       "roles": {
         "800002": {},
         "900201": {}
@@ -57,6 +73,9 @@
       "family": "mbus",
       "secondaryAddress": "21450216",
       "section": "Primary facilities",
+      "meterGroup": {
+        "virtualMeterId": "VIRT000001"
+      },
       "roles": {
         "800002": {},
         "900201": {}

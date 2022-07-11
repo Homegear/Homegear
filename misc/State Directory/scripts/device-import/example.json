@@ -1,7 +1,11 @@
 {
   "version": 1,
   "devices": [
+    //Aggregated meter device - must be defined before any regular device
     {
+      "family": "misc",
+      //A string between 10 and 20 characters. This ID is used as the serial number of the device.
+      "id": "VIRT000001",
       "name": "My device",
       //The equipment ID (or "AKS code") is optional.
       "equipmentId": "123456",
@@ -9,7 +13,48 @@
       //ibs home client. E. g. the ibs home client is associated to the economic unit (e. g. 60:18301) and the device
       //is for a building (e. g. 60:18301.1).
       "location": "60:18301.1",
+      //The role defines the type of virtual device to create. The following roles are available:
+      //900100 => Generic water meter
+      //900200 => Power meter
+      //900300 => Gas meter
+      //900400 => Heat meter
+      //900500 => Cooling energy meter
+      //900600 => Hot water meter
+      //900700 => Cold water meter
+      //900800 => Waste water meter
+      "role": 900100,
+      //Tags are optional and specify what the device is used for, for example for a power meter used for the heat pump the tag should be
+      //"heating".
+      "tags": ["heating"],
+      //The section to place the device in.
+      "section": "Primary facilities",
+      //The optional parent device in the form "<ibs home client location ID>_<peer ID>"
+      "parent": "60:18301_4",
+      //"0" for input/substraction, "1" for output/addition (relating to the parent device)
+      "parentDirection": 0,
+      //The roles to create telemetry for in ib symphony. You can find the list of available roles here:
+      //https://github.com/Homegear/Homegear/blob/dev/misc/State%20Directory/defaultRoles.json
+      "roles": {
+        //Role 800002 points to the data point "offline". This role should always be set.
+        "800002": {},
+        "900101": {
+          //Tags can also optionally be set on the variable level.
+          "tags": ["heating"],
+          //Location can also be set on the variable level
+          "location": "60:18301.1"
+        }
+      }
+    },
+    //M-Bus device
+    {
       "family": "mbus",
+      "name": "My device",
+      //The equipment ID (or "AKS code") is optional.
+      "equipmentId": "123456",
+      //The location only has to be specified when the device is not on the same hierarchical building level as the
+      //ibs home client. E. g. the ibs home client is associated to the economic unit (e. g. 60:18301) and the device
+      //is for a building (e. g. 60:18301.1).
+      "location": "60:18301.1",
       //The primary address is optional. It must be unique within one installation. When the primary address is set, it
       //is used for polling. If it is not set, the secondary address is used for polling.
       "primaryAddress": 1,
@@ -28,13 +73,14 @@
       //An optional meter group can be defined to aggregate meter values.
       "meterGroup": {
         //The ID of the virtual meter
-        "virtualMeterId": "meter-group-id",
-        //Valid operations are "add" and "substract".
+        "virtualMeterId": "VIRT000001",
+        //Valid operations are "add" and "subtract".
         "operation": "add"
       },
       //The roles to create telemetry for in ib symphony. You can find the list of available roles here:
       //https://github.com/Homegear/Homegear/blob/dev/misc/State%20Directory/defaultRoles.json
       "roles": {
+        //Role 800002 points to the data point "offline". This role should always be set.
         "800002": {
           //Setting service level is optional and changes the service level to the specified one. The available service
           //levels are: "warning", "error" and "critical".
