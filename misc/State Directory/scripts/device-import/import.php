@@ -4,6 +4,8 @@ require_once('JsonUtil.php');
 
 $hg = new \Homegear\Homegear();
 
+$hg->setData('importStatus', []);
+
 $testPackets = [
     "27057902" => "68C4C46808007202790527475F0307EB00000004133BEA4400046D2F09D726426CBF2C4413550F130042EC7EDE060C784426330082016CBF2784011300000000C2016CBF28C401130000000082026CBE2984021300000000C2026CBF2AC40213E8F8020082036CBE2B8403133F450B00C2036CBF2CC40313550F130082046CDF21840413E1AC1B00C2046CDC22C404135E4C230082056CDF23840513055A2C00C2056CDE24C40513FEB9340082066CDF258406133A1D3E00C2066C0000C40613000000000F0100007916",
     "26595731" => "6850506808007231575926EE4D0E04CA00000002FD1700003475D86F0400046D3309D7260406F02601000413B5A51900055B00E95D42055F001E9841053EC679683E052B04CD164603222B15000C78315759261FCE16",
@@ -21,16 +23,27 @@ if ($argc >= 3 && $argv[2] == '1') {
 if ($argc >= 2) {
     //Load JSON configuration file
     $config = JsonUtil::Load($argv[1]);
-    if ($config === false) die('Could not load config file.' . PHP_EOL);
+    if ($config === false) {
+        $hg->setData('importStatus', ['finished' => true, 'success' => false, 'error' => 'Could not load config file.']);
+        die('Could not load config file.' . PHP_EOL);
+    }
 } else {
     $config = JsonUtil::Decode($hg->getData('deviceConfig'));
-    if ($config === false) die('Could not load config.' . PHP_EOL);
+    if ($config === false) {
+        $hg->setData('importStatus', ['finished' => true, 'success' => false, 'error' => 'Could not load config.']);
+        die('Could not load config.' . PHP_EOL);
+    }
 }
 
-if (!isset($config['devices'])) die('Configuration file does not contain property "devices".' . PHP_EOL);
+if (!isset($config['devices'])) {
+    $hg->setData('importStatus', ['finished' => true, 'success' => false, 'error' => 'Configuration file does not contain property "devices".']);
+    die('Configuration file does not contain property "devices".' . PHP_EOL);
+}
 
 //Iterate over every device in config
 try {
+    $importedDevices = 0;
+    $hg->setData('importStatus', ['finished' => false, 'importedDevices' => 0, 'deviceCount' => count($config['devices'])]);
     foreach ($config['devices'] as $device) {
         //Step one: Precreate the devices with the provided information:
         $peerId = Device::CreateOrReturn($device);
@@ -64,7 +77,11 @@ try {
 
         //Step three: Apply settings
         Device::ApplySettings($peerId, $device);
+        $importedDevices++;
+        $hg->setData('importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices'])]);
     }
+    $hg->setData('importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices]);
 } catch (Exception $e) {
+    $hg->setData('importStatus', ['finished' => true, 'success' => false, 'error' => 'Error importing device: ' . $e->getMessage()]);
     die('Error importing device: ' . $e->getMessage() . PHP_EOL);
 }
