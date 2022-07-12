@@ -19,7 +19,7 @@ class JsonUtil
         }
     }
 
-    public static function Decode(string $string, bool $stripComments = false): string|false
+    public static function Decode(string $string, bool $stripComments = false): array|false
     {
     	if ($stripComments) {
         	return json_decode(self::StripComments($string), true);
