@@ -1294,18 +1294,18 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
 
 void NodeBlueServer::startFlows() {
   try {
-    std::string rawFlows;
+    BaseLib::PVariable flows;
 
     {
       std::lock_guard<std::mutex> flowsFileGuard(_flowsFileMutex);
       std::string flowsFile = GD::bl->settings.nodeBlueDataPath() + "flows.json";
       if (!BaseLib::Io::fileExists(flowsFile)) return;
-      rawFlows = BaseLib::Io::getFileContent(flowsFile);
+      auto rawFlows = BaseLib::Io::getFileContent(flowsFile);
       if (BaseLib::HelperFunctions::trim(rawFlows).empty()) return;
+      flows = BaseLib::Rpc::JsonDecoder::decode(rawFlows);
     }
 
     //{{{ Filter all nodes and assign it to flows
-    BaseLib::PVariable flows = _jsonDecoder->decode(rawFlows);
     std::unordered_map<std::string, BaseLib::PVariable> subflowInfos;
     std::unordered_map<std::string, std::unordered_map<std::string, BaseLib::PVariable>> flowNodes;
     std::unordered_map<std::string, std::set<std::string>> subflowNodeIds;
