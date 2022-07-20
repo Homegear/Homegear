@@ -934,7 +934,7 @@ void startUp() {
     while (!_stopHomegear) {
       std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
       _stopHomegearConditionVariable.wait_for(stopHomegearGuard, std::chrono::seconds(60));
-      malloc_trim(0); //Clean up unused free memory - on some systems it is not cleaned up automaticially - see https://www.algolia.com/blog/engineering/when-allocators-are-hoarding-your-precious-memory/
+      malloc_trim(0); //Clean up unused free memory - on some systems it is not cleaned up automatically - see https://www.algolia.com/blog/engineering/when-allocators-are-hoarding-your-precious-memory/
     }
 
     terminateHomegear(_signalNumber);
@@ -967,6 +967,11 @@ int main(int argc, char *argv[]) {
     if (std::string(GD::ipcLibVersion) != Ipc::IIpcClient::version()) {
       GD::out.printCritical(std::string("IPC library has wrong version. Expected version ") + GD::ipcLibVersion + " but got version " + Ipc::IIpcClient::version());
       exit(1);
+    }
+
+    //Limit the number of memory arenas to the 32 bit default
+    if (mallopt(M_ARENA_MAX, (int)std::thread::hardware_concurrency() * 2) == 0) {
+      GD::out.printError("Error: Cannot limit number of memory arenas.");
     }
 
     for (int32_t i = 1; i < argc; i++) {
