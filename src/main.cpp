@@ -933,7 +933,8 @@ void startUp() {
 
     while (!_stopHomegear) {
       std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
-      _stopHomegearConditionVariable.wait(stopHomegearGuard);
+      _stopHomegearConditionVariable.wait_for(stopHomegearGuard, std::chrono::seconds(60));
+      malloc_trim(0); //Clean up unused free memory - on some systems it is not cleaned up automaticially - see https://www.algolia.com/blog/engineering/when-allocators-are-hoarding-your-precious-memory/
     }
 
     terminateHomegear(_signalNumber);

@@ -45,6 +45,7 @@
 #include <sys/stat.h>
 
 #include <memory>
+#include <malloc.h>
 
 namespace Homegear::NodeBlue {
 
@@ -696,6 +697,7 @@ void NodeBlueServer::stop() {
   try {
     _shuttingDown = true;
     _stopServer = true;
+    GD::bl->threadManager.join(_maintenanceThread);
     GD::bl->threadManager.join(_mainThread); //Prevent new connections
     _out.printDebug("Debug: Waiting for flows engine server's client threads to finish.");
     closeClientConnections();
@@ -1289,11 +1291,13 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
-  return std::set<std::string>();
+  return {};
 }
 
 void NodeBlueServer::startFlows() {
   try {
+    if (_stopServer) return;
+
     BaseLib::PVariable flows;
 
     {
@@ -1581,6 +1585,7 @@ void NodeBlueServer::startFlows() {
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
+  malloc_trim(0); //This method uses a lot of memory - clean it up (it is not necessarily cleaned up automatically)
 }
 
 void NodeBlueServer::sendShutdown() {
@@ -1736,6 +1741,7 @@ void NodeBlueServer::stopNodes() {
 void NodeBlueServer::restartFlows() {
   try {
     std::lock_guard<std::mutex> restartFlowsGuard(_restartFlowsMutex);
+    if (_stopServer) return;
     _flowsRestarting = true;
     stopNodes();
     bool result = sendReset();
