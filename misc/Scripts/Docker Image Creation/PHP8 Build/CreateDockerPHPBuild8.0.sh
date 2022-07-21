@@ -283,7 +283,7 @@ sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegea
 sed -i '/.*case ZEND_HANDLE_STREAM:.*/a\\t\t\tif (strcmp(sapi_module.name, "homegear") == 0) { if (zend_get_stream_timestamp(file_handle->filename, &statbuf) != SUCCESS) return 0; else break; }' opcache/ZendAccelerator.c
 cd ..
 autoconf
-version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
+version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d ":" -f 2 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`
 rm -Rf debian
 cp -R /PHPBuild/debian .
