@@ -2740,7 +2740,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
 
     if (checkAcls) {
       std::shared_ptr<std::vector<std::string>> newVariables;
-      BaseLib::PArray newValues;
+      BaseLib::PArray newValues = std::make_shared<BaseLib::Array>();
       newVariables->reserve(variables->size());
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
