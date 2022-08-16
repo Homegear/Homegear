@@ -58,7 +58,7 @@ class Util
         $sectionId = 0;
         $categories = \Homegear\Homegear::getCategories('en');
         foreach ($categories as $key => $category) {
-            if (strtolower($category['NAME']) == 'Section '.$section) {
+            if (strtolower($category['NAME']) == 'section '.strtolower($section)) {
                 $sectionId = $category['ID'];
                 break;
             }
