@@ -73,7 +73,7 @@ class Util
         $serviceLevelId = 0;
         $categories = \Homegear\Homegear::getCategories('en');
         foreach ($categories as $key => $category) {
-            if (strtolower($category['NAME']) == 'Priority '.$serviceLevel) {
+            if (strtolower($category['NAME']) == 'priority '.strtolower($serviceLevel)) {
                 $serviceLevelId = $category['ID'];
                 break;
             }
