@@ -149,8 +149,16 @@ class Device
         //Set parent device
         \Homegear\Homegear::deleteMetadata($peerId, 'parent');
         \Homegear\Homegear::deleteMetadata($peerId, 'parentDirection');
-        if (isset($device['parent']) && isset($device['parentDirection'])) {
-            \Homegear\Homegear::setMetadata($peerId, 'parent', $device['parent']);
+        if (isset($device['parent']) && strlen($device['parent']) > 0 && isset($device['parentDirection'])) {
+        	$parent = $device['parent'];
+        	$parts = explode('_', $parent, 2);
+        	if (count($parts) > 1 && $parts[1][0] == '%') {
+        		$peerIds = \Homegear\Homegear::getPeerId(1, substr($parts[1], 1, -1));
+        		if (count($peerIds) > 0) {
+        			$parent = $parts[0].'_'.$peerIds[0];
+        		}
+        	}
+            \Homegear\Homegear::setMetadata($peerId, 'parent', $parent);
             \Homegear\Homegear::setMetadata($peerId, 'parentDirection', $device['parentDirection']);
         }
 
