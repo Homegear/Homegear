@@ -68,7 +68,9 @@
       "tags": ["heating"],
       //The section to place the device in.
       "section": "Primary facilities",
-      //The optional parent device in the form "<ibs home client location ID>_<peer ID>"
+      //The optional parent device in the form "<ibs home client location ID>_<peer ID>".
+      //When the peer ID is unknown, you can use the device's serial number surrounded by "%",
+      //e. g. "60:18301_%VIRT000001%". You can use a virtual meter ID here as well.
       "parent": "60:18301_4",
       //"0" for input/substraction, "1" for output/addition (relating to the parent device)
       "parentDirection": 0,
