@@ -3,7 +3,7 @@
 	<supportedDevices>
 		<device id="VirtualSwitch2CH">
 			<description>VirtualSwitch 2CH</description>
-			<typeNumber>0xF014</typeNumber>
+			<typeNumber>0xF01E</typeNumber>
 		</device>
 	</supportedDevices>
 	<properties/>

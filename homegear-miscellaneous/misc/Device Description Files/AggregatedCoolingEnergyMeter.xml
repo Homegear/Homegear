@@ -3,7 +3,7 @@
     <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
         <device id="HeatMeter">
             <description>Heat meter</description>
-            <typeNumber>0xF01D</typeNumber>
+            <typeNumber>0xF01F</typeNumber>
         </device>
     </supportedDevices>
     <runProgram>
