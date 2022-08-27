@@ -1901,6 +1901,17 @@
     }
   },
   {
+    "id": "80.00.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Gerät aktiv",
+      "de-DE": "Gerät aktiv",
+      "en-US": "device alive"
+    }
+  },
+  {
     "id": "80.01.00",
     "types": [
       "bool"
