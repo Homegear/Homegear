@@ -721,6 +721,7 @@ sed -i "s/<ARCH>/${arch}/g" $rootfs/build/CreateDebianPackage.sh
 cat > "$rootfs/build/CreateDebianPackageStable.sh" <<-'EOF'
 #!/bin/bash
 
+distribution="<DIST>"
 distributionVersion="<DISTVER>"
 
 /build/CreateDebianPackage.sh master $1
@@ -733,6 +734,12 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
+		if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
+				echo "Error: Some or all packages from gitit.de could not be created."
+				exit 1
+			fi
+		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
@@ -743,11 +750,13 @@ else
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageStable.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackageStable.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageStable.sh
 
 cat > "$rootfs/build/CreateDebianPackageTesting.sh" <<-'EOF'
 #!/bin/bash
 
+distribution="<DIST>"
 distributionVersion="<DISTVER>"
 
 /build/CreateDebianPackage.sh testing $1
@@ -760,6 +769,12 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
+		if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
+				echo "Error: Some or all packages from gitit.de could not be created."
+				exit 1
+			fi
+		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
@@ -770,11 +785,13 @@ else
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageTesting.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackageTesting.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageTesting.sh
 
 cat > "$rootfs/build/CreateDebianPackageNightly.sh" <<-'EOF'
 #!/bin/bash
 
+distribution="<DIST>"
 distributionVersion="<DISTVER>"
 
 /build/CreateDebianPackage.sh dev $1
@@ -787,6 +804,12 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
+		if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
+				echo "Error: Some or all packages from gitit.de could not be created."
+				exit 1
+			fi
+		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
@@ -797,6 +820,7 @@ else
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackageNightly.sh
+sed -i "s/<DIST>/${dist}/g" $rootfs/build/CreateDebianPackageNightly.sh
 sed -i "s/<DISTVER>/${distver}/g" $rootfs/build/CreateDebianPackageNightly.sh
 
 cat > "$rootfs/FirstStart.sh" <<-'EOF'
