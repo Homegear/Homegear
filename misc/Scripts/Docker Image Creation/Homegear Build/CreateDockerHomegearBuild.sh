@@ -129,6 +129,7 @@ EOF
 if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
+	[ $? -ne 0 ] && exit 1
 fi
 
 if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ]; then
@@ -140,14 +141,18 @@ fi
 if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
+	[ $? -ne 0 ] && exit 1
 fi
 
 chroot $rootfs apt-get update
 if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
+	[ $? -ne 0 ] && exit 1
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
+	[ $? -ne 0 ] && exit 1
 fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
+[ $? -ne 0 ] && exit 1
 DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
 DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
@@ -164,55 +169,68 @@ rm $rootfs/Release.key
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 # python: Needed by homegear-ui's npm on some systems
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool cmake sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev
+[ $? -ne 0 ] && exit 1
 
 # {{{ Packages for doorctrl
 if { [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; } || { [[ "$dist" == "Debian" ]] && [[ "$distver" == "bullseye" ]] && [[ "$arch" == "arm64" ]]; }; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libasound2-dev libboost-dev libboost-thread-dev libboost-log-dev libboost-system-dev libboost-program-options-dev libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad libavdevice58 libsdl2-2.0-0 libsdl2-2.0-0 libsdl2-2.0-0 libopencore-amrnb0 libopencore-amrwb0 libgpiod-dev libssl-dev libxss-dev
+  [ $? -ne 0 ] && exit 1
 fi
 # }}}
 
 if [ "$distver" == "bullseye" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-2-dev
+	[ $? -ne 0 ] && exit 1
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-dev python
+	[ $? -ne 0 ] && exit 1
 fi
 
 if [ "$distver" != "jammy" ] && [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ] || [ "$distver" == "bullseye" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
+	[ $? -ne 0 ] && exit 1
 fi
 
 if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
+	[ $? -ne 0 ] && exit 1
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
+	[ $? -ne 0 ] && exit 1
 fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
 if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
+	[ $? -ne 0 ] && exit 1
 fi
 # }}}
 
 # {{{ Readline
 if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8 libreadline-dev
+	[ $? -ne 0 ] && exit 1
 else
 	if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bionic" ]; then
 		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline7 libreadline-dev
+		[ $? -ne 0 ] && exit 1
 	else
 		DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline6 libreadline6-dev
+		[ $? -ne 0 ] && exit 1
 	fi
 fi
 # }}}
 
 # {{{ UI build dependencies
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
+[ $? -ne 0 ] && exit 1
 # }}}
 
 # {{{ PJPROJECT for doorctrl
 if { [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; } || { [[ "$dist" == "Debian" ]] && [[ "$distver" == "bullseye" ]] && [[ "$arch" == "arm64" ]]; }; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz && tar -zxf 2.11.tar.gz && rm 2.11.tar.gz && cd /usr/src/pjproject-2.11 && ./configure && make dep && make && make install'
+  [ $? -ne 0 ] && exit 1
 fi
 # }}}
 
