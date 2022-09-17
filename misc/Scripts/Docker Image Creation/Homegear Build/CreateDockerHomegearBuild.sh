@@ -172,7 +172,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip 
 [ $? -ne 0 ] && exit 1
 
 # {{{ Packages for doorctrl
-if { [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; } || { [[ "$dist" == "Debian" ]] && [[ "$distver" == "bullseye" ]] && [[ "$arch" == "arm64" ]]; }; then
+if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libasound2-dev libboost-dev libboost-thread-dev libboost-log-dev libboost-system-dev libboost-program-options-dev libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad libavdevice58 libsdl2-2.0-0 libsdl2-2.0-0 libsdl2-2.0-0 libopencore-amrnb0 libopencore-amrwb0 libgpiod-dev libssl-dev libxss-dev
   [ $? -ne 0 ] && exit 1
 fi
@@ -228,7 +228,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 # }}}
 
 # {{{ PJPROJECT for doorctrl
-if { [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; } || { [[ "$dist" == "Debian" ]] && [[ "$distver" == "bullseye" ]] && [[ "$arch" == "arm64" ]]; }; then
+if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.11.tar.gz && tar -zxf 2.11.tar.gz && rm 2.11.tar.gz && cd /usr/src/pjproject-2.11 && ./configure && make dep && make && make install'
   [ $? -ne 0 ] && exit 1
 fi
@@ -608,7 +608,7 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv ibs-ssh-${1}* ibs-ssh-${1}
 
-  if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+  if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
     wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
     [ $? -ne 0 ] && exit 1
     unzip ${1}.zip
@@ -725,7 +725,7 @@ if [[ -n $2 ]]; then
 	createPackage mellonbot $1 mellonbot 1
 	createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
 	createPackage ibs-ssh $1 ibs-ssh 1
-	if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+	if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 	  createPackage doorctrl $1 doorctrl 1
 	  createPackage ltp08-connector $1 ltp08-connector 1
 	fi
@@ -752,7 +752,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
-		if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
 				echo "Error: Some or all packages from gitit.de could not be created."
 				exit 1
@@ -787,7 +787,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
-		if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
 				echo "Error: Some or all packages from gitit.de could not be created."
 				exit 1
@@ -822,7 +822,7 @@ if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f l
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
-		if { [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; } || { [[ "$distribution" == "Debian" ]] && [[ "$distributionVersion" == "bullseye" ]] && [[ "$architecture" == "arm64" ]]; }; then
+		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
 				echo "Error: Some or all packages from gitit.de could not be created."
 				exit 1
