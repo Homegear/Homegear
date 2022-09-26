@@ -2066,6 +2066,50 @@
     }
   },
   {
+    "id": "81.00.00",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betriebsmeldungen",
+      "de-DE": "Betriebsmeldungen",
+      "en-US": "operating notification"
+    }
+  },
+  {
+    "id": "81.00.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betrieb",
+      "de-DE": "Betrieb",
+      "en-US": "operation"
+    }
+  },
+  {
+    "id": "81.00.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Notbetrieb",
+      "de-DE": "Notbetrieb",
+      "en-US": "emergency operation"
+    }
+  },
+  {
+    "id": "81.00.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Aktiv",
+      "de-DE": "Aktiv",
+      "en-US": "active"
+    }
+  },
+  {
     "id": "90.00.00",
     "translations": {
       "de-CH": "Zähler",
