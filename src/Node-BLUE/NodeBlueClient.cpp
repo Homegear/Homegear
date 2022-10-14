@@ -316,6 +316,9 @@ void NodeBlueClient::start() {
       _out.printError("Error: Could not redirect errors to log file.");
     }
 
+    GD::out.printInfo("Loading common translations...");
+    BaseLib::TranslationManager::load(GD::bl->settings.uiTranslationPath() + "common" + "/");
+
     uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.nodeBlueProcessingThreadCountNodes();
     if (flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
     _threadCount = flowsProcessingThreadCountNodes;
