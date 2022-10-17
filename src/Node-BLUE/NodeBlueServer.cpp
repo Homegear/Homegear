@@ -1564,7 +1564,7 @@ void NodeBlueServer::startFlows() {
     duration = BaseLib::HelperFunctions::getTime() - startTime;
     _out.printInfo("Info: Calling startUpComplete took " + std::to_string(duration) + "ms.");
 
-    { //Remove node data of non-existant nodes
+    { //Remove node data of non-existent nodes
       std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
       std::string dataKey;
       for (auto &nodeId: nodeData) {
@@ -1572,10 +1572,22 @@ void NodeBlueServer::startFlows() {
       }
     }
 
-    { //Remove UI elements of non-existant nodes
+    { //Remove UI elements of non-existent nodes
       auto nodeUiElements = GD::uiController->getAllNodeUiElements();
       for (auto &nodeId: nodeUiElements) {
         if (allNodeIds.find(nodeId.first) == allNodeIds.end() && flowNodes.find(nodeId.first) == flowNodes.end()) GD::uiController->removeNodeUiElements(nodeId.first);
+      }
+    }
+
+    { //Remove cloud devices of non-existent nodes
+      std::string component = "homegear-cloudconnect-devices";
+      std::string key = "";
+      auto cloud_devices = GD::bl->db->getData(component, key);
+      for (auto &device: *cloud_devices->structValue) {
+        if (allNodeIds.find(device.first) == allNodeIds.end() && flowNodes.find(device.first) == flowNodes.end()) {
+          key = device.first;
+          GD::bl->db->deleteData(component, key);
+        }
       }
     }
 
