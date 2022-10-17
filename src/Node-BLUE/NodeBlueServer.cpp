@@ -1768,6 +1768,12 @@ void NodeBlueServer::restartFlows() {
     getMaxThreadCounts();
     _out.printInfo("Info: Starting Flows...");
     startFlows();
+
+    std::string source = "nodeblue";
+    std::shared_ptr<std::vector<std::string>> variables(new std::vector<std::string>{"FLOWS_RESTARTED"});
+    BaseLib::PArray values(new BaseLib::Array{std::make_shared<BaseLib::Variable>(true)});
+    GD::familyController->onEvent(source, 0, -1, variables, values);
+    GD::familyController->onRPCEvent(source, 0, -1, "CENTRAL", variables, values);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
