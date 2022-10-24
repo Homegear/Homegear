@@ -2170,6 +2170,329 @@
     "aggregation": "count"
   },
   {
+    "id": "90.02.10",
+    "translations": {
+      "de-CH": "Wirkenergie Verbrauch T1",
+      "de-DE": "Wirkenergie Verbrauch T1",
+      "en-US": "Active energy consumption T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.11",
+    "translations": {
+      "de-CH": "Wirkenergie Verbrauch T2",
+      "de-DE": "Wirkenergie Verbrauch T2",
+      "en-US": "Active energy consumption T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.12",
+    "translations": {
+      "de-CH": "Wirkenergie Verbrauch total",
+      "de-DE": "Wirkenergie Verbrauch total",
+      "en-US": "Active energy consumption total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.13",
+    "translations": {
+      "de-CH": "Wirkenergie Produktion T1",
+      "de-DE": "Wirkenergie Produktion T1",
+      "en-US": "Active energy produdtion T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.14",
+    "translations": {
+      "de-CH": "Wirkenergie Produktion T2",
+      "de-DE": "Wirkenergie Produktion T2",
+      "en-US": "Active energy produdtion T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.15",
+    "translations": {
+      "de-CH": "Wirkenergie Produktion total",
+      "de-DE": "Wirkenergie Produktion total",
+      "en-US": "Active energy produdtion total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.16",
+    "translations": {
+      "de-CH": "Wirkleistung total",
+      "de-DE": "Wirkleistung total",
+      "en-US": "Active power total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.17",
+    "translations": {
+      "de-CH": "Cos Phi L1",
+      "de-DE": "Cos Phi L1",
+      "en-US": "Cos Phi L1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.18",
+    "translations": {
+      "de-CH": "Cos Phi L2",
+      "de-DE": "Cos Phi L2",
+      "en-US": "Cos Phi L2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.19",
+    "translations": {
+      "de-CH": "Cos Phi L3",
+      "de-DE": "Cos Phi L3",
+      "en-US": "Cos Phi L3"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.20",
+    "translations": {
+      "de-CH": "Cos Phi total",
+      "de-DE": "Cos Phi total",
+      "en-US": "Cos Phi total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.21",
+    "translations": {
+      "de-CH": "Stromstärke L1",
+      "de-DE": "Stromstärke L1",
+      "en-US": "Current L1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.22",
+    "translations": {
+      "de-CH": "Stromstärke L2",
+      "de-DE": "Stromstärke L2",
+      "en-US": "Current L2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.23",
+    "translations": {
+      "de-CH": "Stromstärke L3",
+      "de-DE": "Stromstärke L3",
+      "en-US": "Current L3"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.24",
+    "translations": {
+      "de-CH": "Frequenz",
+      "de-DE": "Frequenz",
+      "en-US": "Frequency"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.25",
+    "translations": {
+      "de-CH": "Blindenergie induktiv T1",
+      "de-DE": "Blindenergie induktiv T1",
+      "en-US": "Reactive energy inductive T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.26",
+    "translations": {
+      "de-CH": "Blindenergie induktiv T2",
+      "de-DE": "Blindenergie induktiv T2",
+      "en-US": "Reactive energy inductive T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.27",
+    "translations": {
+      "de-CH": "Blindenergie induktiv total ",
+      "de-DE": "Blindenergie induktiv total ",
+      "en-US": "Reactive energy inductive total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.28",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv T1",
+      "de-DE": "Blindenergie kapazitiv T1",
+      "en-US": "Reactive energy capazitive T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.29",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv T2",
+      "de-DE": "Blindenergie kapazitiv T2",
+      "en-US": "Reactive energy capazitive T2"
+    },
+    "aggregation": "meter"
+  },{
+  "id": "90.02.30",
+  "translations": {
+    "de-CH": "Blindenergie kapazitiv total",
+    "de-DE": "Blindenergie kapazitiv total",
+    "en-US": "Reactive energy capazitive total"
+  },
+  "aggregation": "meter"
+},
+  {
+    "id": "90.02.31",
+    "translations": {
+      "de-CH": "Blindenergie Verbrauch T1",
+      "de-DE": "Blindenergie Verbrauch T1",
+      "en-US": "Reactive energy consumption T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.32",
+    "translations": {
+      "de-CH": "Blindenergie Verbrauch T2",
+      "de-DE": "Blindenergie Verbrauch T2",
+      "en-US": "Reactive energy consumption T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.33",
+    "translations": {
+      "de-CH": "Blindenergie Verbrauch total",
+      "de-DE": "Blindenergie Verbrauch total",
+      "en-US": "Reactive energy consumption total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.34",
+    "translations": {
+      "de-CH": "Blindenergie Produktion T1",
+      "de-DE": "Blindenergie Produktion T1",
+      "en-US": "Reactive energy produdtion T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.35",
+    "translations": {
+      "de-CH": "Blindenergie Produktion T2",
+      "de-DE": "Blindenergie Produktion T2",
+      "en-US": "Reactive energy produdtion T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.36",
+    "translations": {
+      "de-CH": "Blindenergie Produktion total",
+      "de-DE": "Blindenergie Produktion total",
+      "en-US": "Reactive energy produdtion total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.37",
+    "translations": {
+      "de-CH": "Blindenergie total",
+      "de-DE": "Blindenergie total",
+      "en-US": "Reactive energy total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.38",
+    "translations": {
+      "de-CH": "Blindleistung total",
+      "de-DE": "Blindleistung total",
+      "en-US": "Reactive power total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.39",
+    "translations": {
+      "de-CH": "Tarif",
+      "de-DE": "Tarif",
+      "en-US": "Tariff"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.40",
+    "translations": {
+      "de-CH": "Spannung L1-N",
+      "de-DE": "Spannung L1-N",
+      "en-US": "Voltage L1-N"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.41",
+    "translations": {
+      "de-CH": "Spannung L2-N",
+      "de-DE": "Spannung L2-N",
+      "en-US": "Voltage L2-N"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.42",
+    "translations": {
+      "de-CH": "Spannung L3-N",
+      "de-DE": "Spannung L3-N",
+      "en-US": "Voltage L3-N"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.43",
+    "translations": {
+      "de-CH": "Spannung L1-L2",
+      "de-DE": "Spannung L1-L2",
+      "en-US": "Voltage L1-L2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.44",
+    "translations": {
+      "de-CH": "Spannung L2-L3",
+      "de-DE": "Spannung L2-L3",
+      "en-US": "Voltage L2-L3"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.45",
+    "translations": {
+      "de-CH": "Spannung L3-L1",
+      "de-DE": "Spannung L3-L1",
+      "en-US": "Voltage L3-L1"
+    },
+    "aggregation": "meter"
+  },
+  {
     "id": "90.03.00",
     "translations": {
       "de-CH": "Gaszähler",
