@@ -431,7 +431,7 @@
     "translations": {
       "de-CH": "Heizung - Warmwassertemperatur",
       "de-DE": "Heizung - Warmwassertemperatur",
-      "en-US": "heating - warm water temperature"
+      "en-US": "heating system - warm water temperature"
     }
   },
   {
@@ -442,7 +442,7 @@
     "translations": {
       "de-CH": "Heizung - Warmwasser Solltemperatur",
       "de-DE": "Heizung - Warmwasser Solltemperatur",
-      "en-US": "heating - warm water setpoint temperature"
+      "en-US": "heating system - warm water setpoint temperature"
     }
   },
   {
@@ -453,7 +453,7 @@
     "translations": {
       "de-CH": "Heizung - Aussentemperatur",
       "de-DE": "Heizung - Außentemperatur",
-      "en-US": "heating - outside temperature"
+      "en-US": "heating system - outside temperature"
     }
   },
   {
@@ -464,7 +464,7 @@
     "translations": {
       "de-CH": "Heizung - Betriebsstunden",
       "de-DE": "Heizung - Betriebsstunden",
-      "en-US": "heating - operating hours"
+      "en-US": "heating system - operating hours"
     }
   },
   {
@@ -472,7 +472,7 @@
     "translations": {
       "de-CH": "Heizung - Heizkreispumpe",
       "de-DE": "Heizung - Heizkreispumpe",
-      "en-US": "heating - circuit pump"
+      "en-US": "heating system - circuit pump"
     }
   },
   {
@@ -480,7 +480,7 @@
     "translations": {
       "de-CH": "Heizung - Anforderung",
       "de-DE": "Heizung - Anforderung",
-      "en-US": "heating - demand"
+      "en-US": "heating system - demand"
     }
   },
   {
@@ -488,7 +488,7 @@
     "translations": {
       "de-CH": "Heizung - Mischerstellung",
       "de-DE": "Heizung - Mischerstellung",
-      "en-US": "heating - mixing valve level"
+      "en-US": "heating system - mixing valve level"
     }
   },
   {
@@ -496,7 +496,7 @@
     "translations": {
       "de-CH": "Heizung - Vorlauftemperatur",
       "de-DE": "Heizung - Vorlauftemperatur",
-      "en-US": "heating - supply temperature"
+      "en-US": "heating system - supply temperature"
     }
   },
   {
@@ -504,7 +504,7 @@
     "translations": {
       "de-CH": "Heizung - Rücklauftemperatur",
       "de-DE": "Heizung - Rücklauftemperatur",
-      "en-US": "heating - return temperature"
+      "en-US": "heating system - return temperature"
     }
   },
   {
@@ -512,7 +512,15 @@
     "translations": {
       "de-CH": "Heizung - Betriebsmeldung",
       "de-DE": "Heizung - Betriebsmeldung",
-      "en-US": "heating - operating notification"
+      "en-US": "heating system - operating notification"
+    }
+  },
+  {
+    "id": "20.10.17",
+    "translations": {
+      "de-CH": "Heizung - Druck",
+      "de-DE": "Heizung - Druck",
+      "en-US": "heating system - pressure"
     }
   },
   {
@@ -2348,15 +2356,16 @@
       "en-US": "Reactive energy capazitive T2"
     },
     "aggregation": "meter"
-  },{
-  "id": "90.02.30",
-  "translations": {
-    "de-CH": "Blindenergie kapazitiv total",
-    "de-DE": "Blindenergie kapazitiv total",
-    "en-US": "Reactive energy capazitive total"
   },
-  "aggregation": "meter"
-},
+  {
+    "id": "90.02.30",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv total",
+      "de-DE": "Blindenergie kapazitiv total",
+      "en-US": "Reactive energy capazitive total"
+    },
+    "aggregation": "meter"
+  },
   {
     "id": "90.02.31",
     "translations": {
@@ -2557,7 +2566,7 @@
     "translations": {
       "de-CH": "Vorlauftemperatur",
       "de-DE": "Vorlauftemperatur",
-      "en-US": "Flow temperature"
+      "en-US": "Supply temperature"
     }
   },
   {
@@ -2683,9 +2692,9 @@
   {
     "id": "01.00.00",
     "translations": {
-      "de-CH": "Umgebungssensoren",
-      "de-DE": "Umgebungssensoren",
-      "en-US": "Environment sensors"
+      "de-CH": "Sensoren",
+      "de-DE": "Sensoren",
+      "en-US": "Sensors"
     }
   },
   {
@@ -2726,6 +2735,22 @@
       "de-CH": "Luftdruck",
       "de-DE": "Luftdruck",
       "en-US": "Barometric pressure"
+    }
+  },
+  {
+    "id": "01.00.06",
+    "translations": {
+      "de-CH": "Status",
+      "de-DE": "Status",
+      "en-US": "State"
+    }
+  },
+  {
+    "id": "01.00.07",
+    "translations": {
+      "de-CH": "Leckage",
+      "de-DE": "Leckage",
+      "en-US": "Leakage"
     }
   },
   {
