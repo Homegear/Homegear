@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
     <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-        <device id="VirtualPowerMeter">
-            <description>VirtualPowerMeter</description>
+        <device id="VirtualPowerAnalyzer">
+            <description>VirtualPowerAnalyzer</description>
             <typeNumber>0xF021</typeNumber>
         </device>
     </supportedDevices>
@@ -15,7 +15,7 @@
             <configParameters>config</configParameters>
             <variables>maint_ch0_values</variables>
         </function>
-        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualPowerMeter"
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualPowerAnalyzer"
                   channelCount="1">
             <variables>custom_ch1_values</variables>
         </function>
@@ -271,6 +271,132 @@
                 </physicalNone>
             </parameter>
             <parameter id="REACTIVE_ENERGY_PRODUCTION_T2">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_INDUCTIVE_TOTAL">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_CAPAZITIVE_TOTAL">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_INDUCTIVE_T1">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_CAPAZITIVE_T1">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_INDUCTIVE_T2">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_CAPAZITIVE_T2">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <unit>kVARh</unit>
+                    <unitCode>243</unitCode>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalDecimal>
+                    <minimumValue>0</minimumValue>
+                    <defaultValue>0</defaultValue>
+                </logicalDecimal>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="REACTIVE_ENERGY_TOTAL">
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
