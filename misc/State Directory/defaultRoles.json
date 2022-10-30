@@ -2238,7 +2238,7 @@
       "de-DE": "Wirkleistung total",
       "en-US": "Active power total"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.17",
@@ -2247,7 +2247,7 @@
       "de-DE": "Cos Phi L1",
       "en-US": "Cos Phi L1"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.18",
@@ -2256,7 +2256,7 @@
       "de-DE": "Cos Phi L2",
       "en-US": "Cos Phi L2"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.19",
@@ -2265,7 +2265,7 @@
       "de-DE": "Cos Phi L3",
       "en-US": "Cos Phi L3"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.20",
@@ -2274,7 +2274,7 @@
       "de-DE": "Cos Phi total",
       "en-US": "Cos Phi total"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.21",
@@ -2283,7 +2283,7 @@
       "de-DE": "Stromstärke L1",
       "en-US": "Current L1"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.22",
@@ -2292,7 +2292,7 @@
       "de-DE": "Stromstärke L2",
       "en-US": "Current L2"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.23",
@@ -2301,7 +2301,7 @@
       "de-DE": "Stromstärke L3",
       "en-US": "Current L3"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.24",
@@ -2310,7 +2310,7 @@
       "de-DE": "Frequenz",
       "en-US": "Frequency"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.25",
@@ -2436,7 +2436,7 @@
       "de-DE": "Blindleistung total",
       "en-US": "Reactive power total"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.39",
@@ -2444,8 +2444,7 @@
       "de-CH": "Tarif",
       "de-DE": "Tarif",
       "en-US": "Tariff"
-    },
-    "aggregation": "meter"
+    }
   },
   {
     "id": "90.02.40",
@@ -2454,7 +2453,7 @@
       "de-DE": "Spannung L1-N",
       "en-US": "Voltage L1-N"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.41",
@@ -2463,7 +2462,7 @@
       "de-DE": "Spannung L2-N",
       "en-US": "Voltage L2-N"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.42",
@@ -2472,7 +2471,7 @@
       "de-DE": "Spannung L3-N",
       "en-US": "Voltage L3-N"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.43",
@@ -2481,7 +2480,7 @@
       "de-DE": "Spannung L1-L2",
       "en-US": "Voltage L1-L2"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.44",
@@ -2490,7 +2489,7 @@
       "de-DE": "Spannung L2-L3",
       "en-US": "Voltage L2-L3"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.02.45",
@@ -2499,7 +2498,7 @@
       "de-DE": "Spannung L3-L1",
       "en-US": "Voltage L3-L1"
     },
-    "aggregation": "meter"
+    "aggregation": "average"
   },
   {
     "id": "90.03.00",
