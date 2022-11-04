@@ -7697,6 +7697,55 @@ BaseLib::PVariable RPCSetRoomMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCSetSerialNumber::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setSerialNumbe"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
+
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+
+    for (auto &family: families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+      if (central && central->peerExists(parameters->at(1)->stringValue)) {
+        return BaseLib::Variable::createError(101, "New serial number is already in use.");
+      }
+
+      //Double check and also check in database
+      if (GD::bl->db->peerExists(parameters->at(1)->stringValue))
+        return BaseLib::Variable::createError(101, "New serial number is already in use.");
+    }
+
+    for (auto &family: families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+      if (central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) {
+        if (checkAcls) {
+          auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+          if (!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) {
+            return BaseLib::Variable::createError(-32603, "Unauthorized.");
+          }
+        }
+
+        return central->setSerialNumber(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
+      }
+    }
+
+    return BaseLib::Variable::createError(-2, "Device not found.");
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCSetStoryMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({

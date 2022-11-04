@@ -168,6 +168,7 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetFlowData()));
   _rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetGlobalData()));
   _rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetNodeVariable()));
+  _rpcMethods.emplace("setSerialNumber", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSerialNumber()));
   _rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
   _rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
   _rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));

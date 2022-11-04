@@ -244,6 +244,7 @@ RpcServer::RpcServer() {
   _rpcMethods->emplace("setGlobalData", std::make_shared<RpcMethods::RPCSetGlobalData>());
   _rpcMethods->emplace("setNodeVariable", std::make_shared<RpcMethods::RPCSetNodeVariable>());
   _rpcMethods->emplace("setRoomMetadata", std::make_shared<RPCSetRoomMetadata>());
+  _rpcMethods->emplace("setSerialNumber", std::make_shared<RPCSetSerialNumber>());
   _rpcMethods->emplace("setStoryMetadata", std::make_shared<RPCSetStoryMetadata>());
   _rpcMethods->emplace("setSystemVariable", std::make_shared<RPCSetSystemVariable>());
   _rpcMethods->emplace("setTeam", std::make_shared<RPCSetTeam>());
