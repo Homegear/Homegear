@@ -1582,10 +1582,11 @@ void NodeBlueServer::startFlows() {
 
     { //Remove cloud devices of non-existent nodes
       std::string component = "homegear-cloudconnect-devices";
-      std::string key = "";
+      std::string key;
       auto cloud_devices = GD::bl->db->getData(component, key);
       for (auto &device: *cloud_devices->structValue) {
-        if (allNodeIds.find(device.first) == allNodeIds.end() && flowNodes.find(device.first) == flowNodes.end()) {
+        auto node_id = BaseLib::HelperFunctions::splitFirst(device.first, '_').second;
+        if (!node_id.empty() && allNodeIds.find(node_id) == allNodeIds.end() && flowNodes.find(node_id) == flowNodes.end()) {
           key = device.first;
           GD::bl->db->deleteData(component, key);
         }
