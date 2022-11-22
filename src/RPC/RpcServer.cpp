@@ -1599,11 +1599,11 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                 if (firstHttpPacket) {
                   firstHttpPacket = false;
                   auto header = http.getHeader();
-                  auto userTypeIterator = header.fields.find("ibs-user-type");
+                  auto userTypeIterator = header.fields.find("c1-user-type");
                   if (userTypeIterator != header.fields.end() && !userTypeIterator->second.empty() && userTypeIterator->second != "unknown") {
                     auto userMapIterator = _cloudUserMap.find(userTypeIterator->second);
                     if (userMapIterator != _cloudUserMap.end()) {
-                      auto userIdIterator = header.fields.find("ibs-userid");
+                      auto userIdIterator = header.fields.find("c1-userid");
                       if (userIdIterator != header.fields.end()) {
                         auto userMapIterator2 = userMapIterator->second.find(userIdIterator->second);
                         if (userMapIterator2 == userMapIterator->second.end()) userMapIterator2 = userMapIterator->second.find("*");
