@@ -87,7 +87,7 @@ class Device
         foreach ($deviceDescription['CHANNELS'] as $channel) {
             $variables = \Homegear\Homegear::getParamset($peerId, $channel, "VALUES");
             foreach ($variables as $variable => $value) {
-                $variableDescription = \Homegear\Homegear::getVariableDescription($peerId, $channel, $variable, ["CATEGORIES", "BUILDING_PART"]);
+                $variableDescription = \Homegear\Homegear::getVariableDescription($peerId, $channel, $variable, ["CATEGORIES", "BUILDING_PART", "ROLES"]);
                 if (isset($variableDescription['CATEGORIES'])) {
                     foreach ($variableDescription['CATEGORIES'] as $categoryId) {
                         \Homegear\Homegear::removeCategoryFromVariable($peerId, $channel, $variable, $categoryId);
@@ -95,6 +95,13 @@ class Device
                 }
                 if (isset($variableDescription['BUILDING_PART'])) {
                     \Homegear\Homegear::removeVariableFromBuildingPart($peerId, $channel, $variable, $variableDescription['BUILDING_PART']);
+                }
+                if (isset($variableDescription['ROLES'])) {
+                	foreach ($variableDescription['ROLES'] as $role) {
+                		if (isset($role['id']) {
+                			\Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $role['id']);
+                		}
+                	}
                 }
             }
         }
