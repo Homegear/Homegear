@@ -81,6 +81,8 @@ try {
         $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices'])]);
     }
     $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices]);
+
+    $hg->setValue(0, -1, 'REINIT_CLOUDCONNECT', true);
 } catch (Exception $e) {
     $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'error' => 'Error importing device: ' . $e->getMessage()]);
     die('Error importing device: ' . $e->getMessage() . PHP_EOL);
