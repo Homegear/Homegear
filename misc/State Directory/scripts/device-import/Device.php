@@ -98,7 +98,7 @@ class Device
                 }
                 if (isset($variableDescription['ROLES'])) {
                 	foreach ($variableDescription['ROLES'] as $role) {
-                		if (isset($role['id']) {
+                		if (isset($role['id'])) {
                 			\Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $role['id']);
                 		}
                 	}
