@@ -178,7 +178,7 @@ if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
 fi
 # }}}
 
-if [ "$distver" == "bullseye" ]; then
+if [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-2-dev
 	[ $? -ne 0 ] && exit 1
 else
