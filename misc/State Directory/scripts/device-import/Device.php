@@ -96,13 +96,6 @@ class Device
                 if (isset($variableDescription['BUILDING_PART'])) {
                     \Homegear\Homegear::removeVariableFromBuildingPart($peerId, $channel, $variable, $variableDescription['BUILDING_PART']);
                 }
-                if (isset($variableDescription['ROLES'])) {
-                	foreach ($variableDescription['ROLES'] as $role) {
-                		if (isset($role['id'])) {
-                			\Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $role['id']);
-                		}
-                	}
-                }
             }
         }
 
