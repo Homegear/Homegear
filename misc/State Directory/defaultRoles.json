@@ -2763,17 +2763,17 @@
   {
     "id": "02.01.00",
     "translations": {
-      "de-CH": "ibs-home-Client",
-      "de-DE": "ibs-home-Client",
-      "en-US": "ibs home client"
+      "de-CH": "Sensaru Edge-Client",
+      "de-DE": "Sensaru Edge-Client",
+      "en-US": "Sensaru edge client"
     }
   },
   {
     "id": "02.02.00",
     "translations": {
-      "de-CH": "ibs-home-Kommunikationsmodul",
-      "de-DE": "ibs-home-Kommunikationsmodul",
-      "en-US": "ibs home communication module"
+      "de-CH": "Kommunikationsmodul",
+      "de-DE": "Kommunikationsmodul",
+      "en-US": "communication module"
     }
   },
   {
@@ -2838,6 +2838,38 @@
       "de-CH": "Autoaufzug",
       "de-DE": "Autoaufzug",
       "en-US": "car elevator"
+    }
+  },
+  {
+    "id": "04.00.00",
+    "translations": {
+      "de-CH": "Fördertechnik",
+      "de-DE": "Fördertechnik",
+      "en-US": "conveying equipment"
+    }
+  },
+  {
+    "id": "04.01.00",
+    "translations": {
+      "de-CH": "Personenaufzug",
+      "de-DE": "Personenaufzug",
+      "en-US": "passenger elevator"
+    }
+  },
+  {
+    "id": "05.01.00",
+    "translations": {
+      "de-CH": "GLS",
+      "de-DE": "GLS",
+      "en-US": "BMS"
+    }
+  },
+  {
+    "id": "05.01.01",
+    "translations": {
+      "de-CH": "Allgemeine Servicemeldung",
+      "de-DE": "Allgemeine Servicemeldung",
+      "en-US": "generic service message"
     }
   }
 ]
