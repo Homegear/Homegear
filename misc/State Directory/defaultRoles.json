@@ -1920,6 +1920,17 @@
     }
   },
   {
+    "id": "80.00.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Allgemeine Servicemeldung",
+      "de-DE": "Allgemeine Servicemeldung",
+      "en-US": "generic service message"
+    }
+  },
+  {
     "id": "80.01.00",
     "types": [
       "bool"
@@ -1961,6 +1972,17 @@
       "de-CH": "Aktiv",
       "de-DE": "Aktiv",
       "en-US": "active"
+    }
+  },
+  {
+    "id": "80.01.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Allgemeine Betriebsmeldung",
+      "de-DE": "Allgemeine Betriebsmeldung",
+      "en-US": "generic operating notification"
     }
   },
   {
@@ -2777,6 +2799,22 @@
     }
   },
   {
+    "id": "02.03.00",
+    "translations": {
+      "de-CH": "Kommunikationsmodul",
+      "de-DE": "Kommunikationsmodul",
+      "en-US": "communication module"
+    }
+  },
+  {
+    "id": "02.04.00",
+    "translations": {
+      "de-CH": "GLS",
+      "de-DE": "GLS",
+      "en-US": "BMS"
+    }
+  },
+  {
     "id": "03.00.00",
     "translations": {
       "de-CH": "Sanitärtechnik",
@@ -2854,22 +2892,6 @@
       "de-CH": "Personenaufzug",
       "de-DE": "Personenaufzug",
       "en-US": "passenger elevator"
-    }
-  },
-  {
-    "id": "05.01.00",
-    "translations": {
-      "de-CH": "GLS",
-      "de-DE": "GLS",
-      "en-US": "BMS"
-    }
-  },
-  {
-    "id": "05.01.01",
-    "translations": {
-      "de-CH": "Allgemeine Servicemeldung",
-      "de-DE": "Allgemeine Servicemeldung",
-      "en-US": "generic service message"
     }
   }
 ]
