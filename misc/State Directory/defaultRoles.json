@@ -2200,6 +2200,42 @@
     "aggregation": "count"
   },
   {
+    "id": "90.02.03",
+    "translations": {
+      "de-CH": "Zählerstand T1",
+      "de-DE": "Zählerstand T1",
+      "en-US": "Meter reading T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.04",
+    "translations": {
+      "de-CH": "Verbrauch T1",
+      "de-DE": "Verbrauch T1",
+      "en-US": "Consumption T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.05",
+    "translations": {
+      "de-CH": "Zählerstand T2",
+      "de-DE": "Zählerstand T2",
+      "en-US": "Meter reading T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.06",
+    "translations": {
+      "de-CH": "Verbrauch T2",
+      "de-DE": "Verbrauch T2",
+      "en-US": "Consumption T2"
+    },
+    "aggregation": "count"
+  },
+  {
     "id": "90.02.10",
     "translations": {
       "de-CH": "Wirkenergie Verbrauch T1",
