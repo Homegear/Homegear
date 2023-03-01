@@ -2236,61 +2236,241 @@
     "aggregation": "count"
   },
   {
-    "id": "90.02.10",
+    "id": "90.02.07",
     "translations": {
-      "de-CH": "Wirkenergie Verbrauch T1",
-      "de-DE": "Wirkenergie Verbrauch T1",
-      "en-US": "Active energy consumption T1"
+      "de-CH": "Zählerstand Wirkenergie Bezug T1",
+      "de-DE": "Zählerstand Wirkenergie Bezug T1",
+      "en-US": "Meter reading active energy (consumption) T1"
     },
     "aggregation": "meter"
   },
   {
+    "id": "90.02.08",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug T1",
+      "de-DE": "Verbrauch Wirkenergie Bezug T1",
+      "en-US": "Consumption active energy (consumption) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.09",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug T2",
+      "de-DE": "Zählerstand Wirkenergie Bezug T2",
+      "en-US": "Meter reading active energy (consumption) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.10",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug T2",
+      "de-DE": "Verbrauch Wirkenergie Bezug T2",
+      "en-US": "Consumption active energy (consumption) T2"
+    },
+    "aggregation": "count"
+  },
+  {
     "id": "90.02.11",
     "translations": {
-      "de-CH": "Wirkenergie Verbrauch T2",
-      "de-DE": "Wirkenergie Verbrauch T2",
-      "en-US": "Active energy consumption T2"
+      "de-CH": "Zählerstand Wirkenergie Wirkenergie Bezug gesamt",
+      "de-DE": "Zählerstand Wirkenergie Wirkenergie Bezug gesamt",
+      "en-US": "Meter reading active energy (consumption) total"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.02.12",
     "translations": {
-      "de-CH": "Wirkenergie Verbrauch total",
-      "de-DE": "Wirkenergie Verbrauch total",
-      "en-US": "Active energy consumption total"
+      "de-CH": "Verbrauch Wirkenergie Wirkenergie Bezug gesamt",
+      "de-DE": "Verbrauch Wirkenergie Wirkenergie Bezug gesamt",
+      "en-US": "Consumption active energy (consumption) total"
     },
-    "aggregation": "meter"
+    "aggregation": "count"
   },
   {
     "id": "90.02.13",
     "translations": {
-      "de-CH": "Wirkenergie Produktion T1",
-      "de-DE": "Wirkenergie Produktion T1",
-      "en-US": "Active energy produdtion T1"
+      "de-CH": "Zählerstand Wirkenergie Einspeisung T1",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung T1",
+      "en-US": "Meter reading active energy (production) T1"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.02.14",
     "translations": {
-      "de-CH": "Wirkenergie Produktion T2",
-      "de-DE": "Wirkenergie Produktion T2",
-      "en-US": "Active energy produdtion T2"
+      "de-CH": "Verbrauch Wirkenergie Einspeisung T1",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung T1",
+      "en-US": "Consumption active energy (production) T1"
     },
-    "aggregation": "meter"
+    "aggregation": "count"
   },
   {
     "id": "90.02.15",
     "translations": {
-      "de-CH": "Wirkenergie Produktion total",
-      "de-DE": "Wirkenergie Produktion total",
-      "en-US": "Active energy produdtion total"
+      "de-CH": "Zählerstand Wirkenergie Einspeisung T2",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung T2",
+      "en-US": "Meter reading active energy (production) T2"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.02.16",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung T2",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung T2",
+      "en-US": "Consumption active energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.17",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung gesamt",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung gesamt",
+      "en-US": "Meter reading active energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.18",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung gesamt",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung gesamt",
+      "en-US": "Consumption active energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.19",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug T1",
+      "de-DE": "Zählerstand Blindenergie Bezug T1",
+      "en-US": "Meter reading reactive energy (consumption) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.20",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug T1",
+      "de-DE": "Verbrauch Blindenergie Bezug T1",
+      "en-US": "Consumption reactive energy (consumption) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.21",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug T2",
+      "de-DE": "Zählerstand Blindenergie Bezug T2",
+      "en-US": "Meter reading reactive energy (consumption) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.22",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug T2",
+      "de-DE": "Verbrauch Blindenergie Bezug T2",
+      "en-US": "Consumption reactive energy (consumption) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.23",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug gesamt",
+      "de-DE": "Zählerstand Blindenergie Bezug gesamt",
+      "en-US": "Meter reading reactive energy (consumption) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.24",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug gesamt",
+      "de-DE": "Verbrauch Blindenergie Bezug gesamt",
+      "en-US": "Consumption reactive energy (consumption) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.25",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung T1",
+      "de-DE": "Zählerstand Blindenergie Einspeisung T1",
+      "en-US": "Meter reading reactive energy (production) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.26",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung T1",
+      "de-DE": "Verbrauch Blindenergie Einspeisung T1",
+      "en-US": "Consumption reactive energy (production) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.27",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung T2",
+      "de-DE": "Zählerstand Blindenergie Einspeisung T2",
+      "en-US": "Meter reading reactive energy (production) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.28",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung T2",
+      "de-DE": "Verbrauch Blindenergie Einspeisung T2",
+      "en-US": "Consumption reactive energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.29",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung gesamt",
+      "de-DE": "Zählerstand Blindenergie Einspeisung gesamt",
+      "en-US": "Meter reading reactive energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.30",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung gesamt",
+      "de-DE": "Verbrauch Blindenergie Einspeisung gesamt",
+      "en-US": "Consumption reactive energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.31",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie gesamt",
+      "de-DE": "Zählerstand Blindenergie gesamt",
+      "en-US": "Meter reading reactive energy total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.32",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie gesamt",
+      "de-DE": "Verbrauch Blindenergie gesamt",
+      "en-US": "Consumption reactive energy total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.50",
     "translations": {
       "de-CH": "Wirkleistung total",
       "de-DE": "Wirkleistung total",
@@ -2299,7 +2479,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.17",
+    "id": "90.02.52",
     "translations": {
       "de-CH": "Cos Phi L1",
       "de-DE": "Cos Phi L1",
@@ -2308,7 +2488,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.18",
+    "id": "90.02.54",
     "translations": {
       "de-CH": "Cos Phi L2",
       "de-DE": "Cos Phi L2",
@@ -2317,7 +2497,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.19",
+    "id": "90.02.56",
     "translations": {
       "de-CH": "Cos Phi L3",
       "de-DE": "Cos Phi L3",
@@ -2326,7 +2506,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.20",
+    "id": "90.02.58",
     "translations": {
       "de-CH": "Cos Phi total",
       "de-DE": "Cos Phi total",
@@ -2335,7 +2515,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.21",
+    "id": "90.02.60",
     "translations": {
       "de-CH": "Stromstärke L1",
       "de-DE": "Stromstärke L1",
@@ -2344,7 +2524,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.22",
+    "id": "90.02.62",
     "translations": {
       "de-CH": "Stromstärke L2",
       "de-DE": "Stromstärke L2",
@@ -2353,7 +2533,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.23",
+    "id": "90.02.64",
     "translations": {
       "de-CH": "Stromstärke L3",
       "de-DE": "Stromstärke L3",
@@ -2362,7 +2542,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.24",
+    "id": "90.02.66",
     "translations": {
       "de-CH": "Frequenz",
       "de-DE": "Frequenz",
@@ -2371,7 +2551,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.25",
+    "id": "90.02.68",
     "translations": {
       "de-CH": "Blindenergie induktiv T1",
       "de-DE": "Blindenergie induktiv T1",
@@ -2380,7 +2560,7 @@
     "aggregation": "meter"
   },
   {
-    "id": "90.02.26",
+    "id": "90.02.70",
     "translations": {
       "de-CH": "Blindenergie induktiv T2",
       "de-DE": "Blindenergie induktiv T2",
@@ -2389,7 +2569,7 @@
     "aggregation": "meter"
   },
   {
-    "id": "90.02.27",
+    "id": "90.02.72",
     "translations": {
       "de-CH": "Blindenergie induktiv total ",
       "de-DE": "Blindenergie induktiv total ",
@@ -2398,7 +2578,7 @@
     "aggregation": "meter"
   },
   {
-    "id": "90.02.28",
+    "id": "90.02.74",
     "translations": {
       "de-CH": "Blindenergie kapazitiv T1",
       "de-DE": "Blindenergie kapazitiv T1",
@@ -2407,7 +2587,7 @@
     "aggregation": "meter"
   },
   {
-    "id": "90.02.29",
+    "id": "90.02.76",
     "translations": {
       "de-CH": "Blindenergie kapazitiv T2",
       "de-DE": "Blindenergie kapazitiv T2",
@@ -2416,7 +2596,7 @@
     "aggregation": "meter"
   },
   {
-    "id": "90.02.30",
+    "id": "90.02.78",
     "translations": {
       "de-CH": "Blindenergie kapazitiv total",
       "de-DE": "Blindenergie kapazitiv total",
@@ -2425,70 +2605,7 @@
     "aggregation": "meter"
   },
   {
-    "id": "90.02.31",
-    "translations": {
-      "de-CH": "Blindenergie Verbrauch T1",
-      "de-DE": "Blindenergie Verbrauch T1",
-      "en-US": "Reactive energy consumption T1"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.32",
-    "translations": {
-      "de-CH": "Blindenergie Verbrauch T2",
-      "de-DE": "Blindenergie Verbrauch T2",
-      "en-US": "Reactive energy consumption T2"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.33",
-    "translations": {
-      "de-CH": "Blindenergie Verbrauch total",
-      "de-DE": "Blindenergie Verbrauch total",
-      "en-US": "Reactive energy consumption total"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.34",
-    "translations": {
-      "de-CH": "Blindenergie Produktion T1",
-      "de-DE": "Blindenergie Produktion T1",
-      "en-US": "Reactive energy produdtion T1"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.35",
-    "translations": {
-      "de-CH": "Blindenergie Produktion T2",
-      "de-DE": "Blindenergie Produktion T2",
-      "en-US": "Reactive energy produdtion T2"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.36",
-    "translations": {
-      "de-CH": "Blindenergie Produktion total",
-      "de-DE": "Blindenergie Produktion total",
-      "en-US": "Reactive energy produdtion total"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.37",
-    "translations": {
-      "de-CH": "Blindenergie total",
-      "de-DE": "Blindenergie total",
-      "en-US": "Reactive energy total"
-    },
-    "aggregation": "meter"
-  },
-  {
-    "id": "90.02.38",
+    "id": "90.02.80",
     "translations": {
       "de-CH": "Blindleistung total",
       "de-DE": "Blindleistung total",
@@ -2497,7 +2614,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.39",
+    "id": "90.02.82",
     "translations": {
       "de-CH": "Tarif",
       "de-DE": "Tarif",
@@ -2505,7 +2622,7 @@
     }
   },
   {
-    "id": "90.02.40",
+    "id": "90.02.84",
     "translations": {
       "de-CH": "Spannung L1-N",
       "de-DE": "Spannung L1-N",
@@ -2514,7 +2631,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.41",
+    "id": "90.02.86",
     "translations": {
       "de-CH": "Spannung L2-N",
       "de-DE": "Spannung L2-N",
@@ -2523,7 +2640,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.42",
+    "id": "90.02.88",
     "translations": {
       "de-CH": "Spannung L3-N",
       "de-DE": "Spannung L3-N",
@@ -2532,7 +2649,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.43",
+    "id": "90.02.90",
     "translations": {
       "de-CH": "Spannung L1-L2",
       "de-DE": "Spannung L1-L2",
@@ -2541,7 +2658,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.44",
+    "id": "90.02.92",
     "translations": {
       "de-CH": "Spannung L2-L3",
       "de-DE": "Spannung L2-L3",
@@ -2550,7 +2667,7 @@
     "aggregation": "average"
   },
   {
-    "id": "90.02.45",
+    "id": "90.02.94",
     "translations": {
       "de-CH": "Spannung L3-L1",
       "de-DE": "Spannung L3-L1",
