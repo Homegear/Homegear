@@ -70,18 +70,17 @@ int gnutls_system_recv_timeout(gnutls_transport_ptr_t ptr, unsigned int ms)
 }
 #endif
 
-namespace Homegear {
-
-namespace Rpc {
+namespace Homegear::Rpc {
 
 RpcServer::Client::Client() {
-  socket = std::make_shared<BaseLib::TcpSocket>(GD::bl.get());
-  socketDescriptor = std::make_shared<BaseLib::FileDescriptor>();
+  C1Net::TcpSocketInfo tcp_socket_info;
+  auto dummy_socket = std::make_shared<C1Net::Socket>(-1);
+  socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, dummy_socket);
   waitForResponse = false;
 }
 
 RpcServer::Client::~Client() {
-  GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
+  socket->Shutdown();
   GD::bl->threadManager.join(readThread);
 }
 
@@ -418,6 +417,92 @@ bool RpcServer::lifetick() {
     return 0;
 }*/
 
+BaseLib::PFileDescriptor RpcServer::bindAndReturnSocket(BaseLib::FileDescriptorManager &fileDescriptorManager, const std::string &address, const std::string &port, uint32_t connectionBacklogSize, std::string &listenAddress, int32_t &listenPort) {
+  try {
+    BaseLib::PFileDescriptor socketDescriptor;
+    addrinfo hostInfo{};
+    addrinfo *serverInfo = nullptr;
+
+    static constexpr int32_t yes = 1;
+
+    memset(&hostInfo, 0, sizeof(hostInfo));
+
+    hostInfo.ai_family = AF_UNSPEC;
+    hostInfo.ai_socktype = SOCK_STREAM;
+    hostInfo.ai_flags = AI_PASSIVE;
+    std::array<char, 101> buffer{};
+    int32_t result = 0;
+    if ((result = getaddrinfo(address.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0) {
+      throw SocketOperationException("Error: Could not get address information: " + std::string(gai_strerror(result)));
+    }
+
+    bool bound = false;
+    int32_t error = 0;
+    for (struct addrinfo *info = serverInfo; info != nullptr; info = info->ai_next) {
+      socketDescriptor = fileDescriptorManager.add(socket(info->ai_family, info->ai_socktype | SOCK_CLOEXEC, info->ai_protocol));
+      if (socketDescriptor->descriptor == -1) continue;
+      if (setsockopt(socketDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw SocketOperationException("Error: Could not set socket options.");
+      if (bind(socketDescriptor->descriptor.load(), info->ai_addr, info->ai_addrlen) == -1) {
+        socketDescriptor.reset();
+        error = errno;
+        continue;
+      }
+      switch (info->ai_family) {
+        case AF_INET: inet_ntop(info->ai_family, &((struct sockaddr_in *)info->ai_addr)->sin_addr, buffer.data(), buffer.size() - 1);
+          buffer.back() = '\0';
+          listenAddress = std::string(buffer.data());
+          break;
+        case AF_INET6: inet_ntop(info->ai_family, &((struct sockaddr_in6 *)info->ai_addr)->sin6_addr, buffer.data(), buffer.size() - 1);
+          buffer.back() = '\0';
+          listenAddress = std::string(buffer.data());
+          break;
+      }
+      bound = true;
+      break;
+    }
+    freeaddrinfo(serverInfo);
+    if (!bound) {
+      fileDescriptorManager.shutdown(socketDescriptor);
+      socketDescriptor.reset();
+      if (errno == EADDRINUSE) throw SocketAddressInUseException("Error: Could not start listening on port " + port + ": " + std::string(strerror(error)));
+      else throw SocketBindException("Error: Could not start listening on port " + port + ": " + std::string(strerror(error)));
+    } else if (socketDescriptor->descriptor == -1 || listen(socketDescriptor->descriptor, connectionBacklogSize) == -1) {
+      fileDescriptorManager.shutdown(socketDescriptor);
+      socketDescriptor.reset();
+      throw SocketOperationException("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
+    }
+
+    struct sockaddr_in addressInfo{};
+    socklen_t addressInfoLength = sizeof(addressInfo);
+    if (getsockname(socketDescriptor->descriptor, (struct sockaddr *)&addressInfo, &addressInfoLength) == -1) {
+      fileDescriptorManager.shutdown(socketDescriptor);
+      socketDescriptor.reset();
+      throw SocketOperationException("Error: Could get port listening on: " + std::string(strerror(error)));
+    }
+    listenPort = addressInfo.sin_port;
+
+    try {
+      if (listenAddress == "0.0.0.0") listenAddress = BaseLib::Net::getMyIpAddress();
+      else if (listenAddress == "::") {
+        listenAddress = BaseLib::Net::getMyIp6Address();
+      }
+    }
+    catch (const std::exception &ex) {
+      fileDescriptorManager.shutdown(socketDescriptor);
+      socketDescriptor.reset();
+      throw;
+    }
+    return socketDescriptor;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return {};
+}
+
 void RpcServer::start(BaseLib::Rpc::PServerInfo &info) {
   try {
     stop();
@@ -668,7 +753,7 @@ uint32_t RpcServer::connectionCount() {
 void RpcServer::closeClientConnection(std::shared_ptr<Client> client) {
   try {
     if (!client) return;
-    GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+    client->socket->Shutdown();
     client->closed = true;
   }
   catch (const std::exception &ex) {
@@ -692,14 +777,18 @@ void RpcServer::mainThread() {
           getSocketDescriptor();
           continue;
         }
-        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor(address, port);
-        if (!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
+        auto clientFileDescriptor = getClientSocketDescriptor(address, port);
+        if (!clientFileDescriptor || clientFileDescriptor->GetHandle() == -1) continue;
         std::shared_ptr<Client> client = std::make_shared<Client>();
 
         {
           std::lock_guard<std::mutex> stateGuard(_stateMutex);
-          client->id = clientFileDescriptor->id;
-          client->socketDescriptor = clientFileDescriptor;
+          client->id = clientFileDescriptor->GetHandle();
+
+          C1Net::TcpSocketInfo tcp_socket_info;
+          C1Net::PTlsSession tls_session;
+          if (_info->ssl) tls_session = std::make_shared<C1Net::TlsSession>(GNUTLS_SERVER);
+          client->socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, clientFileDescriptor, tls_session);
           while (_clients.find(client->id) != _clients.end()) {
             std::cerr
                 << "Error: Client id was used twice. This shouldn't happen. Please report this error to the developer."
@@ -711,7 +800,7 @@ void RpcServer::mainThread() {
         }
 
         _out.printInfo(
-            "Info: RPC server client id for client number " + std::to_string(client->socketDescriptor->id) + " is: "
+            "Info: RPC server client id for client number " + std::to_string(client->socket->GetSocketHandle()) + " is: "
                 + std::to_string(client->id));
 
         client->acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), client->id);
@@ -726,15 +815,13 @@ void RpcServer::mainThread() {
         try {
           if (_info->ssl) {
             getSSLSocketDescriptor(client);
-            if (!client->socketDescriptor->tlsSession) {
+            if (!client->socket->GetTlsSessionHandle()) {
               //Remove client from _clients again. Socket is already closed.
               closeClientConnection(client);
               continue;
             }
           }
-          client->socket = std::make_shared<BaseLib::TcpSocket>(GD::bl.get(), client->socketDescriptor);
-          client->socket->setReadTimeout(100000);
-          client->socket->setWriteTimeout(15000000);
+
           client->address = address;
           client->port = port;
 
@@ -779,8 +866,7 @@ void RpcServer::mainThread() {
 
 bool RpcServer::clientValid(std::shared_ptr<Client> &client) {
   try {
-    if (client->socketDescriptor->descriptor == -1) return false;
-    return true;
+    return client->socket->IsValid();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -802,7 +888,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
       std::this_thread::sleep_for(std::chrono::milliseconds(2));
       if (!keepAlive || client->rpcType != BaseLib::RpcType::binary)
         std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
-      client->socket->proofwrite(data);
+      client->socket->Send((uint8_t *)data.data(), data.size());
     }
     catch (BaseLib::SocketDataLimitException &ex) {
       _out.printWarning(std::string("Warning: ") + ex.what());
@@ -1077,7 +1163,7 @@ void RpcServer::callMethod(const std::shared_ptr<Client> &client,
     }
 
     if (GD::bl->debugLevel >= 4 && methodName != "getNodeVariable") {
-      _out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id)
+      _out.printInfo("Info: Client number " + std::to_string(client->socket->GetSocketHandle())
                          + (client->clientType == BaseLib::RpcClientType::ccu2 ? " (CCU)" : "")
                          + (client->clientType == BaseLib::RpcClientType::ipsymcon ? " (IP-Symcon)" : "")
                          + " is calling RPC method: " + methodName + " (" + std::to_string((int32_t)(client->rpcType))
@@ -1327,13 +1413,14 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
                                                           client,
                                                           client->address,
                                                           client->nodeClient);
-          client->socketDescriptor.reset(new BaseLib::FileDescriptor());
-          client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+          C1Net::TcpSocketInfo tcp_socket_info;
+          auto dummy_socket = std::make_shared<C1Net::Socket>(-1);
+          client->socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, dummy_socket);
           client->closed = true;
         }
       } else {
         closeClientConnection(client);
-        _out.printError("Error: Unknown websocket protocol. Known protocols are \"server\" and \"client\".");
+        _out.printError(R"(Error: Unknown websocket protocol. Known protocols are "server" and "client".)");
       }
     } else {
       closeClientConnection(client);
@@ -1351,7 +1438,7 @@ void RpcServer::handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib:
 void RpcServer::readClient(std::shared_ptr<Client> client) {
   try {
     if (!client) return;
-    std::array<char, 1025> buffer{};
+    std::array<uint8_t, 1025> buffer{};
     int32_t processedBytes = 0;
     int32_t bytesRead = 0;
     PacketType::Enum packetType = PacketType::binaryRequest;
@@ -1362,14 +1449,14 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
     bool more_data = false;
 
     _out.printDebug(
-        "Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
+        "Listening for incoming packets from client number " + std::to_string(client->socket->GetSocketHandle()) + ".");
     while (!_stopServer) {
       try {
-        bytesRead = client->socket->proofread(buffer.data(), buffer.size() - 1, more_data);
+        bytesRead = client->socket->Read(buffer.data(), buffer.size() - 1, more_data);
         //Some clients send only one byte in the first packet
         if (bytesRead == 1 && !binaryRpc.processingStarted() && !http.headerProcessingStarted()
             && !webSocket.dataProcessingStarted())
-          bytesRead += client->socket->proofread(buffer.data() + 1, buffer.size() - 2, more_data);
+          bytesRead += client->socket->Read(buffer.data() + 1, buffer.size() - 2, more_data);
         buffer.at(buffer.size() - 1) = '\0'; //Even though it shouldn't matter, make sure there is a null termination.
       }
       catch (const BaseLib::SocketTimeOutException &ex) {
@@ -1393,14 +1480,14 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
 
       if (binaryRpc.processingStarted()
           || (!binaryRpc.processingStarted() && !http.headerProcessingStarted() && !webSocket.dataProcessingStarted()
-              && !strncmp(buffer.data(), "Bin", 3))) {
+              && !strncmp((char *)buffer.data(), "Bin", 3))) {
         if (!_info->rpcServer) continue;
 
         try {
           processedBytes = 0;
           bool doBreak = false;
           while (processedBytes < bytesRead) {
-            processedBytes += binaryRpc.process(buffer.data() + processedBytes, bytesRead - processedBytes);
+            processedBytes += binaryRpc.process((char *)buffer.data() + processedBytes, bytesRead - processedBytes);
             if (binaryRpc.isFinished()) {
               std::shared_ptr<BaseLib::Rpc::RpcHeader> header = _rpcDecoder->decodeHeader(binaryRpc.getData());
               if (!client->authenticated && (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::basic)) {
@@ -1452,7 +1539,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
         processedBytes = 0;
         bool doBreak = false;
         while (processedBytes < bytesRead) {
-          processedBytes += webSocket.process(buffer.data() + processedBytes, bytesRead - processedBytes);
+          processedBytes += webSocket.process((char *)buffer.data() + processedBytes, bytesRead - processedBytes);
           if (webSocket.isFinished()) {
             if (webSocket.getHeader().close) {
               std::vector<char> response;
@@ -1502,8 +1589,9 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                                                       client->address,
                                                       client->nodeClient);
                     if (client->webSocketClient) {
-                      client->socketDescriptor.reset(new BaseLib::FileDescriptor());
-                      client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+                      C1Net::TcpSocketInfo tcp_socket_info;
+                      auto dummy_socket = std::make_shared<C1Net::Socket>(-1);
+                      client->socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, dummy_socket);
                       client->closed = true;
                     }
                   }
@@ -1533,8 +1621,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
 
         if (http.headerProcessingStarted()) processHttp = true;
         else {
-          if (!strncmp(buffer.data(), "GET ", 4) || !strncmp(buffer.data(), "HEAD ", 5)
-              || !strncmp(buffer.data(), "DELETE ", 7)) {
+          if (!strncmp((char *)buffer.data(), "GET ", 4) || !strncmp((char *)buffer.data(), "HEAD ", 5)
+              || !strncmp((char *)buffer.data(), "DELETE ", 7)) {
             buffer.at(bytesRead) = '\0';
             packetType = PacketType::Enum::xmlRequest;
 
@@ -1561,13 +1649,13 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
 
             processHttp = true;
             http.reset();
-          } else if (!strncmp(buffer.data(), "POST", 4) || !strncmp(buffer.data(), "PUT", 3)
-              || !strncmp(buffer.data(), "HTTP/1.", 7)) {
+          } else if (!strncmp((char *)buffer.data(), "POST", 4) || !strncmp((char *)buffer.data(), "PUT", 3)
+              || !strncmp((char *)buffer.data(), "HTTP/1.", 7)) {
             if (bytesRead < 8) continue;
             buffer.at(bytesRead) = '\0';
-            packetType = (!strncmp(buffer.data(), "POST", 4)) || (!strncmp(buffer.data(),
-                                                                           "PUT",
-                                                                           3)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+            packetType = (!strncmp((char *)buffer.data(), "POST", 4)) || (!strncmp((char *)buffer.data(),
+                                                                                   "PUT",
+                                                                                   3)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 
             processHttp = true;
             http.reset();
@@ -1583,7 +1671,7 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
             bool doBreak = false;
             processedBytes = 0;
             while (processedBytes < bytesRead) {
-              processedBytes += http.process(buffer.data() + processedBytes, bytesRead - processedBytes);
+              processedBytes += http.process((char *)buffer.data() + processedBytes, bytesRead - processedBytes);
 
               if (http.getContentSize() > 104857600) {
                 http.reset();
@@ -1624,9 +1712,10 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
 
                 if (_info->webSocket && (http.getHeader().connection & BaseLib::Http::Connection::upgrade)) {
                   if (http.getHeader().path.compare(0, 11, "/node-blue/") == 0) {
-                    GD::nodeBlueServer->getNoderedWebsocket()->handoverClient(client->socket, client->socketDescriptor, http);
-                    client->socketDescriptor.reset(new BaseLib::FileDescriptor());
-                    client->socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+                    GD::nodeBlueServer->getNoderedWebsocket()->handoverClient(client->socket, http);
+                    C1Net::TcpSocketInfo tcp_socket_info;
+                    auto dummy_socket = std::make_shared<C1Net::Socket>(-1);
+                    client->socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, dummy_socket);
                     client->closed = true;
                     continue;
                   } else {
@@ -1702,10 +1791,10 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
                                  http.getHeader().connection & BaseLib::Http::Connection::Enum::keepAlive);
                 }
                 http.reset();
-                if (client->socketDescriptor->descriptor == -1) {
-                  if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socketDescriptor->id) + " closed.");
+                if (!client->socket->IsValid()) {
+                  if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Connection to client number " + std::to_string(client->socket->GetSocketHandle()) + " closed.");
                   if (processedBytes < bytesRead)
-                    _out.printInfo("Info: " + std::to_string(bytesRead - processedBytes) + " bytes are not processed, because connection to client number " + std::to_string(client->socketDescriptor->id) + " was closed.");
+                    _out.printInfo("Info: " + std::to_string(bytesRead - processedBytes) + " bytes are not processed, because connection to client number " + std::to_string(client->socket->GetSocketHandle()) + " was closed.");
                   break;
                 }
               }
@@ -1744,8 +1833,8 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
   closeClientConnection(client);
 }
 
-std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(std::string &address, int32_t &port) {
-  std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
+C1Net::PSocket RpcServer::getClientSocketDescriptor(std::string &address, int32_t &port) {
+  C1Net::PSocket socket_descriptor;
   try {
     {
       //Don't lock _stateMutex => no synchronisation needed
@@ -1782,23 +1871,21 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
       } while (poll_result == -1 && errno == EINTR);
       if (poll_result == -1 || (poll_struct.revents & (POLLNVAL | POLLERR)) || _serverFileDescriptor->descriptor == -1) {
         GD::out.printError("Error polling server socket descriptor: " + std::string(strerror(errno)));
-        return fileDescriptor;
+        return socket_descriptor;
       } else if (poll_result == 0) {
         if (BaseLib::HelperFunctions::getTime() - _lastGargabeCollection > 60000 || _clients.size() > GD::bl->settings.rpcServerMaxConnections() * 100 / 112) {
           collectGarbage();
         }
-        return fileDescriptor;
+        return socket_descriptor;
       }
     }
 
     struct sockaddr_storage clientInfo{};
     socklen_t addressSize = sizeof(addressSize);
-    fileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor,
-                                                               (struct sockaddr *)&clientInfo,
-                                                               &addressSize, SOCK_CLOEXEC));
-    if (!fileDescriptor) return fileDescriptor;
+    socket_descriptor = std::make_shared<C1Net::Socket>(accept4(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientInfo, &addressSize, SOCK_CLOEXEC));
+    if (!socket_descriptor) return socket_descriptor;
 
-    getpeername(fileDescriptor->descriptor, (struct sockaddr *)&clientInfo, &addressSize);
+    getpeername(socket_descriptor->GetHandle(), (struct sockaddr *)&clientInfo, &addressSize);
 
     char ipString[INET6_ADDRSTRLEN];
     if (clientInfo.ss_family == AF_INET) {
@@ -1813,7 +1900,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
     address = std::string(&ipString[0]);
 
     _out.printInfo("Info: Connection from " + address + ":" + std::to_string(port) + " accepted. Client number: "
-                       + std::to_string(fileDescriptor->id));
+                       + std::to_string(socket_descriptor->GetHandle()));
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1821,78 +1908,66 @@ std::shared_ptr<BaseLib::FileDescriptor> RpcServer::getClientSocketDescriptor(st
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
-  return fileDescriptor;
+  return socket_descriptor;
 }
 
 void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client) {
   try {
     if (!_tlsPriorityCache) {
       _out.printError("Error: Could not initiate TLS connection. _tlsPriorityCache is nullptr.");
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
     if (!_x509Cred) {
       _out.printError("Error: Could not initiate TLS connection. _x509Cred is nullptr.");
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
-    int32_t result = 0;
-    if ((result = gnutls_init(&client->socketDescriptor->tlsSession, GNUTLS_SERVER)) != GNUTLS_E_SUCCESS) {
-      _out.printError("Error: Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
-      client->socketDescriptor->tlsSession = nullptr;
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-      return;
-    }
-    if (!client->socketDescriptor->tlsSession) {
+    if (!client->socket->GetTlsSessionHandle()) {
       _out.printError("Error: Client TLS session is nullptr.");
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
-    gnutls_transport_set_pull_timeout_function(client->socketDescriptor->tlsSession, gnutls_system_recv_timeout);
-    if ((result = gnutls_priority_set(client->socketDescriptor->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS) {
+    gnutls_transport_set_pull_timeout_function(client->socket->GetTlsSessionHandle(), gnutls_system_recv_timeout);
+    int result = 0;
+    if ((result = gnutls_priority_set(client->socket->GetTlsSessionHandle(), _tlsPriorityCache)) != GNUTLS_E_SUCCESS) {
       _out.printError("Error: Could not set cipher priority on TLS session: " + std::string(gnutls_strerror(result)));
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
-    if ((result = gnutls_credentials_set(client->socketDescriptor->tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred))
+    if ((result = gnutls_credentials_set(client->socket->GetTlsSessionHandle(), GNUTLS_CRD_CERTIFICATE, _x509Cred))
         != GNUTLS_E_SUCCESS) {
       _out.printError("Error: Could not set x509 credentials on TLS session: " + std::string(gnutls_strerror(result)));
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
-    if (!client->socketDescriptor || client->socketDescriptor->descriptor == -1) {
+    if (!client->socket->IsValid()) {
       _out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
-    gnutls_transport_set_ptr(client->socketDescriptor->tlsSession,
-                             (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
+    gnutls_transport_set_ptr(client->socket->GetTlsSessionHandle(), (gnutls_transport_ptr_t)(uintptr_t)client->socket->GetSocketHandle());
 
     if (_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
-      gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_REQUIRE);
+      gnutls_certificate_server_set_request(client->socket->GetTlsSessionHandle(), GNUTLS_CERT_REQUIRE);
     else if (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert)
-      gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession,
-                                            GNUTLS_CERT_REQUEST);
-    gnutls_handshake_set_timeout(client->socketDescriptor->tlsSession, 5000);
+      gnutls_certificate_server_set_request(client->socket->GetTlsSessionHandle(), GNUTLS_CERT_REQUEST);
+    gnutls_handshake_set_timeout(client->socket->GetTlsSessionHandle(), 5000);
     do {
-      result = gnutls_handshake(client->socketDescriptor->tlsSession);
+      result = gnutls_handshake(client->socket->GetTlsSessionHandle());
     } while (result < 0 && gnutls_error_is_fatal(result) == 0);
     if (result < 0) {
       _out.printWarning("Warning: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
-      GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+      client->socket->Shutdown();
       return;
     }
 
     if (_info->authType & BaseLib::Rpc::ServerInfo::Info::AuthType::cert) {
       std::string error;
-      if (!client->auth->certificateServer(client->socketDescriptor,
-                                           client->user,
-                                           client->distinguishedName,
-                                           client->acls,
-                                           error)) {
+      if (!client->auth->certificateServer(client->socket, client->user, client->distinguishedName, client->acls, error)) {
         if (_info->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::cert) {
           _out.printError("Error: Authentication failed: " + error);
-          GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+          client->socket->Shutdown();
           return;
         } else
           _out.printInfo(
@@ -1913,7 +1988,7 @@ void RpcServer::getSSLSocketDescriptor(std::shared_ptr<Client> client) {
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
-  GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+  client->socket->Shutdown();
 }
 
 void RpcServer::getSocketDescriptor() {
@@ -1995,8 +2070,6 @@ void RpcServer::getSocketDescriptor() {
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
-}
-
 }
 
 }

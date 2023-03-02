@@ -128,7 +128,7 @@ class Client {
                                                              BaseLib::PRpcClientInfo clientInfo,
                                                              std::string id);
 
-  std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket,
+  std::shared_ptr<RemoteRpcServer> addWebSocketServer(std::shared_ptr<C1Net::TcpSocket> socket,
                                                       const std::string &clientId,
                                                       BaseLib::PRpcClientInfo clientInfo,
                                                       std::string address,

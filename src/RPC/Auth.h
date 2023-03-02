@@ -45,7 +45,7 @@ namespace Rpc {
 
 class AuthException : public BaseLib::Exception {
  public:
-  explicit AuthException(const std::string& message) : BaseLib::Exception(message) {}
+  explicit AuthException(const std::string &message) : BaseLib::Exception(message) {}
 };
 
 class Auth {
@@ -60,37 +60,33 @@ class Auth {
 
   bool validUser(std::string &userName);
 
-  bool basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+  bool basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                    std::shared_ptr<BaseLib::Rpc::RpcHeader> &binaryHeader,
                    std::string &userName,
                    BaseLib::Security::PAcls &acls);
 
-  bool basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+  bool basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                    BaseLib::Http &httpPacket,
                    std::string &userName,
                    BaseLib::Security::PAcls &acls);
 
-  bool basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+  bool basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                    BaseLib::WebSocket &webSocket,
                    std::string &userName,
                    BaseLib::Security::PAcls &acls);
 
-  bool sessionServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+  bool sessionServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                      BaseLib::WebSocket &webSocket,
                      std::string &userName,
                      BaseLib::Security::PAcls &acls);
 
-  bool certificateServer(std::shared_ptr<BaseLib::FileDescriptor> &socketDescriptor,
-                         std::string &userName,
-                         std::string &dn,
-                         BaseLib::Security::PAcls &acls,
-                         std::string &error);
+  bool certificateServer(C1Net::PTcpSocket &socket, std::string &userName, std::string &dn, BaseLib::Security::PAcls &acls, std::string &error);
 
-  void sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, bool binary);
+  void sendBasicUnauthorized(std::shared_ptr<C1Net::TcpSocket> &socket, bool binary);
 
-  void sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket> &socket);
+  void sendWebSocketAuthorized(std::shared_ptr<C1Net::TcpSocket> &socket);
 
-  void sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, std::string reason);
+  void sendWebSocketUnauthorized(std::shared_ptr<C1Net::TcpSocket> &socket, std::string reason);
 
  protected:
   std::atomic_bool _authenticated;

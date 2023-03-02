@@ -5348,8 +5348,8 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
           clientInfo->clientType = BaseLib::RpcClientType::ccu2;
           eventServer->reconnectInfinitely = true;
           if (eventServer->socket) {
-            eventServer->socket->setReadTimeout(30000000);
-            eventServer->socket->setWriteTimeout(30000000);
+            eventServer->socket->SetReadTimeout(30000000);
+            eventServer->socket->SetWriteTimeout(30000000);
           }
         }
           // }}}

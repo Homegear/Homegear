@@ -165,8 +165,8 @@ void Client::broadcastNodeEvent(const std::string &nodeId, const std::string &to
       for (auto &server: _servers) {
         if (!server.second->nodeEvents) continue;
         if (server.second->removed ||
-            (server.second->getServerClientInfo()->sendEventsToRpcServer && (server.second->getServerClientInfo()->closed || !server.second->getServerClientInfo()->socket->connected())) ||
-            (server.second->socket && !server.second->socket->connected() && server.second->keepAlive && !server.second->reconnectInfinitely) ||
+            (server.second->getServerClientInfo()->sendEventsToRpcServer && (server.second->getServerClientInfo()->closed || !server.second->getServerClientInfo()->socket->Connected())) ||
+            (server.second->socket && !server.second->socket->Connected() && server.second->keepAlive && !server.second->reconnectInfinitely) ||
             (!server.second->initialized && BaseLib::HelperFunctions::getTimeSeconds() - server.second->creationTime > 120)) {
           continue;
         }
@@ -231,8 +231,8 @@ void Client::broadcastEvent(const std::string &source,
     std::lock_guard<std::mutex> serversGuard(_serversMutex);
     for (auto &server: _servers) {
       if (server.second->removed ||
-          (server.second->getServerClientInfo()->sendEventsToRpcServer && (server.second->getServerClientInfo()->closed || !server.second->getServerClientInfo()->socket->connected())) ||
-          (server.second->socket && !server.second->socket->connected() && server.second->keepAlive && !server.second->reconnectInfinitely))
+          (server.second->getServerClientInfo()->sendEventsToRpcServer && (server.second->getServerClientInfo()->closed || !server.second->getServerClientInfo()->socket->Connected())) ||
+          (server.second->socket && !server.second->socket->Connected() && server.second->keepAlive && !server.second->reconnectInfinitely))
         continue;
       //At least OpenHAB needs PONG to be send event when initialization is not complete
       if ((!server.second->initialized && valueKeys->at(0) != "PONG") ||
@@ -383,7 +383,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> &address) {
     if (result->errorStruct) {
       if (server->removed
           || (server->getServerClientInfo()->sendEventsToRpcServer && server->getServerClientInfo()->closed)
-          || (server->socket && !server->socket->connected() && server->keepAlive && !server->reconnectInfinitely))
+          || (server->socket && !server->socket->Connected() && server->keepAlive && !server->reconnectInfinitely))
         return;
       GD::out.printWarning(
           "Warning: Error calling XML RPC method \"system.listMethods\" on server " + address.first + " with port "
@@ -435,7 +435,7 @@ void Client::listDevices(std::pair<std::string, std::string> &address) {
     if (result->errorStruct) {
       if (server->removed
           || (server->getServerClientInfo()->sendEventsToRpcServer && server->getServerClientInfo()->closed)
-          || (server->socket && !server->socket->connected() && server->keepAlive && !server->reconnectInfinitely))
+          || (server->socket && !server->socket->Connected() && server->keepAlive && !server->reconnectInfinitely))
         return;
       GD::out.printError(
           "Error calling XML RPC method \"listDevices\" on server " + address.first + " with port " + address.second
@@ -924,10 +924,10 @@ void Client::collectGarbage() {
     _lastGarbageCollection = BaseLib::HelperFunctions::getTime();
     for (auto &server: _servers) {
       if (server.second->removed || (server.second->getServerClientInfo()->sendEventsToRpcServer
-          && (server.second->getServerClientInfo()->closed || !server.second->getServerClientInfo()->socket->connected()))
-          || (server.second->socket && !server.second->socket->connected() && server.second->keepAlive
+          && (server.second->getServerClientInfo()->closed || !server.second->getServerClientInfo()->socket->Connected()))
+          || (server.second->socket && !server.second->socket->Connected() && server.second->keepAlive
               && !server.second->reconnectInfinitely) || (!server.second->initialized && now - server.second->creationTime > 120)) {
-        if (server.second->socket) server.second->socket->close();
+        if (server.second->socket) server.second->socket->Shutdown();
         serversToRemove.push_back(server.first);
         if (server.second->nodeEvents) {
           nodeClientRemoved = true;
@@ -1057,7 +1057,7 @@ std::shared_ptr<RemoteRpcServer> Client::addSingleConnectionServer(const std::pa
   return std::make_shared<RemoteRpcServer>(_client, clientInfo);
 }
 
-std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<BaseLib::TcpSocket> socket,
+std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<C1Net::TcpSocket> socket,
                                                             const std::string &clientId,
                                                             BaseLib::PRpcClientInfo clientInfo,
                                                             std::string address,
@@ -1084,7 +1084,6 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
     server->initialized = true;
     if (!clientInfo->sendEventsToRpcServer) {
       server->socket = socket;
-      server->socket->setReadTimeout(15000000);
     }
     server->keepAlive = true;
     server->subscribePeers = true;
@@ -1105,11 +1104,11 @@ std::shared_ptr<RemoteRpcServer> Client::addWebSocketServer(std::shared_ptr<Base
     if (server->settings) {
       GD::out.printInfo("Info: Settings for host \"" + server->hostname + "\" found in \"rpcclients.conf\".");
       if (!clientInfo->sendEventsToRpcServer) {
-        server->socket->setReadTimeout(server->settings->timeout);
-        server->socket->setWriteTimeout(server->settings->timeout);
+        server->socket->SetReadTimeout(server->settings->timeout);
+        server->socket->SetWriteTimeout(server->settings->timeout);
       } else {
-        clientInfo->socket->setReadTimeout(server->settings->timeout);
-        clientInfo->socket->setWriteTimeout(server->settings->timeout);
+        clientInfo->socket->SetReadTimeout(server->settings->timeout);
+        clientInfo->socket->SetWriteTimeout(server->settings->timeout);
       }
     }
     return server;
@@ -1131,7 +1130,7 @@ void Client::removeServer(const std::pair<std::string, std::string> &server) {
         _servers.erase(i);
         serversGuard.unlock();
         //Close waits for all read/write operations to finish and can therefore block. That's why we unlock the mutex first.
-        if (current_server->socket) current_server->socket->close();
+        if (current_server->socket) current_server->socket->Shutdown();
         if (current_server->nodeEvents) {
           bool nodeClientsEmpty = false;
           {

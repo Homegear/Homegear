@@ -28,6 +28,7 @@
  * files in the program, then also delete it here.
 */
 
+#include <gnutls/x509.h>
 #include "Auth.h"
 #include "../GD/GD.h"
 
@@ -45,21 +46,21 @@ Auth::Auth(std::unordered_set<uint64_t> &validGroups) {
 
 bool Auth::validUser(std::string &userName) {
   auto groups = User::getGroups(userName);
-  for (auto group : groups) {
+  for (auto group: groups) {
     if (_validGroups.find(group) != _validGroups.end()) return true;
   }
 
   return false;
 }
 
-void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, bool binary) {
+void Auth::sendBasicUnauthorized(std::shared_ptr<C1Net::TcpSocket> &socket, bool binary) {
   if (binary) {
     if (_basicUnauthBinaryHeader.empty()) {
       BaseLib::PVariable error = BaseLib::Variable::createError(-32603, "Unauthorized");
       _rpcEncoder->encodeResponse(error, _basicUnauthBinaryHeader);
     }
     try {
-      socket->proofwrite(_basicUnauthBinaryHeader);
+      socket->Send((uint8_t *)_basicUnauthBinaryHeader.data(), _basicUnauthBinaryHeader.size());
     }
     catch (const BaseLib::SocketOperationException &ex) {
       throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
@@ -76,7 +77,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, bo
       _basicUnauthHTTPHeader.insert(_basicUnauthHTTPHeader.begin(), header.begin(), header.end());
     }
     try {
-      socket->proofwrite(_basicUnauthHTTPHeader);
+      socket->Send((uint8_t *)_basicUnauthHTTPHeader.data(), _basicUnauthHTTPHeader.size());
     }
     catch (const BaseLib::SocketOperationException &ex) {
       throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
@@ -84,7 +85,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, bo
   }
 }
 
-bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+bool Auth::basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                        std::shared_ptr<BaseLib::Rpc::RpcHeader> &binaryHeader,
                        std::string &userName,
                        BaseLib::Security::PAcls &acls) {
@@ -127,7 +128,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
   return false;
 }
 
-bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+bool Auth::basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                        BaseLib::Http &httpPacket,
                        std::string &userName,
                        BaseLib::Security::PAcls &acls) {
@@ -137,8 +138,9 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
   acls->clear();
   if (_validGroups.empty()) throw AuthException("No valid groups specified in \"rpcservers.conf\".");
   _http.reset();
-  uint32_t bufferLength = 1024;
-  char buffer[bufferLength + 1];
+  const uint32_t bufferLength = 1024;
+  std::array<char, bufferLength + 1> buffer{};
+  bool more_data = false;
   if (httpPacket.getHeader().authorization.empty()) {
     if (_basicAuthHTTPHeader.empty()) {
       _basicAuthHTTPHeader.append("HTTP/1.1 401 Authorization Required\r\n");
@@ -152,13 +154,13 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
     std::shared_ptr<std::vector<char>> data(new std::vector<char>());
     data->insert(data->begin(), _basicAuthHTTPHeader.begin(), _basicAuthHTTPHeader.end());
     try {
-      socket->proofwrite(data);
-      int32_t bytesRead = socket->proofread(buffer, bufferLength);
+      socket->Send((uint8_t *)data->data(), data->size());
+      int32_t bytesRead = socket->Read((uint8_t *)buffer.data(), buffer.size() - 1, more_data);
       //Some clients send only one byte in the first packet
-      if (bytesRead == 1) bytesRead += socket->proofread(&buffer[1], bufferLength - 1);
-      buffer[bytesRead] = '\0';
+      if (bytesRead == 1) bytesRead += socket->Read((uint8_t *)buffer.data() + 1, buffer.size() - 2, more_data);
+      buffer.at(bytesRead) = '\0';
       try {
-        _http.process(buffer, bufferLength);
+        _http.process(buffer.data(), buffer.size() - 1);
       }
       catch (BaseLib::HttpException &ex) {
         throw AuthException(std::string("Authorization failed because of HTTP exception: ") + ex.what());
@@ -202,7 +204,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
   return false;
 }
 
-bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+bool Auth::basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                        BaseLib::WebSocket &webSocket,
                        std::string &userName,
                        BaseLib::Security::PAcls &acls) {
@@ -255,7 +257,7 @@ bool Auth::basicServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
   return false;
 }
 
-bool Auth::sessionServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
+bool Auth::sessionServer(std::shared_ptr<C1Net::TcpSocket> &socket,
                          BaseLib::WebSocket &webSocket,
                          std::string &userName,
                          BaseLib::Security::PAcls &acls) {
@@ -311,16 +313,12 @@ bool Auth::sessionServer(std::shared_ptr<BaseLib::TcpSocket> &socket,
 #endif
 }
 
-bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor> &socketDescriptor,
-                             std::string &userName,
-                             std::string &dn,
-                             BaseLib::Security::PAcls &acls,
-                             std::string &error) {
+bool Auth::certificateServer(C1Net::PTcpSocket &socket, std::string &userName, std::string &dn, BaseLib::Security::PAcls &acls, std::string &error) {
   userName = "";
   if (!acls) acls = std::make_shared<BaseLib::Security::Acls>(GD::bl.get(), -1);
   acls->clear();
   if (_validGroups.empty()) throw AuthException("No valid groups specified in \"rpcservers.conf\".");
-  const gnutls_datum_t *derClientCertificates = gnutls_certificate_get_peers(socketDescriptor->tlsSession, nullptr);
+  const gnutls_datum_t *derClientCertificates = gnutls_certificate_get_peers(socket->GetTlsSessionHandle(), nullptr);
   if (!derClientCertificates) {
     error = "Error retrieving client certificate.";
     return false;
@@ -345,7 +343,7 @@ bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor> &socketDes
     bool userFound = false;
 
     auto outerFields = BaseLib::HelperFunctions::splitAll(certUserName, ',');
-    for (auto &outerField : outerFields) {
+    for (auto &outerField: outerFields) {
       auto innerFields = BaseLib::HelperFunctions::splitFirst(outerField, '=');
       BaseLib::HelperFunctions::trim(innerFields.first);
       BaseLib::HelperFunctions::toLower(innerFields.first);
@@ -375,20 +373,20 @@ bool Auth::certificateServer(std::shared_ptr<BaseLib::FileDescriptor> &socketDes
   return true;
 }
 
-void Auth::sendWebSocketAuthorized(std::shared_ptr<BaseLib::TcpSocket> &socket) {
+void Auth::sendWebSocketAuthorized(std::shared_ptr<C1Net::TcpSocket> &socket) {
   std::vector<char> output;
   std::string json("{\"auth\":\"success\"}");
-  std::vector<char> data(&json[0], &json[0] + json.size());
+  std::vector<char> data(json.data(), json.data() + json.size());
   BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
-  socket->proofwrite(output);
+  socket->Send((uint8_t *)output.data(), output.size());
 }
 
-void Auth::sendWebSocketUnauthorized(std::shared_ptr<BaseLib::TcpSocket> &socket, std::string reason) {
+void Auth::sendWebSocketUnauthorized(std::shared_ptr<C1Net::TcpSocket> &socket, std::string reason) {
   std::vector<char> output;
   std::string json("{\"auth\":\"failure\",\"reason\":\"" + reason + "\"}");
   std::vector<char> data(json.data(), json.data() + json.size());
   BaseLib::WebSocket::encode(data, BaseLib::WebSocket::Header::Opcode::text, output);
-  socket->proofwrite(output);
+  socket->Send((uint8_t *)output.data(), output.size());
 }
 
 }

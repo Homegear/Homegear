@@ -93,7 +93,6 @@ void loadSettings(bool hideOutput = false) {
 }
 
 void bindRPCServers() {
-  BaseLib::TcpSocket tcpSocket(GD::bl.get());
   // Bind all RPC servers listening on ports <= 1024
   for (int32_t i = 0; i < GD::serverInfo.count(); i++) {
     BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
@@ -105,7 +104,7 @@ void bindRPCServers() {
     info += "...";
     GD::out.printInfo(info);
     int32_t listenPort = -1;
-    settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), 100, settings->address, listenPort);
+    settings->socketDescriptor = Rpc::RpcServer::bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), 100, settings->address, listenPort);
     if (settings->socketDescriptor) GD::out.printInfo("Info: Server successfully bound.");
   }
 }

@@ -76,7 +76,7 @@ class UPnP : public BaseLib::Rpc::IWebserverEventSink {
   // {{{ Webserver events
   BaseLib::PEventHandler _webserverEventHandler;
 
-  bool onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpRequest, std::shared_ptr<BaseLib::TcpSocket> &socket, std::string &path);
+  bool onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpRequest, std::shared_ptr<C1Net::TcpSocket> &socket, std::string &path);
   // }}}
 
   void getAddress();

@@ -158,7 +158,7 @@ ZEND_FUNCTION(hg_log);
 ZEND_BEGIN_ARG_INFO_EX(hg_set_language_arg_info, nullptr, 0, 1)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_language);
-ZEND_BEGIN_ARG_INFO_EX(hg_set_script_log_level_arg_info,  nullptr,0, 1)
+ZEND_BEGIN_ARG_INFO_EX(hg_set_script_log_level_arg_info, nullptr, 0, 1)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_http_contents_arg_info, 0, 5, IS_STRING, 0)
@@ -442,7 +442,7 @@ void hg_zend_stream_closer(void *handle) {
 #if PHP_VERSION_ID >= 80000
 zend_result hg_stream_open(const char *filename, zend_file_handle *handle) {
 #else
-int hg_stream_open(const char *filename, zend_file_handle *handle) {
+  int hg_stream_open(const char *filename, zend_file_handle *handle) {
 #endif
   std::string file(filename);
   if (file.size() > 3 && (file.compare(file.size() - 4, 4, ".hgs") == 0 || file.compare(file.size() - 4, 4, ".hgn") == 0)) {
@@ -793,7 +793,7 @@ static void php_homegear_register_variables(zval *track_vars_array) {
     }
     auto nodeBlueUriPathsExcludedFromLogin = Homegear::GD::bl->settings.nodeBlueUriPathsExcludedFromLogin();
     if (!nodeBlueUriPathsExcludedFromLogin.empty()) {
-      php_register_variable_safe((char *)"ANONYMOUS_NODE_BLUE_PATHS", (char*)nodeBlueUriPathsExcludedFromLogin.c_str(), nodeBlueUriPathsExcludedFromLogin.size(), track_vars_array);
+      php_register_variable_safe((char *)"ANONYMOUS_NODE_BLUE_PATHS", (char *)nodeBlueUriPathsExcludedFromLogin.c_str(), nodeBlueUriPathsExcludedFromLogin.size(), track_vars_array);
     }
     if (scriptInfo->clientInfo) {
       if (scriptInfo->clientInfo->authenticated) {
@@ -805,7 +805,7 @@ static void php_homegear_register_variables(zval *track_vars_array) {
         php_register_variable_safe((char *)"SSL_CLIENT_VERIFY", (char *)sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
         php_register_variable_safe((char *)"SSL_CLIENT_S_DN", (char *)scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
         auto dnParts = BaseLib::HelperFunctions::splitAll(scriptInfo->clientInfo->distinguishedName, ',');
-        for (auto &attribute : dnParts) {
+        for (auto &attribute: dnParts) {
           auto attributePair = BaseLib::HelperFunctions::splitFirst(attribute, '=');
           BaseLib::HelperFunctions::trim(attributePair.first);
           BaseLib::HelperFunctions::toUpper(attributePair.first);
@@ -1370,7 +1370,8 @@ ZEND_FUNCTION(hg_poll_event) {
       ZVAL_LONG(&element, eventData->value->integerValue64);
       add_assoc_zval_ex(return_value, "BUTTONID", sizeof("BUTTONID") - 1, &element);
     }
-  } else RETURN_FALSE;
+  } else
+    RETURN_FALSE;
 }
 
 ZEND_FUNCTION(hg_list_rpc_clients) {
@@ -1517,7 +1518,8 @@ ZEND_FUNCTION(hg_log) {
     if (logLevel <= SEG(logLevel)) {
       if (logLevel > 3) errorLog = false;
       logLevel = 0;
-    } else RETURN_TRUE;
+    } else
+      RETURN_TRUE;
   }
 
   if (SEG(peerId) != 0) Homegear::GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, errorLog);
@@ -1734,7 +1736,7 @@ ZEND_FUNCTION(hg_ssdp_search) {
     ssdp.searchDevices(stHeader, searchTime, searchResult);
     result->arrayValue->reserve(searchResult.size());
 
-    for (auto &resultElement : searchResult) {
+    for (auto &resultElement: searchResult) {
       auto info = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       info->structValue->emplace("ip", std::make_shared<BaseLib::Variable>(resultElement.ip()));
       info->structValue->emplace("location", std::make_shared<BaseLib::Variable>(resultElement.location()));
@@ -1742,7 +1744,7 @@ ZEND_FUNCTION(hg_ssdp_search) {
 
       auto fieldInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       auto fields = resultElement.getFields();
-      for (auto &field : fields) {
+      for (auto &field: fields) {
         fieldInfo->structValue->emplace(field.first, std::make_shared<BaseLib::Variable>(field.second));
       }
       info->structValue->emplace("additionalFields", fieldInfo);
@@ -1846,26 +1848,31 @@ ZEND_FUNCTION(hg_configure_gateway) {
     std::vector<char> encodedRequest;
     rpcEncoder.encodeRequest("configure", parameters, encodedRequest);
 
-    BaseLib::TcpSocket socket(Homegear::GD::bl.get(), host, std::to_string(port));
-    socket.open();
-    if (!socket.connected()) {
+    C1Net::TcpSocketInfo tcp_socket_info;
+    C1Net::TcpSocketHostInfo tcp_socket_host_info;
+    tcp_socket_host_info.host = host;
+    tcp_socket_host_info.port = port;
+    C1Net::TcpSocket socket(tcp_socket_info, tcp_socket_host_info);
+    socket.Open();
+    if (!socket.Connected()) {
       zend_throw_exception(homegear_exception_class_entry, "Could not connect to gateway.", -1);
       RETURN_NULL();
     }
-    socket.proofwrite(encodedRequest);
+    socket.Send((uint8_t *)encodedRequest.data(), encodedRequest.size());
 
     //{{{ Receive response
     ssize_t receivedBytes = 0;
     const int32_t bufferSize = 1024;
     std::array<char, bufferSize + 1> buffer;
+    bool more_data = false;
 
     BaseLib::Rpc::BinaryRpc binaryRpc(Homegear::GD::bl.get());
 
     while (!binaryRpc.isFinished()) {
       try {
-        receivedBytes = socket.proofread(buffer.data(), bufferSize);
+        receivedBytes = socket.Read((uint8_t *)buffer.data(), bufferSize, more_data);
         //Some clients send only one byte in the first packet
-        if (receivedBytes == 1 && !binaryRpc.processingStarted()) receivedBytes += socket.proofread(buffer.data() + 1, bufferSize - 1);
+        if (receivedBytes == 1 && !binaryRpc.processingStarted()) receivedBytes += socket.Read((uint8_t *)buffer.data() + 1, bufferSize - 1, more_data);
       }
       catch (const BaseLib::SocketTimeOutException &ex) {
         zend_throw_exception(homegear_exception_class_entry, "Reading from gateway timed out", -2);

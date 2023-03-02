@@ -28,6 +28,8 @@
 */
 
 #include "Mqtt.h"
+
+#include <memory>
 #include "../GD/GD.h"
 
 namespace Homegear {
@@ -38,7 +40,9 @@ Mqtt::Mqtt() : BaseLib::IQueue(GD::bl.get(), 2, 1000) {
     _started = false;
     _reconnecting = false;
     _connected = false;
-    _socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+    C1Net::TcpSocketInfo tcp_socket_info;
+    auto dummy_socket = std::make_shared<C1Net::Socket>(-1);
+    _socket = std::make_unique<C1Net::TcpSocket>(tcp_socket_info, dummy_socket);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -105,13 +109,33 @@ void Mqtt::start() {
 
     _out.init(GD::bl.get());
     _out.setPrefix("MQTT Client: ");
-    _jsonEncoder = std::unique_ptr<BaseLib::Rpc::JsonEncoder>(new BaseLib::Rpc::JsonEncoder(GD::bl.get()));
-    _jsonDecoder = std::unique_ptr<BaseLib::Rpc::JsonDecoder>(new BaseLib::Rpc::JsonDecoder(GD::bl.get()));
+    _jsonEncoder = std::make_unique<BaseLib::Rpc::JsonEncoder>(GD::bl.get());
+    _jsonDecoder = std::make_unique<BaseLib::Rpc::JsonDecoder>(GD::bl.get());
+
+    C1Net::TcpSocketInfo tcp_socket_info;
+    C1Net::TcpSocketHostInfo tcp_socket_host_info;
+    tcp_socket_host_info.auto_connect = false;
+
     if (_settings.bmxTopic()) {
-      _socket.reset(new BaseLib::TcpSocket(GD::bl.get(), _settings.bmxOrgId() + '.' + _settings.bmxHostname(), _settings.bmxPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
+      tcp_socket_host_info.host = _settings.bmxOrgId() + '.' + _settings.bmxHostname();
+      tcp_socket_host_info.port = BaseLib::Math::getUnsignedNumber(_settings.bmxPort());
+      tcp_socket_host_info.tls = _settings.enableSSL();
+      tcp_socket_host_info.verify_certificate = _settings.verifyCertificate();
+      tcp_socket_host_info.ca_file = _settings.caFile();
+      tcp_socket_host_info.client_cert_file = _settings.certPath();
+      tcp_socket_host_info.client_key_file = _settings.keyPath();
     } else {
-      _socket.reset(new BaseLib::TcpSocket(GD::bl.get(), _settings.brokerHostname(), _settings.brokerPort(), _settings.enableSSL(), _settings.caFile(), _settings.verifyCertificate(), _settings.certPath(), _settings.keyPath()));
+      tcp_socket_host_info.host = _settings.brokerHostname();
+      tcp_socket_host_info.port = BaseLib::Math::getUnsignedNumber(_settings.brokerPort());
+      tcp_socket_host_info.tls = _settings.enableSSL();
+      tcp_socket_host_info.verify_certificate = _settings.verifyCertificate();
+      tcp_socket_host_info.ca_file = _settings.caFile();
+      tcp_socket_host_info.client_cert_file = _settings.certPath();
+      tcp_socket_host_info.client_key_file = _settings.keyPath();
     }
+
+    _socket = std::make_unique<C1Net::TcpSocket>(tcp_socket_info, tcp_socket_host_info);
+
     GD::bl->threadManager.join(_listenThread);
     GD::bl->threadManager.start(_listenThread, true, &Mqtt::listen, this);
     GD::bl->threadManager.join(_pingThread);
@@ -133,7 +157,7 @@ void Mqtt::stop() {
     _reconnectThreadMutex.lock();
     GD::bl->threadManager.join(_reconnectThread);
     _reconnectThreadMutex.unlock();
-    _socket.reset(new BaseLib::TcpSocket(GD::bl.get()));
+    _socket->Shutdown();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -193,7 +217,7 @@ void Mqtt::printConnectionError(char resultCode) {
 void Mqtt::getResponseByType(const std::vector<char> &packet, std::vector<char> &responseBuffer, uint8_t responseType, bool errors) {
   try {
     std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
-    if (!_socket->connected()) {
+    if (!_socket->Connected()) {
       if (errors) _out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
       return;
     }
@@ -203,7 +227,7 @@ void Mqtt::getResponseByType(const std::vector<char> &packet, std::vector<char> 
     _requestsByTypeMutex.unlock();
     std::unique_lock<std::mutex> lock(request->mutex);
     try {
-      _socket->proofwrite(packet);
+      _socket->Send((uint8_t *)packet.data(), packet.size());
 
       if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(5000), [&] { return request->mutexReady; })) {
         if (errors) _out.printError("Error: No response received to packet: " + GD::bl->hf.getHexString(packet));
@@ -218,7 +242,7 @@ void Mqtt::getResponseByType(const std::vector<char> &packet, std::vector<char> 
     catch (BaseLib::SocketClosedException &) {
       if (errors) _out.printError("Error: Socket closed while sending packet.");
     }
-    catch (BaseLib::SocketTimeOutException &ex) { _socket->close(); }
+    catch (BaseLib::SocketTimeOutException &ex) { _socket->Shutdown(); }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -229,7 +253,7 @@ void Mqtt::getResponseByType(const std::vector<char> &packet, std::vector<char> 
 void Mqtt::getResponse(const std::vector<char> &packet, std::vector<char> &responseBuffer, uint8_t responseType, int16_t packetId, bool errors) {
   try {
     std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
-    if (!_socket->connected()) {
+    if (!_socket->Connected()) {
       _out.printError("Error: Could not send packet to MQTT server, because we are not connected.");
       return;
     }
@@ -255,7 +279,7 @@ void Mqtt::getResponse(const std::vector<char> &packet, std::vector<char> &respo
     catch (BaseLib::SocketClosedException &) {
       _out.printError("Error: Socket closed while sending packet.");
     }
-    catch (BaseLib::SocketTimeOutException &ex) { _socket->close(); }
+    catch (BaseLib::SocketTimeOutException &ex) { _socket->Shutdown(); }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -273,7 +297,7 @@ void Mqtt::ping() {
         getResponseByType(ping, pong, MQTT_PACKET_PINGRESP, false);
         if (pong.empty()) {
           _out.printError("Error: No PINGRESP received.");
-          _socket->close();
+          _socket->Shutdown();
         }
       }
 
@@ -297,20 +321,21 @@ void Mqtt::listen() {
   uint32_t length = 0;
   uint32_t dataLength = 0;
   uint32_t lengthBytes = 0;
+  bool more_data = false;
   while (_started) {
     try {
-      if (!_socket->connected()) {
+      if (!_socket->Connected()) {
         if (!_started) return;
         reconnect();
         for (int32_t i = 0; i < 300; i++) {
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          if (_socket->connected() || !_started) break;
+          if (_socket->Connected() || !_started) break;
         }
         continue;
       }
       try {
         do {
-          bytesReceived = _socket->proofread(&buffer[0], bufferMax);
+          bytesReceived = _socket->Read((uint8_t *)buffer.data(), bufferMax, more_data);
           if (bytesReceived > 0) {
             data.insert(data.end(), buffer.data(), buffer.data() + bytesReceived);
             if (data.size() > 1000000) {
@@ -340,7 +365,7 @@ void Mqtt::listen() {
         } while (bytesReceived == (unsigned)bufferMax || dataLength > data.size());
       }
       catch (BaseLib::SocketClosedException &ex) {
-        _socket->close();
+        _socket->Shutdown();
         if (_started) _out.printWarning("Warning: Connection to MQTT server closed.");
         continue;
       }
@@ -348,7 +373,7 @@ void Mqtt::listen() {
         continue;
       }
       catch (BaseLib::SocketOperationException &ex) {
-        _socket->close();
+        _socket->Shutdown();
         _out.printError("Error: " + std::string(ex.what()));
         continue;
       }
@@ -594,13 +619,13 @@ void Mqtt::processPublish(std::vector<char> &data) {
 void Mqtt::send(const std::vector<char> &data) {
   try {
     if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
-    _socket->proofwrite(data);
+    _socket->Send((uint8_t *)data.data(), data.size());
   }
   catch (BaseLib::SocketClosedException &) {
     _out.printError("Error: Socket closed while sending packet.");
   }
-  catch (BaseLib::SocketTimeOutException &ex) { _socket->close(); }
-  catch (BaseLib::SocketOperationException &ex) { _socket->close(); }
+  catch (BaseLib::SocketTimeOutException &ex) { _socket->Shutdown(); }
+  catch (BaseLib::SocketOperationException &ex) { _socket->Shutdown(); }
 }
 
 void Mqtt::subscribe(std::string topic) {
@@ -642,7 +667,7 @@ void Mqtt::subscribe(std::string topic) {
         break;
       }
       catch (BaseLib::SocketTimeOutException &ex) {
-        _socket->close();
+        _socket->Shutdown();
         break;
       }
     }
@@ -656,7 +681,7 @@ void Mqtt::reconnect() {
   if (!_started) return;
   try {
     std::lock_guard<std::mutex> reconnectThreadGuard(_reconnectThreadMutex);
-    if (_reconnecting || _socket->connected()) return;
+    if (_reconnecting || _socket->Connected()) return;
     _reconnecting = true;
     GD::bl->threadManager.join(_reconnectThread);
     GD::bl->threadManager.start(_reconnectThread, true, &Mqtt::connect, this);
@@ -671,14 +696,13 @@ void Mqtt::connect() {
   _connectMutex.lock();
   for (int32_t i = 0; i < 5; i++) {
     try {
-      if (_socket->connected() || !_started) {
+      if (_socket->Connected() || !_started) {
         _connectMutex.unlock();
         _reconnecting = false;
         return;
       }
       _connected = false;
-      _socket->setReadTimeout(100000);
-      _socket->open();
+      _socket->Open();
       std::vector<char> payload;
       payload.reserve(200);
       payload.push_back(0); //String size MSB
@@ -771,7 +795,7 @@ void Mqtt::connect() {
         return;
       }
       if (retry && _started) {
-        _socket->open();
+        _socket->Open();
         payload.clear();
         payload.reserve(200);
         payload.push_back(0); //String size MSB
@@ -880,8 +904,8 @@ void Mqtt::disconnect() {
     std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
     _connected = false;
     std::vector<char> disconnect = {(char)MQTT_PACKET_DISCONN, 0};
-    if (_socket->connected()) _socket->proofwrite(disconnect);
-    _socket->close();
+    if (_socket->Connected()) _socket->Send((uint8_t *)disconnect.data(), disconnect.size());
+    _socket->Shutdown();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1121,7 +1145,7 @@ void Mqtt::publish(const std::string &topic, const std::vector<char> &data, bool
         if (!_started) return;
         continue;
       }
-      if (!_socket->connected()) reconnect();
+      if (!_socket->Connected()) reconnect();
       if (!_started) break;
       if (_settings.qos() == 0) {
         send(packet);
