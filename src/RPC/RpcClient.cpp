@@ -339,7 +339,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
         }
       }
     }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       if (!server->reconnectInfinitely) server->removed = true;
       GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
       std::cout << BaseLib::Output::getTimeString() << " " << ex.what()
@@ -403,13 +403,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
     try {
       server->socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      server->socket->Shutdown();
-      std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-      std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-      return;
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       retry = true;
       server->socket->Shutdown();
       std::cout << BaseLib::Output::getTimeString() << " " << "Info: Could not send data to XML RPC server "
@@ -454,20 +448,20 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
             && !webSocket.dataProcessingStarted())
           receivedBytes += server->socket->Read((uint8_t *)buffer + 1, bufferMax - 1, more_data);
       }
-      catch (const BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         _out.printInfo("Info: Reading from RPC server timed out. Server: " + server->hostname);
         retry = true;
         if (!server->keepAlive) server->socket->Shutdown();
         return;
       }
-      catch (const BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         retry = true;
         if (!server->keepAlive) server->socket->Shutdown();
         std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
         std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
         return;
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         retry = true;
         if (!server->keepAlive) server->socket->Shutdown();
         std::cout << BaseLib::Output::getTimeString() << " " << "Error: " << ex.what() << std::endl;
@@ -534,13 +528,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
           try {
             server->socket->Send((uint8_t *)pong.data(), pong.size());
           }
-          catch (BaseLib::SocketDataLimitException &ex) {
-            server->socket->Shutdown();
-            std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-            std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-            return;
-          }
-          catch (const BaseLib::SocketOperationException &ex) {
+          catch (const C1Net::Exception &ex) {
             retry = true;
             server->socket->Shutdown();
             std::cout << BaseLib::Output::getTimeString() << " "

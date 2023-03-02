@@ -178,7 +178,7 @@ void NodepinkWebsocket::readClient(const PClientData &clientData) {
       clientData->clientSocket->Send(clientData->buffer.data(), bytesRead);
     }
   }
-  catch (const BaseLib::SocketClosedException &ex) {
+  catch (const C1Net::ClosedException &ex) {
     _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (2).");
   }
   catch (const std::exception &ex) {
@@ -206,7 +206,7 @@ void NodepinkWebsocket::readNoderedClient(const PClientData &clientData) {
       clientData->socket->Send(clientData->buffer.data(), bytesRead);
     }
   }
-  catch (const BaseLib::SocketClosedException &ex) {
+  catch (const C1Net::ClosedException &ex) {
     _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (4).");
   }
   catch (const std::exception &ex) {

@@ -62,7 +62,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<C1Net::TcpSocket> &socket, bool
     try {
       socket->Send((uint8_t *)_basicUnauthBinaryHeader.data(), _basicUnauthBinaryHeader.size());
     }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
     }
   } else {
@@ -79,7 +79,7 @@ void Auth::sendBasicUnauthorized(std::shared_ptr<C1Net::TcpSocket> &socket, bool
     try {
       socket->Send((uint8_t *)_basicUnauthHTTPHeader.data(), _basicUnauthHTTPHeader.size());
     }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
     }
   }
@@ -166,7 +166,7 @@ bool Auth::basicServer(std::shared_ptr<C1Net::TcpSocket> &socket,
         throw AuthException(std::string("Authorization failed because of HTTP exception: ") + ex.what());
       }
     }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       throw AuthException(std::string("Authorization failed because of socket exception: ") + ex.what());
     }
   } else _http = httpPacket;

@@ -239,10 +239,10 @@ void Mqtt::getResponseByType(const std::vector<char> &packet, std::vector<char> 
       _requestsByTypeMutex.unlock();
       return;
     }
-    catch (BaseLib::SocketClosedException &) {
+    catch (const C1Net::ClosedException &) {
       if (errors) _out.printError("Error: Socket closed while sending packet.");
     }
-    catch (BaseLib::SocketTimeOutException &ex) { _socket->Shutdown(); }
+    catch (const C1Net::TimeoutException &ex) { _socket->Shutdown(); }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -276,10 +276,10 @@ void Mqtt::getResponse(const std::vector<char> &packet, std::vector<char> &respo
       _requestsMutex.unlock();
       return;
     }
-    catch (BaseLib::SocketClosedException &) {
+    catch (const C1Net::ClosedException &) {
       _out.printError("Error: Socket closed while sending packet.");
     }
-    catch (BaseLib::SocketTimeOutException &ex) { _socket->Shutdown(); }
+    catch (const C1Net::TimeoutException &ex) { _socket->Shutdown(); }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -364,15 +364,15 @@ void Mqtt::listen() {
           }
         } while (bytesReceived == (unsigned)bufferMax || dataLength > data.size());
       }
-      catch (BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         _socket->Shutdown();
         if (_started) _out.printWarning("Warning: Connection to MQTT server closed.");
         continue;
       }
-      catch (BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         continue;
       }
-      catch (BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         _socket->Shutdown();
         _out.printError("Error: " + std::string(ex.what()));
         continue;
@@ -621,11 +621,11 @@ void Mqtt::send(const std::vector<char> &data) {
     if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Sending: " + BaseLib::HelperFunctions::getHexString(data));
     _socket->Send((uint8_t *)data.data(), data.size());
   }
-  catch (BaseLib::SocketClosedException &) {
+  catch (const C1Net::ClosedException &) {
     _out.printError("Error: Socket closed while sending packet.");
   }
-  catch (BaseLib::SocketTimeOutException &ex) { _socket->Shutdown(); }
-  catch (BaseLib::SocketOperationException &ex) { _socket->Shutdown(); }
+  catch (const C1Net::TimeoutException &ex) { _socket->Shutdown(); }
+  catch (const C1Net::Exception &ex) { _socket->Shutdown(); }
 }
 
 void Mqtt::subscribe(std::string topic) {
@@ -662,11 +662,11 @@ void Mqtt::subscribe(std::string topic) {
           }
         } else break;
       }
-      catch (BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         _out.printError("Error: Socket closed while sending packet.");
         break;
       }
-      catch (BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         _socket->Shutdown();
         break;
       }

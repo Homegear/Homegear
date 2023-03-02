@@ -474,10 +474,7 @@ bool UPnP::onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpReque
         std::this_thread::sleep_for(std::chrono::milliseconds(22));
         socket->Send((uint8_t *)content.data(), content.size());
       }
-      catch (BaseLib::SocketDataLimitException &ex) {
-        _out.printWarning("Warning: " + std::string(ex.what()));
-      }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         _out.printError("Error: " + std::string(ex.what()));
       }
       socket->Shutdown();

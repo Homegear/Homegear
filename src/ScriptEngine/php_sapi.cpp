@@ -1874,15 +1874,15 @@ ZEND_FUNCTION(hg_configure_gateway) {
         //Some clients send only one byte in the first packet
         if (receivedBytes == 1 && !binaryRpc.processingStarted()) receivedBytes += socket.Read((uint8_t *)buffer.data() + 1, bufferSize - 1, more_data);
       }
-      catch (const BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         zend_throw_exception(homegear_exception_class_entry, "Reading from gateway timed out", -2);
         RETURN_NULL();
       }
-      catch (const BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
         RETURN_NULL();
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
         RETURN_NULL();
       }

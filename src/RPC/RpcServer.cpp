@@ -433,7 +433,7 @@ BaseLib::PFileDescriptor RpcServer::bindAndReturnSocket(BaseLib::FileDescriptorM
     std::array<char, 101> buffer{};
     int32_t result = 0;
     if ((result = getaddrinfo(address.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0) {
-      throw SocketOperationException("Error: Could not get address information: " + std::string(gai_strerror(result)));
+      throw C1Net::Exception("Error: Could not get address information: " + std::string(gai_strerror(result)));
     }
 
     bool bound = false;
@@ -441,7 +441,7 @@ BaseLib::PFileDescriptor RpcServer::bindAndReturnSocket(BaseLib::FileDescriptorM
     for (struct addrinfo *info = serverInfo; info != nullptr; info = info->ai_next) {
       socketDescriptor = fileDescriptorManager.add(socket(info->ai_family, info->ai_socktype | SOCK_CLOEXEC, info->ai_protocol));
       if (socketDescriptor->descriptor == -1) continue;
-      if (setsockopt(socketDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw SocketOperationException("Error: Could not set socket options.");
+      if (setsockopt(socketDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw C1Net::Exception("Error: Could not set socket options.");
       if (bind(socketDescriptor->descriptor.load(), info->ai_addr, info->ai_addrlen) == -1) {
         socketDescriptor.reset();
         error = errno;
@@ -464,12 +464,12 @@ BaseLib::PFileDescriptor RpcServer::bindAndReturnSocket(BaseLib::FileDescriptorM
     if (!bound) {
       fileDescriptorManager.shutdown(socketDescriptor);
       socketDescriptor.reset();
-      if (errno == EADDRINUSE) throw SocketAddressInUseException("Error: Could not start listening on port " + port + ": " + std::string(strerror(error)));
+      if (errno == EADDRINUSE) throw C1Net::AddressInUseException("Error: Could not start listening on port " + port + ": " + std::string(strerror(error)));
       else throw SocketBindException("Error: Could not start listening on port " + port + ": " + std::string(strerror(error)));
     } else if (socketDescriptor->descriptor == -1 || listen(socketDescriptor->descriptor, connectionBacklogSize) == -1) {
       fileDescriptorManager.shutdown(socketDescriptor);
       socketDescriptor.reset();
-      throw SocketOperationException("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
+      throw C1Net::Exception("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
     }
 
     struct sockaddr_in addressInfo{};
@@ -477,7 +477,7 @@ BaseLib::PFileDescriptor RpcServer::bindAndReturnSocket(BaseLib::FileDescriptorM
     if (getsockname(socketDescriptor->descriptor, (struct sockaddr *)&addressInfo, &addressInfoLength) == -1) {
       fileDescriptorManager.shutdown(socketDescriptor);
       socketDescriptor.reset();
-      throw SocketOperationException("Error: Could get port listening on: " + std::string(strerror(error)));
+      throw C1Net::Exception("Error: Could get port listening on: " + std::string(strerror(error)));
     }
     listenPort = addressInfo.sin_port;
 
@@ -890,10 +890,7 @@ void RpcServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::vec
         std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Add additional time for XMLRPC requests. Otherwise clients might not receive response.
       client->socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      _out.printWarning(std::string("Warning: ") + ex.what());
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       _out.printError(std::string("Error: ") + ex.what());
       error = true;
     }
@@ -1459,14 +1456,14 @@ void RpcServer::readClient(std::shared_ptr<Client> client) {
           bytesRead += client->socket->Read(buffer.data() + 1, buffer.size() - 2, more_data);
         buffer.at(buffer.size() - 1) = '\0'; //Even though it shouldn't matter, make sure there is a null termination.
       }
-      catch (const BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         continue;
       }
-      catch (const BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: " + std::string(ex.what()));
         break;
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         _out.printError(ex.what());
         break;
       }

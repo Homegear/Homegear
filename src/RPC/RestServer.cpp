@@ -393,10 +393,7 @@ void RestServer::send(std::shared_ptr<C1Net::TcpSocket> &socket, std::vector<cha
     try {
       socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      _out.printWarning(std::string("Warning: ") + ex.what());
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       _out.printInfo(std::string("Info: ") + ex.what());
     }
     socket->Shutdown();

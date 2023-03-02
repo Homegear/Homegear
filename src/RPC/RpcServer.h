@@ -50,19 +50,9 @@ namespace Homegear {
 
 namespace Rpc {
 
-class SocketOperationException : public BaseLib::Exception {
+class SocketBindException : public C1Net::Exception {
  public:
-  explicit SocketOperationException(const std::string &message) : Exception(message) {}
-};
-
-class SocketAddressInUseException : public SocketOperationException {
- public:
-  explicit SocketAddressInUseException(const std::string &message) : SocketOperationException(message) {}
-};
-
-class SocketBindException : public SocketOperationException {
- public:
-  explicit SocketBindException(const std::string &message) : SocketOperationException(message) {}
+  explicit SocketBindException(const std::string &message) : C1Net::Exception(message) {}
 };
 
 class RpcServer {

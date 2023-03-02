@@ -252,10 +252,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
           try {
             scriptInfo->socket->Send((uint8_t *)newContent.data(), newContent.size());
           }
-          catch (BaseLib::SocketDataLimitException &ex) {
-            GD::out.printWarning("Warning: " + std::string(ex.what()));
-          }
-          catch (const BaseLib::SocketOperationException &ex) {
+          catch (const C1Net::Exception &ex) {
             GD::out.printError("Error: " + std::string(ex.what()));
           }
           catch (const std::exception &ex) {
@@ -502,10 +499,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
         try {
           scriptInfo->socket->Send((uint8_t *)newContent.data(), newContent.size());
         }
-        catch (BaseLib::SocketDataLimitException &ex) {
-          GD::out.printWarning("Warning: " + std::string(ex.what()));
-        }
-        catch (const BaseLib::SocketOperationException &ex) {
+        catch (const C1Net::Exception &ex) {
           GD::out.printError("Error: " + std::string(ex.what()));
         }
         catch (const std::exception &ex) {
@@ -683,10 +677,7 @@ void WebServer::send(std::shared_ptr<C1Net::TcpSocket> &socket, std::vector<char
     try {
       socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      _out.printWarning("Warning: " + std::string(ex.what()));
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       _out.printInfo("Info: " + std::string(ex.what()));
     }
   }
