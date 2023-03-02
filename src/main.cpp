@@ -698,7 +698,7 @@ void startUp() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         continue;
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const Rpc::SocketOperationException &ex) {
         GD::out.printError("Error binding RPC servers (2): " + std::string(ex.what()) + " Retrying in 5 seconds...");
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         continue;
