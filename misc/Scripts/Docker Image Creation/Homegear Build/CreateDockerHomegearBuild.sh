@@ -334,6 +334,13 @@ function createPackageWithoutAutomake {
 
 cd /build
 
+wget --https-only https://gitit.de/api/v4/projects/455/repository/archive.zip?sha=master -O master.zip
+[ $? -ne 0 ] && exit 1
+unzip master.zip
+[ $? -ne 0 ] && exit 1
+rm master.zip
+mv libc1-net-master* libc1-net-${1}
+
 wget --https-only https://github.com/Homegear/libhomegear-base/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
@@ -625,6 +632,14 @@ if [[ -n $2 ]]; then
 	fi
 fi
 
+createPackage libc1-net $1 libc1-net 0
+if test -f libc1-net*.deb; then
+	dpkg -i libc1-net*.deb
+else
+	echo "Error building libc1-net."
+	exit 1
+fi
+
 createPackage libhomegear-base $1 libhomegear-base 0
 if test -f libhomegear-base*.deb; then
 	dpkg -i libhomegear-base*.deb
@@ -746,7 +761,7 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
+if test -f libc1-net_*.deb && test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
 		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f c1-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
@@ -781,7 +796,7 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
+if test -f libc1-net_*.deb && test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
 		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f c1-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
@@ -816,7 +831,7 @@ distributionVersion="<DISTVER>"
 
 cd /build
 
-if test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
+if test -f libc1-net_*.deb && test -f libhomegear-base_*.deb && test -f libhomegear-node_*.deb && test -f libhomegear-ipc_*.deb && test -f python3-homegear_*.deb && test -f homegear_*.deb && test -f homegear-nodes-core_*.deb && test -f homegear-nodes-ui_*.deb && test -f homegear-homematicbidcos_*.deb && test -f homegear-homematicwired_*.deb && test -f homegear-insteon_*.deb && test -f homegear-max_*.deb && test -f homegear-philipshue_*.deb && test -f homegear-sonos_*.deb && test -f homegear-kodi_*.deb && test -f homegear-intertechno_*.deb && test -f homegear-nanoleaf_*.deb && test -f homegear-ccu_*.deb && test -f homegear-velux-klf200_*.deb && test -f homegear-influxdb_*.deb && test -f homegear-management_*.deb && test -f homegear-ui_*.deb && test -f binrpc_*.deb; then
 	if [[ -n $1 ]]; then
 		if test ! -f homegear-adminui_*.deb || test ! -f homegear-easy-licensing_*.deb || test ! -f homegear-licensing_*.deb || test ! -f homegear-nodes-extra_*.deb || test ! -f homegear-knx_*.deb || test ! -f homegear-enocean_*.deb || test ! -f homegear-mbus_*.deb || test ! -f homegear-zwave_*.deb || test ! -f homegear-zigbee_*.deb || test ! -f homegear-beckhoff_*.deb || test ! -f homegear-abi_*.deb || test ! -f homegear-klafs_*.deb || test ! -f homegear-webssh_*.deb || test ! -f homegear-dc-connector_*.deb || test ! -f mellonbot_*.deb || test ! -f homegear-cloudconnect_*.deb || test ! -f c1-ssh_*.deb; then
 			echo "Error: Some or all packages from gitit.de could not be created."
