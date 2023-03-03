@@ -150,7 +150,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	[ $? -ne 0 ] && exit 1
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 	[ $? -ne 0 ] && exit 1
-fi
+ficd li
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
 [ $? -ne 0 ] && exit 1
 DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
@@ -244,6 +244,7 @@ architecture="<ARCH>"
 buildthreads="<BUILDTHREADS>"
 
 function createPackage {
+  echo "Building package ${1}..."
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
@@ -306,6 +307,7 @@ function createPackage {
 }
 
 function createPackageWithoutAutomake {
+  echo "Building package ${1}..."
 	fullversion=$(${1}-${2}/getVersion.sh)
 	version=$(echo $fullversion | cut -d "-" -f 1)
 	revision=$(echo $fullversion | cut -d "-" -f 2)
@@ -689,7 +691,7 @@ createPackage Homegear-Intertechno $1 homegear-intertechno 0
 createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage Homegear-CCU $1 homegear-ccu 0
 createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
-createPackage Homegear-Loxone $1 homegear-loxone 0
+#createPackage Homegear-Loxone $1 homegear-loxone 0
 createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
 createPackage homegear-management $1 homegear-management 0
