@@ -150,7 +150,7 @@ if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == 
 	[ $? -ne 0 ] && exit 1
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 	[ $? -ne 0 ] && exit 1
-ficd li
+fi
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-https ca-certificates curl
 [ $? -ne 0 ] && exit 1
 DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
