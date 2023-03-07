@@ -175,10 +175,10 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip 
 [ $? -ne 0 ] && exit 1
 
 # {{{ Packages for doorctrl
-if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libasound2-dev libboost-dev libboost-thread-dev libboost-log-dev libboost-system-dev libboost-program-options-dev libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad libavdevice58 libsdl2-2.0-0 libsdl2-2.0-0 libsdl2-2.0-0 libopencore-amrnb0 libopencore-amrwb0 libgpiod-dev libssl-dev libxss-dev
-  [ $? -ne 0 ] && exit 1
-fi
+#if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
+#  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libasound2-dev libboost-dev libboost-thread-dev libboost-log-dev libboost-system-dev libboost-program-options-dev libgtk-3-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad libavdevice58 libsdl2-2.0-0 libsdl2-2.0-0 libsdl2-2.0-0 libopencore-amrnb0 libopencore-amrwb0 libgpiod-dev libssl-dev libxss-dev
+#  [ $? -ne 0 ] && exit 1
+#fi
 # }}}
 
 if [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ]; then
@@ -231,10 +231,10 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install php-cli
 # }}}
 
 # {{{ PJPROJECT for doorctrl
-if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.13.tar.gz && tar -zxf 2.13.tar.gz && rm 2.13.tar.gz && cd /usr/src/pjproject-2.13 && ./configure && make dep && make && make install'
-  [ $? -ne 0 ] && exit 1
-fi
+#if [[ "$dist" == "Raspbian" ]] && [[ "$distver" == "bullseye" ]]; then
+#  DEBIAN_FRONTEND=noninteractive chroot $rootfs /bin/bash -c 'cd /usr/src && wget https://github.com/pjsip/pjproject/archive/refs/tags/2.13.tar.gz && tar -zxf 2.13.tar.gz && rm 2.13.tar.gz && cd /usr/src/pjproject-2.13 && ./configure && make dep && make && make install'
+#  [ $? -ne 0 ] && exit 1
+#fi
 # }}}
 
 mkdir $rootfs/build
@@ -620,21 +620,21 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv c1-ssh-${1}* c1-ssh-${1}
 
-  if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
-    wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
-    [ $? -ne 0 ] && exit 1
-    unzip ${1}.zip
-    [ $? -ne 0 ] && exit 1
-    rm ${1}.zip
-    mv doorctrl-${1}* doorctrl-${1}
+#  if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
+#    wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+#    [ $? -ne 0 ] && exit 1
+#    unzip ${1}.zip
+#    [ $? -ne 0 ] && exit 1
+#    rm ${1}.zip
+#    mv doorctrl-${1}* doorctrl-${1}
 
-    wget --https-only https://gitit.de/api/v4/projects/332/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
-    [ $? -ne 0 ] && exit 1
-    unzip ${1}.zip
-    [ $? -ne 0 ] && exit 1
-    rm ${1}.zip
-    mv ltp08-connector-${1}* ltp08-connector-${1}
-	fi
+#    wget --https-only https://gitit.de/api/v4/projects/332/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
+#    [ $? -ne 0 ] && exit 1
+#    unzip ${1}.zip
+#    [ $? -ne 0 ] && exit 1
+#    rm ${1}.zip
+#    mv ltp08-connector-${1}* ltp08-connector-${1}
+#	fi
 fi
 
 createPackage libc1-net $1 libc1-net 0
@@ -745,10 +745,10 @@ if [[ -n $2 ]]; then
 	createPackage mellonbot $1 mellonbot 1
 	createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
 	createPackage c1-ssh $1 c1-ssh 1
-	if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
-	  createPackage doorctrl $1 doorctrl 1
-	  createPackage ltp08-connector $1 ltp08-connector 1
-	fi
+#	if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
+#	  createPackage doorctrl $1 doorctrl 1
+#	  createPackage ltp08-connector $1 ltp08-connector 1
+#	fi
 fi
 EOF
 chmod 755 $rootfs/build/CreateDebianPackage.sh
@@ -772,12 +772,12 @@ if test -f libc1-net_*.deb && test -f libhomegear-base_*.deb && test -f libhomeg
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
-		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
-			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
-				echo "Error: Some or all packages from gitit.de could not be created."
-				exit 1
-			fi
-		fi
+#		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
+#			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
+#				echo "Error: Some or all packages from gitit.de could not be created."
+#				exit 1
+#			fi
+#		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
@@ -807,12 +807,12 @@ if test -f libc1-net_*.deb && test -f libhomegear-base_*.deb && test -f libhomeg
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
-		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
-			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
-				echo "Error: Some or all packages from gitit.de could not be created."
-				exit 1
-			fi
-		fi
+#		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
+#			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
+#				echo "Error: Some or all packages from gitit.de could not be created."
+#				exit 1
+#			fi
+#		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
@@ -842,12 +842,12 @@ if test -f libc1-net_*.deb && test -f libhomegear-base_*.deb && test -f libhomeg
 			echo "Error: Some or all packages from gitit.de could not be created."
 			exit 1
 		fi
-		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
-			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
-				echo "Error: Some or all packages from gitit.de could not be created."
-				exit 1
-			fi
-		fi
+#		if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
+#			if test ! -f doorctrl_*.deb || test ! -f ltp08-connector_*.deb; then
+#				echo "Error: Some or all packages from gitit.de could not be created."
+#				exit 1
+#			fi
+#		fi
 	fi
 	if test -f /build/UploadRepository.sh; then
 		/build/UploadRepository.sh
