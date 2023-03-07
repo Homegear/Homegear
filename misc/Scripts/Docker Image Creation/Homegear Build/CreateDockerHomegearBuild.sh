@@ -126,6 +126,9 @@ Pin: origin homegear.eu
 Pin-Priority: 999
 EOF
 
+# Retry downloading package three times
+echo 'Acquire::Retries "3";' > "$rootfs/etc/apt/apt.conf.d/80-retries"
+
 if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
