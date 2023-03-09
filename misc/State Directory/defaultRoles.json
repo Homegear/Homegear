@@ -2762,9 +2762,9 @@
   {
     "id": "90.04.00",
     "translations": {
-      "de-CH": "Wärmemengenzähler",
-      "de-DE": "Wärmemengenzähler",
-      "en-US": "Heat meter"
+      "de-CH": "Wärmemengenzähler Heizung",
+      "de-DE": "Wärmemengenzähler Heizung",
+      "en-US": "Heat meter for heating"
     }
   },
   {
@@ -2920,6 +2920,180 @@
       "en-US": "Consumption"
     },
     "aggregation": "count"
+  },
+  {
+    "id": "90.09.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Warmwasser",
+      "de-DE": "Wärmemengenzähler Warmwasser",
+      "en-US": "Heat meter for hot water"
+    }
+  },
+  {
+    "id": "90.09.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.09.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.09.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.09.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.09.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.09.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.10.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Sonnenkollektor",
+      "de-DE": "Wärmemengenzähler Sonnenkollektor",
+      "en-US": "Heat meter for solar thermal collector"
+    }
+  },
+  {
+    "id": "90.10.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.10.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.10.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.10.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.10.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.10.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.11.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Wärmepumpe",
+      "de-DE": "Wärmemengenzähler Wärmepumpe",
+      "en-US": "Heat meter for heat pump"
+    }
+  },
+  {
+    "id": "90.11.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.11.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.11.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.11.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.11.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.11.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
   },
   {
     "id": "01.00.00",
