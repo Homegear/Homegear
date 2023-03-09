@@ -2726,18 +2726,36 @@
   {
     "id": "90.03.01",
     "translations": {
-      "de-CH": "Zählerstand",
-      "de-DE": "Zählerstand",
-      "en-US": "Meter reading"
+      "de-CH": "Zählerstand Volumen",
+      "de-DE": "Zählerstand Volumen",
+      "en-US": "Meter reading volume"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.03.02",
     "translations": {
-      "de-CH": "Verbrauch",
-      "de-DE": "Verbrauch",
-      "en-US": "Consumption"
+      "de-CH": "Verbrauch Volumen",
+      "de-DE": "Verbrauch Volumen",
+      "en-US": "Consumption volume"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.03.03",
+    "translations": {
+      "de-CH": "Zählerstand Energie",
+      "de-DE": "Zählerstand Energie",
+      "en-US": "Consumption energy"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.03.04",
+    "translations": {
+      "de-CH": "Verbrauch Energie",
+      "de-DE": "Verbrauch Energie",
+      "en-US": "Consumption energy"
     },
     "aggregation": "count"
   },
