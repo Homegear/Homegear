@@ -524,6 +524,46 @@
     }
   },
   {
+    "id": "20.10.18",
+    "translations": {
+      "de-CH": "Heizung - Spitzen-Heizleistung",
+      "de-DE": "Heizung - Spitzen-Heizleistung",
+      "en-US": "heating system - peak heating power"
+    }
+  },
+  {
+    "id": "20.10.19",
+    "translations": {
+      "de-CH": "Heizung - Taktung",
+      "de-DE": "Heizung - Taktung",
+      "en-US": "heating system - on/off cycles"
+    }
+  },
+  {
+    "id": "20.10.20",
+    "translations": {
+      "de-CH": "Heizung - Wirkungsgrad",
+      "de-DE": "Heizung - Wirkungsgrad",
+      "en-US": "heating system - efficiency"
+    }
+  },
+  {
+    "id": "20.10.21",
+    "translations": {
+      "de-CH": "Heizung - Energieverlust",
+      "de-DE": "Heizung - Energieverlust",
+      "en-US": "heating system - energy loss"
+    }
+  },
+  {
+    "id": "20.10.22",
+    "translations": {
+      "de-CH": "Heizung - CO₂",
+      "de-DE": "Heizung - CO₂",
+      "en-US": "heating system - CO₂"
+    }
+  },
+  {
     "id": "20.20.00",
     "translations": {
       "de-CH": "Lüftung",
@@ -2890,9 +2930,9 @@
   {
     "id": "01.00.03",
     "translations": {
-      "de-CH": "CO2",
-      "de-DE": "CO2",
-      "en-US": "CO2"
+      "de-CH": "CO₂",
+      "de-DE": "CO₂",
+      "en-US": "CO₂"
     }
   },
   {
@@ -2925,6 +2965,14 @@
       "de-CH": "Leckage",
       "de-DE": "Leckage",
       "en-US": "Leakage"
+    }
+  },
+  {
+    "id": "01.00.08",
+    "translations": {
+      "de-CH": "Trinkwassertemperatur",
+      "de-DE": "Trinkwassertemperatur",
+      "en-US": "Drinking water temperature"
     }
   },
   {
