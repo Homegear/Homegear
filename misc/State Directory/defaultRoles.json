@@ -529,7 +529,8 @@
       "de-CH": "Heizung - Aktuelle Heizleistung",
       "de-DE": "Heizung - Aktuelle Heizleistung",
       "en-US": "heating system - current heating power"
-    }
+    },
+    "aggregation":  "max"
   },
   {
     "id": "20.10.19",
@@ -537,7 +538,8 @@
       "de-CH": "Heizung - Taktung",
       "de-DE": "Heizung - Taktung",
       "en-US": "heating system - on/off cycles"
-    }
+    },
+    "aggregation": "count"
   },
   {
     "id": "20.10.20",
@@ -561,22 +563,6 @@
       "de-CH": "Heizung - CO₂",
       "de-DE": "Heizung - CO₂",
       "en-US": "heating system - CO₂"
-    }
-  },
-  {
-    "id": "20.10.23",
-    "translations": {
-      "de-CH": "Heizung - Ventilstellung",
-      "de-DE": "Heizung - Ventilstellung",
-      "en-US": "heating system - valve position"
-    }
-  },
-  {
-    "id": "20.10.24",
-    "translations": {
-      "de-CH": "Heizung - Soll-Ventilstellung",
-      "de-DE": "Heizung - Soll-Ventilstellung",
-      "en-US": "heating system - setpoint valve position"
     }
   },
   {
