@@ -564,6 +564,22 @@
     }
   },
   {
+    "id": "20.10.23",
+    "translations": {
+      "de-CH": "Heizung - Ventilstellung",
+      "de-DE": "Heizung - Ventilstellung",
+      "en-US": "heating system - valve position"
+    }
+  },
+  {
+    "id": "20.10.24",
+    "translations": {
+      "de-CH": "Heizung - Soll-Ventilstellung",
+      "de-DE": "Heizung - Soll-Ventilstellung",
+      "en-US": "heating system - setpoint valve position"
+    }
+  },
+  {
     "id": "20.20.00",
     "translations": {
       "de-CH": "Lüftung",
