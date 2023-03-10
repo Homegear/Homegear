@@ -526,9 +526,9 @@
   {
     "id": "20.10.18",
     "translations": {
-      "de-CH": "Heizung - Spitzen-Heizleistung",
-      "de-DE": "Heizung - Spitzen-Heizleistung",
-      "en-US": "heating system - peak heating power"
+      "de-CH": "Heizung - Aktuelle Heizleistung",
+      "de-DE": "Heizung - Aktuelle Heizleistung",
+      "en-US": "heating system - current heating power"
     }
   },
   {
