@@ -2316,8 +2316,8 @@
   {
     "id": "90.02.11",
     "translations": {
-      "de-CH": "Zählerstand Wirkenergie Wirkenergie Bezug gesamt",
-      "de-DE": "Zählerstand Wirkenergie Wirkenergie Bezug gesamt",
+      "de-CH": "Zählerstand Wirkenergie Bezug gesamt",
+      "de-DE": "Zählerstand Wirkenergie Bezug gesamt",
       "en-US": "Meter reading active energy (consumption) total"
     },
     "aggregation": "meter"
@@ -2325,8 +2325,8 @@
   {
     "id": "90.02.12",
     "translations": {
-      "de-CH": "Verbrauch Wirkenergie Wirkenergie Bezug gesamt",
-      "de-DE": "Verbrauch Wirkenergie Wirkenergie Bezug gesamt",
+      "de-CH": "Verbrauch Wirkenergie Bezug gesamt",
+      "de-DE": "Verbrauch Wirkenergie Bezug gesamt",
       "en-US": "Consumption active energy (consumption) total"
     },
     "aggregation": "count"
@@ -2750,7 +2750,7 @@
       "de-DE": "Zählerstand Energie",
       "en-US": "Consumption energy"
     },
-    "aggregation": "count"
+    "aggregation": "meter"
   },
   {
     "id": "90.03.04",
@@ -3162,14 +3162,6 @@
     }
   },
   {
-    "id": "01.00.08",
-    "translations": {
-      "de-CH": "Trinkwassertemperatur",
-      "de-DE": "Trinkwassertemperatur",
-      "en-US": "Drinking water temperature"
-    }
-  },
-  {
     "id": "02.00.00",
     "translations": {
       "de-CH": "Digitale Infrastruktur",
@@ -3183,6 +3175,14 @@
       "de-CH": "Sensaru Edge-Client",
       "de-DE": "Sensaru Edge-Client",
       "en-US": "Sensaru edge client"
+    }
+  },
+  {
+    "id": "02.01.01",
+    "translations": {
+      "de-CH": "RSSI",
+      "de-DE": "RSSI",
+      "en-US": "RSSI"
     }
   },
   {
