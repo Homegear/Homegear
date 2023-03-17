@@ -6,6 +6,8 @@
       "family": "misc",
       //A string between 10 and 20 characters. This ID is used as the serial number of the device.
       "id": "VIRT000001",
+      //You can optionally specify the interface ID here if the devices of one family use multiple interfaces
+      "interface": "My interface",
       "name": "My device",
       //The equipment ID (or "AKS code") is optional.
       "equipmentId": "123456",

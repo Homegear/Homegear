@@ -49,7 +49,7 @@ class Device
                     900800 => 0xF01A
                 ];
                 if (!isset($roleTypeIdMap[$role])) throw new DeviceException('Unknown role.');
-                $peerId = \Homegear\Homegear::createDevice($familyId, $roleTypeIdMap[$role], $device['id'], -1, -1, '');
+                $peerId = \Homegear\Homegear::createDevice($familyId, $roleTypeIdMap[$role], $device['id'], -1, -1, $device['interface'] ?? '');
             }
             if ($role == 900101 || $role == 900601 || $role == 900701 || $role == 900801) {
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900100);
