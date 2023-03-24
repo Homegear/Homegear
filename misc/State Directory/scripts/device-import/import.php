@@ -56,9 +56,9 @@ try {
                 $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
             } else {
                 if (isset($device['primaryAddress'])) {
-                    $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']]]);
+                    $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']], $device['interface'] ?? '']);
                 } else {
-                    $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']]]);
+                    $hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']], $device['interface'] ?? '']);
                 }
             }
             //Homegear might need some time to reload the device description files
