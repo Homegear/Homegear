@@ -6,8 +6,6 @@
       "family": "misc",
       //A string between 10 and 20 characters. This ID is used as the serial number of the device.
       "id": "VIRT000001",
-      //You can optionally specify the interface ID here if the devices of one family use multiple interfaces
-      "interface": "My interface",
       "name": "My device",
       //The equipment ID (or "AKS code") is optional.
       "equipmentId": "123456",
@@ -55,6 +53,8 @@
       "name": "My device",
       //The equipment ID (or "AKS code") is optional.
       "equipmentId": "123456",
+      //You can optionally specify the interface ID here if the devices of one family use multiple interfaces
+      "interface": "My interface",
       //The location only has to be specified when the device is not on the same hierarchical building level as the
       //ibs home client. E. g. the ibs home client is associated to the economic unit (e. g. 60:18301) and the device
       //is for a building (e. g. 60:18301.1).
