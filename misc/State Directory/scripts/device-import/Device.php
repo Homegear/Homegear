@@ -26,7 +26,7 @@ class Device
                 $peerId = $peerIds[0];
                 \Homegear\Homegear::invokeFamilyMethod(Util::MBUS_FAMILY_ID, "setPrimaryAddress", [$peerId, $primaryAddress]);
             } else {
-                $peerId = \Homegear\Homegear::createDevice($familyId, -1, $device['secondaryAddress'], $primaryAddress, -1, '');
+                $peerId = \Homegear\Homegear::createDevice($familyId, -1, $device['secondaryAddress'], $primaryAddress, -1, $device['interface'] ?? '');
                 if (is_array($peerId)) throw new DeviceException('Could not create device: '.$peerId['faultString']);
             }
         } else if ($familyId == Util::MISC_FAMILY_ID) {
@@ -49,7 +49,7 @@ class Device
                     900800 => 0xF01A
                 ];
                 if (!isset($roleTypeIdMap[$role])) throw new DeviceException('Unknown role.');
-                $peerId = \Homegear\Homegear::createDevice($familyId, $roleTypeIdMap[$role], $device['id'], -1, -1, $device['interface'] ?? '');
+                $peerId = \Homegear\Homegear::createDevice($familyId, $roleTypeIdMap[$role], $device['id'], -1, -1, '');
             }
             if ($role == 900101 || $role == 900601 || $role == 900701 || $role == 900801) {
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900100);
