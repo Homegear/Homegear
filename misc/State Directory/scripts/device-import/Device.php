@@ -17,7 +17,7 @@ class Device
         if (!isset($device['family'])) throw new DeviceException('At least one device does not have a "family" property');
         $familyId = Util::GetFamilyId($device['family']);
         if ($familyId == Util::MBUS_FAMILY_ID) {
-            if (!isset($device['secondaryAddress'])) throw new DeviceException('At least one device does not have a "secondaryAddress" property');
+            if (!isset($device['secondaryAddress']) || intval($device['secondaryAddress']) == 0) throw new DeviceException('At least one device has an invalid "secondaryAddress" property');
             $primaryAddress = -1;
             if (isset($device['primaryAddress'])) $primaryAddress = intval($device['primaryAddress']);
             $peerIds = \Homegear\Homegear::getPeerId(2, '0x' . $device['secondaryAddress']);
