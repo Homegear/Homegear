@@ -88,7 +88,7 @@ try {
         $importedDevices++;
         $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'errors' => $errors]);
     }
-    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices]);
+    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices, 'errors' => $errors]);
 
     $hg->setValue(0, -1, 'REINIT_CLOUDCONNECT', true);
 } catch (Exception $e) {
