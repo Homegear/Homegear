@@ -214,7 +214,7 @@ class Device
                             if ($role < 800000 || $role >= 810000) {
                                 throw new DeviceException('serviceLevel can only be set to data points with service roles.');
                             }
-                            $serviceLevelCategoryId = Util::GetOrCreateServiceLevelCategory($device['serviceLevel']);
+                            $serviceLevelCategoryId = Util::GetOrCreateServiceLevelCategory($roleSettings['serviceLevel']);
                             \Homegear\Homegear::addCategoryToVariable($peerId, $channel, $variable, $serviceLevelCategoryId);
                         }
                     }
