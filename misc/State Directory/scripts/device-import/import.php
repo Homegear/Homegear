@@ -43,60 +43,74 @@ if (!isset($config['devices'])) {
 //Iterate over every device in config
 try {
     $importedDevices = 0;
-    $errors = array_fill(0, count($config['devices']), []);
-    $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => 0, 'deviceCount' => count($config['devices']), 'errors' => $errors]);
+    $error = false;
+    $results = array_fill(0, count($config['devices']), []);
+    $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => 0, 'deviceCount' => count($config['devices']), 'results' => $results]);
     foreach ($config['devices'] as $device) {
+		$error = false;
+
         //Step one: Precreate the devices with the provided information:
         try {
         	$peerId = Device::CreateOrReturn($device);
         } catch (Exception $e) {
-			$errors[$importedDevices] = ['message' => $e->getMessage()];
+			$results[$importedDevices] = ['success' => false, 'device' => $device, 'message' => $e->getMessage()];
+			$error = true;
 		}
 
         $familyId = Util::GetFamilyId($device['family']);
 
         //Step two: Poll M-Bus device
-        try {
-			if ($familyId == Util::MBUS_FAMILY_ID) {
-				if ($testMode) {
-					$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
-				} else {
-					if (isset($device['primaryAddress'])) {
-						$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']], $device['interface'] ?? '', true]);
+        if (!$error) {
+			try {
+				if ($familyId == Util::MBUS_FAMILY_ID) {
+					if ($testMode) {
+						$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
 					} else {
-						$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']], $device['interface'] ?? '', true]);
+						if (isset($device['primaryAddress'])) {
+							$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']], $device['interface'] ?? '', true]);
+						} else {
+							$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']], $device['interface'] ?? '', true]);
+						}
+					}
+					//Homegear might need some time to reload the device description files
+					for ($i = 0; $i < 10; $i++) {
+						$result = $hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED');
+						if (is_int($result) && $result >= time() - 60) {
+							break;
+						}
+						sleep(1);
+					}
+					if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') < time() - 60) {
+						print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
+						$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => 'No response from device'];
+						$importedDevices++;
+						$hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
+						continue;
 					}
 				}
-				//Homegear might need some time to reload the device description files
-				for ($i = 0; $i < 10; $i++) {
-					$result = $hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED');
-					if (is_int($result) && $result >= time() - 60) {
-						break;
-					}
-					sleep(1);
-				}
-				if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') < time() - 60) {
-					print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
-					$errors[$importedDevices] = ['message' => 'No response from peer '. $peerId];
-					$importedDevices++;
-					$hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'errors' => $errors]);
-					continue;
-				}
+			} catch (Exception $e) {
+				$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => $e->getMessage()];
+				$error = true;
 			}
-		} catch (Exception $e) {
-			$errors[$importedDevices] = ['message' => $e->getMessage()];
 		}
 
         //Step three: Apply settings
-        try {
-            Device::ApplySettings($peerId, $device);
-        } catch (Exception $e) {
-			$errors[$importedDevices] = ['message' => $e->getMessage()];
+        if (!$error) {
+			try {
+				Device::ApplySettings($peerId, $device);
+			} catch (Exception $e) {
+				$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => $e->getMessage()];
+			}
 	    }
+
+	    if (!$error) {
+	    	$results[$importedDevices] = ['success' => true, 'peerId' => $peerId, 'device' => $device];
+	    }
+
         $importedDevices++;
-        $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'errors' => $errors]);
+        $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
     }
-    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices, 'errors' => $errors]);
+    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices, 'results' => $results]);
 
     $hg->setValue(0, -1, 'REINIT_CLOUDCONNECT', true);
 } catch (Exception $e) {
