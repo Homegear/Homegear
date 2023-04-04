@@ -178,7 +178,7 @@ class Device
 						}
                 	}
                 	if (count($roleChannels) == 0) {
-                		if (strlen($error == 0)) $error = "Could not find role $role";
+                		if (strlen($error) == 0) $error = "Could not find role $role";
                 		else $error .= ", could not find role $role";
                 		continue;
                 	}
