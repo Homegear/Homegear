@@ -40,6 +40,8 @@
         //Role 800002 points to the data point "offline". This role should always be set.
         "800002": {},
         "900101": {
+          //Optional alternative roles to check
+          "alternativeRoles": [900601, 900701],
           //Tags can also optionally be set on the variable level.
           "tags": ["heating"],
           //Location can also be set on the variable level

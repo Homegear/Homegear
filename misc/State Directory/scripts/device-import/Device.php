@@ -168,7 +168,18 @@ class Device
             foreach ($device['roles'] as $key => $roleSettings) {
                 $role = intval($key);
                 $roleChannels = \Homegear\Homegear::getVariablesInRole($role, $peerId);
-                if (count($roleChannels) == 0) throw new DeviceException("Could not find role $role in peer $peerId.");
+                if (count($roleChannels) == 0) {
+                	if ($roleSettings['alternativeRoles'] && is_array($roleSettings['alternativeRoles'])) {
+						foreach ($roleSettings['alternativeRoles'] as $alternativeRole) {
+							$role = intval($alternativeRole);
+							$roleChannels = \Homegear\Homegear::getVariablesInRole($role, $peerId);
+							if (count($roleChannels) > 0) break;
+						}
+                	}
+                	if (count($roleChannels) == 0) {
+                		throw new DeviceException("Could not find role $role in peer $peerId.");
+                	}
+                }
                 foreach ($roleChannels as $channel => $roleVariables) {
                     foreach ($roleVariables as $variable => $variableSettings) {
                         //Add role to telemetry
@@ -179,8 +190,8 @@ class Device
                             $buildingPartId = Util::GetOrCreateBuildingPart($device['location']);
                             \Homegear\Homegear::addVariableToBuildingPart($peerId, $channel, $variable, $buildingPartId);
                         }
-                        if (isset($variableSettings['location'])) {
-                            $buildingPartId = Util::GetOrCreateBuildingPart($variableSettings['location']);
+                        if (isset($roleSettings['location'])) {
+                            $buildingPartId = Util::GetOrCreateBuildingPart($roleSettings['location']);
                             \Homegear\Homegear::addVariableToBuildingPart($peerId, $channel, $variable, $buildingPartId);
                         }
 
@@ -191,15 +202,15 @@ class Device
                         }
 
                         //Set data point tags
-                        if (isset($variableSettings['tags'])) {
-                            foreach ($variableSettings['tags'] as $tag) {
+                        if (isset($roleSettings['tags'])) {
+                            foreach ($roleSettings['tags'] as $tag) {
                                 $tagCategoryId = Util::GetOrCreateTagCategory($tag);
                                 \Homegear\Homegear::addCategoryToVariable($peerId, $channel, $variable, $tagCategoryId);
                             }
                         }
 
                         //Set service level
-                        if (isset($variableSettings['serviceLevel'])) {
+                        if (isset($roleSettings['serviceLevel'])) {
                             if ($role < 800000 || $role >= 810000) {
                                 throw new DeviceException('serviceLevel can only be set to data points with service roles.');
                             }
