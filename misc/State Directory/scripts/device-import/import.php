@@ -24,19 +24,19 @@ if ($argc >= 2) {
     //Load JSON configuration file
     $config = JsonUtil::Load($argv[1]);
     if ($config === false) {
-        $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'error' => 'Could not load config file.']);
+        $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'time' => time(), 'success' => false, 'error' => 'Could not load config file.']);
         die('Could not load config file.' . PHP_EOL);
     }
 } else {
     $config = JsonUtil::Decode($hg->getData('homegear', 'deviceConfig'));
     if ($config === false) {
-        $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'error' => 'Could not load config.']);
+        $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'time' => time(), 'success' => false, 'error' => 'Could not load config.']);
         die('Could not load config.' . PHP_EOL);
     }
 }
 
 if (!isset($config['devices'])) {
-    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'error' => 'Configuration file does not contain property "devices".']);
+    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'time' => time(), 'success' => false, 'error' => 'Configuration file does not contain property "devices".']);
     die('Configuration file does not contain property "devices".' . PHP_EOL);
 }
 
@@ -45,7 +45,7 @@ try {
     $importedDevices = 0;
     $error = false;
     $results = array_fill(0, count($config['devices']), []);
-    $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => 0, 'deviceCount' => count($config['devices']), 'results' => $results]);
+    $hg->setData('homegear', 'importStatus', ['finished' => false, 'time' => time(), 'importedDevices' => 0, 'deviceCount' => count($config['devices']), 'results' => $results]);
     foreach ($config['devices'] as $device) {
 		$error = false;
 
@@ -84,7 +84,7 @@ try {
 						print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
 						$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => 'No response from device'];
 						$importedDevices++;
-						$hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
+						$hg->setData('homegear', 'importStatus', ['finished' => false, 'time' => time(), 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
 						continue;
 					}
 				}
@@ -108,12 +108,12 @@ try {
 	    }
 
         $importedDevices++;
-        $hg->setData('homegear', 'importStatus', ['finished' => false, 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
+        $hg->setData('homegear', 'importStatus', ['finished' => false, 'time' => time(), 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
     }
-    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'importedDevices' => $importedDevices, 'results' => $results]);
+    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => true, 'time' => time(), 'importedDevices' => $importedDevices, 'results' => $results]);
 
     $hg->setValue(0, -1, 'REINIT_CLOUDCONNECT', true);
 } catch (Exception $e) {
-    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'error' => 'Error importing device: ' . $e->getMessage()]);
+    $hg->setData('homegear', 'importStatus', ['finished' => true, 'success' => false, 'time' => time(), 'error' => 'Error importing device: ' . $e->getMessage()]);
     die('Error importing device: ' . $e->getMessage() . PHP_EOL);
 }
