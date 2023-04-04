@@ -14,10 +14,10 @@ class Device
     public static function CreateOrReturn(array $device): int
     {
         $peerId = 0;
-        if (!isset($device['family'])) throw new DeviceException('At least one device does not have a "family" property');
+        if (!isset($device['family'])) throw new DeviceException('Device does not have a "family" property');
         $familyId = Util::GetFamilyId($device['family']);
         if ($familyId == Util::MBUS_FAMILY_ID) {
-            if (!isset($device['secondaryAddress']) || intval($device['secondaryAddress']) == 0) throw new DeviceException('At least one device has an invalid "secondaryAddress" property');
+            if (!isset($device['secondaryAddress']) || intval($device['secondaryAddress']) == 0) throw new DeviceException('Device has an invalid "secondaryAddress" property');
             $primaryAddress = -1;
             if (isset($device['primaryAddress'])) $primaryAddress = intval($device['primaryAddress']);
             $peerIds = \Homegear\Homegear::getPeerId(2, '0x' . $device['secondaryAddress']);
@@ -30,8 +30,8 @@ class Device
                 if (is_array($peerId)) throw new DeviceException('Could not create device: '.$peerId['faultString']);
             }
         } else if ($familyId == Util::MISC_FAMILY_ID) {
-            if (!isset($device['id'])) throw new DeviceException('At least one device does not have a "id" property');
-            if (!isset($device['role'])) throw new DeviceException('At least one device does not have a "role" property');
+            if (!isset($device['id'])) throw new DeviceException('Device does not have a "id" property');
+            if (!isset($device['role'])) throw new DeviceException('Device does not have a "role" property');
             $role = intval($device['role']);
             $peerIds = \Homegear\Homegear::getPeerId(1, $device['id']);
             $deviceExists = count($peerIds) > 0;
@@ -70,9 +70,9 @@ class Device
     /**
      * @throws DeviceException
      */
-    public static function ApplySettings(int $peerId, array $device)
+    public static function ApplySettings(int $peerId, array $device, string &$error)
     {
-        if (!isset($device['family'])) throw new DeviceException('At least one device does not have a "family" property');
+        if (!isset($device['family'])) throw new DeviceException('Device does not have a "family" property');
         $familyId = Util::GetFamilyId($device['family']);
 
         //Delete all device categories
@@ -177,7 +177,9 @@ class Device
 						}
                 	}
                 	if (count($roleChannels) == 0) {
-                		throw new DeviceException("Could not find role $role in peer $peerId.");
+                		if (strlen($error == 0)) $error = "Could not find role $role";
+                		else $error .= ", could not find role $role";
+                		continue;
                 	}
                 }
                 foreach ($roleChannels as $channel => $roleVariables) {

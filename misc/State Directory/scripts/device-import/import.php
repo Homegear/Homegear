@@ -97,7 +97,11 @@ try {
         //Step three: Apply settings
         if (!$error) {
 			try {
-				Device::ApplySettings($peerId, $device);
+				$error = '';
+				Device::ApplySettings($peerId, $device, $error);
+				if (strlen($error) > 0) {
+					$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => $error];
+				}
 			} catch (Exception $e) {
 				$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => $e->getMessage()];
 			}
