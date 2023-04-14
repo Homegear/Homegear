@@ -43,7 +43,7 @@ class Util
         $tagId = 0;
         $categories = \Homegear\Homegear::getCategories('en');
         foreach ($categories as $key => $category) {
-            if (strtolower($category['NAME']) == $tag) {
+            if (strtolower($category['NAME']) == strtolower($tag)) {
                 $tagId = $category['ID'];
                 break;
             }
