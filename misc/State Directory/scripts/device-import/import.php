@@ -63,29 +63,31 @@ try {
         if (!$error) {
 			try {
 				if ($familyId == Util::MBUS_FAMILY_ID) {
-					if ($testMode) {
-						$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
-					} else {
-						if (isset($device['primaryAddress'])) {
-							$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']], $device['interface'] ?? '', true]);
+					if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') == 0) {
+						if ($testMode) {
+							$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'processPacket', [$testPackets[$device['secondaryAddress']]]);
 						} else {
-							$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']], $device['interface'] ?? '', true]);
+							if (isset($device['primaryAddress'])) {
+								$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['primaryAddress']], $device['interface'] ?? '', true]);
+							} else {
+								$hg->invokeFamilyMethod(Util::MBUS_FAMILY_ID, 'poll', [[$device['secondaryAddress']], $device['interface'] ?? '', true]);
+							}
 						}
-					}
-					//Homegear might need some time to reload the device description files
-					for ($i = 0; $i < 10; $i++) {
-						$result = $hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED');
-						if (is_int($result) && $result >= time() - 60) {
-							break;
+						//Homegear might need some time to reload the device description files
+						for ($i = 0; $i < 10; $i++) {
+							$result = $hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED');
+							if (is_int($result) && $result >= time() - 60) {
+								break;
+							}
+							sleep(1);
 						}
-						sleep(1);
-					}
-					if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') < time() - 60) {
-						print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
-						$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => 'No response from device'];
-						$importedDevices++;
-						$hg->setData('homegear', 'importStatus', ['finished' => false, 'time' => time(), 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
-						continue;
+						if ($hg->getValue($peerId, 0, 'LAST_PACKET_RECEIVED') == 0) {
+							print('Error: No response from peer ' . $peerId . "." . PHP_EOL);
+							$results[$importedDevices] = ['success' => false, 'peerId' => $peerId, 'device' => $device, 'message' => 'No response from device'];
+							$importedDevices++;
+							$hg->setData('homegear', 'importStatus', ['finished' => false, 'time' => time(), 'importedDevices' => $importedDevices, 'deviceCount' => count($config['devices']), 'results' => $results]);
+							continue;
+						}
 					}
 				}
 			} catch (Exception $e) {
