@@ -655,8 +655,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       std::unique_lock<std::mutex> waitLock(_waitMutex);
       int64_t startTime = BaseLib::HelperFunctions::getTime();
       while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&] {
-        if (BaseLib::HelperFunctions::getTime() - startTime > 300000) return true;
-        else return _scriptFinished;
+        return _scriptFinished;
       }));
 
       auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -698,8 +697,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       std::unique_lock<std::mutex> waitLock(_waitMutex);
       int64_t startTime = BaseLib::HelperFunctions::getTime();
       while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&] {
-        if (BaseLib::HelperFunctions::getTime() - startTime > 300000) return true;
-        else return _scriptFinished;
+        return _scriptFinished;
       }));
 
       auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
