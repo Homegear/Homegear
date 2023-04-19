@@ -14,10 +14,11 @@ class Device
     public static function CreateOrReturn(array $device): int
     {
         $peerId = 0;
-        if (!isset($device['family'])) throw new DeviceException('At least one device does not have a "family" property');
+        if (!isset($device['family'])) throw new DeviceException('Device does not have a "family" property');
         $familyId = Util::GetFamilyId($device['family']);
         if ($familyId == Util::MBUS_FAMILY_ID) {
-            if (!isset($device['secondaryAddress']) || intval($device['secondaryAddress']) == 0) throw new DeviceException('At least one device has an invalid "secondaryAddress" property');
+            if (!isset($device['secondaryAddress']) || intval($device['secondaryAddress']) == 0) throw new DeviceException('Device has an invalid "secondaryAddress" property');
+            $device['secondaryAddress'] = (string)$device['secondaryAddress'];
             $primaryAddress = -1;
             if (isset($device['primaryAddress'])) $primaryAddress = intval($device['primaryAddress']);
             $peerIds = \Homegear\Homegear::getPeerId(2, '0x' . $device['secondaryAddress']);
@@ -30,8 +31,8 @@ class Device
                 if (is_array($peerId)) throw new DeviceException('Could not create device: '.$peerId['faultString']);
             }
         } else if ($familyId == Util::MISC_FAMILY_ID) {
-            if (!isset($device['id'])) throw new DeviceException('At least one device does not have a "id" property');
-            if (!isset($device['role'])) throw new DeviceException('At least one device does not have a "role" property');
+            if (!isset($device['id'])) throw new DeviceException('Device does not have a "id" property');
+            if (!isset($device['role'])) throw new DeviceException('Device does not have a "role" property');
             $role = intval($device['role']);
             $peerIds = \Homegear\Homegear::getPeerId(1, $device['id']);
             $deviceExists = count($peerIds) > 0;
@@ -70,9 +71,9 @@ class Device
     /**
      * @throws DeviceException
      */
-    public static function ApplySettings(int $peerId, array $device)
+    public static function ApplySettings(int $peerId, array $device, string &$error)
     {
-        if (!isset($device['family'])) throw new DeviceException('At least one device does not have a "family" property');
+        if (!isset($device['family'])) throw new DeviceException('Device does not have a "family" property');
         $familyId = Util::GetFamilyId($device['family']);
 
         //Delete all device categories
@@ -168,7 +169,20 @@ class Device
             foreach ($device['roles'] as $key => $roleSettings) {
                 $role = intval($key);
                 $roleChannels = \Homegear\Homegear::getVariablesInRole($role, $peerId);
-                if (count($roleChannels) == 0) throw new DeviceException("Could not find role $role in peer $peerId.");
+                if (count($roleChannels) == 0) {
+                	if ($roleSettings['alternativeRoles'] && is_array($roleSettings['alternativeRoles'])) {
+						foreach ($roleSettings['alternativeRoles'] as $alternativeRole) {
+							$role = intval($alternativeRole);
+							$roleChannels = \Homegear\Homegear::getVariablesInRole($role, $peerId);
+							if (count($roleChannels) > 0) break;
+						}
+                	}
+                	if (count($roleChannels) == 0) {
+                		if (strlen($error) == 0) $error = "Could not find role $role";
+                		else $error .= ", could not find role $role";
+                		continue;
+                	}
+                }
                 foreach ($roleChannels as $channel => $roleVariables) {
                     foreach ($roleVariables as $variable => $variableSettings) {
                         //Add role to telemetry
@@ -179,8 +193,8 @@ class Device
                             $buildingPartId = Util::GetOrCreateBuildingPart($device['location']);
                             \Homegear\Homegear::addVariableToBuildingPart($peerId, $channel, $variable, $buildingPartId);
                         }
-                        if (isset($variableSettings['location'])) {
-                            $buildingPartId = Util::GetOrCreateBuildingPart($variableSettings['location']);
+                        if (isset($roleSettings['location'])) {
+                            $buildingPartId = Util::GetOrCreateBuildingPart($roleSettings['location']);
                             \Homegear\Homegear::addVariableToBuildingPart($peerId, $channel, $variable, $buildingPartId);
                         }
 
@@ -191,19 +205,19 @@ class Device
                         }
 
                         //Set data point tags
-                        if (isset($variableSettings['tags'])) {
-                            foreach ($variableSettings['tags'] as $tag) {
+                        if (isset($roleSettings['tags'])) {
+                            foreach ($roleSettings['tags'] as $tag) {
                                 $tagCategoryId = Util::GetOrCreateTagCategory($tag);
                                 \Homegear\Homegear::addCategoryToVariable($peerId, $channel, $variable, $tagCategoryId);
                             }
                         }
 
                         //Set service level
-                        if (isset($variableSettings['serviceLevel'])) {
+                        if (isset($roleSettings['serviceLevel'])) {
                             if ($role < 800000 || $role >= 810000) {
                                 throw new DeviceException('serviceLevel can only be set to data points with service roles.');
                             }
-                            $serviceLevelCategoryId = Util::GetOrCreateServiceLevelCategory($device['serviceLevel']);
+                            $serviceLevelCategoryId = Util::GetOrCreateServiceLevelCategory($roleSettings['serviceLevel']);
                             \Homegear\Homegear::addCategoryToVariable($peerId, $channel, $variable, $serviceLevelCategoryId);
                         }
                     }

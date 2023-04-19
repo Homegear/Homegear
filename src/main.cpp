@@ -439,6 +439,13 @@ void setLimits() {
   getrlimit(RLIMIT_RTPRIO, &limits);
   GD::out.printInfo("Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
 #endif
+
+  getrlimit(RLIMIT_STACK, &limits);
+  limits.rlim_cur = GD::bl->settings.stackSize();
+  GD::out.printInfo("Setting stack size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+  setrlimit(RLIMIT_STACK, &limits);
+  getrlimit(RLIMIT_STACK, &limits);
+  GD::out.printInfo("Stack size now is \"" + std::to_string(limits.rlim_cur) + "\".");
 }
 
 void printHelp() {
