@@ -566,6 +566,14 @@
     }
   },
   {
+    "id": "20.11.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
     "id": "20.20.00",
     "translations": {
       "de-CH": "Lüftung",
@@ -915,6 +923,22 @@
     }
   },
   {
+    "id": "30.11.00",
+    "translations": {
+      "de-CH": "Türe",
+      "de-DE": "Türe",
+      "en-US": "door"
+    }
+  },
+  {
+    "id": "30.12.00",
+    "translations": {
+      "de-CH": "Tor",
+      "de-DE": "Tor",
+      "en-US": "gate"
+    }
+  },
+  {
     "id": "30.20.00",
     "translations": {
       "de-CH": "RWA-Anlage",
@@ -978,6 +1002,14 @@
           "false": "aus"
         }
       }
+    }
+  },
+  {
+    "id": "40.20.00",
+    "translations": {
+      "de-CH": "Niederspannungshauptverteilung",
+      "de-DE": "Niederspannungshauptverteilung",
+      "en-US": "low voltage distribution"
     }
   },
   {
@@ -2080,6 +2112,17 @@
       "de-CH": "Pumpenfehler",
       "de-DE": "Pumpenfehler",
       "en-US": "pump fault"
+    }
+  },
+  {
+    "id": "80.02.05",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Überspannungsschutz ausgelöst",
+      "de-DE": "Überspannungsschutz ausgelöst",
+      "en-US": "surge protection tripped"
     }
   },
   {
@@ -3274,19 +3317,779 @@
     }
   },
   {
-    "id": "04.00.00",
+    "id": "A0.00.00",
     "translations": {
-      "de-CH": "Fördertechnik",
-      "de-DE": "Fördertechnik",
-      "en-US": "conveying equipment"
+      "de-CH": "Wärme-Erzeugung",
+      "de-DE": "Wärme-Erzeugung",
+      "en-US": "heat production"
     }
   },
   {
-    "id": "04.01.00",
+    "id": "A0.01.00",
+    "translations": {
+      "de-CH": "Fernwärme-Übergabestation",
+      "de-DE": "Fernwärme-Übergabestation",
+      "en-US": "long distance heating transfer station"
+    }
+  },
+  {
+    "id": "A0.02.00",
+    "translations": {
+      "de-CH": "Fernwärme-Unterstation",
+      "de-DE": "Fernwärme-Unterstation",
+      "en-US": "long distance heating sub station"
+    }
+  },
+  {
+    "id": "A0.03.00",
+    "translations": {
+      "de-CH": "Gas-Brennwertkessel",
+      "de-DE": "Gas-Brennwertkessel",
+      "en-US": "gas heating"
+    }
+  },
+  {
+    "id": "A0.04.00",
+    "translations": {
+      "de-CH": "Öl-Brennwertkessel",
+      "de-DE": "Öl-Brennwertkessel",
+      "en-US": "oil heating"
+    }
+  },
+  {
+    "id": "A0.05.00",
+    "translations": {
+      "de-CH": "Pellet-Brennwertkessel",
+      "de-DE": "Pellet-Brennwertkessel",
+      "en-US": "pellet heating"
+    }
+  },
+  {
+    "id": "A0.06.00",
+    "translations": {
+      "de-CH": "Solarthermieanlage",
+      "de-DE": "Solarthermieanlage",
+      "en-US": "solar thermal system"
+    }
+  },
+  {
+    "id": "A0.07.00",
+    "translations": {
+      "de-CH": "Wärmepumpe",
+      "de-DE": "Wärmepumpe",
+      "en-US": "heat pump"
+    }
+  },
+  {
+    "id": "A2.00.00",
+    "translations": {
+      "de-CH": "Wärme-Verteilung",
+      "de-DE": "Wärme-Verteilung",
+      "en-US": "heat distribution"
+    }
+  },
+  {
+    "id": "A2.10.00",
+    "translations": {
+      "de-CH": "Wärme-Hauptverteilung",
+      "de-DE": "Wärme-Hauptverteilung",
+      "en-US": "heat main distribution"
+    }
+  },
+  {
+    "id": "A2.20.00",
+    "translations": {
+      "de-CH": "Wärme-Unterverteilung",
+      "de-DE": "Wärme-Hauptverteilung",
+      "en-US": "heat sub distribution"
+    }
+  },
+  {
+    "id": "A2.30.00",
+    "translations": {
+      "de-CH": "Heizkreis",
+      "de-DE": "Heizkreis",
+      "en-US": "heating circuit"
+    }
+  },
+  {
+    "id": "A2.40.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "A4.00.00",
+    "translations": {
+      "de-CH": "Lüftung",
+      "de-DE": "Lüftung",
+      "en-US": "ventilation"
+    }
+  },
+  {
+    "id": "A4.01.00",
+    "translations": {
+      "de-CH": "Monoblock",
+      "de-DE": "Monoblock",
+      "en-US": "monobloc ventilation"
+    }
+  },
+  {
+    "id": "A4.02.00",
+    "translations": {
+      "de-CH": "Gaswarnanlage",
+      "de-DE": "Gaswarnanlage",
+      "en-US": "gas detection system"
+    }
+  },
+  {
+    "id": "A6.00.00",
+    "translations": {
+      "de-CH": "Klima",
+      "de-DE": "Klima",
+      "en-US": "air conditioning"
+    }
+  },
+  {
+    "id": "A6.01.00",
+    "translations": {
+      "de-CH": "Entfeuchtungsanlage",
+      "de-DE": "Entfeuchtungsanlage",
+      "en-US": "dehumidification system"
+    }
+  },
+  {
+    "id": "A6.02.00",
+    "translations": {
+      "de-CH": "Befeuchtungsanlage",
+      "de-DE": "Befeuchtungsanlage",
+      "en-US": "humidification system"
+    }
+  },
+  {
+    "id": "A8.00.00",
+    "translations": {
+      "de-CH": "Kälte-Erzeugung",
+      "de-DE": "Kälte-Erzeugung",
+      "en-US": "cold production"
+    }
+    },
+    {
+    "id": "A8.01.00",
+    "translations": {
+      "de-CH": "Fernkälte-Übergabestation",
+      "de-DE": "Fernkälte-Übergabestation",
+      "en-US": "long distance cooling transfer station"
+    }
+  },
+  {
+    "id": "A8.02.00",
+    "translations": {
+      "de-CH": "Fernkälte-Unterstation",
+      "de-DE": "Fernkälte-Unterstation",
+      "en-US": "long distance cooling sub station"
+    }
+  },
+  {
+    "id": "A8.03.00",
+    "translations": {
+      "de-CH": "Kältemaschine",
+      "de-DE": "Kältemaschine",
+      "en-US": "chiller"
+    }
+  },
+    {
+    "id": "A8.04.00",
+    "translations": {
+      "de-CH": "Klimagerät",
+      "de-DE": "Klimagerät",
+      "en-US": "air conditioning unit"
+    }
+  },
+  {
+    "id": "AA.00.00",
+    "translations": {
+      "de-CH": "Kälte-Verteilung",
+      "de-DE": "Kälte-Verteilung",
+      "en-US": "cooling distribution"
+    }
+  },
+  {
+    "id": "AA.10.00",
+    "translations": {
+      "de-CH": "Kälte-Hauptverteilung",
+      "de-DE": "Kälte-Hauptverteilung",
+      "en-US": "long distance cooling transfer distribution"
+    }
+  },
+  {
+    "id": "AA.20.00",
+    "translations": {
+      "de-CH": "Kälte-Unterverteilung",
+      "de-DE": "Kälte-Unterverteilung",
+      "en-US": "long distance cooling sub distribution"
+    }
+  },
+  {
+    "id": "AA.30.00",
+    "translations": {
+      "de-CH": "Kältekreis",
+      "de-DE": "Kältekreis",
+      "en-US": "cooling circuit"
+    }
+  },
+  {
+    "id": "AA.40.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "AC.00.00",
+    "translations": {
+      "de-CH": "Sanitär",
+      "de-DE": "Sanitär",
+      "en-US": "sanitation"
+    }
+  },
+  {
+    "id": "AC.01.00",
+    "translations": {
+      "de-CH": "Rohrbegleitheizung",
+      "de-DE": "Rohrbegleitheizung",
+      "en-US": "trace heating"
+    }
+  },
+  {
+    "id": "AC.02.00",
+    "translations": {
+      "de-CH": "Dachrinnen-Heizung",
+      "de-DE": "Dachrinnen-Heizung",
+      "en-US": "gutter heating system"
+    }
+  },
+  {
+    "id": "AC.03.00",
+    "translations": {
+      "de-CH": "Enthärtungsanlage",
+      "de-DE": "Enthärtungsanlage",
+      "en-US": "softening system"
+    }
+  },
+  {
+    "id": "AC.04.00",
+    "translations": {
+      "de-CH": "Osmoseanlage",
+      "de-DE": "Osmoseanlage",
+      "en-US": "osmosis system"
+    }
+  },
+  {
+    "id": "AC.05.00",
+    "translations": {
+      "de-CH": "Hebeanlage",
+      "de-DE": "Hebeanlage",
+      "en-US": "pumping station"
+    }
+  },
+  {
+    "id": "B0.00.00",
+    "translations": {
+      "de-CH": "Elektrische Energie-Erzeugung",
+      "de-DE": "Elektrische Energie-Erzeugung",
+      "en-US": "electrical production"
+    }
+  },
+  {
+    "id": "B0.01.00",
+    "translations": {
+      "de-CH": "Netzersatzanlage",
+      "de-DE": "Netzersatzanlage",
+      "en-US": "emergency power genset"
+    }
+  },
+  {
+    "id": "B0.02.00",
+    "translations": {
+      "de-CH": "Blockheiz-Kraftwerk (BHKW)",
+      "de-DE": "Blockheiz-Kraftwerk (BHKW)",
+      "en-US": "combined heat and power (CHP)"
+    }
+  },
+  {
+    "id": "B0.03.00",
+    "translations": {
+      "de-CH": "Brennstoffzellen-Heizgerät",
+      "de-DE": "Brennstoffzellen-Heizgerät",
+      "en-US": "fuel cell heating"
+    }
+  },
+  {
+    "id": "B0.04.00",
+    "translations": {
+      "de-CH": "Photovoltaikanlage (PVA)",
+      "de-DE": "Photovoltaikanlage (PVA)",
+      "en-US": "photovoltaic system (PVS)"
+    }
+  },
+  {
+    "id": "B0.05.00",
+    "translations": {
+      "de-CH": "Batteriespeicheranlage",
+      "de-DE": "Batteriespeicheranlage",
+      "en-US": "battery bank unit"
+    }
+  },
+  {
+    "id": "B0.06.00",
+    "translations": {
+      "de-CH": "Unterbrechungsfreie Stromversorgung (USV)",
+      "de-DE": "Unterbrechungsfreie Stromversorgung (USV)",
+      "en-US": "uninterruptible power supply (UPS)"
+    }
+  },
+  {
+    "id": "B0.07.00",
+    "translations": {
+      "de-CH": "Windenergieanlage (WEA)",
+      "de-DE": "Windenergieanlage (WEA)",
+      "en-US": "wind power system (WPS)"
+    }
+  },
+  {
+    "id": "B2.00.00",
+    "translations": {
+      "de-CH": "Elektrische Energie-Verteilung",
+      "de-DE": "Elektrische Energie-Verteilung",
+      "en-US": "electrical distribution"
+    }
+  },
+  {
+    "id": "B2.01.00",
+    "translations": {
+      "de-CH": "Blindleistungskompensationsanlage",
+      "de-DE": "Blindleistungskompensationsanlage",
+      "en-US": "power-factor correction system"
+    }
+  },
+	{
+	"id": "B2.02.00",
+    "translations": {
+      "de-CH": "Mittelspannungshauptverteilung (MSHV)",
+      "de-DE": "Mittelspannungshauptverteilung (MSHV)",
+      "en-US": "medium voltage main distribution (MVMD)"
+	 }
+	},
+  {
+    "id": "B2.03.00",
+    "translations": {
+      "de-CH": "Niederspannungshauptverteilung (NSHV)",
+      "de-DE": "Niederspannungshauptverteilung (NSHV)",
+      "en-US": "low-voltage main distribution (LVMD)"
+    }
+  },
+  {
+    "id": "B2.04.00",
+    "translations": {
+      "de-CH": "Niederspannungsunterverteilung (NUV)",
+      "de-DE": "Niederspannungsunterverteilung (NUV)",
+      "en-US": "low-voltage sub-distribution (LVSD)"
+    }
+  },
+  {
+    "id": "B4.00.00",
+    "translations": {
+      "de-CH": "Elektrische Anlagen",
+      "de-DE": "Elektrische Anlagen",
+      "en-US": "electrical systems"
+    }
+  },
+  {
+    "id": "B4.01.00",
+    "translations": {
+      "de-CH": "Fahrzeugladestation",
+      "de-DE": "Fahrzeugladestation",
+      "en-US": "electric vehicle charging station"
+    }
+  },
+  {
+    "id": "B6.00.00",
+    "translations": {
+      "de-CH": "Gebäudeautomation",
+      "de-DE": "Gebäudeautomation",
+      "en-US": "building automation"
+    }
+  },
+  {
+    "id": "B8.00.00",
+    "translations": {
+      "de-CH": "Gebäudeleitsystem",
+      "de-DE": "Gebäudeleitsystem",
+      "en-US": "building management system"
+    }
+  }, 
+  {
+    "id": "B8.01.00",
+    "translations": {
+      "de-CH": "Störmeldeanlage",
+      "de-DE": "Störmeldeanlage",
+      "en-US": "incident messaging system"
+    }
+  }, 
+  {
+    "id": "BA.00.00",
+    "translations": {
+      "de-CH": "Raumautomation",
+      "de-DE": "Raumautomation",
+      "en-US": "building automation"
+    }
+  },
+  {
+    "id": "BA.01.00",
+    "translations": {
+      "de-CH": "Wetterstation",
+      "de-DE": "Wetterstation",
+      "en-US": "weather station"
+    }
+  },
+  {
+    "id": "BA.10.00",
+    "translations": {
+      "de-CH": "Beleuchtung",
+      "de-DE": "Beleuchtung",
+      "en-US": "lighting"
+    }
+  }, 
+  {
+    "id": "BA.20.00",
+    "translations": {
+      "de-CH": "Beschattung",
+      "de-DE": "Beschattung",
+      "en-US": "shading"
+    }
+  },
+  {
+    "id": "BC.00.00",
+    "translations": {
+      "de-CH": "Digitale Services",
+      "de-DE": "Digitale Services",
+      "en-US": "digital services"
+    }
+  },
+  {
+    "id": "BC.01.00",
+    "translations": {
+      "de-CH": "Analyzer für Heizung",
+      "de-DE": "Analyzer für Heizung",
+      "en-US": "analyzer for heating"
+    }
+  },
+  {
+    "id": "BC.02.00",
+    "translations": {
+      "de-CH": "Analyzer für Brauchwarmwasser",
+      "de-DE": "Analyzer für Brauchwarmwasser",
+      "en-US": "analyzer for warm water"
+    }
+  },
+  {
+    "id": "BC.03.00",
+    "translations": {
+      "de-CH": "Monitoring",
+      "de-DE": "Monitoring",
+      "en-US": "monitoring"
+    }
+  },
+  {
+    "id": "C0.00.00",
+    "translations": {
+      "de-CH": "Beförderungs- und Transport",
+      "de-DE": "Beförderungs- und Transport",
+      "en-US": "transportation systems"
+    }
+  },
+  {
+    "id": "C0.01.00",
     "translations": {
       "de-CH": "Personenaufzug",
       "de-DE": "Personenaufzug",
       "en-US": "passenger elevator"
+    }
+  },
+  {
+    "id": "C0.02.00",
+    "translations": {
+      "de-CH": "Lastenaufzug",
+      "de-DE": "Lastenaufzug",
+      "en-US": "goods elevator"
+    }
+  },
+  {
+    "id": "C0.03.00",
+    "translations": {
+      "de-CH": "Rolltreppenanlage",
+      "de-DE": "Fahrtreppenanlage",
+      "en-US": "escalator"
+    }
+  },
+  {
+    "id": "C0.04.00",
+    "translations": {
+      "de-CH": "Anpassrampe",
+      "de-DE": "Anpassrampe",
+      "en-US": "dock leveler"
+    }
+  },
+  {
+    "id": "C0.10.00",
+    "translations": {
+      "de-CH": "Fassadenbefahranlage",
+      "de-DE": "Fassadenbefahranlage",
+      "en-US": "building cradle"
+    }
+  },
+  {
+    "id": "C0.20.00",
+    "translations": {
+      "de-CH": "Förderanlage",
+      "de-DE": "Förderanlage",
+      "en-US": "conveying system"
+    }
+  },
+  {
+    "id": "C2.00.00",
+    "translations": {
+      "de-CH": "Sicherheit",
+      "de-DE": "Sicherheit",
+      "en-US": "safety systems"
+    }
+  },
+  {
+    "id": "C2.01.00",
+    "translations": {
+      "de-CH": "Türe",
+      "de-DE": "Türe",
+      "en-US": "door"
+    }
+  },
+  {
+    "id": "C2.02.00",
+    "translations": {
+      "de-CH": "Tor",
+      "de-DE": "Tor",
+      "en-US": "gate"
+    }
+  },
+  {
+    "id": "C2.10.00",
+    "translations": {
+      "de-CH": "Schrankenanlage",
+      "de-DE": "Schrankenanlage",
+      "en-US": "barrier system"
+    }
+  },
+ {
+    "id": "C2.20.00",
+    "translations": {
+      "de-CH": "Notlichtanlage (NLA)",
+      "de-DE": "Notlichtanlage (NLA)",
+      "en-US": "emergency light system"
+    }
+  },
+  {
+    "id": "C2.21.00",
+    "translations": {
+      "de-CH": "Sicherheitsbeleuchtungsanlage",
+      "de-DE": "Sicherheitsbeleuchtungsanlage",
+      "en-US": "safety lighting system"
+    }
+  },
+  {
+    "id": "C2.30.00",
+    "translations": {
+      "de-CH": "Videoüberwachungsanlage (VÜA)",
+      "de-DE": "Videoüberwachungsanlage (VÜA)",
+      "en-US": "closed-circuit television system (CCTV)"
+    }
+  },
+  {
+    "id": "C2.40.00",
+    "translations": {
+      "de-CH": "Zutrittskontrollanlage (ZuKo)",
+      "de-DE": "Zutrittskontrollanlage (ZuKo)",
+      "en-US": "access control system"
+    }
+  },
+  {
+    "id": "C2.50.00",
+    "translations": {
+      "de-CH": "Einbruchmeldeanlage (EMA)",
+      "de-DE": "Einbruchmeldeanlage (EMA)",
+      "en-US": "intrusion detection system"
+    }
+  }, 
+  {
+    "id": "C2.60.00",
+    "translations": {
+      "de-CH": "Überfallalarmanlage",
+      "de-DE": "Überfallalarmanlage",
+      "en-US": "panic and attack alarm system"
+    }
+  },
+  {
+    "id": "C2.61.00",
+    "translations": {
+      "de-CH": "Tresor",
+      "de-DE": "Tresor",
+      "en-US": "tresor"
+    }
+  },
+  {
+    "id": "C2.70.00",
+    "translations": {
+      "de-CH": "Evakuationsanlage (EVAK)",
+      "de-DE": "Evakuationsanlage (EVAK)",
+      "en-US": "evacuation and paging system"
+    }
+  },
+  {
+    "id": "C2.71.00",
+    "translations": {
+      "de-CH": "Personenschutzsystem",
+      "de-DE": "Personenschutzsystem",
+      "en-US": "personnel safety system"
+    }
+  },
+  {
+    "id": "C4.00.00",
+    "translations": {
+      "de-CH": "Brandschutz",
+      "de-DE": "Brandschutz",
+      "en-US": "smoke and fire protection"
+    }
+  },  
+  {
+    "id": "C4.01.00",
+    "translations": {
+      "de-CH": "Brandmeldeanlage (BMA)",
+      "de-DE": "Brandmeldeanlage (BMA)",
+      "en-US": "fire alarm system"
+    }
+  },
+	{
+    "id": "C4.02.00",
+    "translations": {
+      "de-CH": "Rauchschutzdruckanlage (RDA)",
+      "de-DE": "Rauchschutzdruckanlage (RDA)",
+      "en-US": "smoke protection pressuration system"
+    }
+  },
+  {
+    "id": "C4.03.00",
+    "translations": {
+      "de-CH": "Rauch- und Wärmeabzugsanlage (RWA)",
+      "de-DE": "Rauch- und Wärmeabzugsanlage (RWA)",
+      "en-US": "smoke and heat protection system (SHE)"
+    }
+  },
+  {
+    "id": "FE.00.00",
+    "translations": {
+      "de-CH": "nutzerspezifische Systeme",
+      "de-DE": "nutzerspezifische Systeme",
+      "en-US": "user specific Systems"
+    }
+  },
+  {
+    "id": "FE.00.00",
+    "translations": {
+      "de-CH": "Parkleitsystem",
+      "de-DE": "Parkleitsystem",
+      "en-US": "parking guidance system"
+    }
+  },
+  {
+    "id": "FE.10.00",
+    "translations": {
+      "de-CH": "Paketbox-System",
+      "de-DE": "Paketbox-System",
+      "en-US": "parcel box system"
+    }
+  },
+  {
+    "id": "FE.20.00",
+    "translations": {
+      "de-CH": "Gegensprechanlage",
+      "de-DE": "Gegensprechanlage",
+      "en-US": "intercom system"
+    }
+  },   
+  {
+    "id": "FE.21.00",
+    "translations": {
+      "de-CH": "Video-Gegensprechanlage",
+      "de-DE": "Video-Gegensprechanlage",
+      "en-US": "video intercom system"
+    }
+  },
+  {
+    "id": "FE.20.00",
+    "translations": {
+      "de-CH": "Besucherinformationssystem",
+      "de-DE": "Besucherinformationssystem",
+      "en-US": "visitor information system"
+    }
+  },
+  {
+    "id": "FE.21.00",
+    "translations": {
+      "de-CH": "Raumreservationssystem",
+      "de-DE": "Raumreservationssystem",
+      "en-US": "room reservation system"
+    }
+  },    
+  {
+    "id": "FE.22.00",
+    "translations": {
+      "de-CH": "Multimediaanlage",
+      "de-DE": "Multimediaanlage",
+      "en-US": "multimedia system"
+    }
+  },
+  {
+    "id": "FE.30.00",
+    "translations": {
+      "de-CH": "Personensuchanlage",
+      "de-DE": "Personensuchanlage",
+      "en-US": "personal paging system"
+    }
+  },
+  {
+    "id": "FE.31.00",
+    "translations": {
+      "de-CH": "Rufanlage",
+      "de-DE": "Rufanlage",
+      "en-US": "call system"
+    }
+  },     
+  {
+    "id": "FE.40.00",
+    "translations": {
+      "de-CH": "Entsorgungsanlage",
+      "de-DE": "Entsorgungsanlage",
+      "en-US": "waste disposal system"
+    }
+  },
+  {
+    "id": "FE.50.00",
+    "translations": {
+      "de-CH": "Druckluftanlage",
+      "de-DE": "Druckluftanlage",
+      "en-US": "compressed air system"
     }
   }
 ]
