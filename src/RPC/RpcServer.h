@@ -122,7 +122,6 @@ class RpcServer {
   BaseLib::Rpc::PServerInfo _info;
   gnutls_certificate_credentials_t _x509Cred = nullptr;
   gnutls_priority_t _tlsPriorityCache = nullptr;
-  gnutls_dh_params_t _dhParams = nullptr;
   int32_t _threadPolicy = SCHED_OTHER;
   int32_t _threadPriority = 0;
   std::atomic_bool _stopServer;
