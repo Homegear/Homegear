@@ -694,7 +694,7 @@ createPackage Homegear-Loxone $1 homegear-loxone 0
 createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
 createPackage Homegear-KNX $1 homegear-knx 1
 createPackage Homegear-EnOcean $1 homegear-enocean 1
-createPackage homegear-M-Bus $1 homegear-mbus 1
+createPackage Homegear-M-Bus $1 homegear-mbus 1
 createPackage homegear-influxdb $1 homegear-influxdb 0
 createPackage homegear-gateway $1 homegear-gateway 0
 createPackage homegear-management $1 homegear-management 0
