@@ -566,6 +566,17 @@
     }
   },
   {
+    "id": "20.10.23",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Temperatur technischer Speicher",
+      "de-DE": "Heizung - Temperatur technischer Speicher",
+      "en-US": "heating system - heat accumulator temperature"
+    }
+  },
+  {
     "id": "20.11.00",
     "translations": {
       "de-CH": "Druckhaltestation",
