@@ -2039,6 +2039,9 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       if (http.getHeader().fields["accept"] == "text/html") {
         responseEncoding = "text/html";
         contentString = _nodeManager->getFrontendCode();
+        if (contentString.empty()) {
+          _out.printCritical("Could not find any installed nodes.");
+        }
       } else {
         responseEncoding = "application/json";
         _jsonEncoder->encode(_nodeManager->getModuleInfo(), contentString);
