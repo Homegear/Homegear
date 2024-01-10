@@ -130,7 +130,7 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ]; then
+if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
@@ -142,7 +142,7 @@ if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bi
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -157,7 +157,7 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-distutils
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ];  then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install dirmngr
 fi
 
