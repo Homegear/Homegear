@@ -277,6 +277,8 @@ cd parallel
 # Switch to release, once PHP 8 is supported
 # git checkout release
 git checkout develop
+# ZEND_JMPZNZ seems to be removed from PHP source
+sed -i 's/case ZEND_JMPZNZ:/#ifdef ZEND_JMPZNZ\ncase ZEND_JMPZNZ:\n#endif/g' src/cache.c
 cd ..
 # Add Homegear to allowed OPcode cache modules
 sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
