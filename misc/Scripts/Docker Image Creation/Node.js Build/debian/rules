@@ -13,6 +13,7 @@ override_dh_auto_build:
 	mkdir -p $(CURDIR)/build
 	./configure --shared --prefix $(CURDIR)/build
 	make install
+	rm -f $(CURDIR)/build/bin/node
 
 override_dh_auto_install:
 	dh_testdir
