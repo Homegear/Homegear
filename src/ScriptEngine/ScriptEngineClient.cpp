@@ -848,7 +848,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         zendHandle.filename = scriptInfo->fullPath.c_str();
         zendHandle.opened_path = nullptr;
         zendHandle.free_filename = 0;
-#else
+#elif PHP_VERSION_ID < 80200
         auto stream = new hg_stream_handle();
         stream->position = 0;
         stream->buffer = scriptInfo->script;
@@ -861,12 +861,27 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         zendHandle.handle.stream.fsizer = hg_zend_stream_fsizer;
         zendHandle.handle.stream.isatty = 0;
         zendHandle.handle.stream.closer = hg_zend_stream_closer;
+#else
+        auto stream = new hg_stream_handle();
+        stream->position = 0;
+        stream->buffer = scriptInfo->script;
+
+        zendHandle.type = ZEND_HANDLE_STREAM;
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length() - 1, false);
+        zendHandle.opened_path = nullptr; //It might make sense to set this.
+        zendHandle.handle.stream.handle = stream;
+        zendHandle.handle.stream.reader = hg_zend_stream_reader;
+        zendHandle.handle.stream.fsizer = hg_zend_stream_fsizer;
+        zendHandle.handle.stream.isatty = 0;
+        zendHandle.handle.stream.closer = hg_zend_stream_closer;
 #endif
       } else {
         zendHandle.type = ZEND_HANDLE_FILENAME;
-        zendHandle.filename = scriptInfo->fullPath.c_str();
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length() - 1, false);
         zendHandle.opened_path = nullptr;
+#if PHP_VERSION_ID < 80200
         zendHandle.free_filename = 0;
+#endif
       }
 
       zend_homegear_globals *globals = php_homegear_get_globals();
