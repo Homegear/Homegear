@@ -446,7 +446,11 @@ zend_result hg_stream_open(const char *filename, zend_file_handle *handle) {
 #else
 zend_result hg_stream_open(zend_file_handle *handle) {
 #endif
+#if PHP_VERSION_ID < 80200
+  std::string file(filename);
+#else
   std::string file(handle->filename->val, handle->filename->len);
+#endif
   if (file.size() > 3 && (file.compare(file.size() - 4, 4, ".hgs") == 0 || file.compare(file.size() - 4, 4, ".hgn") == 0)) {
     std::lock_guard<std::mutex> scriptCacheGuard(script_cache_mutex_);
     auto scriptIterator = script_cache_.find(file);

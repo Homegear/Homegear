@@ -877,11 +877,13 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
 #endif
       } else {
         zendHandle.type = ZEND_HANDLE_FILENAME;
-        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length(), false);
-        zendHandle.opened_path = nullptr;
 #if PHP_VERSION_ID < 80200
+        zendHandle.filename = scriptInfo->fullPath.c_str();
         zendHandle.free_filename = 0;
+#else
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length(), false);
 #endif
+        zendHandle.opened_path = nullptr;
       }
 
       zend_homegear_globals *globals = php_homegear_get_globals();
