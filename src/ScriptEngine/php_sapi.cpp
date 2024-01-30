@@ -2650,7 +2650,11 @@ void php_homegear_deinit() {
 }
 
 static int php_homegear_startup(sapi_module_struct *sapi_globals) {
+#if PHP_VERSION_ID < 80200
+  if (php_module_startup(sapi_globals, &homegear_module_entry, 1) == FAILURE) return FAILURE;
+#else
   if (php_module_startup(sapi_globals, &homegear_module_entry) == FAILURE) return FAILURE;
+#endif
 
   // {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed. => is fixed
 

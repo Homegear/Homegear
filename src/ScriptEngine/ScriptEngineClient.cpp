@@ -96,6 +96,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
 
 ScriptEngineClient::~ScriptEngineClient() {
   dispose(true);
+  php_homegear_deinit();
   if (_maintenanceThread.joinable()) _maintenanceThread.join();
   if (_watchdogThread.joinable()) _watchdogThread.join();
 }
@@ -142,7 +143,6 @@ void ScriptEngineClient::dispose(bool broadcastShutdown) {
     stopEventThreads();
     stopQueue(0);
     stopQueue(1);
-    php_homegear_deinit();
     _scriptCache.clear();
     _rpcResponses.clear();
   }
