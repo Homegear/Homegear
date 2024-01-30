@@ -55,7 +55,7 @@
  */
 #endif
 
-static bool disposed_ = true;
+static bool disposed_ = false;
 static zend_homegear_superglobals super_globals_;
 static std::mutex script_cache_mutex_;
 static std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>> script_cache_;
@@ -2628,8 +2628,8 @@ int php_homegear_init() {
 }
 
 void php_homegear_deinit() {
-  disposed_ = true;
   if (disposed_) return;
+  disposed_ = true;
   php_homegear_sapi_module.shutdown(&php_homegear_sapi_module);
   sapi_shutdown();
 

@@ -867,7 +867,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         stream->buffer = scriptInfo->script;
 
         zendHandle.type = ZEND_HANDLE_STREAM;
-        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length() - 1, false);
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length(), false);
         zendHandle.opened_path = nullptr; //It might make sense to set this.
         zendHandle.handle.stream.handle = stream;
         zendHandle.handle.stream.reader = hg_zend_stream_reader;
@@ -877,7 +877,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
 #endif
       } else {
         zendHandle.type = ZEND_HANDLE_FILENAME;
-        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length() - 1, false);
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length(), false);
         zendHandle.opened_path = nullptr;
 #if PHP_VERSION_ID < 80200
         zendHandle.free_filename = 0;
@@ -1267,7 +1267,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 
     zval *reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
     if (reference != nullptr) {
-      if (Z_ISREF_P(reference) && Z_RES_P(reference)->ptr && Z_TYPE_P(Z_REFVAL_P(reference)) == IS_ARRAY) {
+      if (Z_ISREF_P(reference) && Z_TYPE_P(Z_REFVAL_P(reference)) == IS_ARRAY) {
         zval *token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
         if (token != nullptr) {
           if (Z_TYPE_P(token) == IS_TRUE) {

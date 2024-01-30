@@ -501,14 +501,15 @@ bool php_init_node(PScriptInfo scriptInfo, zend_class_entry *homegearNodeClassEn
       zend_string *className = zend_string_init("HomegearNode", sizeof("HomegearNode") - 1, 0);
       homegearNodeClassEntry = zend_lookup_class(className);
       zend_string_release(className);
-      zend_declare_class_constant_stringl(homegearNodeClassEntry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
-      zend_declare_class_constant_stringl(homegearNodeClassEntry, "FLOW_ID", sizeof("FLOW_ID") - 1, SEG(flowId).c_str(), SEG(flowId).size());
     }
 
     if (!homegearNodeClassEntry) {
       Homegear::GD::out.printError("Error: Class HomegearNode not found in file: " + scriptInfo->fullPath);
       return false;
     }
+
+    zend_declare_class_constant_stringl(homegearNodeClassEntry, "NODE_ID", sizeof("NODE_ID") - 1, SEG(nodeId).c_str(), SEG(nodeId).size());
+    zend_declare_class_constant_stringl(homegearNodeClassEntry, "FLOW_ID", sizeof("FLOW_ID") - 1, SEG(flowId).c_str(), SEG(flowId).size());
 
     //Don't use pefree to free the allocated memory => double free in php_request_shutdown (invisible in valgrind and not crashing on at least amd64!).
     homegearNode = (zend_object *)ecalloc(1, sizeof(zend_object) + zend_object_properties_size(homegearNodeClassEntry));
