@@ -3604,7 +3604,13 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData &clientData, 
     if (result->errorStruct || !wait) {
       std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
       clientData->rpcResponses.erase(packetId);
-      if (!wait) return std::make_shared<BaseLib::Variable>();
+      if (!wait) {
+        {
+          std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
+          _lifetick1.second = true;
+        }
+        return std::make_shared<BaseLib::Variable>();
+      }
       else return result;
     }
 
