@@ -554,9 +554,14 @@ zend_result hg_stream_open(zend_file_handle *handle) {
     //when calling zend_stream_init_fp() after returning, PHP crashes with a SEGFAULT on "include" of a non-existing
     //file.
     if (!fp) return FAILURE;
+#if PHP_VERSION_ID < 80200
+    zend_stream_init_fp(handle, fp, filename);
+    handle->opened_path = opened_path;
+#else
     handle->type = ZEND_HANDLE_FP;
     handle->handle.fp = fp;
     handle->opened_path = opened_path;
+#endif
 #endif
     //}}}
   }
