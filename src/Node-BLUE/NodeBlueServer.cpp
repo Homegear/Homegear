@@ -53,10 +53,10 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
   _out.init(GD::bl.get());
   _out.setPrefix("Node-BLUE Server: ");
 
-  _lifetick1.first = 0;
-  _lifetick1.second = true;
-  _lifetick2.first = 0;
-  _lifetick2.second = true;
+  lifetick_1_.first = 0;
+  lifetick_1_.second = true;
+  lifetick_2_.first = 0;
+  lifetick_2_.second = true;
 
   _nodepink = std::make_shared<Nodepink>();
   _nodepinkWebsocket = std::make_shared<NodepinkWebsocket>();
@@ -347,35 +347,71 @@ NodeBlueServer::NodeBlueServer() : IQueue(GD::bl.get(), 3, 100000) {
 
 #ifndef NO_SCRIPTENGINE
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("executePhpNode",
-                                                                                                                                                  std::bind(&NodeBlueServer::executePhpNode, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::executePhpNode,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("executePhpNodeMethod",
-                                                                                                                                                  std::bind(&NodeBlueServer::executePhpNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::executePhpNodeMethod,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
 #endif
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("errorEvent",
-                                                                                                                                                  std::bind(&NodeBlueServer::errorEvent, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::errorEvent,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("frontendEventLog",
-                                                                                                                                                  std::bind(&NodeBlueServer::frontendEventLog, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::frontendEventLog,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("getCredentials",
-                                                                                                                                                  std::bind(&NodeBlueServer::getCredentials, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::getCredentials,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("invokeNodeMethod",
-                                                                                                                                                  std::bind(&NodeBlueServer::invokeNodeMethod, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::invokeNodeMethod,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("invokeIpcProcessMethod",
                                                                                                                                                   std::bind(&NodeBlueServer::invokeIpcProcessMethod,
                                                                                                                                                             this,
                                                                                                                                                             std::placeholders::_1,
                                                                                                                                                             std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeEvent",
-                                                                                                                                                  std::bind(&NodeBlueServer::nodeEvent, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::nodeEvent,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeBlueVariableEvent",
-                                                                                                                                                  std::bind(&NodeBlueServer::nodeBlueVariableEvent, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::nodeBlueVariableEvent,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("nodeRedNodeInput",
-                                                                                                                                                  std::bind(&NodeBlueServer::nodeRedNodeInput, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::nodeRedNodeInput,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("registerUiNodeRoles",
-                                                                                                                                                  std::bind(&NodeBlueServer::registerUiNodeRoles, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::registerUiNodeRoles,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("setCredentials",
-                                                                                                                                                  std::bind(&NodeBlueServer::setCredentials, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::setCredentials,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
   _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(PNodeBlueClientData &clientData, BaseLib::PArray &parameters)>>("setCredentialTypes",
-                                                                                                                                                  std::bind(&NodeBlueServer::setCredentialTypes, this, std::placeholders::_1, std::placeholders::_2)));
+                                                                                                                                                  std::bind(&NodeBlueServer::setCredentialTypes,
+                                                                                                                                                            this,
+                                                                                                                                                            std::placeholders::_1,
+                                                                                                                                                            std::placeholders::_2)));
 }
 
 NodeBlueServer::~NodeBlueServer() {
@@ -386,16 +422,14 @@ NodeBlueServer::~NodeBlueServer() {
 bool NodeBlueServer::lifetick() {
   try {
     {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      if (!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000) {
+      if (!lifetick_1_.second && BaseLib::HelperFunctions::getTime() - lifetick_1_.first > 120000) {
         _out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
         return false;
       }
     }
 
     {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      if (!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000) {
+      if (!lifetick_2_.second && BaseLib::HelperFunctions::getTime() - lifetick_2_.first > 120000) {
         _out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
         return false;
       }
@@ -404,13 +438,13 @@ bool NodeBlueServer::lifetick() {
     std::vector<PNodeBlueClientData> clients;
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto result = sendRequest(client, "lifetick", std::make_shared<BaseLib::Array>(), true);
       if (result->errorStruct || !result->booleanValue) return false;
     }
@@ -451,13 +485,13 @@ BaseLib::PVariable NodeBlueServer::getLoad() {
 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto result = sendRequest(client, "getLoad", std::make_shared<BaseLib::Array>(), true);
       if (result->errorStruct) continue;
 
@@ -483,13 +517,13 @@ BaseLib::PVariable NodeBlueServer::getNodeProcessingTimes() {
 
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto result2 = sendRequest(client, "getNodeProcessingTimes", std::make_shared<BaseLib::Array>(), true);
       if (result2->errorStruct) continue;
 
@@ -514,8 +548,9 @@ void NodeBlueServer::collectGarbage() {
     {
       std::lock_guard<std::mutex> processGuard(_processMutex);
       bool emptyProcess = false;
-      for (auto &process: _processes) {
-        if (process.second->flowCount() == 0 && BaseLib::HelperFunctions::getTime() - process.second->lastExecution > 60000 && process.second->getClientData() && !process.second->getClientData()->closed) {
+      for (auto &process : _processes) {
+        if (process.second->flowCount() == 0 && BaseLib::HelperFunctions::getTime() - process.second->lastExecution > 60000 && process.second->getClientData()
+            && !process.second->getClientData()->closed) {
           if (emptyProcess) closeClientConnection(process.second->getClientData());
           else emptyProcess = true;
         }
@@ -527,7 +562,7 @@ void NodeBlueServer::collectGarbage() {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       try {
         clientsToRemove.reserve(_clients.size());
-        for (auto &client: _clients) {
+        for (auto &client : _clients) {
           if (client.second->closed) clientsToRemove.push_back(client.second);
         }
       }
@@ -538,7 +573,7 @@ void NodeBlueServer::collectGarbage() {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
       }
     }
-    for (auto &i: clientsToRemove) {
+    for (auto &i : clientsToRemove) {
       {
         std::lock_guard<std::mutex> stateGuard(_stateMutex);
         _clients.erase(i->id);
@@ -558,7 +593,7 @@ void NodeBlueServer::getMaxThreadCounts() {
   try {
     _maxThreadCounts.clear();
     auto threadCounts = _nodeManager->getMaxThreadCounts();
-    for (auto &entry: threadCounts) {
+    for (auto &entry : threadCounts) {
       _maxThreadCounts[entry.first] = entry.second;
     }
   }
@@ -666,7 +701,7 @@ bool NodeBlueServer::start() {
     }
     _webroot = GD::bl->settings.nodeBluePath() + "www/";
     _anonymousPaths = BaseLib::HelperFunctions::splitAll(GD::bl->settings.nodeBlueUriPathsExcludedFromLogin(), ',');
-    for (auto &element: _anonymousPaths) {
+    for (auto &element : _anonymousPaths) {
       BaseLib::HelperFunctions::trim(element);
       if (element.empty()) {
         _anonymousPaths.clear();
@@ -738,12 +773,12 @@ void NodeBlueServer::homegearReloading() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "reload", parameters, false);
     }
@@ -869,14 +904,14 @@ BaseLib::PVariable NodeBlueServer::getNodesWithFixedInputs() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     auto nodeStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
       auto result = sendRequest(client, "getNodesWithFixedInputs", parameters, true);
       if (result->errorStruct) continue;
@@ -1005,13 +1040,13 @@ void NodeBlueServer::enableNodeEvents() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "enableNodeEvents", parameters, false);
     }
@@ -1033,13 +1068,13 @@ void NodeBlueServer::disableNodeEvents() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "disableNodeEvents", parameters, false);
     }
@@ -1054,7 +1089,7 @@ void NodeBlueServer::disableNodeEvents() {
 
 void NodeBlueServer::parseEnvironmentVariables(const BaseLib::PVariable &env, BaseLib::PVariable &output) {
   try {
-    for (auto &entry: *env->arrayValue) {
+    for (auto &entry : *env->arrayValue) {
       auto nameIterator = entry->structValue->find("name");
       auto valueIterator = entry->structValue->find("value");
       auto typeIterator = entry->structValue->find("type");
@@ -1129,7 +1164,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
     //Copy subflow, prefix all subflow node IDs and wires with subflow ID and identify subsubflows
     std::unordered_map<std::string, BaseLib::PVariable> subflow;
     nodesToAdd.reserve(subflowNodes.size());
-    for (auto &subflowElement: subflowNodes) {
+    for (auto &subflowElement : subflowNodes) {
       BaseLib::PVariable subflowNode2 = std::make_shared<BaseLib::Variable>();
       *subflowNode2 = *subflowElement.second;
       subflowNode2->structValue->at("id")->stringValue = subflowIdPrefix + subflowNode2->structValue->at("id")->stringValue;
@@ -1143,8 +1178,8 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
 
       auto subflowNodeWiresIterator = subflowNode2->structValue->find("wires");
       if (subflowNodeWiresIterator == subflowNode2->structValue->end()) continue;
-      for (auto &output: *subflowNodeWiresIterator->second->arrayValue) {
-        for (auto &wire: *output->arrayValue) {
+      for (auto &output : *subflowNodeWiresIterator->second->arrayValue) {
+        for (auto &wire : *output->arrayValue) {
           auto idIterator = wire->structValue->find("id");
           if (idIterator == wire->structValue->end()) continue;
           idIterator->second->stringValue = subflowIdPrefix + idIterator->second->stringValue;
@@ -1163,7 +1198,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         auto &element = wiresOutIterator->second->arrayValue->at(outputIndex);
         auto innerIterator = element->structValue->find("wires");
         if (innerIterator == element->structValue->end()) continue;
-        for (auto &wireIterator: *innerIterator->second->arrayValue) {
+        for (auto &wireIterator : *innerIterator->second->arrayValue) {
           auto wireIdIterator = wireIterator->structValue->find("id");
           if (wireIdIterator == wireIterator->structValue->end()) continue;
 
@@ -1181,7 +1216,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
           auto &targetNodeWireOutput = targetNodeWiresIterator->second->arrayValue->at(outputIndex);
 
           if (wireIdIterator->second->stringValue == subflowId) {
-            for (const auto &targetNodeWire: *targetNodeWireOutput->arrayValue) {
+            for (const auto &targetNodeWire : *targetNodeWireOutput->arrayValue) {
               auto targetNodeWireIdIterator = targetNodeWire->structValue->find("id");
               if (targetNodeWireIdIterator == targetNodeWire->structValue->end()) continue;
 
@@ -1202,7 +1237,8 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
 
           auto sourceNodeWiresIterator = sourceNodeIterator->second->structValue->find("wires");
           if (sourceNodeWiresIterator == sourceNodeIterator->second->structValue->end()) continue;
-          while ((signed)sourceNodeWiresIterator->second->arrayValue->size() < wirePortIterator->second->integerValue + 1) sourceNodeWiresIterator->second->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
+          while ((signed) sourceNodeWiresIterator->second->arrayValue->size() < wirePortIterator->second->integerValue + 1)
+            sourceNodeWiresIterator->second->arrayValue->push_back(std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray));
 
           *sourceNodeWiresIterator->second->arrayValue->at(wirePortIterator->second->integerValue) = *targetNodeWiresIterator->second->arrayValue->at(outputIndex);
         }
@@ -1219,7 +1255,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         auto wiresInWiresIterator = wiresInIterator->second->arrayValue->at(i)->structValue->find("wires");
         if (wiresInWiresIterator != wiresInIterator->second->arrayValue->at(i)->structValue->end()) {
           wiresIn.back()->reserve(wiresInIterator->second->arrayValue->at(i)->structValue->size());
-          for (auto &wiresInWire: *wiresInWiresIterator->second->arrayValue) {
+          for (auto &wiresInWire : *wiresInWiresIterator->second->arrayValue) {
             auto wiresInWireIdIterator = wiresInWire->structValue->find("id");
             if (wiresInWireIdIterator == wiresInWire->structValue->end()) continue;
 
@@ -1238,12 +1274,12 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
         }
       }
 
-      for (auto &node2: flowNodes) {
+      for (auto &node2 : flowNodes) {
         auto node2WiresIterator = node2.second->structValue->find("wires");
         if (node2WiresIterator == node2.second->structValue->end()) continue;
-        for (auto &node2WiresOutput: *node2WiresIterator->second->arrayValue) {
+        for (auto &node2WiresOutput : *node2WiresIterator->second->arrayValue) {
           bool rebuildArray = false;
-          for (auto &node2Wire: *node2WiresOutput->arrayValue) {
+          for (auto &node2Wire : *node2WiresOutput->arrayValue) {
             auto node2WireIdIterator = node2Wire->structValue->find("id");
             if (node2WireIdIterator == node2Wire->structValue->end()) continue;
 
@@ -1254,7 +1290,7 @@ std::set<std::string> NodeBlueServer::insertSubflows(BaseLib::PVariable &subflow
           }
           if (rebuildArray) {
             BaseLib::PArray wireArray = std::make_shared<BaseLib::Array>();
-            for (auto &node2Wire: *node2WiresOutput->arrayValue) {
+            for (auto &node2Wire : *node2WiresOutput->arrayValue) {
               auto node2WireIdIterator = node2Wire->structValue->find("id");
               if (node2WireIdIterator == node2Wire->structValue->end()) continue;
 
@@ -1317,7 +1353,7 @@ void NodeBlueServer::startFlows() {
     std::set<std::string> allNodeIds;
     std::set<std::string> disabledFlows;
     std::unordered_map<std::string, BaseLib::PVariable> flowsEnvironmentVariables;
-    for (auto &element: *flows->arrayValue) {
+    for (auto &element : *flows->arrayValue) {
       auto idIterator = element->structValue->find("id");
       if (idIterator == element->structValue->end()) {
         _out.printError("Error: Flow element has no id.");
@@ -1353,7 +1389,7 @@ void NodeBlueServer::startFlows() {
         if (_nodeManager->isUiNode(typeIterator->second->stringValue)) {
           _out.printInfo("Info: Deleting UI element of disabled node " + idIterator->second->stringValue);
           auto uiElementId = GD::bl->db->getNodeData(idIterator->second->stringValue, "uiElementId");
-          if (!uiElementId->errorStruct && uiElementId->integerValue64 != 0) GD::uiController->removeUiElement((uint64_t)uiElementId->integerValue64);
+          if (!uiElementId->errorStruct && uiElementId->integerValue64 != 0) GD::uiController->removeUiElement((uint64_t) uiElementId->integerValue64);
         }
 
         continue;
@@ -1387,17 +1423,17 @@ void NodeBlueServer::startFlows() {
     //}}}
 
     //{{{ Insert subflows
-    for (auto &subflowNodeIdsInner: subflowNodeIds) {
+    for (auto &subflowNodeIdsInner : subflowNodeIds) {
       if (subflowInfos.find(subflowNodeIdsInner.first) != subflowInfos.end()) continue; //Don't process nodes of subflows
 
-      for (const auto &subflowNodeId: subflowNodeIdsInner.second) {
+      for (const auto &subflowNodeId : subflowNodeIdsInner.second) {
         std::set<std::string> processedSubflows;
 
         std::set<std::string> subsubflows;
         subsubflows.emplace(subflowNodeId);
         while (!subsubflows.empty()) {
           std::set<std::string> newSubsubflows;
-          for (auto &subsubflowNodeId: subsubflows) {
+          for (auto &subsubflowNodeId : subsubflows) {
             auto &innerFlowNodes = flowNodes.at(subflowNodeIdsInner.first);
             auto subflowNodeIterator = innerFlowNodes.find(subsubflowNodeId);
             if (subflowNodeIterator == innerFlowNodes.end()) {
@@ -1413,7 +1449,7 @@ void NodeBlueServer::startFlows() {
             std::set<std::string> returnedSubsubflows = insertSubflows(subflowNodeIterator->second, subflowInfos, innerFlowNodes, subflowNodesIterator->second, allNodeIds);
             processedSubflows.emplace(subsubflowNodeId);
             bool abort = false;
-            for (auto &returnedSubsubflow: returnedSubsubflows) {
+            for (auto &returnedSubsubflow : returnedSubsubflows) {
               if (processedSubflows.find(returnedSubsubflow) != processedSubflows.end()) {
                 _out.printError("Error: Subflow recursion detected. Aborting processing subflows for flow with ID: " + subflowNodeIdsInner.first);
                 abort = true;
@@ -1438,7 +1474,7 @@ void NodeBlueServer::startFlows() {
     //Only reserve memory when there are any Node-RED nodes.
     if (!hasNoderedFlowsFile && _nodeManager->nodeRedRequired()) nodeRedFlow->arrayValue->reserve(flowNodes.size());
 
-    for (auto &element: flowNodes) {
+    for (auto &element : flowNodes) {
       if (subflowInfos.find(element.first) != subflowInfos.end()) continue;
       BaseLib::PVariable nodeRedFlowNodes = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
       if (!hasNoderedFlowsFile) nodeRedFlowNodes->arrayValue->reserve(element.second.size());
@@ -1453,7 +1489,7 @@ void NodeBlueServer::startFlows() {
           environmentVariables = flowsEnvironmentVariablesIterator->second;
         }
       }
-      for (auto &node: element.second) {
+      for (auto &node : element.second) {
         if (!node.second) continue;
         flow->arrayValue->push_back(node.second);
 
@@ -1532,7 +1568,7 @@ void NodeBlueServer::startFlows() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
@@ -1540,7 +1576,7 @@ void NodeBlueServer::startFlows() {
 
     auto startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Starting nodes.");
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "startNodes", parameters, true);
     }
@@ -1549,7 +1585,7 @@ void NodeBlueServer::startFlows() {
 
     startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Calling \"configNodesStarted\".");
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "configNodesStarted", parameters, true);
     }
@@ -1558,7 +1594,7 @@ void NodeBlueServer::startFlows() {
 
     startTime = BaseLib::HelperFunctions::getTime();
     _out.printInfo("Info: Calling \"startUpComplete\".");
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "startUpComplete", parameters, true);
     }
@@ -1568,14 +1604,14 @@ void NodeBlueServer::startFlows() {
     { //Remove node data of non-existent nodes
       std::set<std::string> nodeData = GD::bl->db->getAllNodeDataNodes();
       std::string dataKey;
-      for (auto &nodeId: nodeData) {
+      for (auto &nodeId : nodeData) {
         if (allNodeIds.find(nodeId) == allNodeIds.end() && flowNodes.find(nodeId) == flowNodes.end() && nodeId != "global") GD::bl->db->deleteNodeData(nodeId, dataKey);
       }
     }
 
     { //Remove UI elements of non-existent nodes
       auto nodeUiElements = GD::uiController->getAllNodeUiElements();
-      for (auto &nodeId: nodeUiElements) {
+      for (auto &nodeId : nodeUiElements) {
         if (allNodeIds.find(nodeId.first) == allNodeIds.end() && flowNodes.find(nodeId.first) == flowNodes.end()) GD::uiController->removeNodeUiElements(nodeId.first);
       }
     }
@@ -1584,7 +1620,7 @@ void NodeBlueServer::startFlows() {
       std::string component = "homegear-cloudconnect-devices";
       std::string key;
       auto cloud_devices = GD::bl->db->getData(component, key);
-      for (auto &device: *cloud_devices->structValue) {
+      for (auto &device : *cloud_devices->structValue) {
         auto node_id = BaseLib::HelperFunctions::splitFirst(device.first, '_').second;
         if (!node_id.empty() && allNodeIds.find(node_id) == allNodeIds.end() && flowNodes.find(node_id) == flowNodes.end()) {
           key = device.first;
@@ -1608,12 +1644,12 @@ void NodeBlueServer::sendShutdown() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
       sendRequest(client, "shutdown", parameters, false);
     }
@@ -1643,12 +1679,12 @@ bool NodeBlueServer::sendReset() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
       auto result = sendRequest(client, "reset", parameters, true);
       if (result->errorStruct) {
@@ -1681,7 +1717,7 @@ void NodeBlueServer::closeClientConnections() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         clients.push_back(client.second);
         closeClientConnection(client.second);
         std::lock_guard<std::mutex> processGuard(_processMutex);
@@ -1694,7 +1730,7 @@ void NodeBlueServer::closeClientConnections() {
     }
 
     while (!_clients.empty()) {
-      for (auto &client: clients) {
+      for (auto &client : clients) {
         std::unique_lock<std::mutex> waitLock(client->waitMutex);
         waitLock.unlock();
         client->requestConditionVariable.notify_all();
@@ -1722,14 +1758,14 @@ void NodeBlueServer::stopNodes() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     int64_t startTime = BaseLib::HelperFunctions::getTime();
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "stopNodes", parameters, true);
     }
@@ -1737,7 +1773,7 @@ void NodeBlueServer::stopNodes() {
     _out.printInfo("Info: Calling stop took " + std::to_string(duration) + "ms.");
 
     startTime = BaseLib::HelperFunctions::getTime();
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       sendRequest(client, "waitForNodesStopped", parameters, true);
     }
@@ -1821,7 +1857,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
 #else
   try {
     bool loginValid = false;
-    for (auto &element: _anonymousPaths) {
+    for (auto &element : _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -1859,7 +1895,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         auto innerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
         if (key.empty()) {
-          for (auto &innerNodeData: *nodeData->structValue) {
+          for (auto &innerNodeData : *nodeData->structValue) {
             auto innerInnerContextData = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             innerInnerContextData->structValue->emplace("msg", innerNodeData.second);
             innerInnerContextData->structValue->emplace("format", std::make_shared<BaseLib::Variable>(getNodeBlueFormatFromVariableType(innerNodeData.second)));
@@ -1880,7 +1916,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       if (!loginValid) return "unauthorized";
       std::string language = "en";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
-      for (auto &arg: args) {
+      for (auto &arg : args) {
         auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
         if (argPair.first == "lng") {
           language = argPair.second;
@@ -1900,7 +1936,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
       std::string localePath = _webroot + "static/locales/";
       std::string language = "en";
       std::vector<std::string> args = BaseLib::HelperFunctions::splitAll(http.getHeader().args, '&');
-      for (auto &arg: args) {
+      for (auto &arg : args) {
         auto argPair = BaseLib::HelperFunctions::splitFirst(arg, '=');
         if (argPair.first == "lng") {
           if (BaseLib::Io::directoryExists(localePath + argPair.second)) language = argPair.second;
@@ -1916,7 +1952,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
         contentString.clear();
         auto decodedExtraContent = BaseLib::Rpc::JsonDecoder::decode(extraContent);
 
-        for (auto &element: *decodedExtraContent->structValue) {
+        for (auto &element : *decodedExtraContent->structValue) {
           auto subelementIterator = decodedContent->structValue->find(element.first);
           if (subelementIterator == decodedContent->structValue->end()) {
             decodedContent->structValue->emplace(element.first, element.second);
@@ -1924,7 +1960,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
           }
 
           if (element.second->type == BaseLib::VariableType::tStruct) {
-            for (auto &subelement: *element.second->structValue) {
+            for (auto &subelement : *element.second->structValue) {
               auto subsubelementIterator = subelementIterator->second->structValue->find(subelement.first);
               if (subsubelementIterator == subelementIterator->second->structValue->end()) {
                 subelementIterator->second->structValue->emplace(subelement.first, subelement.second);
@@ -1932,7 +1968,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
               }
 
               if (subelement.second->type == BaseLib::VariableType::tStruct) {
-                for (auto &subsubelement: *subelement.second->structValue) {
+                for (auto &subsubelement : *subelement.second->structValue) {
                   auto subsubsubelementIterator = subsubelementIterator->second->structValue->find(subsubelement.first);
                   if (subsubsubelementIterator == subsubelementIterator->second->structValue->end()) {
                     subsubelementIterator->second->structValue->emplace(subsubelement.first, subsubelement.second);
@@ -1940,7 +1976,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
                   }
 
                   if (subsubelement.second->type == BaseLib::VariableType::tStruct) {
-                    for (auto &subsubsubelement: *subsubelement.second->structValue) {
+                    for (auto &subsubsubelement : *subsubelement.second->structValue) {
                       auto subsubsubsubelementIterator = subsubsubelementIterator->second->structValue->find(subsubsubelement.first);
                       if (subsubsubsubelementIterator == subsubsubelementIterator->second->structValue->end()) {
                         subsubsubelementIterator->second->structValue->emplace(subsubsubelement.first, subsubsubelement.second);
@@ -1948,7 +1984,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
                       }
 
                       if (subsubsubelement.second->type == BaseLib::VariableType::tStruct) {
-                        for (auto &subsubsubsubelement: *subsubsubelement.second->structValue) {
+                        for (auto &subsubsubsubelement : *subsubsubelement.second->structValue) {
                           auto subsubsubsubsubelementIterator = subsubsubsubelementIterator->second->structValue->find(subsubsubsubelement.first);
                           if (subsubsubsubsubelementIterator == subsubsubsubelementIterator->second->structValue->end()) {
                             subsubsubsubelementIterator->second->structValue->emplace(subsubsubsubelement.first, subsubsubsubelement.second);
@@ -1961,7 +1997,9 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
                             (*(*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first]->structValue)[subsubsubsubelement.first] =
                                 subsubsubsubelement.second;
                         }
-                      } else (*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first] = subsubsubelement.second;
+                      } else
+                        (*(*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first]->structValue)[subsubsubelement.first] =
+                            subsubsubelement.second;
                     }
                   } else (*(*(*decodedContent->structValue)[element.first]->structValue)[subelement.first]->structValue)[subsubelement.first] = subsubelement.second;
                 }
@@ -2086,11 +2124,11 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
           auto responseJson = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           responseJson->arrayValue->reserve(directories.size() + files.size());
 
-          for (auto &directory: directories) {
+          for (auto &directory : directories) {
             responseJson->arrayValue->push_back(std::make_shared<BaseLib::Variable>(directory.substr(0, directory.size() - 1)));
           }
 
-          for (auto &file: files) {
+          for (auto &file : files) {
             auto fileEntry = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             fileEntry->structValue->emplace("fn", std::make_shared<BaseLib::Variable>(file));
             responseJson->arrayValue->push_back(fileEntry);
@@ -2115,7 +2153,7 @@ std::string NodeBlueServer::handleGet(std::string &path, BaseLib::Http &http, st
 
         std::string ending;
         int32_t pos = webrootPath.find_last_of('.');
-        if (pos != (signed)std::string::npos && (unsigned)pos < webrootPath.size() - 1) ending = webrootPath.substr(pos + 1);
+        if (pos != (signed) std::string::npos && (unsigned) pos < webrootPath.size() - 1) ending = webrootPath.substr(pos + 1);
         BaseLib::HelperFunctions::toLower(ending);
         responseEncoding = http.getMimeType(ending);
         if (responseEncoding.empty()) responseEncoding = "application/octet-stream";
@@ -2163,7 +2201,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
 #else
   try {
     bool loginValid = false;
-    for (auto &element: _anonymousPaths) {
+    for (auto &element : _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -2216,7 +2254,7 @@ std::string NodeBlueServer::handlePost(std::string &path, BaseLib::Http &http, s
       auto subdirectoryParts = BaseLib::HelperFunctions::splitAll(subdirectories, '/');
       if (subdirectoryParts.empty()) return "";
 
-      for (int32_t i = 0; i < (signed)subdirectoryParts.size() - 1; i++) {
+      for (int32_t i = 0; i < (signed) subdirectoryParts.size() - 1; i++) {
         libraryDirectory += subdirectoryParts.at(i) + '/';
         if (!BaseLib::Io::directoryExists(libraryDirectory)) {
           if (!BaseLib::Io::createDirectory(libraryDirectory, S_IRWXU | S_IRWXG)) return "";
@@ -2386,7 +2424,7 @@ std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
 
   {
     auto contentTypeParts = BaseLib::HelperFunctions::splitAll(http.getHeader().contentTypeFull, ';');
-    for (auto &part: contentTypeParts) {
+    for (auto &part : contentTypeParts) {
       BaseLib::HelperFunctions::trim(part);
       auto pair = BaseLib::HelperFunctions::splitFirst(part, '=');
       BaseLib::HelperFunctions::toLower(pair.first);
@@ -2400,18 +2438,18 @@ std::string NodeBlueServer::processNodeUpload(BaseLib::Http &http) {
   if (boundary.empty()) return R"({"result":"error","error":"Could not interprete data."})";
 
   auto &content = http.getContent();
-  auto end = (char *)memmem(content.data(), content.size(), (boundary + "--").c_str(), boundary.size() + 2);
+  auto end = (char *) memmem(content.data(), content.size(), (boundary + "--").c_str(), boundary.size() + 2);
   if (!end) return R"({"result":"error","error":"Could not interprete data."})";
-  auto start = (char *)memmem(content.data(), content.size(), (boundary).c_str(), boundary.size());
+  auto start = (char *) memmem(content.data(), content.size(), (boundary).c_str(), boundary.size());
   if (!start) return R"({"result":"error","error":"Could not interprete data."})";
 
   std::vector<char> data(start + boundary.size() + 2, end - 4);
-  char *headerEnd = (char *)memmem(data.data(), data.size(), "\r\n\r\n", 4);
+  char *headerEnd = (char *) memmem(data.data(), data.size(), "\r\n\r\n", 4);
   if (!headerEnd) return R"({"result":"error","error":"Could not interprete data."})";
   std::string header(data.data(), headerEnd - data.data());
   auto headerLines = BaseLib::HelperFunctions::splitAll(header, '\n');
   std::string contentType;
-  for (auto &line: headerLines) {
+  for (auto &line : headerLines) {
     auto pair = BaseLib::HelperFunctions::splitFirst(line, ':');
     BaseLib::HelperFunctions::trim(pair.first);
     BaseLib::HelperFunctions::toLower(pair.first);
@@ -2511,7 +2549,7 @@ std::string NodeBlueServer::handleDelete(std::string &path, BaseLib::Http &http,
 #else
   try {
     bool loginValid = false;
-    for (auto &element: _anonymousPaths) {
+    for (auto &element : _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -2611,7 +2649,7 @@ std::string NodeBlueServer::handlePut(std::string &path, BaseLib::Http &http, st
 #else
   try {
     bool loginValid = false;
-    for (auto &element: _anonymousPaths) {
+    for (auto &element : _anonymousPaths) {
       if (path.size() >= 9 + element.size() && path.compare(9, element.size(), element) == 0) {
         loginValid = true;
         break;
@@ -2671,9 +2709,9 @@ BaseLib::PVariable NodeBlueServer::getVariablesInRole(BaseLib::PRpcClientInfo cl
     auto inputChannels = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     auto outputChannels = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
     std::lock_guard<std::mutex> nodeInfoGuard(_nodeInfoMapMutex);
-    for (auto &nodeInfo: _nodeInfoMap) {
+    for (auto &nodeInfo : _nodeInfoMap) {
       if (peerId == 0 || peerId == 0x50000001) {
-        for (auto &output: nodeInfo.second.outputRoles) {
+        for (auto &output : nodeInfo.second.outputRoles) {
           if (output.second == roleId) {
             if (!clientInfo->acls->checkNodeBlueVariableWriteAccess(nodeInfo.first, output.first)) continue;
 
@@ -2686,7 +2724,7 @@ BaseLib::PVariable NodeBlueServer::getVariablesInRole(BaseLib::PRpcClientInfo cl
 
             auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
-            roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)BaseLib::RoleDirection::output));
+            roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t) BaseLib::RoleDirection::output));
             roleStruct->structValue->emplace("level", std::make_shared<BaseLib::Variable>((roleId / 10000) * 10000 == roleId ? 0 : ((roleId / 100) * 100 == roleId ? 1 : 2)));
 
             channelIterator->second->structValue->emplace(nodeInfo.first, roleStruct);
@@ -2716,14 +2754,14 @@ uint32_t NodeBlueServer::flowCount() {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     uint32_t count = 0;
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array());
       BaseLib::PVariable response = sendRequest(client, "flowCount", parameters, true);
       count += response->integerValue;
@@ -2753,7 +2791,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
 
     if (id != 0 && id != 0x50000001) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family: families) {
+      for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (peer) break;
@@ -2766,7 +2804,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
       BaseLib::PArray newValues = std::make_shared<BaseLib::Array>();
       newVariables->reserve(variables->size());
       newValues->reserve(values->size());
-      for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
+      for (int32_t i = 0; i < (int32_t) variables->size(); i++) {
         if (id == 0) {
           if (_nodeBlueClientInfo->acls->variablesBuildingPartsRoomsCategoriesRolesReadSet()) {
             auto systemVariable = GD::systemVariableController->getInternal(variables->at(i));
@@ -2795,13 +2833,13 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       if (peer) {
         metadata->structValue->emplace("name", std::make_shared<BaseLib::Variable>(peer->getName()));
@@ -2811,7 +2849,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
           auto categories = peer->getCategories(-1);
           auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           categoryArray->arrayValue->reserve(categories.size());
-          for (auto category: categories) {
+          for (auto category : categories) {
             categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
           }
           metadata->structValue->emplace("categories", categoryArray);
@@ -2825,7 +2863,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
             auto categories = peer->getCategories(channel);
             auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categoryArray->arrayValue->reserve(categories.size());
-            for (auto category: categories) {
+            for (auto category : categories) {
               categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
             }
             metadata->structValue->emplace("channelCategories", categoryArray);
@@ -2834,7 +2872,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
           auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
           metadata->structValue->emplace("variableMetadata", variableMetadata);
 
-          for (auto &variable: *variables) {
+          for (auto &variable : *variables) {
             auto room = peer->getVariableRoom(channel, variable);
             variableMetadata->structValue->emplace("room", std::make_shared<BaseLib::Variable>(room));
 
@@ -2842,7 +2880,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
               auto categories = peer->getVariableCategories(channel, variable);
               auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
               categoryArray->arrayValue->reserve(categories.size());
-              for (auto category: categories) {
+              for (auto category : categories) {
                 categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
               }
               variableMetadata->structValue->emplace("categories", categoryArray);
@@ -2851,10 +2889,10 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
             {
               auto roles = peer->getVariableRoles(channel, variable);
               auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-              for (auto &role: roles) {
+              for (auto &role : roles) {
                 auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
-                roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
+                roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t) role.second.direction));
                 if (role.second.invert) roleStruct->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(role.second.invert));
                 rolesArray->arrayValue->emplace_back(std::move(roleStruct));
               }
@@ -2867,7 +2905,7 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
         auto variableMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
         metadata->structValue->emplace("variableMetadata", variableMetadata);
 
-        for (auto &variable: *variables) {
+        for (auto &variable : *variables) {
           auto systemVariable = GD::systemVariableController->getInternal(variable);
           if (!systemVariable) continue;
 
@@ -2875,16 +2913,16 @@ void NodeBlueServer::broadcastEvent(std::string &source, uint64_t id, int32_t ch
 
           auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           categoryArray->arrayValue->reserve(systemVariable->categories.size());
-          for (auto category: systemVariable->categories) {
+          for (auto category : systemVariable->categories) {
             categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
           }
           variableMetadata->structValue->emplace("categories", categoryArray);
 
           auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-          for (auto &role: systemVariable->roles) {
+          for (auto &role : systemVariable->roles) {
             auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
-            roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
+            roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t) role.second.direction));
             if (role.second.invert) roleStruct->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(role.second.invert));
             rolesArray->arrayValue->emplace_back(std::move(roleStruct));
           }
@@ -2921,13 +2959,13 @@ void NodeBlueServer::broadcastFlowVariableEvent(std::string &flowId, std::string
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(flowId));
@@ -2954,13 +2992,13 @@ void NodeBlueServer::broadcastGlobalVariableEvent(std::string &variable, BaseLib
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(variable));
@@ -2987,7 +3025,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
 
     if (serviceMessage->peerId > 0) {
       auto families = GD::familyController->getFamilies();
-      for (auto &family: families) {
+      for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(serviceMessage->peerId);
         if (peer) break;
@@ -3003,13 +3041,13 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto metadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
       if (peer) {
         metadata->structValue->emplace("name", std::make_shared<BaseLib::Variable>(peer->getName()));
@@ -3019,7 +3057,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
           auto categories = peer->getCategories(-1);
           auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
           categoryArray->arrayValue->reserve(categories.size());
-          for (auto category: categories) {
+          for (auto category : categories) {
             categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
           }
           metadata->structValue->emplace("categories", categoryArray);
@@ -3033,7 +3071,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
             auto categories = peer->getCategories(serviceMessage->channel);
             auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
             categoryArray->arrayValue->reserve(categories.size());
-            for (auto category: categories) {
+            for (auto category : categories) {
               categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
             }
             metadata->structValue->emplace("channelCategories", categoryArray);
@@ -3050,7 +3088,7 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
               auto categories = peer->getVariableCategories(serviceMessage->channel, serviceMessage->variable);
               auto categoryArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
               categoryArray->arrayValue->reserve(categories.size());
-              for (auto category: categories) {
+              for (auto category : categories) {
                 categoryArray->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(category));
               }
               variableMetadata->structValue->emplace("categories", categoryArray);
@@ -3059,10 +3097,10 @@ void NodeBlueServer::broadcastServiceMessage(const BaseLib::PServiceMessage &ser
             {
               auto roles = peer->getVariableRoles(serviceMessage->channel, serviceMessage->variable);
               auto rolesArray = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-              for (auto &role: roles) {
+              for (auto &role : roles) {
                 auto roleStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 roleStruct->structValue->emplace("id", std::make_shared<BaseLib::Variable>(role.second.id));
-                roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t)role.second.direction));
+                roleStruct->structValue->emplace("direction", std::make_shared<BaseLib::Variable>((int32_t) role.second.direction));
                 if (role.second.invert) roleStruct->structValue->emplace("invert", std::make_shared<BaseLib::Variable>(role.second.invert));
                 rolesArray->arrayValue->emplace_back(std::move(roleStruct));
               }
@@ -3095,12 +3133,12 @@ void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const
     if (!_nodeBlueClientInfo->acls->checkEventServerMethodAccess("newDevices")) return;
     if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family: families) {
+      for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
-        if (central && central->peerExists((uint64_t)ids.front())) //All ids are from the same family
+        if (central && central->peerExists((uint64_t) ids.front())) //All ids are from the same family
         {
-          for (auto id: ids) {
-            auto peer = central->getPeer((uint64_t)id);
+          for (auto id : ids) {
+            auto peer = central->getPeer((uint64_t) id);
             if (!peer || !_nodeBlueClientInfo->acls->checkDeviceReadAccess(peer)) return;
           }
         }
@@ -3111,13 +3149,13 @@ void NodeBlueServer::broadcastNewDevices(const std::vector<uint64_t> &ids, const
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceDescriptions});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastNewDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastNewDevices\". Queue is full.");
@@ -3138,13 +3176,13 @@ void NodeBlueServer::broadcastDeleteDevices(const BaseLib::PVariable &deviceInfo
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array{deviceInfo});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastDeleteDevices", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastDeleteDevices\". Queue is full.");
@@ -3166,7 +3204,7 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     if (_nodeBlueClientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesReadSet()) {
       std::shared_ptr<BaseLib::Systems::Peer> peer;
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family: families) {
+      for (auto &family : families) {
         std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
         if (central) peer = central->getPeer(id);
         if (!peer || !_nodeBlueClientInfo->acls->checkDeviceReadAccess(peer)) return;
@@ -3177,13 +3215,13 @@ void NodeBlueServer::broadcastUpdateDevice(uint64_t id, int32_t channel, int32_t
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       BaseLib::PArray parameters(new BaseLib::Array{std::make_shared<BaseLib::Variable>(id), std::make_shared<BaseLib::Variable>(channel), std::make_shared<BaseLib::Variable>(hint)});
       std::shared_ptr<BaseLib::IQueueEntry> queueEntry = std::make_shared<QueueEntry>(client, "broadcastUpdateDevice", parameters);
       if (!enqueue(2, queueEntry)) printQueueFullError(_out, "Error: Could not queue RPC method call \"broadcastUpdateDevice\". Queue is full.");
@@ -3203,13 +3241,13 @@ void NodeBlueServer::broadcastStatus(const std::string &nodeId, const BaseLib::P
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
@@ -3232,14 +3270,14 @@ void NodeBlueServer::broadcastError(const std::string &nodeId, int32_t level, co
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
     bool handled = false;
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(nodeId));
@@ -3279,13 +3317,13 @@ void NodeBlueServer::broadcastVariableProfileStateChanged(uint64_t profileId, bo
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(2);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(profileId));
@@ -3310,13 +3348,13 @@ void NodeBlueServer::broadcastUiNotificationCreated(uint64_t uiNotificationId) {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
 
@@ -3339,13 +3377,13 @@ void NodeBlueServer::broadcastUiNotificationRemoved(uint64_t uiNotificationId) {
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
 
@@ -3368,13 +3406,13 @@ void NodeBlueServer::broadcastUiNotificationAction(uint64_t uiNotificationId, co
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(uiNotificationId));
@@ -3400,13 +3438,13 @@ void NodeBlueServer::broadcastRawPacketEvent(int32_t familyId, const std::string
     {
       std::lock_guard<std::mutex> stateGuard(_stateMutex);
       clients.reserve(_clients.size());
-      for (auto &client: _clients) {
+      for (auto &client : _clients) {
         if (client.second->closed) continue;
         clients.push_back(client.second);
       }
     }
 
-    for (auto &client: clients) {
+    for (auto &client : clients) {
       auto parameters = std::make_shared<BaseLib::Array>();
       parameters->reserve(3);
       parameters->emplace_back(std::make_shared<BaseLib::Variable>(familyId));
@@ -3448,7 +3486,8 @@ void NodeBlueServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
         _lastQueueSlowErrorCounter = 0;
         _out.printWarning(
-            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
+            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time)
+                + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
                 + std::to_string(_lastQueueSlowErrorCounter));
       }
     }
@@ -3544,7 +3583,7 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData &clientData, std::ve
   try {
     int32_t totallySentBytes = 0;
     std::lock_guard<std::mutex> sendGuard(clientData->sendMutex);
-    while (totallySentBytes < (signed)data.size()) {
+    while (totallySentBytes < (signed) data.size()) {
       int32_t sentBytes = ::send(clientData->fileDescriptor->descriptor, data.data() + totallySentBytes, data.size() - totallySentBytes, MSG_NOSIGNAL);
       if (sentBytes == -1) {
         if (errno == EAGAIN) continue;
@@ -3565,11 +3604,8 @@ BaseLib::PVariable NodeBlueServer::send(PNodeBlueClientData &clientData, std::ve
 
 BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters, bool wait) {
   try {
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = false;
-      _lifetick1.first = BaseLib::HelperFunctions::getTime();
-    }
+    lifetick_1_.first = BaseLib::HelperFunctions::getTime();
+    lifetick_1_.second = false;
 
     int32_t packetId;
     {
@@ -3605,13 +3641,9 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData &clientData, 
       std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
       clientData->rpcResponses.erase(packetId);
       if (!wait) {
-        {
-          std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-          _lifetick1.second = true;
-        }
+        lifetick_1_.second = true;
         return std::make_shared<BaseLib::Variable>();
-      }
-      else return result;
+      } else return result;
     }
 
     int32_t i = 0;
@@ -3626,18 +3658,14 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData &clientData, 
     }
 
     if (!response->finished || (response->response && response->response->arrayValue->size() != 2) || response->packetId != packetId) {
-      _out.printError("Error: No or invalid response received to RPC request. Method: " + methodName + "." + (response->response ? " Response was: " + response->response->print(false, false, true) : ""));
+      _out.printError(
+          "Error: No or invalid response received to RPC request. Method: " + methodName + "." + (response->response ? " Response was: " + response->response->print(false, false, true) : ""));
       result = BaseLib::Variable::createError(-1, "No response received.");
     } else result = response->response->arrayValue->at(1);
 
     {
       std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
       clientData->rpcResponses.erase(packetId);
-    }
-
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = true;
     }
 
     return result;
@@ -3648,27 +3676,20 @@ BaseLib::PVariable NodeBlueServer::sendRequest(PNodeBlueClientData &clientData, 
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_1_.second = true;
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void NodeBlueServer::sendResponse(PNodeBlueClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable) {
   try {
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = false;
-      _lifetick2.first = BaseLib::HelperFunctions::getTime();
-    }
+    lifetick_2_.first = BaseLib::HelperFunctions::getTime();
+    lifetick_2_.second = false;
 
     BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
     std::vector<char> data;
     _rpcEncoder->encodeResponse(array, data);
     if (GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::nodeBlue, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
     send(clientData, data);
-
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = true;
-    }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3676,6 +3697,7 @@ void NodeBlueServer::sendResponse(PNodeBlueClientData &clientData, BaseLib::PVar
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_2_.second = true;
 }
 
 void NodeBlueServer::mainThread() {
@@ -3699,7 +3721,7 @@ void NodeBlueServer::mainThread() {
         {
           std::lock_guard<std::mutex> stateGuard(_stateMutex);
           clients.reserve(_clients.size());
-          for (auto &client: _clients) {
+          for (auto &client : _clients) {
             if (client.second->closed) continue;
             if (client.second->fileDescriptor->descriptor == -1) {
               client.second->closed = true;
@@ -3714,9 +3736,10 @@ void NodeBlueServer::mainThread() {
         maxfd = _serverFileDescriptor->descriptor;
         FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
 
-        for (auto &client: clients) {
+        for (auto &client : clients) {
           int32_t descriptor = client->fileDescriptor->descriptor;
-          if (descriptor == -1) continue; //Never pass -1 to FD_SET => undefined behaviour. This is just a safety precaution, because the file descriptor manager is locked and descriptors shouldn't be modified.
+          if (descriptor == -1)
+            continue; //Never pass -1 to FD_SET => undefined behaviour. This is just a safety precaution, because the file descriptor manager is locked and descriptors shouldn't be modified.
           FD_SET(descriptor, &readFileDescriptor);
           if (descriptor > maxfd) maxfd = descriptor;
         }
@@ -3735,7 +3758,8 @@ void NodeBlueServer::mainThread() {
       if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown) {
         sockaddr_un clientAddress{};
         socklen_t addressSize = sizeof(addressSize);
-        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize, SOCK_CLOEXEC));
+        std::shared_ptr<BaseLib::FileDescriptor>
+            clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize, SOCK_CLOEXEC));
         if (!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
         _out.printInfo("Info: Connection accepted. Client number: " + std::to_string(clientFileDescriptor->id));
 
@@ -3788,7 +3812,7 @@ void NodeBlueServer::mainThread() {
 
 PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount) {
   try {
-    if (GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
+    if (GD::bl->settings.maxNodeThreadsPerProcess() != -1 && maxThreadCount > (unsigned) GD::bl->settings.maxNodeThreadsPerProcess()) {
       _out.printError("Error: Could not get flow process, because maximum number of threads in flow is greater than the number of threads allowed per flow process.");
       return PNodeBlueProcess();
     }
@@ -3796,9 +3820,9 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount) {
     std::lock_guard<std::mutex> processGuard(_newProcessMutex);
     {
       std::lock_guard<std::mutex> processGuard2(_processMutex);
-      for (auto &process: _processes) {
+      for (auto &process : _processes) {
         if (process.second->getClientData()->closed) continue;
-        if (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || process.second->nodeThreadCount() + maxThreadCount <= (unsigned)GD::bl->settings.maxNodeThreadsPerProcess()) {
+        if (GD::bl->settings.maxNodeThreadsPerProcess() == -1 || process.second->nodeThreadCount() + maxThreadCount <= (unsigned) GD::bl->settings.maxNodeThreadsPerProcess()) {
           process.second->lastExecution = BaseLib::HelperFunctions::getTime();
           return process.second;
         }
@@ -3824,7 +3848,7 @@ PNodeBlueProcess NodeBlueServer::getFreeProcess(uint32_t maxThreadCount) {
       }
 
       std::unique_lock<std::mutex> requestLock(_processRequestMutex);
-      process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&] { return (bool)(process->getClientData()) || process->getExited(); });
+      process->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(120000), [&] { return (bool) (process->getClientData()) || process->getExited(); });
 
       if (!process->getClientData()) {
         std::lock_guard<std::mutex> processGuard2(_processMutex);
@@ -3861,7 +3885,7 @@ void NodeBlueServer::readClient(PNodeBlueClientData &clientData) {
       return;
     }
 
-    if (bytesRead > (signed)clientData->buffer.size()) bytesRead = clientData->buffer.size();
+    if (bytesRead > (signed) clientData->buffer.size()) bytesRead = clientData->buffer.size();
 
     try {
       processedBytes = 0;
@@ -3939,7 +3963,7 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket) {
       return false;
     }
     int32_t reuseAddress = 1;
-    if (setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void *)&reuseAddress, sizeof(int32_t)) == -1) {
+    if (setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void *) &reuseAddress, sizeof(int32_t)) == -1) {
       GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
       _out.printCritical("Critical: Couldn't set socket options: " + _socketPath + ". Flows won't work correctly. Error: " + strerror(errno));
       return false;
@@ -3954,7 +3978,7 @@ bool NodeBlueServer::getFileDescriptor(bool deleteOldSocket) {
     }
     strncpy(serverAddress.sun_path, _socketPath.c_str(), 104);
     serverAddress.sun_path[103] = 0; //Just to make sure the string is null terminated.
-    bool bound = (bind(_serverFileDescriptor->descriptor.load(), (sockaddr *)&serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
+    bool bound = (bind(_serverFileDescriptor->descriptor.load(), (sockaddr *) &serverAddress, strlen(serverAddress.sun_path) + 1 + sizeof(serverAddress.sun_family)) != -1);
     if (_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1) {
       GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
       _out.printCritical("Critical: Flows server could not start listening. Error: " + std::string(strerror(errno)));
@@ -3998,7 +4022,7 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, const std::unordered_m
 
     {
       std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
-      for (auto &node: flowNodes) {
+      for (auto &node : flowNodes) {
         auto type = node.second->structValue->at("type")->stringValue;
         _nodeInfoMap.emplace(node.first, NodeServerInfo{clientData->id, type, _nodeManager->getNodeCodeType(type)});
       }
@@ -4022,7 +4046,7 @@ void NodeBlueServer::startFlow(PFlowInfoServer &flowInfo, const std::unordered_m
 
       {
         std::lock_guard<std::mutex> nodeInfoMapGuard(_nodeInfoMapMutex);
-        for (auto &node: flowNodes) {
+        for (auto &node : flowNodes) {
           _nodeInfoMap.erase(node.first);
         }
       }
@@ -4079,7 +4103,7 @@ BaseLib::PVariable NodeBlueServer::addNodesToFlow(const std::string &tab, const 
       }
 
       auto nodeIdReplacementStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-      for (auto &entry: nodeIdReplacementMap) {
+      for (auto &entry : nodeIdReplacementMap) {
         nodeIdReplacementStruct->structValue->emplace(entry.first, std::make_shared<BaseLib::Variable>(entry.second));
       }
 
@@ -4287,7 +4311,12 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData &clientDat
     bool wait = false;
     if (parameters->size() == 4) {
       filename = parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.find_last_of('/') + 1);
-      scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode, parameters->at(0), parameters->at(1)->stringValue, filename, parameters->at(2)->integerValue, parameters->at(3));
+      scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::simpleNode,
+                                                                       parameters->at(0),
+                                                                       parameters->at(1)->stringValue,
+                                                                       filename,
+                                                                       parameters->at(2)->integerValue,
+                                                                       parameters->at(3));
       auto internalMessagesIterator = parameters->at(3)->structValue->find("_internal");
       if (internalMessagesIterator != parameters->at(3)->structValue->end()) {
         auto synchronousOutputIterator = internalMessagesIterator->second->structValue->find("synchronousOutput");
@@ -4298,7 +4327,8 @@ BaseLib::PVariable NodeBlueServer::executePhpNode(PNodeBlueClientData &clientDat
       uint32_t threadCount = 0;
       auto threadCountIterator = _maxThreadCounts.find(parameters->at(0)->stringValue);
       if (threadCountIterator != _maxThreadCounts.end()) threadCount = threadCountIterator->second;
-      scriptInfo = std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCount);
+      scriptInfo =
+          std::make_shared<BaseLib::ScriptEngine::ScriptInfo>(BaseLib::ScriptEngine::ScriptInfo::ScriptType::statefulNode, parameters->at(1), parameters->at(2)->stringValue, filename, threadCount);
     }
     GD::scriptEngineServer->executeScript(scriptInfo, wait);
     return std::make_shared<BaseLib::Variable>();
@@ -4391,7 +4421,9 @@ BaseLib::PVariable NodeBlueServer::invokeNodeMethod(PNodeBlueClientData &clientD
 BaseLib::PVariable NodeBlueServer::invokeIpcProcessMethod(PNodeBlueClientData &clientData, BaseLib::PArray &parameters) {
   try {
     if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Method expects exactly three parameters.");
-    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "First parameter is not of type Integer.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64)
+      return BaseLib::Variable::createError(-1,
+                                            "First parameter is not of type Integer.");
     if (parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Second parameter is not of type String.");
     if (parameters->at(2)->type != BaseLib::VariableType::tArray) return BaseLib::Variable::createError(-1, "Third parameter is not of type Array.");
 
@@ -4412,7 +4444,8 @@ BaseLib::PVariable NodeBlueServer::nodeEvent(PNodeBlueClientData &clientData, Ba
       _nodeEventCounter = 0;
     }
 
-    if ((parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 || parameters->at(1)->stringValue.compare(0, 14, "highlightLink/") == 0) && _nodeEventCounter > _bl->settings.nodeBlueEventLimit1())
+    if ((parameters->at(1)->stringValue.compare(0, 14, "highlightNode/") == 0 || parameters->at(1)->stringValue.compare(0, 14, "highlightLink/") == 0)
+        && _nodeEventCounter > _bl->settings.nodeBlueEventLimit1())
       return std::make_shared<BaseLib::Variable>();
     else if (parameters->at(1)->stringValue != "debug" && _nodeEventCounter > _bl->settings.nodeBlueEventLimit2()) return std::make_shared<BaseLib::Variable>();
     else if (_nodeEventCounter > _bl->settings.nodeBlueEventLimit3()) return std::make_shared<BaseLib::Variable>();
@@ -4471,7 +4504,7 @@ BaseLib::PVariable NodeBlueServer::registerUiNodeRoles(PNodeBlueClientData &clie
     auto nodeInfoIterator = _nodeInfoMap.find(nodeId);
     if (nodeInfoIterator == _nodeInfoMap.end()) return std::make_shared<BaseLib::Variable>();
 
-    for (auto &role: *roles) {
+    for (auto &role : *roles) {
       if (role.first.at(0) == 'o') {
         nodeInfoIterator->second.outputRoles.emplace(BaseLib::Math::getUnsignedNumber(role.first.substr(1)), role.second->integerValue);
       }
