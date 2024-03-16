@@ -615,6 +615,22 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv c1-ssh-${1}* c1-ssh-${1}
 
+	if [[ "$distribution" == "Ubuntu" ]] && [[ "$distributionVersion" == "jammy" ]]; then
+	  	wget --https-only https://gitit.de/api/v4/projects/457/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+    	[ $? -ne 0 ] && exit 1
+    	unzip master.zip
+    	[ $? -ne 0 ] && exit 1
+    	rm master.zip
+    	mv libc1-util-master* libc1-util-${1}
+
+    	wget --https-only https://gitit.de/api/v4/projects/449/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
+      [ $? -ne 0 ] && exit 1
+      unzip master.zip
+      [ $? -ne 0 ] && exit 1
+      rm master.zip
+      mv libc1-module-master* libc1-module-${1}
+	fi
+
 #  if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 #    wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 #    [ $? -ne 0 ] && exit 1
@@ -662,6 +678,24 @@ if test -f libhomegear-ipc*.deb; then
 else
 	echo "Error building libhomegear-ipc."
 	exit 1
+fi
+
+if [[ -n $2 ]] && [[ "$distribution" == "Ubuntu" ]] && [[ "$distributionVersion" == "jammy" ]]; then
+  createPackage libc1-util $1 libc1-util 0
+  if test -f libc1-util*.deb; then
+  	dpkg -i libc1-util*.deb
+  else
+  	echo "Error building libc1-util."
+  	exit 1
+  fi
+
+  createPackage libc1-module $1 libc1-module 0
+  if test -f libc1-module*.deb; then
+    dpkg -i libc1-module*.deb
+  else
+    echo "Error building libc1-module."
+    exit 1
+  fi
 fi
 
 createPackageWithoutAutomake python3-homegear $1 python3-homegear 0
