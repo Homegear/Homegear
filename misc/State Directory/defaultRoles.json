@@ -2874,6 +2874,14 @@
     }
   },
   {
+    "id": "90.04.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
+  },
+  {
     "id": "90.05.00",
     "translations": {
       "de-CH": "Kältemengenzähler",
@@ -2898,6 +2906,46 @@
       "en-US": "Consumption"
     },
     "aggregation": "count"
+  },
+  {
+    "id": "90.05.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.05.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.05.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.05.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.05.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
   },
   {
     "id": "90.06.00",
@@ -3036,6 +3084,14 @@
     }
   },
   {
+    "id": "90.05.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
+  },
+  {
     "id": "90.10.00",
     "translations": {
       "de-CH": "Wärmemengenzähler Sonnenkollektor",
@@ -3094,6 +3150,14 @@
     }
   },
   {
+    "id": "90.05.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
+  },
+  {
     "id": "90.11.00",
     "translations": {
       "de-CH": "Wärmemengenzähler Wärmepumpe",
@@ -3149,6 +3213,14 @@
       "de-CH": "Volumen",
       "de-DE": "Volumen",
       "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.05.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
     }
   },
   {
