@@ -566,17 +566,6 @@
     }
   },
   {
-    "id": "20.10.23",
-    "types": [
-      "float"
-    ],
-    "translations": {
-      "de-CH": "Heizung - Temperatur technischer Speicher",
-      "de-DE": "Heizung - Temperatur technischer Speicher",
-      "en-US": "heating system - heat accumulator temperature"
-    }
-  },
-  {
     "id": "20.11.00",
     "translations": {
       "de-CH": "Druckhaltestation",
@@ -2782,36 +2771,36 @@
   {
     "id": "90.03.01",
     "translations": {
-      "de-CH": "Zählerstand Volumen",
-      "de-DE": "Zählerstand Volumen",
-      "en-US": "Meter reading volume"
+      "de-CH": "Zählerstand (Volumen)",
+      "de-DE": "Zählerstand (Volumen)",
+      "en-US": "Meter reading (volume)"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.03.02",
     "translations": {
-      "de-CH": "Verbrauch Volumen",
-      "de-DE": "Verbrauch Volumen",
-      "en-US": "Consumption volume"
+      "de-CH": "Verbrauch (Volumen)",
+      "de-DE": "Verbrauch (Volumen)",
+      "en-US": "Consumption (volume)"
     },
     "aggregation": "count"
   },
   {
     "id": "90.03.03",
     "translations": {
-      "de-CH": "Zählerstand Energie",
-      "de-DE": "Zählerstand Energie",
-      "en-US": "Consumption energy"
+      "de-CH": "Zählerstand (Energie)",
+      "de-DE": "Zählerstand (Energie)",
+      "en-US": "Consumption (energy)"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.03.04",
     "translations": {
-      "de-CH": "Verbrauch Energie",
-      "de-DE": "Verbrauch Energie",
-      "en-US": "Consumption energy"
+      "de-CH": "Verbrauch (Energie)",
+      "de-DE": "Verbrauch (Energie)",
+      "en-US": "Consumption (energy)"
     },
     "aggregation": "count"
   },
@@ -3084,14 +3073,6 @@
     }
   },
   {
-    "id": "90.05.07",
-    "translations": {
-      "de-CH": "Leistung",
-      "de-DE": "Leistung",
-      "en-US": "Thermal power"
-    }
-  },
-  {
     "id": "90.10.00",
     "translations": {
       "de-CH": "Wärmemengenzähler Sonnenkollektor",
@@ -3150,14 +3131,6 @@
     }
   },
   {
-    "id": "90.05.07",
-    "translations": {
-      "de-CH": "Leistung",
-      "de-DE": "Leistung",
-      "en-US": "Thermal power"
-    }
-  },
-  {
     "id": "90.11.00",
     "translations": {
       "de-CH": "Wärmemengenzähler Wärmepumpe",
@@ -3213,14 +3186,6 @@
       "de-CH": "Volumen",
       "de-DE": "Volumen",
       "en-US": "Volume"
-    }
-  },
-  {
-    "id": "90.05.07",
-    "translations": {
-      "de-CH": "Leistung",
-      "de-DE": "Leistung",
-      "en-US": "Thermal power"
     }
   },
   {
@@ -3306,9 +3271,57 @@
   {
     "id": "02.01.01",
     "translations": {
-      "de-CH": "RSSI",
-      "de-DE": "RSSI",
-      "en-US": "RSSI"
+      "de-CH": "RSRP",
+      "de-DE": "RSRP",
+      "en-US": "RSRP"
+    }
+  },
+  {
+    "id": "02.01.02",
+    "translations": {
+      "de-CH": "RSRQ",
+      "de-DE": "RSRQ",
+      "en-US": "RSRQ"
+    }
+  },
+  {
+    "id": "02.01.03",
+    "translations": {
+      "de-CH": "Coverage extension",
+      "de-DE": "Coverage extension",
+      "en-US": "coverage extension"
+    }
+  },
+  {
+    "id": "02.01.04",
+    "translations": {
+      "de-CH": "NB-IoT-Reset-Zähler",
+      "de-DE": "NB-IoT-Reset-Zähler",
+      "en-US": "NB-IoT reset counter"
+    }
+  },
+  {
+    "id": "02.01.05",
+    "translations": {
+      "de-CH": "Gesamt-Onboardingzeit",
+      "de-DE": "Gesamt-Onboardingzeit",
+      "en-US": "Total onboarding time"
+    }
+  },
+  {
+    "id": "02.01.06",
+    "translations": {
+      "de-CH": "Angelernte Geräte",
+      "de-DE": "Angelernte Geräte",
+      "en-US": "Paired devices"
+    }
+  },
+  {
+    "id": "02.01.07",
+    "translations": {
+      "de-CH": "NB-IoT-Sendefehler",
+      "de-DE": "NB-IoT-Sendefehler",
+      "en-US": "NB-IoT send errors"
     }
   },
   {
@@ -3558,8 +3571,8 @@
       "de-DE": "Kälte-Erzeugung",
       "en-US": "cold production"
     }
-    },
-    {
+  },
+  {
     "id": "A8.01.00",
     "translations": {
       "de-CH": "Fernkälte-Übergabestation",
@@ -3583,7 +3596,7 @@
       "en-US": "chiller"
     }
   },
-    {
+  {
     "id": "A8.04.00",
     "translations": {
       "de-CH": "Klimagerät",
@@ -3759,14 +3772,14 @@
       "en-US": "power-factor correction system"
     }
   },
-	{
-	"id": "B2.02.00",
+  {
+    "id": "B2.02.00",
     "translations": {
       "de-CH": "Mittelspannungshauptverteilung (MSHV)",
       "de-DE": "Mittelspannungshauptverteilung (MSHV)",
       "en-US": "medium voltage main distribution (MVMD)"
-	 }
-	},
+    }
+  },
   {
     "id": "B2.03.00",
     "translations": {
@@ -3814,7 +3827,7 @@
       "de-DE": "Gebäudeleitsystem",
       "en-US": "building management system"
     }
-  }, 
+  },
   {
     "id": "B8.01.00",
     "translations": {
@@ -3822,7 +3835,7 @@
       "de-DE": "Störmeldeanlage",
       "en-US": "incident messaging system"
     }
-  }, 
+  },
   {
     "id": "BA.00.00",
     "translations": {
@@ -3846,7 +3859,7 @@
       "de-DE": "Beleuchtung",
       "en-US": "lighting"
     }
-  }, 
+  },
   {
     "id": "BA.20.00",
     "translations": {
@@ -3975,7 +3988,7 @@
       "en-US": "barrier system"
     }
   },
- {
+  {
     "id": "C2.20.00",
     "translations": {
       "de-CH": "Notlichtanlage (NLA)",
@@ -4014,7 +4027,7 @@
       "de-DE": "Einbruchmeldeanlage (EMA)",
       "en-US": "intrusion detection system"
     }
-  }, 
+  },
   {
     "id": "C2.60.00",
     "translations": {
@@ -4054,7 +4067,7 @@
       "de-DE": "Brandschutz",
       "en-US": "smoke and fire protection"
     }
-  },  
+  },
   {
     "id": "C4.01.00",
     "translations": {
@@ -4063,7 +4076,7 @@
       "en-US": "fire alarm system"
     }
   },
-	{
+  {
     "id": "C4.02.00",
     "translations": {
       "de-CH": "Rauchschutzdruckanlage (RDA)",
@@ -4110,7 +4123,7 @@
       "de-DE": "Gegensprechanlage",
       "en-US": "intercom system"
     }
-  },   
+  },
   {
     "id": "FE.21.00",
     "translations": {
@@ -4134,7 +4147,7 @@
       "de-DE": "Raumreservationssystem",
       "en-US": "room reservation system"
     }
-  },    
+  },
   {
     "id": "FE.22.00",
     "translations": {
@@ -4158,7 +4171,7 @@
       "de-DE": "Rufanlage",
       "en-US": "call system"
     }
-  },     
+  },
   {
     "id": "FE.40.00",
     "translations": {
