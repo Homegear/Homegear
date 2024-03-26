@@ -185,10 +185,8 @@ class ScriptEngineServer : public BaseLib::IQueue {
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-  std::mutex _lifetick1Mutex;
-  std::pair<int64_t, bool> _lifetick1;
-  std::mutex _lifetick2Mutex;
-  std::pair<int64_t, bool> _lifetick2;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_1_;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_2_;
 
   // {{{ Debugging / Valgrinding
   pid_t _manualClientCurrentProcessId = 1;

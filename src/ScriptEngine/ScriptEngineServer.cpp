@@ -56,10 +56,10 @@ ScriptEngineServer::ScriptEngineServer() : IQueue(GD::bl.get(), 3, 100000) {
   _shuttingDown = false;
   _stopServer = false;
 
-  _lifetick1.first = 0;
-  _lifetick1.second = true;
-  _lifetick2.first = 0;
-  _lifetick2.second = true;
+  lifetick_1_.first = 0;
+  lifetick_1_.second = true;
+  lifetick_2_.first = 0;
+  lifetick_2_.second = true;
 
   _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, true);
   _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
@@ -404,16 +404,14 @@ ScriptEngineServer::~ScriptEngineServer() {
 bool ScriptEngineServer::lifetick() {
   try {
     {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      if (!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000) {
+      if (!lifetick_1_.second && BaseLib::HelperFunctions::getTime() - lifetick_1_.first > 120000) {
         _out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
         return false;
       }
     }
 
     {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      if (!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000) {
+      if (!lifetick_2_.second && BaseLib::HelperFunctions::getTime() - lifetick_2_.first > 120000) {
         _out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
         return false;
       }
@@ -1397,11 +1395,9 @@ BaseLib::PVariable ScriptEngineServer::send(PScriptEngineClientData &clientData,
 
 BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData &clientData, std::string methodName, const BaseLib::PArray &parameters, bool wait) {
   try {
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = false;
-      _lifetick1.first = BaseLib::HelperFunctions::getTime();
-    }
+    lifetick_1_.first = BaseLib::HelperFunctions::getTime();
+    lifetick_1_.second = false;
+
 
     int32_t packetId;
     {
@@ -1436,6 +1432,9 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData &clie
     if (result->errorStruct || !wait) {
       std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
       clientData->rpcResponses.erase(packetId);
+
+      lifetick_1_.second = true;
+
       if (!wait) return std::make_shared<BaseLib::Variable>();
       else return result;
     }
@@ -1461,11 +1460,7 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData &clie
       clientData->rpcResponses.erase(packetId);
     }
 
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = true;
-    }
-
+    lifetick_1_.second = true;
     return result;
   }
   catch (const std::exception &ex) {
@@ -1475,27 +1470,20 @@ BaseLib::PVariable ScriptEngineServer::sendRequest(PScriptEngineClientData &clie
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
 
+  lifetick_1_.second = true;
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void ScriptEngineServer::sendResponse(PScriptEngineClientData &clientData, BaseLib::PVariable &scriptId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable) {
   try {
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = false;
-      _lifetick2.first = BaseLib::HelperFunctions::getTime();
-    }
+    lifetick_2_.first = BaseLib::HelperFunctions::getTime();
+    lifetick_2_.second = false;
 
     BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{scriptId, packetId, variable})));
     std::vector<char> data;
     _rpcEncoder->encodeResponse(array, data);
     if (GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::scriptEngine, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
     send(clientData, data);
-
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = true;
-    }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1503,6 +1491,7 @@ void ScriptEngineServer::sendResponse(PScriptEngineClientData &clientData, BaseL
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_2_.second = true;
 }
 
 void ScriptEngineServer::mainThread() {

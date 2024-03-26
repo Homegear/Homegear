@@ -91,16 +91,16 @@ class IpcServer : public BaseLib::IQueue {
 
     QueueEntry() = default;
 
-    QueueEntry(PIpcClientData clientData, std::vector<char> &packet) {
-      this->clientData = std::move(clientData);
+    QueueEntry(PIpcClientData &clientData, std::vector<char> &packet) {
+      this->clientData = clientData;
       this->packet = packet;
     }
 
-    QueueEntry(PIpcClientData clientData, std::string methodName, BaseLib::PArray parameters) {
+    QueueEntry(PIpcClientData &clientData, const std::string &methodName, BaseLib::PArray &parameters) {
       type = QueueEntryType::broadcast;
-      this->clientData = std::move(clientData);
-      this->methodName = std::move(methodName);
-      this->parameters = std::move(parameters);
+      this->clientData = clientData;
+      this->methodName = methodName;
+      this->parameters = parameters;
     }
 
     ~QueueEntry() override = default;
@@ -140,10 +140,8 @@ class IpcServer : public BaseLib::IQueue {
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-  std::mutex _lifetick1Mutex;
-  std::pair<int64_t, bool> _lifetick1;
-  std::mutex _lifetick2Mutex;
-  std::pair<int64_t, bool> _lifetick2;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_1_;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_2_;
 
   void collectGarbage();
 

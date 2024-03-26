@@ -103,10 +103,10 @@ RpcServer::RpcServer() {
   _stopServer = false;
   _stopped = true;
 
-  _lifetick1.first = 0;
-  _lifetick1.second = true;
-  _lifetick2.first = 0;
-  _lifetick2.second = true;
+  lifetick_1_.first = 0;
+  lifetick_1_.second = true;
+  lifetick_2_.first = 0;
+  lifetick_2_.second = true;
 
   _rpcMethods = std::make_shared<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>>();
   _rpcMethods->emplace("devTest", std::make_shared<RPCDevTest>());
@@ -381,16 +381,14 @@ void RpcServer::dispose() {
 bool RpcServer::lifetick() {
   try {
     {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      if (!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000) {
+      if (!lifetick_1_.second && BaseLib::HelperFunctions::getTime() - lifetick_1_.first > 120000) {
         GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
         return false;
       }
     }
 
     {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      if (!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000) {
+      if (!lifetick_2_.second && BaseLib::HelperFunctions::getTime() - lifetick_2_.first > 120000) {
         GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
         return false;
       }
@@ -1027,9 +1025,8 @@ BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientIn
     }
 
     {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = false;
-      _lifetick1.first = BaseLib::HelperFunctions::getTime();
+      lifetick_1_.first = BaseLib::HelperFunctions::getTime();
+      lifetick_1_.second = false;
     }
 
     if (GD::bl->debugLevel >= 4) {
@@ -1047,10 +1044,7 @@ BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientIn
       ret->print(true, false);
     }
 
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = true;
-    }
+    lifetick_1_.second = true;
     return ret;
   }
   catch (const std::exception &ex) {
@@ -1059,6 +1053,7 @@ BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientIn
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_1_.second = true;
   return BaseLib::Variable::createError(-32500, ": Unknown application error.");
 }
 
@@ -1103,9 +1098,8 @@ void RpcServer::callMethod(const std::shared_ptr<Client> &client,
     }
 
     {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.first = BaseLib::HelperFunctions::getTime();
-      _lifetick2.second = false;
+      lifetick_2_.first = BaseLib::HelperFunctions::getTime();
+      lifetick_2_.second = false;
     }
 
     if (GD::bl->debugLevel >= 4 && methodName != "getNodeVariable") {
@@ -1124,11 +1118,6 @@ void RpcServer::callMethod(const std::shared_ptr<Client> &client,
       ret->print(true, false);
     }
     sendRPCResponseToClient(client, ret, messageId, responseType, keepAlive);
-
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = true;
-    }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1136,6 +1125,7 @@ void RpcServer::callMethod(const std::shared_ptr<Client> &client,
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_2_.second = true;
 }
 
 std::string RpcServer::getHttpResponseHeader(const std::string &contentType, uint32_t contentLength, bool closeConnection) {

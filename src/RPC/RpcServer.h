@@ -143,10 +143,8 @@ class RpcServer {
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<WebServer::WebServer> _webServer;
   std::unique_ptr<RestServer> _restServer;
-  std::mutex _lifetick1Mutex;
-  std::pair<int64_t, bool> _lifetick1;
-  std::mutex _lifetick2Mutex;
-  std::pair<int64_t, bool> _lifetick2;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_1_;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_2_;
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> _cloudUserMap;
 
   void collectGarbage();
