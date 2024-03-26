@@ -65,7 +65,6 @@ override_dh_auto_install:
 	if test ! -e /usr/bin/npm; then ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npm /usr/bin/npm; fi
 	# Linking this file uses /usr/bin/node_modules instead of /usr/lib/node_modules
 	if test ! -e /usr/bin/npx; then ln -s /usr/share/homegear/nodejs/lib/node_modules/npm/bin/npx /usr/bin/npx; fi
-    rm -f /usr/bin/node
 	if test ! -e /usr/bin/node; then ln -s $(CURDIR)/debian/homegear/usr/bin/homegear-node /usr/bin/node; fi
 	# This works and doesn't bite with the real Node.js if installled.
 	if test ! -e /usr/bin/node_modules; then ln -s /usr/share/homegear/nodejs/lib/node_modules /usr/bin/node_modules; fi
