@@ -135,20 +135,20 @@ if [ "$distver" == "stretch" ]; then
 	[ $? -ne 0 ] && exit 1
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 	[ $? -ne 0 ] && exit 1
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	[ $? -ne 0 ] && exit 1
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
@@ -181,7 +181,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip 
 #fi
 # }}}
 
-if [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-2-dev
 	[ $? -ne 0 ] && exit 1
 else
@@ -189,7 +189,7 @@ else
 	[ $? -ne 0 ] && exit 1
 fi
 
-if [ "$distver" != "jammy" ] && [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" != "noble" ] && [ "$distver" != "jammy" ] && [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
 	[ $? -ne 0 ] && exit 1
 fi
@@ -203,15 +203,19 @@ else
 fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "noble" ]; then
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls30-dev
+else
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
+fi
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	[ $? -ne 0 ] && exit 1
 fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8 libreadline-dev
 	[ $? -ne 0 ] && exit 1
 else
@@ -274,7 +278,7 @@ function createPackage {
 	fi' $sourcePath/debian/preinst
 	fi
 	sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "buster" ] && [ "$distributionVersion" != "bullseye" ] && [ "$distributionVersion" != "bookworm" ] && [ "$distributionVersion" != "bionic" ] && [ "$distributionVersion" != "focal" ] && [ "$distributionVersion" != "jammy" ]; then
+	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "buster" ] && [ "$distributionVersion" != "bullseye" ] && [ "$distributionVersion" != "bookworm" ] && [ "$distributionVersion" != "bionic" ] && [ "$distributionVersion" != "focal" ] && [ "$distributionVersion" != "jammy" ] && [ "$distributionVersion" != "noble" ]; then
 		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
 		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
 	fi
