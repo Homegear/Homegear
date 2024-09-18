@@ -130,19 +130,19 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "buster" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "buster" ] || [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "noble" ] ||[ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -157,16 +157,18 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ]; then
 	#When using the default "fakeroot-sysv" PHP package creation fails
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ]; then
+  echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu noble main" > $rootfs/etc/apt/sources.list.d/php8-src.list
+elif [ "$distver" == "jammy" ] || [ "$distver" == "bookworm" ]; then
   echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > $rootfs/etc/apt/sources.list.d/php8-src.list
 elif [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu focal main" > $rootfs/etc/apt/sources.list.d/php8-src.list
