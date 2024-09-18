@@ -203,11 +203,7 @@ else
 fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
-if [ "$distver" == "bookworm" ] || [ "$distver" == "noble" ]; then
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls30-dev
-else
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-fi
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
 if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	[ $? -ne 0 ] && exit 1
@@ -980,8 +976,5 @@ EOF
 rm -Rf $rootfs
 
 docker build -t homegear/build:${distlc}-${distver}-${arch} "$dir"
-if [ "$dist" == "Raspbian" ]; then
-	docker tag -f homegear/build:${distlc}-${distver}-${arch} homegear/build:${distlc}-${distver}
-fi
 
 rm -Rf $dir
