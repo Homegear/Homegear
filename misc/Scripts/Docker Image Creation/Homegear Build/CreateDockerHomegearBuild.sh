@@ -465,12 +465,6 @@ unzip ${1}.zip
 [ $? -ne 0 ] && exit 1
 rm ${1}.zip
 
-wget --https-only https://github.com/dimmu311/Homegear-Loxone/archive/${1}.zip
-[ $? -ne 0 ] && exit 1
-unzip ${1}.zip
-[ $? -ne 0 ] && exit 1
-rm ${1}.zip
-
 wget --https-only https://github.com/Homegear/Homegear-M-Bus/archive/${1}.zip
 [ $? -ne 0 ] && exit 1
 unzip ${1}.zip
@@ -729,7 +723,6 @@ createPackage Homegear-Intertechno $1 homegear-intertechno 0
 createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
 createPackage Homegear-CCU $1 homegear-ccu 0
 createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
-createPackage Homegear-Loxone $1 homegear-loxone 0
 createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
 createPackage Homegear-KNX $1 homegear-knx 1
 createPackage Homegear-EnOcean $1 homegear-enocean 1
