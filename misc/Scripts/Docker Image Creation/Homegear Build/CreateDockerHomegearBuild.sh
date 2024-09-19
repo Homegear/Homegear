@@ -205,7 +205,7 @@ fi
 # {{{ GCC, GCrypt, GNUTLS, Curl
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
 if [ "$distver" == "noble" ]; then
-  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutls30t64
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutls30t64 libnsl2
   [ $? -ne 0 ] && exit 1
 elif [ "$distver" == "bookworm" ]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutls30
