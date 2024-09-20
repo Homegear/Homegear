@@ -221,7 +221,10 @@ fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ]; then
+  DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8t64 libreadline-dev
+  [ $? -ne 0 ] && exit 1
+elif [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8 libreadline-dev
 	[ $? -ne 0 ] && exit 1
 else
