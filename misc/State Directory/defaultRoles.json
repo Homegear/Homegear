@@ -1,1854 +1,4191 @@
 [
-    {
-        "id": "10.00.00",
-        "translations": {
-            "en-US": "light",
-            "de-DE": "Licht"
-        }
-    },
-    {
-        "id": "10.00.01",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "light - state",
-            "de-DE": "Licht - Status"
-        },
-        "ui": {
-            "simpleCreationInfo": [
-                {
-                    "element": "Base.lightingSwitchBrightnessTemp",
-                    "roleIdsIn": [
-                        [
-                            100001
-                        ],
-                        [
-                            101001
-                        ],
-                        [
-                            103001
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            100001
-                        ],
-                        [
-                            101001
-                        ],
-                        [
-                            103001
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.lightingSwitchBrightness",
-                    "roleIdsIn": [
-                        [
-                            100001
-                        ],
-                        [
-                            101001
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            100001
-                        ],
-                        [
-                            101001
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.lightingSwitch",
-                    "roleIdsIn": [
-                        [
-                            100001
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            100001
-                        ]
-                    ]
-                }
-            ],
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "an",
-                    "false": "aus"
-                }
-            }
-        }
-    },
-    {
-        "id": "10.10.01",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "light - brightness",
-            "de-DE": "Licht - Helligkeit"
-        },
-        "ui": {
-            "simpleCreationInfo": [
-                {
-                    "element": "Base.lightingSwitchBrightness",
-                    "roleIdsIn": [
-                        [
-                            100001
-                        ],
-                        [
-                            101001
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            100001
-                        ],
-                        [
-                            101001
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.lightingBrightness",
-                    "roleIdsIn": [
-                        [
-                            101001
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            101001
-                        ]
-                    ]
-                }
-            ],
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "an",
-                    "false": "aus"
-                }
-            }
-        }
-    },
-    {
-        "id": "10.20.00",
-        "translations": {
-            "en-US": "light - color",
-            "de-DE": "Licht - Farbe"
-        }
-    },
-    {
-        "id": "10.20.01",
-        "types": [
-            "int"
-        ],
-        "translations": {
-            "en-US": "light - color - RGB",
-            "de-DE": "Licht - Farbe - RGB"
-        }
-    },
-    {
-        "id": "10.20.02",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "light - color - hue",
-            "de-DE": "Licht - Farbe - Farbton"
-        }
-    },
-    {
-        "id": "10.20.03",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "light - color - saturation",
-            "de-DE": "Licht - Farbe - Sättigung"
-        }
-    },
-    {
-        "id": "10.20.04",
-        "translations": {
-            "en-US": "light - color - XY",
-            "de-DE": "Licht - Farbe - XY"
-        }
-    },
-    {
-        "id": "10.30.00",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "light - cold white/warm white",
-            "de-DE": "Licht - Kaltweiß/warmweiß"
-        }
-    },
-    {
-        "id": "10.30.01",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "light - color temperature white",
-            "de-DE": "Licht - Farbtemperatur weiß"
-        }
-    },
-    {
-        "id": "20.00.00",
-        "translations": {
-            "en-US": "HVAC",
-            "de-DE": "HLK"
-        }
-    },
-    {
-        "id": "20.10.00",
-        "translations": {
-            "en-US": "heating",
-            "de-DE": "Heizung"
-        }
-    },
-    {
-        "id": "20.10.01",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "heating - current temperature",
-            "de-DE": "Heizung - Ist-Temperatur"
-        }
-    },
-    {
-        "id": "20.10.02",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "heating - setpoint temperature",
-            "de-DE": "Heizung - Soll-Temperatur"
-        },
-        "addVariables": [
-            {
-                "id": "COMFORT_TEMPERATURE",
-                "type": "FLOAT",
-                "min": 0.0,
-                "max": 30.0,
-                "default": 21.0,
-                "roles": [
-                    200000,
-                    201000,
-                    201004
-                ]
-            },
-            {
-                "id": "ECO_TEMPERATURE",
-                "type": "FLOAT",
-                "min": 0.0,
-                "max": 30.0,
-                "default": 18.0,
-                "roles": [
-                    200000,
-                    201000,
-                    201005
-                ]
-            },
-            {
-                "id": "FROST_PROTECTION_TEMPERATURE",
-                "type": "FLOAT",
-                "min": 0.0,
-                "max": 30.0,
-                "default": 5.0,
-                "roles": [
-                    200000,
-                    201000,
-                    201006
-                ]
-            },
-            {
-                "id": "TEMPERATURE_MODE",
-                "type": "ENUM",
-                "default": 0,
-                "enumeration": [
-                    "unset",
-                    "frostProtection",
-                    "comfort",
-                    "eco"
-                ],
-                "roles": [
-                    200000,
-                    201000,
-                    201003
-                ]
-            }
-        ],
-        "ui": {
-            "simpleCreationInfo": [
-                {
-                    "element": "Base.heatingSliderModeWindowhandle",
-                    "roleIdsIn": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ],
-                        [
-                            301002
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ],
-                        [
-                            301002
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.heatingSliderMode",
-                    "roleIdsIn": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            201001
-                        ],
-                        [
-                            201002
-                        ],
-                        [
-                            201003
-                        ]
-                    ]
-                }
-            ]
-        }
-    },
-    {
-        "id": "20.10.03",
-        "types": [
-            "int"
-        ],
-        "translations": {
-            "en-US": "heating - temperature mode",
-            "de-DE": "Heizung - Temperaturmodus"
-        },
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "0": "Frostschutz",
-                    "1": "Komfort",
-                    "2": "Spar"
-                }
-            }
-        }
-    },
-    {
-        "id": "20.10.04",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "heating - comfort temperature",
-            "de-DE": "Heizung - Komforttemperatur"
-        }
-    },
-    {
-        "id": "20.10.05",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "heating - eco temperature",
-            "de-DE": "Heizung - Absenktemperatur"
-        }
-    },
-    {
-        "id": "20.10.06",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "heating - frost protection temperature",
-            "de-DE": "Heizung - Frostschutztemperatur"
-        }
-    },
-    {
-        "id": "20.20.00",
-        "translations": {
-            "en-US": "ventilation",
-            "de-DE": "Lüftung"
-        }
-    },
-    {
-        "id": "20.20.01",
-        "translations": {
-            "en-US": "ventilation level",
-            "de-DE": "Lüftungsstufe"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.ventilationMode",
-                "roleIdsIn": [
-                    [
-                        202001
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        202001
-                    ]
-                ]
-            },
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "1": "Level 1",
-                    "2": "Level 2",
-                    "3": "Level 3",
-                    "4": "Level 4"
-                }
-            }
-        }
-    },
-    {
-        "id": "20.20.02",
-        "translations": {
-            "en-US": "Outside Air",
-            "de-DE": "Außenluft"
-        }
-    },
-    {
-        "id": "20.20.03",
-        "translations": {
-            "en-US": "Supply Air",
-            "de-DE": "Zuluft"
-        }
-    },
-    {
-        "id": "20.20.04",
-        "translations": {
-            "en-US": "Extract Air",
-            "de-DE": "Abluft"
-        }
-    },
-    {
-        "id": "20.20.05",
-        "translations": {
-            "en-US": "Exhaust Air",
-            "de-DE": "Fortluft"
-        }
-    },
-    {
-        "id": "20.20.06",
-        "translations": {
-            "en-US": "Fire Damper",
-            "de-DE": "Brandschutzklappe"
-        }
-    },
-    {
-        "id": "20.20.07",
-        "translations": {
-            "en-US": "differential pressure",
-            "de-DE": "Differenzdruck"
-        }
-    },
-    {
-        "id": "20.20.08",
-        "translations": {
-            "en-US": "co-no System",
-            "de-DE": "co-no Anlage"
-        }
-    },
-    
-    
-    {
-        "id": "20.30.00",
-        "translations": {
-            "en-US": "heat pump",
-            "de-DE": "Wärmepumpe"
-        }
-    },
-    {
-        "id": "20.40.00",
-        "translations": {
-            "en-US": "pump",
-            "de-DE": "Pumpe"
-        }
-    },
-    {
-        "id": "30.00.00",
-        "translations": {
-            "en-US": "security",
-            "de-DE": "Sicherheit"
-        }
-    },
-    {
-        "id": "30.10.00",
-        "translations": {
-            "en-US": "security - contact sensor",
-            "de-DE": "Sicherheit - Kontaktsensor"
-        }
-    },
-    {
-        "id": "30.10.01",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "security - Door state",
-            "de-DE": "Sicherheit - Türzustand"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.doorHandle",
-                "roleIdsIn": [
-                    [
-                        301001
-                    ]
-                ],
-                "roleIdsOut": []
-            }
-        }
-    },
-    {
-        "id": "30.10.02",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "security - Window state",
-            "de-DE": "Sicherheit - Fensterzustand"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.windowHandle",
-                "roleIdsIn": [
-                    [
-                        301002
-                    ]
-                ],
-                "roleIdsOut": []
-            }
-        }
-    },
-    {
-        "id": "30.10.03",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "security - Door lock",
-            "de-DE": "Sicherheit - Türschloss"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.doorLock",
-                "roleIdsIn": [
-                    [
-                        301003
-                    ]
-                ],
-                "roleIdsOut": []
-            }
-        }
-    },
-    {
-        "id": "30.20.00",
-        "translations": {
-            "en-US": "SHE system",
-            "de-DE": "RWA-Anlage"
-        }
-    },
-    {
-        "id": "30.30.00",
-        "translations": {
-            "en-US": "emergency light",
-            "de-DE": "Notlicht"
-        }
-    },
-    {
-        "id": "30.40.00",
-        "translations": {
-            "en-US": "pumping station",
-            "de-DE": "Hebeanlage"
-        }
-    },
-    {
-        "id": "40.00.00",
-        "translations": {
-            "en-US": "socket",
-            "de-DE": "Steckdose"
-        }
-    },
-    {
-        "id": "40.00.01",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "socket - state",
-            "de-DE": "Steckdose - Zustand"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.socketSwitch",
-                "roleIdsIn": [
-                    [
-                        400001
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        400001
-                    ]
-                ]
-            },
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "an",
-                    "false": "aus"
-                }
-            }
-        }
-    },
-    {
-        "id": "50.00.00",
-        "translations": {
-            "en-US": "shading",
-            "de-DE": "Beschattung"
-        }
-    },
-    {
-        "id": "50.10.00",
-        "translations": {
-            "en-US": "shading - blind",
-            "de-DE": "Beschattung - Rollladen"
-        },
-        "ui": {
-            "simpleCreationInfo": [
-                {
-                    "element": "Base.shadingButtonsPosition",
-                    "roleIdsIn": [
-                        [
-                        ],
-                        [
-                            501004
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            501001,
-                            501003,
-                            501002
-                        ],
-                        [
-                            501004
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.shadingButtonsUpDown",
-                    "roleIdsIn": [
-                        [
-                            501001,
-                            501002
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            501001,
-                            501002
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.shadingButtonsSingleStepPositionPositionSlatsWindalarm",
-                    "roleIdsIn": [
-                        [],
-                        [
-                            501004
-                        ],
-                        [
-                            501007
-                        ],
-                        [
-                            501008
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            {
-                                "id": 501005,
-                                "value": false
-                            },
-                            {
-                                "id": 501006,
-                                "value": false
-                            },
-                            {
-                                "id": 501006,
-                                "value": true
-                            },
-                            {
-                                "id": 501005,
-                                "value": true
-                            }
-                        ],
-                        [
-                            501004
-                        ],
-                        [
-                            501007
-                        ],
-                        []
-                    ]
-                }
-            ]
-        }
-    },
-    {
-        "id": "50.10.01",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - blind - up",
-            "de-DE": "Beschattung - hoch"
-        },
-        "uiRef": 501000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "einfahren"
-                }
-            }
-        }
-    },
-    {
-        "id": "50.10.02",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - blind - down",
-            "de-DE": "Beschattung - runter"
-        },
-        "uiRef": 501000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "false": "ausfahren"
-                }
-            }
-        }
-    },
-    {
-        "id": "50.10.03",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - blind - stop",
-            "de-DE": "Beschattung - Stopp"
-        },
-        "uiRef": 501000
-    },
-    {
-        "id": "50.10.04",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "shading - blind - position",
-            "de-DE": "Beschattung - Position"
-        },
-        "uiRef": 501000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "0": "einfahren",
-                    "100": "ausfahren"
-                }
-            }
-        }
-    },
-    {
-        "id": "50.10.05",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - blind - up and down",
-            "de-DE": "Beschattung - hoch und runter"
-        },
-        "uiRef": 501000
-    },
-    {
-        "id": "50.10.06",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - blind - step",
-            "de-DE": "Beschattung - Stufe"
-        },
-        "uiRef": 501000
-    },
-    {
-        "id": "50.10.07",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "shading - slats - position",
-            "de-DE": "Beschattung - Lamellenposition"
-        },
-        "uiRef": 501000
-    },
-    {
-        "id": "50.10.08",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - windalert",
-            "de-DE": "Beschattung - Windalarm"
-        },
-        "uiRef": 501000
-    },
-    {
-        "id": "50.20.00",
-        "translations": {
-            "en-US": "shading - awning",
-            "de-DE": "Beschattung - Markise"
-        },
-        "ui": {
-            "simpleCreationInfo": [
-                {
-                    "element": "Base.shadingAnwingButtonsPosition",
-                    "roleIdsIn": [
-                        [
-                        ],
-                        [
-                            502004
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            502001,
-                            502003,
-                            502002
-                        ],
-                        [
-                            502004
-                        ]
-                    ]
-                },
-                {
-                    "element": "Base.shadingAwningButtonsPositionWindalarm",
-                    "roleIdsIn": [
-                        [],
-                        [
-                            502004
-                        ],
-                        [
-                            502008
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            {
-                                "id": 502005,
-                                "value": false
-                            },
-                            {
-                                "id": 502006,
-                                "value": false
-                            },
-                            {
-                                "id": 502005,
-                                "value": true
-                            }
-                        ],
-                        [
-                            502004
-                        ],
-                        []
-                    ]
-                },
-                {
-                 "element": "Base.shadingAwningButtonsPosition",
-                    "roleIdsIn": [
-                        [],
-                        [
-                            502004
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            {
-                                "id": 502005,
-                                "value": false
-                            },
-                            {
-                                "id": 502006,
-                                "value": false
-                            },
-                            {
-                                "id": 502005,
-                                "value": true
-                            },
-                            [
-                                502004
-                            ]
-                        ]
-                    ] 
-                }
-            ]
-        }
-    },
-    {
-        "id": "50.20.01",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - awning - retract",
-            "de-DE": "Beschattung - Markise - einfahren"
-        },
-        "uiRef": 502000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "false": "einfahren"
-                }
-            }
-        }
-    },
-    {
-        "id": "50.20.02",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - awning - extend",
-            "de-DE": "Beschattung - Markise - ausfahren"
-        },
-        "uiRef": 502000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "ausfahren"
-                }
-            }
-        }
-    },
-    {
-        "id": "50.20.03",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - awning - stop",
-            "de-DE": "Beschattung - Markise - Stopp"
-        },
-        "uiRef": 502000
-    },
-    {
-        "id": "50.20.04",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "shading - awning - position",
-            "de-DE": "Beschattung - Markise - Position"
-        },
-        "uiRef": 502000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "0": "einfahren",
-                    "100": "ausfahren"
-                }
-            }
-        }
-    },
-      {
-        "id": "50.20.05",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - awning - retract and extend",
-            "de-DE": "Beschattung - Markise - einfahren und ausfahren"
-        },
-        "uiRef": 502000
-    },
-    {
-        "id": "50.20.06",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - awning - step",
-            "de-DE": "Beschattung - Markise - Stufe"
-        },
-        "uiRef": 502000
-    },
-    {
-        "id": "50.20.07",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "shading - slats - position",
-            "de-DE": "Beschattung - Markise - Lamellenposition"
-        },
-        "uiRef": 502000
-    },
-    {
-        "id": "50.20.08",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "shading - awning - windalert",
-            "de-DE": "Beschattung - Markise - Windalarm"
-        },
-        "uiRef": 502000
-    },
-    {
-        "id": "60.00.00",
-        "translations": {
-            "en-US": "window",
-            "de-DE": "Fenster"
-        },
-        "ui": {
-            "simpleCreationInfo": [
-                {
-                    "element": "Base.windowButtonsUpDown",
-                    "roleIdsIn": [
-                        [
-                            600001,
-                            600002
-                        ]
-                    ],
-                    "roleIdsOut": [
-                        [
-                            600001,
-                            600002
-                        ]
-                    ]
-                }
-            ]
-        }
-    },
-    {
-        "id": "60.00.01",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "window - up",
-            "de-DE": "Fenster - hoch"
-        },
-        "uiRef": 600000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "false": "öffnen"
-                }
-            }
-        }
-    },
-    {
-        "id": "60.00.02",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "window - down",
-            "de-DE": "Fenster - runter"
-        },
-        "uiRef": 600000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "true": "schließen"
-                }
-            }
-        }
-    },
-    {
-        "id": "60.00.03",
-        "types": [
-            "bool",
-            "int"
-        ],
-        "translations": {
-            "en-US": "window - stop",
-            "de-DE": "Fenster - Stopp"
-        },
-        "uiRef": 600000
-    },
-    {
-        "id": "60.00.04",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "window - position",
-            "de-DE": "Fenster - Position"
-        },
-        "uiRef": 600000,
-        "ui": {
-            "roleProfileValues": {
-                "type": "select",
-                "options": {
-                    "false": "öffnen",
-                    "true": "schließen"
-                }
-            }
-        }
-    },
-    {
-        "id": "70.00.00",
-        "translations": {
-            "en-US": "weather",
-            "de-DE": "Wetter"
-        }
-    },
-    {
-        "id": "70.00.01",
-        "types": [
-            "string"
-        ],
-        "translations": {
-            "en-US": "weather - city",
-            "de-DE": "Wetter - Stadt"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateCity",
-                "roleIdsIn": [
-                    [
-                        700001
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700001
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.02",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - cloudcoverage",
-            "de-DE": "Wetter - Bewölkung"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateCloudcoverage",
-                "roleIdsIn": [
-                    [
-                        700002
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700002
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.03",
-        "types": [
-            "string"
-        ],
-        "translations": {
-            "en-US": "weather - datetime",
-            "de-DE": "Wetter - Datum Zeit"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateDate",
-                "roleIdsIn": [
-                    [
-                        700003
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700003
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.04",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - humidity",
-            "de-DE": "Wetter - Luftfeuchtigkeit"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.humidity",
-                "roleIdsIn": [
-                    [
-                        700004
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700004
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.05",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - pressure",
-            "de-DE": "Wetter - Luftdruck"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climatePressure",
-                "roleIdsIn": [
-                    [
-                        700005
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700005
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.06",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - rain forecast 3h",
-            "de-DE": "Wetter - Regenvorhersage 3h"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateRain3h",
-                "roleIdsIn": [
-                    [
-                        700006
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700006
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.07",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - snow forecast 3h",
-            "de-DE": "Wetter - Schneevorhersage 3h"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateSnow3h",
-                "roleIdsIn": [
-                    [
-                        700007
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700007
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.08",
-        "types": [
-            "string"
-        ],
-        "translations": {
-            "en-US": "weather - sunrise",
-            "de-DE": "Wetter - Sonnenaufgang"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateSunrise",
-                "roleIdsIn": [
-                    [
-                        700008
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700008
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.09",
-        "types": [
-            "string"
-        ],
-        "translations": {
-            "en-US": "weather - sunset",
-            "de-DE": "Wetter - Sonnenuntergang"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateSunset",
-                "roleIdsIn": [
-                    [
-                        700009
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700009
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.10",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - temperature",
-            "de-DE": "Wetter - Temperatur"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.temperature",
-                "roleIdsIn": [
-                    [
-                        700010
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700010
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.11",
-        "types": [
-            "string"
-        ],
-        "translations": {
-            "en-US": "weather - weather",
-            "de-DE": "Wetter - Wetter"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateWeather",
-                "roleIdsIn": [
-                    [
-                        700011
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700011
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.12",
-        "types": [
-            "string"
-        ],
-        "translations": {
-            "en-US": "weather - wind direction",
-            "de-DE": "Wetter - Windrichtung"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateWinddirection",
-                "roleIdsIn": [
-                    [
-                        700012
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700012
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.13",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - wind gust",
-            "de-DE": "Wetter - Windböen"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateWindgust",
-                "roleIdsIn": [
-                    [
-                        700013
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700013
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.14",
-        "types": [
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - wind speed",
-            "de-DE": "Wetter - Windgeschwindigkeit"
-        },
-        "ui": {
-            "simpleCreationInfo": {
-                "element": "Base.climateWindspeed",
-                "roleIdsIn": [
-                    [
-                        700014
-                    ]
-                ],
-                "roleIdsOut": [
-                    [
-                        700014
-                    ]
-                ]
-            }
-        }
-    },
-    {
-        "id": "70.00.15",
-        "types": [
-            "int",
-            "float"
-        ],
-        "translations": {
-            "en-US": "weather - VOC",
-            "de-DE": "Wetter - VOC"
-        }
-
-    },
-    {
-        "id": "80.00.00",
-        "translations": {
-            "en-US": "service",
-            "de-DE": "Service"
-        }
-    },
-    {
-        "id": "80.00.01",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "low battery",
-            "de-DE": "Batterie schwach"
-        }
-    },
-    {
-        "id": "80.00.02",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "device offline",
-            "de-DE": "Gerät offline"
-        }
-    },
-    {
-        "id": "80.01.00",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "operating notification",
-            "de-DE": "Betriebsmeldungen"
-        }
-    },
-    {
-        "id": "80.01.01",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "operation",
-            "de-DE": "Betrieb"
-        }
-    },
-    {
-        "id": "80.01.02",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "emergency operation",
-            "de-DE": "Notbetrieb"
-        }
-    },
-    {
-        "id": "80.01.03",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "active",
-            "de-DE": "Aktiv"
-        }
-    },
-    {
-        "id": "80.02.00",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "faults",
-            "de-DE": "Störungen"
-        }
-    },
-    {
-        "id": "80.02.01",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "collective fault",
-            "de-DE": "Sammelstörung"
-        }
-    },
-    {
-        "id": "80.02.02",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "fault",
-            "de-DE": "Störung"
-        }
-    },
-    {
-        "id": "80.03.00",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "alerts",
-            "de-DE": "Alarme"
-        }
-    },
-    {
-        "id": "80.03.01",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "collective alert",
-            "de-DE": "Sammelalarm"
-        }
-    },
-    {
-        "id": "80.03.02",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "alert",
-            "de-DE": "Alarm"
-        }
-    },
-    {
-        "id": "80.03.03",
-        "types": [
-            "bool"
-        ],
-        "translations": {
-            "en-US": "fire alert",
-            "de-DE": "Feueralarm"
-        }
-    },
-    {
-        "id": "90.00.00",
-        "translations": {
-            "en-US": "meters",
-            "de-DE": "Zähler"
-        }
-    },
-    {
-        "id": "90.01.00",
-        "translations": {
-            "en-US": "Water meter",
-            "de-DE": "Wasserzähler"
-        }
-    },
-    {
-        "id": "90.01.01",
-        "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
-        },
-        "aggregation": "meter"
-    },
-    {
-        "id": "90.01.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
-        },
-        "aggregation": "count"
-    },
-    {
-        "id": "90.02.00",
-        "translations": {
-            "en-US": "Power meter",
-            "de-DE": "Stromzähler"
-        }
-    },
-    {
-        "id": "90.02.01",
-        "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
-        },
-        "aggregation": "meter"
-    },
-    {
-        "id": "90.02.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
-        },
-        "aggregation": "count"
-    },
-    {
-        "id": "90.03.00",
-        "translations": {
-            "en-US": "Gas meter",
-            "de-DE": "Gaszähler"
-        }
-    },
-    {
-        "id": "90.03.01",
-        "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
-        },
-        "aggregation": "meter"
-    },
-    {
-        "id": "90.03.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
-        },
-        "aggregation": "count"
-    },
-    {
-        "id": "90.04.00",
-        "translations": {
-            "en-US": "Heat meter",
-            "de-DE": "Wärmemengenzähler"
-        }
-    },
-    {
-        "id": "90.04.01",
-        "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
-        },
-        "aggregation": "meter"
-    },
-    {
-        "id": "90.04.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
-        },
-        "aggregation": "count"
-    },
-    {
-        "id": "90.05.00",
-        "translations": {
-            "en-US": "Cooling energy meter",
-            "de-DE": "Kältemengenzähler"
-        }
-    },
-    {
-        "id": "90.05.01",
-        "translations": {
-            "en-US": "Meter reading",
-            "de-DE": "Zählerstand"
-        },
-        "aggregation": "meter"
-    },
-    {
-        "id": "90.05.02",
-        "translations": {
-            "en-US": "Consumption",
-            "de-DE": "Verbrauch"
-        },
-        "aggregation": "count"
-    },
-    {
-        "id": "01.00.00",
-        "translations": {
-            "en-US": "Environment sensors",
-            "de-DE": "Umgebungssensoren"
-        }
-    },
-    {
-        "id": "01.00.01",
-        "translations": {
-            "en-US": "Temperature",
-            "de-DE": "Temperatur"
-        }
-    },
-    {
-        "id": "01.00.02",
-        "translations": {
-            "en-US": "Humidity",
-            "de-DE": "Luftfeuchtigkeit"
-        }
-    },
-    {
-        "id": "01.00.03",
-        "translations": {
-            "en-US": "CO2",
-            "de-DE": "CO2"
-        }
-    },
-    {
-        "id": "01.00.04",
-        "translations": {
-            "en-US": "VOC",
-            "de-DE": "VOC"
-        }
-    },
-    {
-        "id": "01.00.05",
-        "translations": {
-            "en-US": "Barometric pressure",
-            "de-DE": "Luftdruck"
-        }
+  {
+    "id": "10.00.00",
+    "translations": {
+      "de-CH": "Licht",
+      "de-DE": "Licht",
+      "en-US": "light"
     }
+  },
+  {
+    "id": "10.00.01",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Licht - Status",
+      "de-DE": "Licht - Status",
+      "en-US": "light - state"
+    },
+    "ui": {
+      "simpleCreationInfo": [
+        {
+          "element": "Base.lightingSwitchBrightnessTemp",
+          "roleIdsIn": [
+            [
+              100001
+            ],
+            [
+              101001
+            ],
+            [
+              103001
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              100001
+            ],
+            [
+              101001
+            ],
+            [
+              103001
+            ]
+          ]
+        },
+        {
+          "element": "Base.lightingSwitchBrightness",
+          "roleIdsIn": [
+            [
+              100001
+            ],
+            [
+              101001
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              100001
+            ],
+            [
+              101001
+            ]
+          ]
+        },
+        {
+          "element": "Base.lightingSwitch",
+          "roleIdsIn": [
+            [
+              100001
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              100001
+            ]
+          ]
+        }
+      ],
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "true": "an",
+          "false": "aus"
+        }
+      }
+    }
+  },
+  {
+    "id": "10.10.01",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Licht - Helligkeit",
+      "de-DE": "Licht - Helligkeit",
+      "en-US": "light - brightness"
+    },
+    "ui": {
+      "simpleCreationInfo": [
+        {
+          "element": "Base.lightingSwitchBrightness",
+          "roleIdsIn": [
+            [
+              100001
+            ],
+            [
+              101001
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              100001
+            ],
+            [
+              101001
+            ]
+          ]
+        },
+        {
+          "element": "Base.lightingBrightness",
+          "roleIdsIn": [
+            [
+              101001
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              101001
+            ]
+          ]
+        }
+      ],
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "true": "an",
+          "false": "aus"
+        }
+      }
+    }
+  },
+  {
+    "id": "10.20.00",
+    "translations": {
+      "de-CH": "Licht - Farbe",
+      "de-DE": "Licht - Farbe",
+      "en-US": "light - color"
+    }
+  },
+  {
+    "id": "10.20.01",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Licht - Farbe - RGB",
+      "de-DE": "Licht - Farbe - RGB",
+      "en-US": "light - color - RGB"
+    }
+  },
+  {
+    "id": "10.20.02",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Licht - Farbe - Farbton",
+      "de-DE": "Licht - Farbe - Farbton",
+      "en-US": "light - color - hue"
+    }
+  },
+  {
+    "id": "10.20.03",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Licht - Farbe - Sättigung",
+      "de-DE": "Licht - Farbe - Sättigung",
+      "en-US": "light - color - saturation"
+    }
+  },
+  {
+    "id": "10.20.04",
+    "translations": {
+      "de-CH": "Licht - Farbe - XY",
+      "de-DE": "Licht - Farbe - XY",
+      "en-US": "light - color - XY"
+    }
+  },
+  {
+    "id": "10.30.00",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Licht - Kaltweiss/warmweiss",
+      "de-DE": "Licht - Kaltweiß/warmweiß",
+      "en-US": "light - cold white/warm white"
+    }
+  },
+  {
+    "id": "10.30.01",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Licht - Farbtemperatur weiss",
+      "de-DE": "Licht - Farbtemperatur weiß",
+      "en-US": "light - color temperature white"
+    }
+  },
+  {
+    "id": "20.00.00",
+    "translations": {
+      "de-CH": "HLK",
+      "de-DE": "HLK",
+      "en-US": "HVAC"
+    }
+  },
+  {
+    "id": "20.10.00",
+    "translations": {
+      "de-CH": "Heizung",
+      "de-DE": "Heizung",
+      "en-US": "heating"
+    }
+  },
+  {
+    "id": "20.10.01",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Ist-Temperatur",
+      "de-DE": "Heizung - Ist-Temperatur",
+      "en-US": "heating - current temperature"
+    }
+  },
+  {
+    "id": "20.10.02",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Soll-Temperatur",
+      "de-DE": "Heizung - Soll-Temperatur",
+      "en-US": "heating - setpoint temperature"
+    },
+    "addVariables": [
+      {
+        "id": "COMFORT_TEMPERATURE",
+        "type": "FLOAT",
+        "min": 0.0,
+        "max": 30.0,
+        "default": 21.0,
+        "roles": [
+          200000,
+          201000,
+          201004
+        ]
+      },
+      {
+        "id": "ECO_TEMPERATURE",
+        "type": "FLOAT",
+        "min": 0.0,
+        "max": 30.0,
+        "default": 18.0,
+        "roles": [
+          200000,
+          201000,
+          201005
+        ]
+      },
+      {
+        "id": "FROST_PROTECTION_TEMPERATURE",
+        "type": "FLOAT",
+        "min": 0.0,
+        "max": 30.0,
+        "default": 5.0,
+        "roles": [
+          200000,
+          201000,
+          201006
+        ]
+      },
+      {
+        "id": "TEMPERATURE_MODE",
+        "type": "ENUM",
+        "default": 0,
+        "enumeration": [
+          "unset",
+          "frostProtection",
+          "comfort",
+          "eco"
+        ],
+        "roles": [
+          200000,
+          201000,
+          201003
+        ]
+      }
+    ],
+    "ui": {
+      "simpleCreationInfo": [
+        {
+          "element": "Base.heatingSliderModeWindowhandle",
+          "roleIdsIn": [
+            [
+              201001
+            ],
+            [
+              201002
+            ],
+            [
+              201003
+            ],
+            [
+              301002
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              201001
+            ],
+            [
+              201002
+            ],
+            [
+              201003
+            ],
+            [
+              301002
+            ]
+          ]
+        },
+        {
+          "element": "Base.heatingSliderMode",
+          "roleIdsIn": [
+            [
+              201001
+            ],
+            [
+              201002
+            ],
+            [
+              201003
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              201001
+            ],
+            [
+              201002
+            ],
+            [
+              201003
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "20.10.03",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Temperaturmodus",
+      "de-DE": "Heizung - Temperaturmodus",
+      "en-US": "heating - temperature mode"
+    },
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "0": "Frostschutz",
+          "1": "Komfort",
+          "2": "Spar"
+        }
+      }
+    }
+  },
+  {
+    "id": "20.10.04",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Komforttemperatur",
+      "de-DE": "Heizung - Komforttemperatur",
+      "en-US": "heating - comfort temperature"
+    }
+  },
+  {
+    "id": "20.10.05",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Absenktemperatur",
+      "de-DE": "Heizung - Absenktemperatur",
+      "en-US": "heating - eco temperature"
+    }
+  },
+  {
+    "id": "20.10.06",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Frostschutztemperatur",
+      "de-DE": "Heizung - Frostschutztemperatur",
+      "en-US": "heating - frost protection temperature"
+    }
+  },
+  {
+    "id": "20.10.07",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Warmwassertemperatur",
+      "de-DE": "Heizung - Warmwassertemperatur",
+      "en-US": "heating system - warm water temperature"
+    }
+  },
+  {
+    "id": "20.10.08",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Warmwasser Solltemperatur",
+      "de-DE": "Heizung - Warmwasser Solltemperatur",
+      "en-US": "heating system - warm water setpoint temperature"
+    }
+  },
+  {
+    "id": "20.10.09",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Aussentemperatur",
+      "de-DE": "Heizung - Außentemperatur",
+      "en-US": "heating system - outside temperature"
+    }
+  },
+  {
+    "id": "20.10.10",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Heizung - Betriebsstunden",
+      "de-DE": "Heizung - Betriebsstunden",
+      "en-US": "heating system - operating hours"
+    }
+  },
+  {
+    "id": "20.10.11",
+    "translations": {
+      "de-CH": "Heizung - Heizkreispumpe",
+      "de-DE": "Heizung - Heizkreispumpe",
+      "en-US": "heating system - circuit pump"
+    }
+  },
+  {
+    "id": "20.10.12",
+    "translations": {
+      "de-CH": "Heizung - Anforderung",
+      "de-DE": "Heizung - Anforderung",
+      "en-US": "heating system - demand"
+    }
+  },
+  {
+    "id": "20.10.13",
+    "translations": {
+      "de-CH": "Heizung - Mischerstellung",
+      "de-DE": "Heizung - Mischerstellung",
+      "en-US": "heating system - mixing valve level"
+    }
+  },
+  {
+    "id": "20.10.14",
+    "translations": {
+      "de-CH": "Heizung - Vorlauftemperatur",
+      "de-DE": "Heizung - Vorlauftemperatur",
+      "en-US": "heating system - supply temperature"
+    }
+  },
+  {
+    "id": "20.10.15",
+    "translations": {
+      "de-CH": "Heizung - Rücklauftemperatur",
+      "de-DE": "Heizung - Rücklauftemperatur",
+      "en-US": "heating system - return temperature"
+    }
+  },
+  {
+    "id": "20.10.16",
+    "translations": {
+      "de-CH": "Heizung - Betriebsmeldung",
+      "de-DE": "Heizung - Betriebsmeldung",
+      "en-US": "heating system - operating notification"
+    }
+  },
+  {
+    "id": "20.10.17",
+    "translations": {
+      "de-CH": "Heizung - Druck",
+      "de-DE": "Heizung - Druck",
+      "en-US": "heating system - pressure"
+    }
+  },
+  {
+    "id": "20.10.18",
+    "translations": {
+      "de-CH": "Heizung - Aktuelle Heizleistung",
+      "de-DE": "Heizung - Aktuelle Heizleistung",
+      "en-US": "heating system - current heating power"
+    },
+    "aggregation":  "max"
+  },
+  {
+    "id": "20.10.19",
+    "translations": {
+      "de-CH": "Heizung - Taktung",
+      "de-DE": "Heizung - Taktung",
+      "en-US": "heating system - on/off cycles"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "20.10.20",
+    "translations": {
+      "de-CH": "Heizung - Wirkungsgrad",
+      "de-DE": "Heizung - Wirkungsgrad",
+      "en-US": "heating system - efficiency"
+    }
+  },
+  {
+    "id": "20.10.21",
+    "translations": {
+      "de-CH": "Heizung - Energieverlust",
+      "de-DE": "Heizung - Energieverlust",
+      "en-US": "heating system - energy loss"
+    }
+  },
+  {
+    "id": "20.10.22",
+    "translations": {
+      "de-CH": "Heizung - CO₂",
+      "de-DE": "Heizung - CO₂",
+      "en-US": "heating system - CO₂"
+    }
+  },
+  {
+    "id": "20.11.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "20.20.00",
+    "translations": {
+      "de-CH": "Lüftung",
+      "de-DE": "Lüftung",
+      "en-US": "ventilation"
+    }
+  },
+  {
+    "id": "20.20.01",
+    "translations": {
+      "de-CH": "Lüftungsstufe",
+      "de-DE": "Lüftungsstufe",
+      "en-US": "ventilation level"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.ventilationMode",
+        "roleIdsIn": [
+          [
+            202001
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            202001
+          ]
+        ]
+      },
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "1": "Level 1",
+          "2": "Level 2",
+          "3": "Level 3",
+          "4": "Level 4"
+        }
+      }
+    }
+  },
+  {
+    "id": "20.20.02",
+    "translations": {
+      "de-CH": "Aussenluft",
+      "de-DE": "Außenluft",
+      "en-US": "outside air"
+    }
+  },
+  {
+    "id": "20.20.03",
+    "translations": {
+      "de-CH": "Zuluft",
+      "de-DE": "Zuluft",
+      "en-US": "supply air"
+    }
+  },
+  {
+    "id": "20.20.04",
+    "translations": {
+      "de-CH": "Abluft",
+      "de-DE": "Abluft",
+      "en-US": "extract air"
+    }
+  },
+  {
+    "id": "20.20.05",
+    "translations": {
+      "de-CH": "Fortluft",
+      "de-DE": "Fortluft",
+      "en-US": "exhaust air"
+    }
+  },
+  {
+    "id": "20.20.06",
+    "translations": {
+      "de-CH": "Brandschutzklappe",
+      "de-DE": "Brandschutzklappe",
+      "en-US": "fire damper"
+    }
+  },
+  {
+    "id": "20.20.07",
+    "translations": {
+      "de-CH": "Differenzdruck",
+      "de-DE": "Differenzdruck",
+      "en-US": "differential pressure"
+    }
+  },
+  {
+    "id": "20.20.08",
+    "translations": {
+      "de-CH": "co-no-Anlage",
+      "de-DE": "co-no-Anlage",
+      "en-US": "co-no System"
+    }
+  },
+  {
+    "id": "20.20.09",
+    "translations": {
+      "de-CH": "Abluftventilator",
+      "de-DE": "Abluftventilator",
+      "en-US": "exctract air ventilator"
+    }
+  },
+  {
+    "id": "20.20.10",
+    "translations": {
+      "de-CH": "Aussenluftventilator",
+      "de-DE": "Außenluftventilator",
+      "en-US": "outside air ventilator"
+    }
+  },
+  {
+    "id": "20.20.11",
+    "translations": {
+      "de-CH": "Abluft Differenzdruck",
+      "de-DE": "Abluft Differenzdruck",
+      "en-US": "extract air differenial pressure"
+    }
+  },
+  {
+    "id": "20.20.12",
+    "translations": {
+      "de-CH": "Aussenluft Differenzdruck",
+      "de-DE": "Außenluft Differenzdruck",
+      "en-US": "outside air differenial pressure"
+    }
+  },
+  {
+    "id": "20.20.13",
+    "translations": {
+      "de-CH": "Aussenlufttemperatur",
+      "de-DE": "Außenlufttemperatur",
+      "en-US": "outside air temperature"
+    }
+  },
+  {
+    "id": "20.20.14",
+    "translations": {
+      "de-CH": "Aussenluftfeuchte",
+      "de-DE": "Außenluftfeuchte",
+      "en-US": "outside air humidity"
+    }
+  },
+  {
+    "id": "20.20.15",
+    "translations": {
+      "de-CH": "Fortlufttemperatur",
+      "de-DE": "Fortlufttemperatur",
+      "en-US": "exhaust temperature"
+    }
+  },
+  {
+    "id": "20.20.16",
+    "translations": {
+      "de-CH": "Fortluftfeuchte",
+      "de-DE": "Fortluftfeuchte",
+      "en-US": "exhaust air humidity"
+    }
+  },
+  {
+    "id": "20.20.17",
+    "translations": {
+      "de-CH": "Zulufttemperatur",
+      "de-DE": "Zulufttemperatur",
+      "en-US": "supply air temperature"
+    }
+  },
+  {
+    "id": "20.20.18",
+    "translations": {
+      "de-CH": "Zuluftfeuchte",
+      "de-DE": "Zuluftfeuchte",
+      "en-US": "supply air humidity"
+    }
+  },
+  {
+    "id": "20.20.19",
+    "translations": {
+      "de-CH": "Ablufttemperatur",
+      "de-DE": "Ablufttemperatur",
+      "en-US": "extract temperature"
+    }
+  },
+  {
+    "id": "20.20.20",
+    "translations": {
+      "de-CH": "Abluftfeuchte",
+      "de-DE": "Abluftfeuchte",
+      "en-US": "extract air humidity"
+    }
+  },
+  {
+    "id": "20.20.21",
+    "translations": {
+      "de-CH": "Aussentemperatur",
+      "de-DE": "Außentemperatur",
+      "en-US": "outside temperature"
+    }
+  },
+  {
+    "id": "20.20.22",
+    "translations": {
+      "de-CH": "Betriebsmeldung",
+      "de-DE": "Betriebsmeldung",
+      "en-US": "operating notification"
+    }
+  },
+  {
+    "id": "20.20.23",
+    "translations": {
+      "de-CH": "Zuluftventilator",
+      "de-DE": "Zuluftventilator",
+      "en-US": "supply air ventilator"
+    }
+  },
+  {
+    "id": "20.20.24",
+    "translations": {
+      "de-CH": "Fortluftventilator",
+      "de-DE": "Fortluftventilator",
+      "en-US": "exhaust air ventilator"
+    }
+  },
+  {
+    "id": "20.20.25",
+    "translations": {
+      "de-CH": "Zuluft Differenzdruck",
+      "de-DE": "Zuluft Differenzdruck",
+      "en-US": "supply air differential pressure"
+    }
+  },
+  {
+    "id": "20.20.26",
+    "translations": {
+      "de-CH": "Fortluft Differenzdruck",
+      "de-DE": "Fortluft Differenzdruck",
+      "en-US": "exhaust air differential pressure"
+    }
+  },
+  {
+    "id": "20.30.00",
+    "translations": {
+      "de-CH": "Wärmepumpe",
+      "de-DE": "Wärmepumpe",
+      "en-US": "heat pump"
+    }
+  },
+  {
+    "id": "20.40.00",
+    "translations": {
+      "de-CH": "Pumpe",
+      "de-DE": "Pumpe",
+      "en-US": "pump"
+    }
+  },
+  {
+    "id": "20.50.00",
+    "translations": {
+      "de-CH": "Pelletkessel",
+      "de-DE": "Pelletkessel",
+      "en-US": "pellet boiler"
+    }
+  },
+  {
+    "id": "30.00.00",
+    "translations": {
+      "de-CH": "Sicherheit",
+      "de-DE": "Sicherheit",
+      "en-US": "security"
+    }
+  },
+  {
+    "id": "30.10.00",
+    "translations": {
+      "de-CH": "Sicherheit - Kontaktsensor",
+      "de-DE": "Sicherheit - Kontaktsensor",
+      "en-US": "security - contact sensor"
+    }
+  },
+  {
+    "id": "30.10.01",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Sicherheit - Türstatus",
+      "de-DE": "Sicherheit - Türstatus",
+      "en-US": "security - door state"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.doorHandle",
+        "roleIdsIn": [
+          [
+            301001
+          ]
+        ],
+        "roleIdsOut": []
+      }
+    }
+  },
+  {
+    "id": "30.10.02",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Sicherheit - Fensterzustand",
+      "de-DE": "Sicherheit - Fensterzustand",
+      "en-US": "security - window state"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.windowHandle",
+        "roleIdsIn": [
+          [
+            301002
+          ]
+        ],
+        "roleIdsOut": []
+      }
+    }
+  },
+  {
+    "id": "30.10.03",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Sicherheit - Türschloss",
+      "de-DE": "Sicherheit - Türschloss",
+      "en-US": "security - door lock"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.doorLock",
+        "roleIdsIn": [
+          [
+            301003
+          ]
+        ],
+        "roleIdsOut": []
+      }
+    }
+  },
+  {
+    "id": "30.11.00",
+    "translations": {
+      "de-CH": "Türe",
+      "de-DE": "Türe",
+      "en-US": "door"
+    }
+  },
+  {
+    "id": "30.12.00",
+    "translations": {
+      "de-CH": "Tor",
+      "de-DE": "Tor",
+      "en-US": "gate"
+    }
+  },
+  {
+    "id": "30.20.00",
+    "translations": {
+      "de-CH": "RWA-Anlage",
+      "de-DE": "RWA-Anlage",
+      "en-US": "SHE system"
+    }
+  },
+  {
+    "id": "30.30.00",
+    "translations": {
+      "de-CH": "Notlicht",
+      "de-DE": "Notlicht",
+      "en-US": "emergency light"
+    }
+  },
+  {
+    "id": "30.40.00",
+    "translations": {
+      "de-CH": "Lösch mich",
+      "de-DE": "Lösch mich",
+      "en-US": "Delete me"
+    }
+  },
+  {
+    "id": "40.00.00",
+    "translations": {
+      "de-CH": "Steckdose",
+      "de-DE": "Steckdose",
+      "en-US": "socket"
+    }
+  },
+  {
+    "id": "40.00.01",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Steckdose - Status",
+      "de-DE": "Steckdose - Status",
+      "en-US": "socket - state"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.socketSwitch",
+        "roleIdsIn": [
+          [
+            400001
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            400001
+          ]
+        ]
+      },
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "true": "an",
+          "false": "aus"
+        }
+      }
+    }
+  },
+  {
+    "id": "40.20.00",
+    "translations": {
+      "de-CH": "Niederspannungshauptverteilung",
+      "de-DE": "Niederspannungshauptverteilung",
+      "en-US": "low voltage distribution"
+    }
+  },
+  {
+    "id": "50.00.00",
+    "translations": {
+      "de-CH": "Beschattung",
+      "de-DE": "Beschattung",
+      "en-US": "shading"
+    }
+  },
+  {
+    "id": "50.10.00",
+    "translations": {
+      "de-CH": "Beschattung - Rollladen",
+      "de-DE": "Beschattung - Rollladen",
+      "en-US": "shading - blind"
+    },
+    "ui": {
+      "simpleCreationInfo": [
+        {
+          "element": "Base.shadingButtonsPosition",
+          "roleIdsIn": [
+            [
+            ],
+            [
+              501004
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              501001,
+              501003,
+              501002
+            ],
+            [
+              501004
+            ]
+          ]
+        },
+        {
+          "element": "Base.shadingButtonsUpDown",
+          "roleIdsIn": [
+            [
+              501001,
+              501002
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              501001,
+              501002
+            ]
+          ]
+        },
+        {
+          "element": "Base.shadingButtonsSingleStepPositionPositionSlatsWindalarm",
+          "roleIdsIn": [
+            [],
+            [
+              501004
+            ],
+            [
+              501007
+            ],
+            [
+              501008
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              {
+                "id": 501005,
+                "value": false
+              },
+              {
+                "id": 501006,
+                "value": false
+              },
+              {
+                "id": 501006,
+                "value": true
+              },
+              {
+                "id": 501005,
+                "value": true
+              }
+            ],
+            [
+              501004
+            ],
+            [
+              501007
+            ],
+            []
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "50.10.01",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - hoch",
+      "de-DE": "Beschattung - hoch",
+      "en-US": "shading - blind - up"
+    },
+    "uiRef": 501000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "true": "einfahren"
+        }
+      }
+    }
+  },
+  {
+    "id": "50.10.02",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - runter",
+      "de-DE": "Beschattung - runter",
+      "en-US": "shading - blind - down"
+    },
+    "uiRef": 501000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "false": "ausfahren"
+        }
+      }
+    }
+  },
+  {
+    "id": "50.10.03",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Stopp",
+      "de-DE": "Beschattung - Stopp",
+      "en-US": "shading - blind - stop"
+    },
+    "uiRef": 501000
+  },
+  {
+    "id": "50.10.04",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Position",
+      "de-DE": "Beschattung - Position",
+      "en-US": "shading - blind - position"
+    },
+    "uiRef": 501000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "0": "einfahren",
+          "100": "ausfahren"
+        }
+      }
+    }
+  },
+  {
+    "id": "50.10.05",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - hoch und runter",
+      "de-DE": "Beschattung - hoch und runter",
+      "en-US": "shading - blind - up and down"
+    },
+    "uiRef": 501000
+  },
+  {
+    "id": "50.10.06",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Schritt",
+      "de-DE": "Beschattung - Schritt",
+      "en-US": "shading - blind - step"
+    },
+    "uiRef": 501000
+  },
+  {
+    "id": "50.10.07",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Lamellenposition",
+      "de-DE": "Beschattung - Lamellenposition",
+      "en-US": "shading - slats - position"
+    },
+    "uiRef": 501000
+  },
+  {
+    "id": "50.10.08",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Windalarm",
+      "de-DE": "Beschattung - Windalarm",
+      "en-US": "shading - windalert"
+    },
+    "uiRef": 501000
+  },
+  {
+    "id": "50.20.00",
+    "translations": {
+      "de-CH": "Beschattung - Markise",
+      "de-DE": "Beschattung - Markise",
+      "en-US": "shading - awning"
+    },
+    "ui": {
+      "simpleCreationInfo": [
+        {
+          "element": "Base.shadingAnwingButtonsPosition",
+          "roleIdsIn": [
+            [
+            ],
+            [
+              502004
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              502001,
+              502003,
+              502002
+            ],
+            [
+              502004
+            ]
+          ]
+        },
+        {
+          "element": "Base.shadingAwningButtonsPositionWindalarm",
+          "roleIdsIn": [
+            [],
+            [
+              502004
+            ],
+            [
+              502008
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              {
+                "id": 502005,
+                "value": false
+              },
+              {
+                "id": 502006,
+                "value": false
+              },
+              {
+                "id": 502005,
+                "value": true
+              }
+            ],
+            [
+              502004
+            ],
+            []
+          ]
+        },
+        {
+          "element": "Base.shadingAwningButtonsPosition",
+          "roleIdsIn": [
+            [],
+            [
+              502004
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              {
+                "id": 502005,
+                "value": false
+              },
+              {
+                "id": 502006,
+                "value": false
+              },
+              {
+                "id": 502005,
+                "value": true
+              },
+              [
+                502004
+              ]
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "50.20.01",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - einfahren",
+      "de-DE": "Beschattung - Markise - einfahren",
+      "en-US": "shading - awning - retract"
+    },
+    "uiRef": 502000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "false": "einfahren"
+        }
+      }
+    }
+  },
+  {
+    "id": "50.20.02",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - ausfahren",
+      "de-DE": "Beschattung - Markise - ausfahren",
+      "en-US": "shading - awning - extend"
+    },
+    "uiRef": 502000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "true": "ausfahren"
+        }
+      }
+    }
+  },
+  {
+    "id": "50.20.03",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - Stopp",
+      "de-DE": "Beschattung - Markise - Stopp",
+      "en-US": "shading - awning - stop"
+    },
+    "uiRef": 502000
+  },
+  {
+    "id": "50.20.04",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - Position",
+      "de-DE": "Beschattung - Markise - Position",
+      "en-US": "shading - awning - position"
+    },
+    "uiRef": 502000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "0": "einfahren",
+          "100": "ausfahren"
+        }
+      }
+    }
+  },
+  {
+    "id": "50.20.05",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - einfahren und ausfahren",
+      "de-DE": "Beschattung - Markise - einfahren und ausfahren",
+      "en-US": "shading - awning - retract and extend"
+    },
+    "uiRef": 502000
+  },
+  {
+    "id": "50.20.06",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - Stufe",
+      "de-DE": "Beschattung - Markise - Stufe",
+      "en-US": "shading - awning - step"
+    },
+    "uiRef": 502000
+  },
+  {
+    "id": "50.20.07",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - Lamellenposition",
+      "de-DE": "Beschattung - Markise - Lamellenposition",
+      "en-US": "shading - slats - position"
+    },
+    "uiRef": 502000
+  },
+  {
+    "id": "50.20.08",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Beschattung - Markise - Windalarm",
+      "de-DE": "Beschattung - Markise - Windalarm",
+      "en-US": "shading - awning - windalert"
+    },
+    "uiRef": 502000
+  },
+  {
+    "id": "60.00.00",
+    "translations": {
+      "de-CH": "Fenster",
+      "de-DE": "Fenster",
+      "en-US": "window"
+    },
+    "ui": {
+      "simpleCreationInfo": [
+        {
+          "element": "Base.windowButtonsUpDown",
+          "roleIdsIn": [
+            [
+              600001,
+              600002
+            ]
+          ],
+          "roleIdsOut": [
+            [
+              600001,
+              600002
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "60.00.01",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Fenster - hoch",
+      "de-DE": "Fenster - hoch",
+      "en-US": "window - up"
+    },
+    "uiRef": 600000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "false": "öffnen"
+        }
+      }
+    }
+  },
+  {
+    "id": "60.00.02",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Fenster - runter",
+      "de-DE": "Fenster - runter",
+      "en-US": "window - down"
+    },
+    "uiRef": 600000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "true": "schließen"
+        }
+      }
+    }
+  },
+  {
+    "id": "60.00.03",
+    "types": [
+      "bool",
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Fenster - Stopp",
+      "de-DE": "Fenster - Stopp",
+      "en-US": "window - stop"
+    },
+    "uiRef": 600000
+  },
+  {
+    "id": "60.00.04",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Fenster - Position",
+      "de-DE": "Fenster - Position",
+      "en-US": "window - position"
+    },
+    "uiRef": 600000,
+    "ui": {
+      "roleProfileValues": {
+        "type": "select",
+        "options": {
+          "false": "öffnen",
+          "true": "schließen"
+        }
+      }
+    }
+  },
+  {
+    "id": "70.00.00",
+    "translations": {
+      "de-CH": "Wetter",
+      "de-DE": "Wetter",
+      "en-US": "weather"
+    }
+  },
+  {
+    "id": "70.00.01",
+    "types": [
+      "string"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Stadt",
+      "de-DE": "Wetter - Stadt",
+      "en-US": "weather - city"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateCity",
+        "roleIdsIn": [
+          [
+            700001
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700001
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.02",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Bewölkung",
+      "de-DE": "Wetter - Bewölkung",
+      "en-US": "weather - cloudcoverage"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateCloudcoverage",
+        "roleIdsIn": [
+          [
+            700002
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700002
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.03",
+    "types": [
+      "string"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Datum u. Zeit",
+      "de-DE": "Wetter - Datum u. Zeit",
+      "en-US": "weather - datetime"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateDate",
+        "roleIdsIn": [
+          [
+            700003
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700003
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.04",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Luftfeuchtigkeit",
+      "de-DE": "Wetter - Luftfeuchtigkeit",
+      "en-US": "weather - humidity"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.humidity",
+        "roleIdsIn": [
+          [
+            700004
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700004
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.05",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Luftdruck",
+      "de-DE": "Wetter - Luftdruck",
+      "en-US": "weather - pressure"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climatePressure",
+        "roleIdsIn": [
+          [
+            700005
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700005
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.06",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Regenvorhersage 3h",
+      "de-DE": "Wetter - Regenvorhersage 3h",
+      "en-US": "weather - rain forecast 3h"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateRain3h",
+        "roleIdsIn": [
+          [
+            700006
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700006
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.07",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Schneevorhersage 3h",
+      "de-DE": "Wetter - Schneevorhersage 3h",
+      "en-US": "weather - snow forecast 3h"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateSnow3h",
+        "roleIdsIn": [
+          [
+            700007
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700007
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.08",
+    "types": [
+      "string"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Sonnenaufgang",
+      "de-DE": "Wetter - Sonnenaufgang",
+      "en-US": "weather - sunrise"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateSunrise",
+        "roleIdsIn": [
+          [
+            700008
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700008
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.09",
+    "types": [
+      "string"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Sonnenuntergang",
+      "de-DE": "Wetter - Sonnenuntergang",
+      "en-US": "weather - sunset"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateSunset",
+        "roleIdsIn": [
+          [
+            700009
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700009
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.10",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Temperatur",
+      "de-DE": "Wetter - Temperatur",
+      "en-US": "weather - temperature"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.temperature",
+        "roleIdsIn": [
+          [
+            700010
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700010
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.11",
+    "types": [
+      "string"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Wetter",
+      "de-DE": "Wetter - Wetter",
+      "en-US": "weather - weather"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateWeather",
+        "roleIdsIn": [
+          [
+            700011
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700011
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.12",
+    "types": [
+      "string"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Windrichtung",
+      "de-DE": "Wetter - Windrichtung",
+      "en-US": "weather - wind direction"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateWinddirection",
+        "roleIdsIn": [
+          [
+            700012
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700012
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.13",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Windböen",
+      "de-DE": "Wetter - Windböen",
+      "en-US": "weather - wind gust"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateWindgust",
+        "roleIdsIn": [
+          [
+            700013
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700013
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.14",
+    "types": [
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - Windgeschwindigkeit",
+      "de-DE": "Wetter - Windgeschwindigkeit",
+      "en-US": "weather - wind speed"
+    },
+    "ui": {
+      "simpleCreationInfo": {
+        "element": "Base.climateWindspeed",
+        "roleIdsIn": [
+          [
+            700014
+          ]
+        ],
+        "roleIdsOut": [
+          [
+            700014
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "70.00.15",
+    "types": [
+      "int",
+      "float"
+    ],
+    "translations": {
+      "de-CH": "Wetter - VOC",
+      "de-DE": "Wetter - VOC",
+      "en-US": "weather - VOC"
+    }
+  },
+  {
+    "id": "80.00.00",
+    "translations": {
+      "de-CH": "Service",
+      "de-DE": "Service",
+      "en-US": "service"
+    }
+  },
+  {
+    "id": "80.00.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Batterie schwach",
+      "de-DE": "Batterie schwach",
+      "en-US": "low battery"
+    }
+  },
+  {
+    "id": "80.00.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Gerät offline",
+      "de-DE": "Gerät offline",
+      "en-US": "device offline"
+    }
+  },
+  {
+    "id": "80.00.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Gerät aktiv",
+      "de-DE": "Gerät aktiv",
+      "en-US": "device alive"
+    }
+  },
+  {
+    "id": "80.00.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Allgemeine Servicemeldung",
+      "de-DE": "Allgemeine Servicemeldung",
+      "en-US": "generic service message"
+    }
+  },
+  {
+    "id": "80.01.00",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betriebsmeldungen",
+      "de-DE": "Betriebsmeldungen",
+      "en-US": "operating notification"
+    }
+  },
+  {
+    "id": "80.01.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betrieb",
+      "de-DE": "Betrieb",
+      "en-US": "operation"
+    }
+  },
+  {
+    "id": "80.01.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Notbetrieb",
+      "de-DE": "Notbetrieb",
+      "en-US": "emergency operation"
+    }
+  },
+  {
+    "id": "80.01.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Aktiv",
+      "de-DE": "Aktiv",
+      "en-US": "active"
+    }
+  },
+  {
+    "id": "80.01.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Allgemeine Betriebsmeldung",
+      "de-DE": "Allgemeine Betriebsmeldung",
+      "en-US": "generic operating notification"
+    }
+  },
+  {
+    "id": "80.02.00",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Störungen",
+      "de-DE": "Störungen",
+      "en-US": "faults"
+    }
+  },
+  {
+    "id": "80.02.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Sammelstörung",
+      "de-DE": "Sammelstörung",
+      "en-US": "collective fault"
+    }
+  },
+  {
+    "id": "80.02.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Störung",
+      "de-DE": "Störung",
+      "en-US": "fault"
+    }
+  },
+  {
+    "id": "80.02.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Temperaturfehler",
+      "de-DE": "Temperaturfehler",
+      "en-US": "temperature fault"
+    }
+  },
+  {
+    "id": "80.02.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Pumpenfehler",
+      "de-DE": "Pumpenfehler",
+      "en-US": "pump fault"
+    }
+  },
+  {
+    "id": "80.02.05",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Überspannungsschutz ausgelöst",
+      "de-DE": "Überspannungsschutz ausgelöst",
+      "en-US": "surge protection tripped"
+    }
+  },
+  {
+    "id": "80.03.00",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Alarme",
+      "de-DE": "Alarme",
+      "en-US": "alerts"
+    }
+  },
+  {
+    "id": "80.03.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Sammelalarm",
+      "de-DE": "Sammelalarm",
+      "en-US": "collective alert"
+    }
+  },
+  {
+    "id": "80.03.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Alarm",
+      "de-DE": "Alarm",
+      "en-US": "alert"
+    }
+  },
+  {
+    "id": "80.03.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Feueralarm",
+      "de-DE": "Feueralarm",
+      "en-US": "fire alert"
+    }
+  },
+  {
+    "id": "80.03.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Flutalarm",
+      "de-DE": "Flutalarm",
+      "en-US": "flood alert"
+    }
+  },
+  {
+    "id": "81.00.00",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betriebsmeldungen",
+      "de-DE": "Betriebsmeldungen",
+      "en-US": "operating notification"
+    }
+  },
+  {
+    "id": "81.00.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betrieb",
+      "de-DE": "Betrieb",
+      "en-US": "operation"
+    }
+  },
+  {
+    "id": "81.00.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Notbetrieb",
+      "de-DE": "Notbetrieb",
+      "en-US": "emergency operation"
+    }
+  },
+  {
+    "id": "81.00.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Aktiv",
+      "de-DE": "Aktiv",
+      "en-US": "active"
+    }
+  },
+  {
+    "id": "90.00.00",
+    "translations": {
+      "de-CH": "Zähler",
+      "de-DE": "Zähler",
+      "en-US": "meters"
+    }
+  },
+  {
+    "id": "90.01.00",
+    "translations": {
+      "de-CH": "Generischer Wasserzähler",
+      "de-DE": "Generischer Wasserzähler",
+      "en-US": "Generic water meter"
+    }
+  },
+  {
+    "id": "90.01.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.01.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.00",
+    "translations": {
+      "de-CH": "Stromzähler",
+      "de-DE": "Stromzähler",
+      "en-US": "Power meter"
+    }
+  },
+  {
+    "id": "90.02.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.03",
+    "translations": {
+      "de-CH": "Zählerstand T1",
+      "de-DE": "Zählerstand T1",
+      "en-US": "Meter reading T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.04",
+    "translations": {
+      "de-CH": "Verbrauch T1",
+      "de-DE": "Verbrauch T1",
+      "en-US": "Consumption T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.05",
+    "translations": {
+      "de-CH": "Zählerstand T2",
+      "de-DE": "Zählerstand T2",
+      "en-US": "Meter reading T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.06",
+    "translations": {
+      "de-CH": "Verbrauch T2",
+      "de-DE": "Verbrauch T2",
+      "en-US": "Consumption T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.07",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug T1",
+      "de-DE": "Zählerstand Wirkenergie Bezug T1",
+      "en-US": "Meter reading active energy (consumption) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.08",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug T1",
+      "de-DE": "Verbrauch Wirkenergie Bezug T1",
+      "en-US": "Consumption active energy (consumption) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.09",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug T2",
+      "de-DE": "Zählerstand Wirkenergie Bezug T2",
+      "en-US": "Meter reading active energy (consumption) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.10",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug T2",
+      "de-DE": "Verbrauch Wirkenergie Bezug T2",
+      "en-US": "Consumption active energy (consumption) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.11",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug gesamt",
+      "de-DE": "Zählerstand Wirkenergie Bezug gesamt",
+      "en-US": "Meter reading active energy (consumption) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.12",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug gesamt",
+      "de-DE": "Verbrauch Wirkenergie Bezug gesamt",
+      "en-US": "Consumption active energy (consumption) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.13",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung T1",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung T1",
+      "en-US": "Meter reading active energy (production) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.14",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung T1",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung T1",
+      "en-US": "Consumption active energy (production) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.15",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung T2",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung T2",
+      "en-US": "Meter reading active energy (production) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.16",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung T2",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung T2",
+      "en-US": "Consumption active energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.17",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung gesamt",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung gesamt",
+      "en-US": "Meter reading active energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.18",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung gesamt",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung gesamt",
+      "en-US": "Consumption active energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.19",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug T1",
+      "de-DE": "Zählerstand Blindenergie Bezug T1",
+      "en-US": "Meter reading reactive energy (consumption) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.20",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug T1",
+      "de-DE": "Verbrauch Blindenergie Bezug T1",
+      "en-US": "Consumption reactive energy (consumption) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.21",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug T2",
+      "de-DE": "Zählerstand Blindenergie Bezug T2",
+      "en-US": "Meter reading reactive energy (consumption) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.22",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug T2",
+      "de-DE": "Verbrauch Blindenergie Bezug T2",
+      "en-US": "Consumption reactive energy (consumption) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.23",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug gesamt",
+      "de-DE": "Zählerstand Blindenergie Bezug gesamt",
+      "en-US": "Meter reading reactive energy (consumption) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.24",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug gesamt",
+      "de-DE": "Verbrauch Blindenergie Bezug gesamt",
+      "en-US": "Consumption reactive energy (consumption) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.25",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung T1",
+      "de-DE": "Zählerstand Blindenergie Einspeisung T1",
+      "en-US": "Meter reading reactive energy (production) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.26",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung T1",
+      "de-DE": "Verbrauch Blindenergie Einspeisung T1",
+      "en-US": "Consumption reactive energy (production) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.27",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung T2",
+      "de-DE": "Zählerstand Blindenergie Einspeisung T2",
+      "en-US": "Meter reading reactive energy (production) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.28",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung T2",
+      "de-DE": "Verbrauch Blindenergie Einspeisung T2",
+      "en-US": "Consumption reactive energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.29",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung gesamt",
+      "de-DE": "Zählerstand Blindenergie Einspeisung gesamt",
+      "en-US": "Meter reading reactive energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.30",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung gesamt",
+      "de-DE": "Verbrauch Blindenergie Einspeisung gesamt",
+      "en-US": "Consumption reactive energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.31",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie gesamt",
+      "de-DE": "Zählerstand Blindenergie gesamt",
+      "en-US": "Meter reading reactive energy total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.32",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie gesamt",
+      "de-DE": "Verbrauch Blindenergie gesamt",
+      "en-US": "Consumption reactive energy total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.50",
+    "translations": {
+      "de-CH": "Wirkleistung total",
+      "de-DE": "Wirkleistung total",
+      "en-US": "Active power total"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.52",
+    "translations": {
+      "de-CH": "Cos Phi L1",
+      "de-DE": "Cos Phi L1",
+      "en-US": "Cos Phi L1"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.54",
+    "translations": {
+      "de-CH": "Cos Phi L2",
+      "de-DE": "Cos Phi L2",
+      "en-US": "Cos Phi L2"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.56",
+    "translations": {
+      "de-CH": "Cos Phi L3",
+      "de-DE": "Cos Phi L3",
+      "en-US": "Cos Phi L3"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.58",
+    "translations": {
+      "de-CH": "Cos Phi total",
+      "de-DE": "Cos Phi total",
+      "en-US": "Cos Phi total"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.60",
+    "translations": {
+      "de-CH": "Stromstärke L1",
+      "de-DE": "Stromstärke L1",
+      "en-US": "Current L1"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.62",
+    "translations": {
+      "de-CH": "Stromstärke L2",
+      "de-DE": "Stromstärke L2",
+      "en-US": "Current L2"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.64",
+    "translations": {
+      "de-CH": "Stromstärke L3",
+      "de-DE": "Stromstärke L3",
+      "en-US": "Current L3"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.66",
+    "translations": {
+      "de-CH": "Frequenz",
+      "de-DE": "Frequenz",
+      "en-US": "Frequency"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.68",
+    "translations": {
+      "de-CH": "Blindenergie induktiv T1",
+      "de-DE": "Blindenergie induktiv T1",
+      "en-US": "Reactive energy inductive T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.70",
+    "translations": {
+      "de-CH": "Blindenergie induktiv T2",
+      "de-DE": "Blindenergie induktiv T2",
+      "en-US": "Reactive energy inductive T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.72",
+    "translations": {
+      "de-CH": "Blindenergie induktiv total ",
+      "de-DE": "Blindenergie induktiv total ",
+      "en-US": "Reactive energy inductive total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.74",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv T1",
+      "de-DE": "Blindenergie kapazitiv T1",
+      "en-US": "Reactive energy capazitive T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.76",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv T2",
+      "de-DE": "Blindenergie kapazitiv T2",
+      "en-US": "Reactive energy capazitive T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.78",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv total",
+      "de-DE": "Blindenergie kapazitiv total",
+      "en-US": "Reactive energy capazitive total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.80",
+    "translations": {
+      "de-CH": "Blindleistung total",
+      "de-DE": "Blindleistung total",
+      "en-US": "Reactive power total"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.82",
+    "translations": {
+      "de-CH": "Tarif",
+      "de-DE": "Tarif",
+      "en-US": "Tariff"
+    }
+  },
+  {
+    "id": "90.02.84",
+    "translations": {
+      "de-CH": "Spannung L1-N",
+      "de-DE": "Spannung L1-N",
+      "en-US": "Voltage L1-N"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.86",
+    "translations": {
+      "de-CH": "Spannung L2-N",
+      "de-DE": "Spannung L2-N",
+      "en-US": "Voltage L2-N"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.88",
+    "translations": {
+      "de-CH": "Spannung L3-N",
+      "de-DE": "Spannung L3-N",
+      "en-US": "Voltage L3-N"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.90",
+    "translations": {
+      "de-CH": "Spannung L1-L2",
+      "de-DE": "Spannung L1-L2",
+      "en-US": "Voltage L1-L2"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.92",
+    "translations": {
+      "de-CH": "Spannung L2-L3",
+      "de-DE": "Spannung L2-L3",
+      "en-US": "Voltage L2-L3"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.94",
+    "translations": {
+      "de-CH": "Spannung L3-L1",
+      "de-DE": "Spannung L3-L1",
+      "en-US": "Voltage L3-L1"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.03.00",
+    "translations": {
+      "de-CH": "Gaszähler",
+      "de-DE": "Gaszähler",
+      "en-US": "Gas meter"
+    }
+  },
+  {
+    "id": "90.03.01",
+    "translations": {
+      "de-CH": "Zählerstand (Volumen)",
+      "de-DE": "Zählerstand (Volumen)",
+      "en-US": "Meter reading (volume)"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.03.02",
+    "translations": {
+      "de-CH": "Verbrauch (Volumen)",
+      "de-DE": "Verbrauch (Volumen)",
+      "en-US": "Consumption (volume)"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.03.03",
+    "translations": {
+      "de-CH": "Zählerstand (Energie)",
+      "de-DE": "Zählerstand (Energie)",
+      "en-US": "Consumption (energy)"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.03.04",
+    "translations": {
+      "de-CH": "Verbrauch (Energie)",
+      "de-DE": "Verbrauch (Energie)",
+      "en-US": "Consumption (energy)"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.04.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Heizung",
+      "de-DE": "Wärmemengenzähler Heizung",
+      "en-US": "Heat meter for heating"
+    }
+  },
+  {
+    "id": "90.04.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.04.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.04.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.04.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.04.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.04.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.04.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
+  },
+  {
+    "id": "90.05.00",
+    "translations": {
+      "de-CH": "Kältemengenzähler",
+      "de-DE": "Kältemengenzähler",
+      "en-US": "Cooling energy meter"
+    }
+  },
+  {
+    "id": "90.05.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.05.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.05.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.05.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.05.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.05.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.05.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
+  },
+  {
+    "id": "90.06.00",
+    "translations": {
+      "de-CH": "Warmwasserzähler",
+      "de-DE": "Warmwasserzähler",
+      "en-US": "Hot water meter"
+    }
+  },
+  {
+    "id": "90.06.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.06.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.07.00",
+    "translations": {
+      "de-CH": "Kaltwasserzähler",
+      "de-DE": "Kaltwasserzähler",
+      "en-US": "Cold water meter"
+    }
+  },
+  {
+    "id": "90.07.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.07.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.08.00",
+    "translations": {
+      "de-CH": "Abwasserzähler",
+      "de-DE": "Abwasserzähler",
+      "en-US": "Waste water meter"
+    }
+  },
+  {
+    "id": "90.08.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.08.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.09.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Warmwasser",
+      "de-DE": "Wärmemengenzähler Warmwasser",
+      "en-US": "Heat meter for hot water"
+    }
+  },
+  {
+    "id": "90.09.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.09.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.09.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.09.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.09.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.09.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.10.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Sonnenkollektor",
+      "de-DE": "Wärmemengenzähler Sonnenkollektor",
+      "en-US": "Heat meter for solar thermal collector"
+    }
+  },
+  {
+    "id": "90.10.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.10.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.10.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.10.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.10.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.10.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.11.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Wärmepumpe",
+      "de-DE": "Wärmemengenzähler Wärmepumpe",
+      "en-US": "Heat meter for heat pump"
+    }
+  },
+  {
+    "id": "90.11.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.11.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.11.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.11.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.11.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.11.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "01.00.00",
+    "translations": {
+      "de-CH": "Sensoren",
+      "de-DE": "Sensoren",
+      "en-US": "Sensors"
+    }
+  },
+  {
+    "id": "01.00.01",
+    "translations": {
+      "de-CH": "Temperatur",
+      "de-DE": "Temperatur",
+      "en-US": "Temperature"
+    }
+  },
+  {
+    "id": "01.00.02",
+    "translations": {
+      "de-CH": "Luftfeuchtigkeit",
+      "de-DE": "Luftfeuchtigkeit",
+      "en-US": "Humidity"
+    }
+  },
+  {
+    "id": "01.00.03",
+    "translations": {
+      "de-CH": "CO₂",
+      "de-DE": "CO₂",
+      "en-US": "CO₂"
+    }
+  },
+  {
+    "id": "01.00.04",
+    "translations": {
+      "de-CH": "VOC",
+      "de-DE": "VOC",
+      "en-US": "VOC"
+    }
+  },
+  {
+    "id": "01.00.05",
+    "translations": {
+      "de-CH": "Luftdruck",
+      "de-DE": "Luftdruck",
+      "en-US": "Barometric pressure"
+    }
+  },
+  {
+    "id": "01.00.06",
+    "translations": {
+      "de-CH": "Status",
+      "de-DE": "Status",
+      "en-US": "State"
+    }
+  },
+  {
+    "id": "01.00.07",
+    "translations": {
+      "de-CH": "Leckage",
+      "de-DE": "Leckage",
+      "en-US": "Leakage"
+    }
+  },
+  {
+    "id": "02.00.00",
+    "translations": {
+      "de-CH": "Digitale Infrastruktur",
+      "de-DE": "Digitale Infrastruktur",
+      "en-US": "Digital infrastructure"
+    }
+  },
+  {
+    "id": "02.01.00",
+    "translations": {
+      "de-CH": "Sensaru Edge-Client",
+      "de-DE": "Sensaru Edge-Client",
+      "en-US": "Sensaru edge client"
+    }
+  },
+  {
+    "id": "02.01.01",
+    "translations": {
+      "de-CH": "RSRP",
+      "de-DE": "RSRP",
+      "en-US": "RSRP"
+    }
+  },
+  {
+    "id": "02.01.02",
+    "translations": {
+      "de-CH": "RSRQ",
+      "de-DE": "RSRQ",
+      "en-US": "RSRQ"
+    }
+  },
+  {
+    "id": "02.01.03",
+    "translations": {
+      "de-CH": "Coverage extension",
+      "de-DE": "Coverage extension",
+      "en-US": "coverage extension"
+    }
+  },
+  {
+    "id": "02.01.04",
+    "translations": {
+      "de-CH": "NB-IoT-Reset-Zähler",
+      "de-DE": "NB-IoT-Reset-Zähler",
+      "en-US": "NB-IoT reset counter"
+    }
+  },
+  {
+    "id": "02.01.05",
+    "translations": {
+      "de-CH": "Gesamt-Onboardingzeit",
+      "de-DE": "Gesamt-Onboardingzeit",
+      "en-US": "Total onboarding time"
+    }
+  },
+  {
+    "id": "02.01.06",
+    "translations": {
+      "de-CH": "Angelernte Geräte",
+      "de-DE": "Angelernte Geräte",
+      "en-US": "Paired devices"
+    }
+  },
+  {
+    "id": "02.01.07",
+    "translations": {
+      "de-CH": "NB-IoT-Sendefehler",
+      "de-DE": "NB-IoT-Sendefehler",
+      "en-US": "NB-IoT send errors"
+    }
+  },
+  {
+    "id": "02.02.00",
+    "translations": {
+      "de-CH": "Kommunikationsmodul",
+      "de-DE": "Kommunikationsmodul",
+      "en-US": "communication module"
+    }
+  },
+  {
+    "id": "02.03.00",
+    "translations": {
+      "de-CH": "Kommunikationsmodul",
+      "de-DE": "Kommunikationsmodul",
+      "en-US": "communication module"
+    }
+  },
+  {
+    "id": "02.04.00",
+    "translations": {
+      "de-CH": "GLS",
+      "de-DE": "GLS",
+      "en-US": "BMS"
+    }
+  },
+  {
+    "id": "03.00.00",
+    "translations": {
+      "de-CH": "Sanitärtechnik",
+      "de-DE": "Sanitärtechnik",
+      "en-US": "sanitary devices"
+    }
+  },
+  {
+    "id": "03.01.00",
+    "translations": {
+      "de-CH": "Hebeanlage",
+      "de-DE": "Hebeanlage",
+      "en-US": "pumping station"
+    }
+  },
+  {
+    "id": "03.02.00",
+    "translations": {
+      "de-CH": "Druckerhöhungsanlage",
+      "de-DE": "Druckerhöhungsanlage",
+      "en-US": "pressure booster station"
+    }
+  },
+  {
+    "id": "03.03.00",
+    "translations": {
+      "de-CH": "Rückstauklappe",
+      "de-DE": "Rückstauklappe",
+      "en-US": "backflow trap"
+    }
+  },
+  {
+    "id": "04.00.00",
+    "translations": {
+      "de-CH": "Fördertechnik",
+      "de-DE": "Fördertechnik",
+      "en-US": "conveying equipment"
+    }
+  },
+  {
+    "id": "04.01.00",
+    "translations": {
+      "de-CH": "Personenaufzug",
+      "de-DE": "Personenaufzug",
+      "en-US": "passenger elevator"
+    }
+  },
+  {
+    "id": "04.02.00",
+    "translations": {
+      "de-CH": "Lastenaufzug",
+      "de-DE": "Lastenaufzug",
+      "en-US": "goods elevator"
+    }
+  },
+  {
+    "id": "04.03.00",
+    "translations": {
+      "de-CH": "Autoaufzug",
+      "de-DE": "Autoaufzug",
+      "en-US": "car elevator"
+    }
+  },
+  {
+    "id": "A0.00.00",
+    "translations": {
+      "de-CH": "Wärme-Erzeugung",
+      "de-DE": "Wärme-Erzeugung",
+      "en-US": "heat production"
+    }
+  },
+  {
+    "id": "A0.01.00",
+    "translations": {
+      "de-CH": "Fernwärme-Übergabestation",
+      "de-DE": "Fernwärme-Übergabestation",
+      "en-US": "long distance heating transfer station"
+    }
+  },
+  {
+    "id": "A0.02.00",
+    "translations": {
+      "de-CH": "Fernwärme-Unterstation",
+      "de-DE": "Fernwärme-Unterstation",
+      "en-US": "long distance heating sub station"
+    }
+  },
+  {
+    "id": "A0.03.00",
+    "translations": {
+      "de-CH": "Gas-Brennwertkessel",
+      "de-DE": "Gas-Brennwertkessel",
+      "en-US": "gas heating"
+    }
+  },
+  {
+    "id": "A0.04.00",
+    "translations": {
+      "de-CH": "Öl-Brennwertkessel",
+      "de-DE": "Öl-Brennwertkessel",
+      "en-US": "oil heating"
+    }
+  },
+  {
+    "id": "A0.05.00",
+    "translations": {
+      "de-CH": "Pellet-Brennwertkessel",
+      "de-DE": "Pellet-Brennwertkessel",
+      "en-US": "pellet heating"
+    }
+  },
+  {
+    "id": "A0.06.00",
+    "translations": {
+      "de-CH": "Solarthermieanlage",
+      "de-DE": "Solarthermieanlage",
+      "en-US": "solar thermal system"
+    }
+  },
+  {
+    "id": "A0.07.00",
+    "translations": {
+      "de-CH": "Wärmepumpe",
+      "de-DE": "Wärmepumpe",
+      "en-US": "heat pump"
+    }
+  },
+  {
+    "id": "A2.00.00",
+    "translations": {
+      "de-CH": "Wärme-Verteilung",
+      "de-DE": "Wärme-Verteilung",
+      "en-US": "heat distribution"
+    }
+  },
+  {
+    "id": "A2.10.00",
+    "translations": {
+      "de-CH": "Wärme-Hauptverteilung",
+      "de-DE": "Wärme-Hauptverteilung",
+      "en-US": "heat main distribution"
+    }
+  },
+  {
+    "id": "A2.20.00",
+    "translations": {
+      "de-CH": "Wärme-Unterverteilung",
+      "de-DE": "Wärme-Hauptverteilung",
+      "en-US": "heat sub distribution"
+    }
+  },
+  {
+    "id": "A2.30.00",
+    "translations": {
+      "de-CH": "Heizkreis",
+      "de-DE": "Heizkreis",
+      "en-US": "heating circuit"
+    }
+  },
+  {
+    "id": "A2.40.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "A4.00.00",
+    "translations": {
+      "de-CH": "Lüftung",
+      "de-DE": "Lüftung",
+      "en-US": "ventilation"
+    }
+  },
+  {
+    "id": "A4.01.00",
+    "translations": {
+      "de-CH": "Monoblock",
+      "de-DE": "Monoblock",
+      "en-US": "monobloc ventilation"
+    }
+  },
+  {
+    "id": "A4.02.00",
+    "translations": {
+      "de-CH": "Gaswarnanlage",
+      "de-DE": "Gaswarnanlage",
+      "en-US": "gas detection system"
+    }
+  },
+  {
+    "id": "A6.00.00",
+    "translations": {
+      "de-CH": "Klima",
+      "de-DE": "Klima",
+      "en-US": "air conditioning"
+    }
+  },
+  {
+    "id": "A6.01.00",
+    "translations": {
+      "de-CH": "Entfeuchtungsanlage",
+      "de-DE": "Entfeuchtungsanlage",
+      "en-US": "dehumidification system"
+    }
+  },
+  {
+    "id": "A6.02.00",
+    "translations": {
+      "de-CH": "Befeuchtungsanlage",
+      "de-DE": "Befeuchtungsanlage",
+      "en-US": "humidification system"
+    }
+  },
+  {
+    "id": "A8.00.00",
+    "translations": {
+      "de-CH": "Kälte-Erzeugung",
+      "de-DE": "Kälte-Erzeugung",
+      "en-US": "cold production"
+    }
+  },
+  {
+    "id": "A8.01.00",
+    "translations": {
+      "de-CH": "Fernkälte-Übergabestation",
+      "de-DE": "Fernkälte-Übergabestation",
+      "en-US": "long distance cooling transfer station"
+    }
+  },
+  {
+    "id": "A8.02.00",
+    "translations": {
+      "de-CH": "Fernkälte-Unterstation",
+      "de-DE": "Fernkälte-Unterstation",
+      "en-US": "long distance cooling sub station"
+    }
+  },
+  {
+    "id": "A8.03.00",
+    "translations": {
+      "de-CH": "Kältemaschine",
+      "de-DE": "Kältemaschine",
+      "en-US": "chiller"
+    }
+  },
+  {
+    "id": "A8.04.00",
+    "translations": {
+      "de-CH": "Klimagerät",
+      "de-DE": "Klimagerät",
+      "en-US": "air conditioning unit"
+    }
+  },
+  {
+    "id": "AA.00.00",
+    "translations": {
+      "de-CH": "Kälte-Verteilung",
+      "de-DE": "Kälte-Verteilung",
+      "en-US": "cooling distribution"
+    }
+  },
+  {
+    "id": "AA.10.00",
+    "translations": {
+      "de-CH": "Kälte-Hauptverteilung",
+      "de-DE": "Kälte-Hauptverteilung",
+      "en-US": "long distance cooling transfer distribution"
+    }
+  },
+  {
+    "id": "AA.20.00",
+    "translations": {
+      "de-CH": "Kälte-Unterverteilung",
+      "de-DE": "Kälte-Unterverteilung",
+      "en-US": "long distance cooling sub distribution"
+    }
+  },
+  {
+    "id": "AA.30.00",
+    "translations": {
+      "de-CH": "Kältekreis",
+      "de-DE": "Kältekreis",
+      "en-US": "cooling circuit"
+    }
+  },
+  {
+    "id": "AA.40.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "AC.00.00",
+    "translations": {
+      "de-CH": "Sanitär",
+      "de-DE": "Sanitär",
+      "en-US": "sanitation"
+    }
+  },
+  {
+    "id": "AC.01.00",
+    "translations": {
+      "de-CH": "Rohrbegleitheizung",
+      "de-DE": "Rohrbegleitheizung",
+      "en-US": "trace heating"
+    }
+  },
+  {
+    "id": "AC.02.00",
+    "translations": {
+      "de-CH": "Dachrinnen-Heizung",
+      "de-DE": "Dachrinnen-Heizung",
+      "en-US": "gutter heating system"
+    }
+  },
+  {
+    "id": "AC.03.00",
+    "translations": {
+      "de-CH": "Enthärtungsanlage",
+      "de-DE": "Enthärtungsanlage",
+      "en-US": "softening system"
+    }
+  },
+  {
+    "id": "AC.04.00",
+    "translations": {
+      "de-CH": "Osmoseanlage",
+      "de-DE": "Osmoseanlage",
+      "en-US": "osmosis system"
+    }
+  },
+  {
+    "id": "AC.05.00",
+    "translations": {
+      "de-CH": "Hebeanlage",
+      "de-DE": "Hebeanlage",
+      "en-US": "pumping station"
+    }
+  },
+  {
+    "id": "B0.00.00",
+    "translations": {
+      "de-CH": "Elektrische Energie-Erzeugung",
+      "de-DE": "Elektrische Energie-Erzeugung",
+      "en-US": "electrical production"
+    }
+  },
+  {
+    "id": "B0.01.00",
+    "translations": {
+      "de-CH": "Netzersatzanlage",
+      "de-DE": "Netzersatzanlage",
+      "en-US": "emergency power genset"
+    }
+  },
+  {
+    "id": "B0.02.00",
+    "translations": {
+      "de-CH": "Blockheiz-Kraftwerk (BHKW)",
+      "de-DE": "Blockheiz-Kraftwerk (BHKW)",
+      "en-US": "combined heat and power (CHP)"
+    }
+  },
+  {
+    "id": "B0.03.00",
+    "translations": {
+      "de-CH": "Brennstoffzellen-Heizgerät",
+      "de-DE": "Brennstoffzellen-Heizgerät",
+      "en-US": "fuel cell heating"
+    }
+  },
+  {
+    "id": "B0.04.00",
+    "translations": {
+      "de-CH": "Photovoltaikanlage (PVA)",
+      "de-DE": "Photovoltaikanlage (PVA)",
+      "en-US": "photovoltaic system (PVS)"
+    }
+  },
+  {
+    "id": "B0.05.00",
+    "translations": {
+      "de-CH": "Batteriespeicheranlage",
+      "de-DE": "Batteriespeicheranlage",
+      "en-US": "battery bank unit"
+    }
+  },
+  {
+    "id": "B0.06.00",
+    "translations": {
+      "de-CH": "Unterbrechungsfreie Stromversorgung (USV)",
+      "de-DE": "Unterbrechungsfreie Stromversorgung (USV)",
+      "en-US": "uninterruptible power supply (UPS)"
+    }
+  },
+  {
+    "id": "B0.07.00",
+    "translations": {
+      "de-CH": "Windenergieanlage (WEA)",
+      "de-DE": "Windenergieanlage (WEA)",
+      "en-US": "wind power system (WPS)"
+    }
+  },
+  {
+    "id": "B2.00.00",
+    "translations": {
+      "de-CH": "Elektrische Energie-Verteilung",
+      "de-DE": "Elektrische Energie-Verteilung",
+      "en-US": "electrical distribution"
+    }
+  },
+  {
+    "id": "B2.01.00",
+    "translations": {
+      "de-CH": "Blindleistungskompensationsanlage",
+      "de-DE": "Blindleistungskompensationsanlage",
+      "en-US": "power-factor correction system"
+    }
+  },
+  {
+    "id": "B2.02.00",
+    "translations": {
+      "de-CH": "Mittelspannungshauptverteilung (MSHV)",
+      "de-DE": "Mittelspannungshauptverteilung (MSHV)",
+      "en-US": "medium voltage main distribution (MVMD)"
+    }
+  },
+  {
+    "id": "B2.03.00",
+    "translations": {
+      "de-CH": "Niederspannungshauptverteilung (NSHV)",
+      "de-DE": "Niederspannungshauptverteilung (NSHV)",
+      "en-US": "low-voltage main distribution (LVMD)"
+    }
+  },
+  {
+    "id": "B2.04.00",
+    "translations": {
+      "de-CH": "Niederspannungsunterverteilung (NUV)",
+      "de-DE": "Niederspannungsunterverteilung (NUV)",
+      "en-US": "low-voltage sub-distribution (LVSD)"
+    }
+  },
+  {
+    "id": "B4.00.00",
+    "translations": {
+      "de-CH": "Elektrische Anlagen",
+      "de-DE": "Elektrische Anlagen",
+      "en-US": "electrical systems"
+    }
+  },
+  {
+    "id": "B4.01.00",
+    "translations": {
+      "de-CH": "Fahrzeugladestation",
+      "de-DE": "Fahrzeugladestation",
+      "en-US": "electric vehicle charging station"
+    }
+  },
+  {
+    "id": "B6.00.00",
+    "translations": {
+      "de-CH": "Gebäudeautomation",
+      "de-DE": "Gebäudeautomation",
+      "en-US": "building automation"
+    }
+  },
+  {
+    "id": "B8.00.00",
+    "translations": {
+      "de-CH": "Gebäudeleitsystem",
+      "de-DE": "Gebäudeleitsystem",
+      "en-US": "building management system"
+    }
+  },
+  {
+    "id": "B8.01.00",
+    "translations": {
+      "de-CH": "Störmeldeanlage",
+      "de-DE": "Störmeldeanlage",
+      "en-US": "incident messaging system"
+    }
+  },
+  {
+    "id": "BA.00.00",
+    "translations": {
+      "de-CH": "Raumautomation",
+      "de-DE": "Raumautomation",
+      "en-US": "building automation"
+    }
+  },
+  {
+    "id": "BA.01.00",
+    "translations": {
+      "de-CH": "Wetterstation",
+      "de-DE": "Wetterstation",
+      "en-US": "weather station"
+    }
+  },
+  {
+    "id": "BA.10.00",
+    "translations": {
+      "de-CH": "Beleuchtung",
+      "de-DE": "Beleuchtung",
+      "en-US": "lighting"
+    }
+  },
+  {
+    "id": "BA.20.00",
+    "translations": {
+      "de-CH": "Beschattung",
+      "de-DE": "Beschattung",
+      "en-US": "shading"
+    }
+  },
+  {
+    "id": "BC.00.00",
+    "translations": {
+      "de-CH": "Digitale Services",
+      "de-DE": "Digitale Services",
+      "en-US": "digital services"
+    }
+  },
+  {
+    "id": "BC.01.00",
+    "translations": {
+      "de-CH": "Analyzer für Heizung",
+      "de-DE": "Analyzer für Heizung",
+      "en-US": "analyzer for heating"
+    }
+  },
+  {
+    "id": "BC.02.00",
+    "translations": {
+      "de-CH": "Analyzer für Brauchwarmwasser",
+      "de-DE": "Analyzer für Brauchwarmwasser",
+      "en-US": "analyzer for warm water"
+    }
+  },
+  {
+    "id": "BC.03.00",
+    "translations": {
+      "de-CH": "Monitoring",
+      "de-DE": "Monitoring",
+      "en-US": "monitoring"
+    }
+  },
+  {
+    "id": "C0.00.00",
+    "translations": {
+      "de-CH": "Beförderungs- und Transport",
+      "de-DE": "Beförderungs- und Transport",
+      "en-US": "transportation systems"
+    }
+  },
+  {
+    "id": "C0.01.00",
+    "translations": {
+      "de-CH": "Personenaufzug",
+      "de-DE": "Personenaufzug",
+      "en-US": "passenger elevator"
+    }
+  },
+  {
+    "id": "C0.02.00",
+    "translations": {
+      "de-CH": "Lastenaufzug",
+      "de-DE": "Lastenaufzug",
+      "en-US": "goods elevator"
+    }
+  },
+  {
+    "id": "C0.03.00",
+    "translations": {
+      "de-CH": "Rolltreppenanlage",
+      "de-DE": "Fahrtreppenanlage",
+      "en-US": "escalator"
+    }
+  },
+  {
+    "id": "C0.04.00",
+    "translations": {
+      "de-CH": "Anpassrampe",
+      "de-DE": "Anpassrampe",
+      "en-US": "dock leveler"
+    }
+  },
+  {
+    "id": "C0.10.00",
+    "translations": {
+      "de-CH": "Fassadenbefahranlage",
+      "de-DE": "Fassadenbefahranlage",
+      "en-US": "building cradle"
+    }
+  },
+  {
+    "id": "C0.20.00",
+    "translations": {
+      "de-CH": "Förderanlage",
+      "de-DE": "Förderanlage",
+      "en-US": "conveying system"
+    }
+  },
+  {
+    "id": "C2.00.00",
+    "translations": {
+      "de-CH": "Sicherheit",
+      "de-DE": "Sicherheit",
+      "en-US": "safety systems"
+    }
+  },
+  {
+    "id": "C2.01.00",
+    "translations": {
+      "de-CH": "Türe",
+      "de-DE": "Türe",
+      "en-US": "door"
+    }
+  },
+  {
+    "id": "C2.02.00",
+    "translations": {
+      "de-CH": "Tor",
+      "de-DE": "Tor",
+      "en-US": "gate"
+    }
+  },
+  {
+    "id": "C2.10.00",
+    "translations": {
+      "de-CH": "Schrankenanlage",
+      "de-DE": "Schrankenanlage",
+      "en-US": "barrier system"
+    }
+  },
+  {
+    "id": "C2.20.00",
+    "translations": {
+      "de-CH": "Notlichtanlage (NLA)",
+      "de-DE": "Notlichtanlage (NLA)",
+      "en-US": "emergency light system"
+    }
+  },
+  {
+    "id": "C2.21.00",
+    "translations": {
+      "de-CH": "Sicherheitsbeleuchtungsanlage",
+      "de-DE": "Sicherheitsbeleuchtungsanlage",
+      "en-US": "safety lighting system"
+    }
+  },
+  {
+    "id": "C2.30.00",
+    "translations": {
+      "de-CH": "Videoüberwachungsanlage (VÜA)",
+      "de-DE": "Videoüberwachungsanlage (VÜA)",
+      "en-US": "closed-circuit television system (CCTV)"
+    }
+  },
+  {
+    "id": "C2.40.00",
+    "translations": {
+      "de-CH": "Zutrittskontrollanlage (ZuKo)",
+      "de-DE": "Zutrittskontrollanlage (ZuKo)",
+      "en-US": "access control system"
+    }
+  },
+  {
+    "id": "C2.50.00",
+    "translations": {
+      "de-CH": "Einbruchmeldeanlage (EMA)",
+      "de-DE": "Einbruchmeldeanlage (EMA)",
+      "en-US": "intrusion detection system"
+    }
+  },
+  {
+    "id": "C2.60.00",
+    "translations": {
+      "de-CH": "Überfallalarmanlage",
+      "de-DE": "Überfallalarmanlage",
+      "en-US": "panic and attack alarm system"
+    }
+  },
+  {
+    "id": "C2.61.00",
+    "translations": {
+      "de-CH": "Tresor",
+      "de-DE": "Tresor",
+      "en-US": "tresor"
+    }
+  },
+  {
+    "id": "C2.70.00",
+    "translations": {
+      "de-CH": "Evakuationsanlage (EVAK)",
+      "de-DE": "Evakuationsanlage (EVAK)",
+      "en-US": "evacuation and paging system"
+    }
+  },
+  {
+    "id": "C2.71.00",
+    "translations": {
+      "de-CH": "Personenschutzsystem",
+      "de-DE": "Personenschutzsystem",
+      "en-US": "personnel safety system"
+    }
+  },
+  {
+    "id": "C4.00.00",
+    "translations": {
+      "de-CH": "Brandschutz",
+      "de-DE": "Brandschutz",
+      "en-US": "smoke and fire protection"
+    }
+  },
+  {
+    "id": "C4.01.00",
+    "translations": {
+      "de-CH": "Brandmeldeanlage (BMA)",
+      "de-DE": "Brandmeldeanlage (BMA)",
+      "en-US": "fire alarm system"
+    }
+  },
+  {
+    "id": "C4.02.00",
+    "translations": {
+      "de-CH": "Rauchschutzdruckanlage (RDA)",
+      "de-DE": "Rauchschutzdruckanlage (RDA)",
+      "en-US": "smoke protection pressuration system"
+    }
+  },
+  {
+    "id": "C4.03.00",
+    "translations": {
+      "de-CH": "Rauch- und Wärmeabzugsanlage (RWA)",
+      "de-DE": "Rauch- und Wärmeabzugsanlage (RWA)",
+      "en-US": "smoke and heat protection system (SHE)"
+    }
+  },
+  {
+    "id": "FE.00.00",
+    "translations": {
+      "de-CH": "nutzerspezifische Systeme",
+      "de-DE": "nutzerspezifische Systeme",
+      "en-US": "user specific Systems"
+    }
+  },
+  {
+    "id": "FE.00.00",
+    "translations": {
+      "de-CH": "Parkleitsystem",
+      "de-DE": "Parkleitsystem",
+      "en-US": "parking guidance system"
+    }
+  },
+  {
+    "id": "FE.10.00",
+    "translations": {
+      "de-CH": "Paketbox-System",
+      "de-DE": "Paketbox-System",
+      "en-US": "parcel box system"
+    }
+  },
+  {
+    "id": "FE.20.00",
+    "translations": {
+      "de-CH": "Gegensprechanlage",
+      "de-DE": "Gegensprechanlage",
+      "en-US": "intercom system"
+    }
+  },
+  {
+    "id": "FE.21.00",
+    "translations": {
+      "de-CH": "Video-Gegensprechanlage",
+      "de-DE": "Video-Gegensprechanlage",
+      "en-US": "video intercom system"
+    }
+  },
+  {
+    "id": "FE.20.00",
+    "translations": {
+      "de-CH": "Besucherinformationssystem",
+      "de-DE": "Besucherinformationssystem",
+      "en-US": "visitor information system"
+    }
+  },
+  {
+    "id": "FE.21.00",
+    "translations": {
+      "de-CH": "Raumreservationssystem",
+      "de-DE": "Raumreservationssystem",
+      "en-US": "room reservation system"
+    }
+  },
+  {
+    "id": "FE.22.00",
+    "translations": {
+      "de-CH": "Multimediaanlage",
+      "de-DE": "Multimediaanlage",
+      "en-US": "multimedia system"
+    }
+  },
+  {
+    "id": "FE.30.00",
+    "translations": {
+      "de-CH": "Personensuchanlage",
+      "de-DE": "Personensuchanlage",
+      "en-US": "personal paging system"
+    }
+  },
+  {
+    "id": "FE.31.00",
+    "translations": {
+      "de-CH": "Rufanlage",
+      "de-DE": "Rufanlage",
+      "en-US": "call system"
+    }
+  },
+  {
+    "id": "FE.40.00",
+    "translations": {
+      "de-CH": "Entsorgungsanlage",
+      "de-DE": "Entsorgungsanlage",
+      "en-US": "waste disposal system"
+    }
+  },
+  {
+    "id": "FE.50.00",
+    "translations": {
+      "de-CH": "Druckluftanlage",
+      "de-DE": "Druckluftanlage",
+      "en-US": "compressed air system"
+    }
+  }
 ]

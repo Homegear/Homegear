@@ -40,8 +40,8 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -58,8 +58,8 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -76,8 +76,8 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -94,8 +94,8 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>
@@ -112,8 +112,8 @@
                 <properties>
                     <readable>true</readable>
                     <writeable>true</writeable>
-                    <service>true</service>
                     <unit>kWh</unit>
+                    <unitCode>19</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>

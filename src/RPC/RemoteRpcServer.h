@@ -52,7 +52,7 @@ class RemoteRpcServer {
  public:
   std::shared_ptr<ClientSettings::Settings> settings;
 
-  int32_t creationTime = 0;
+  int64_t creationTime = 0;
   std::atomic_bool removed;
   std::atomic_bool initialized;
   bool useSSL = false;
@@ -74,7 +74,7 @@ class RemoteRpcServer {
   int32_t uid = -1;
   std::shared_ptr<std::set<uint64_t>> knownDevices;
   std::map<std::string, bool> knownMethods;
-  std::shared_ptr<BaseLib::TcpSocket> socket;
+  std::shared_ptr<C1Net::TcpSocket> socket;
   std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
   std::mutex sendMutex;
   int32_t lastPacketSent = -1;

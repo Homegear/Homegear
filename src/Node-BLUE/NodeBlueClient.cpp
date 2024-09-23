@@ -53,6 +53,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("reload", std::bind(&NodeBlueClient::reload, this, std::placeholders::_1));
   _localRpcMethods.emplace("shutdown", std::bind(&NodeBlueClient::shutdown, this, std::placeholders::_1));
   _localRpcMethods.emplace("lifetick", std::bind(&NodeBlueClient::lifetick, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getLoad", std::bind(&NodeBlueClient::getLoad, this, std::placeholders::_1));
   _localRpcMethods.emplace("startFlow", std::bind(&NodeBlueClient::startFlow, this, std::placeholders::_1));
   _localRpcMethods.emplace("startNodes", std::bind(&NodeBlueClient::startNodes, this, std::placeholders::_1));
   _localRpcMethods.emplace("configNodesStarted", std::bind(&NodeBlueClient::configNodesStarted, this, std::placeholders::_1));
@@ -65,6 +66,7 @@ NodeBlueClient::NodeBlueClient() : IQueue(GD::bl.get(), 3, 100000) {
   _localRpcMethods.emplace("nodeOutput", std::bind(&NodeBlueClient::nodeOutput, this, std::placeholders::_1));
   _localRpcMethods.emplace("invokeNodeMethod", std::bind(&NodeBlueClient::invokeExternalNodeMethod, this, std::placeholders::_1));
   _localRpcMethods.emplace("executePhpNodeBaseMethod", std::bind(&NodeBlueClient::executePhpNodeBaseMethod, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getNodeProcessingTimes", std::bind(&NodeBlueClient::getNodeProcessingTimes, this, std::placeholders::_1));
   _localRpcMethods.emplace("getNodesWithFixedInputs", std::bind(&NodeBlueClient::getNodesWithFixedInputs, this, std::placeholders::_1));
   _localRpcMethods.emplace("getFlowVariable", std::bind(&NodeBlueClient::getFlowVariable, this, std::placeholders::_1));
   _localRpcMethods.emplace("getNodeVariable", std::bind(&NodeBlueClient::getNodeVariable, this, std::placeholders::_1));
@@ -314,24 +316,28 @@ void NodeBlueClient::start() {
       _out.printError("Error: Could not redirect errors to log file.");
     }
 
+    GD::out.printInfo("Loading common translations...");
+    BaseLib::TranslationManager::load(GD::bl->settings.uiTranslationPath() + "common" + "/");
+
     uint32_t flowsProcessingThreadCountNodes = GD::bl->settings.nodeBlueProcessingThreadCountNodes();
     if (flowsProcessingThreadCountNodes < 5) flowsProcessingThreadCountNodes = 5;
     _threadCount = flowsProcessingThreadCountNodes;
+    _out.printMessage("Thread count set to: " + std::to_string(_threadCount));
 
     _processingThreadCount1 = 0;
     _processingThreadCount2 = 0;
     _processingThreadCount3 = 0;
 
-    startQueue(0, false, _threadCount, 0, SCHED_OTHER);
-    startQueue(1, false, _threadCount, 0, SCHED_OTHER);
-    startQueue(2, false, _threadCount, 0, SCHED_OTHER);
+    startQueue(0, false, _threadCount / 2, 0, SCHED_OTHER);
+    startQueue(1, false, _threadCount / 2, 0, SCHED_OTHER);
+    startQueue(2, false, _threadCount * 2, 0, SCHED_OTHER);
 
     if (GD::bl->settings.nodeBlueWatchdogTimeout() >= 1000) _watchdogThread = std::thread(&NodeBlueClient::watchdog, this);
 
     _socketPath = GD::bl->settings.socketPath() + "homegearFE.sock";
     if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
     for (int32_t i = 0; i < 2; i++) {
-      _fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
+      _fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0));
       if (!_fileDescriptor || _fileDescriptor->descriptor == -1) {
         _out.printError("Could not create socket.");
         return;
@@ -469,13 +475,14 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
         _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
         _lastQueueSlowErrorCounter = 0;
         _out.printWarning(
-            "Warning: Queue entry was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: "
-                + std::to_string(_lastQueueSlowErrorCounter));
+            "Warning: Queue entry of queue " + std::to_string(index) + " was queued for " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time)
+                + "ms. Either something is hanging or you need to increase your number of processing threads. Messages since last log entry: " + std::to_string(_lastQueueSlowErrorCounter));
       }
     }
 
     if (index == 0) //IPC request
     {
+      auto start_time = BaseLib::HelperFunctions::getTime();
       _processingThreadCount1++;
       try {
         if (_processingThreadCount1 == _threadCount) _processingThreadCountMaxReached1 = BaseLib::HelperFunctions::getTime();
@@ -510,8 +517,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached1 = 0;
       _processingThreadCount1--;
+      if (BaseLib::HelperFunctions::getTime() - start_time > 2000) {
+        _lastQueueSlowErrorCounter++;
+        if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+          _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+          _lastQueueSlowErrorCounter = 0;
+          _out.printInfo("Info: Processing of IPC method call to " + queueEntry->methodName + " took " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms.");
+        }
+      }
     } else if (index == 1) //IPC response
     {
+      auto start_time = BaseLib::HelperFunctions::getTime();
       _processingThreadCount2++;
       try {
         if (_processingThreadCount2 == _threadCount) _processingThreadCountMaxReached2 = BaseLib::HelperFunctions::getTime();
@@ -553,8 +569,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached2 = 0;
       _processingThreadCount2--;
+      if (BaseLib::HelperFunctions::getTime() - start_time > 2000) {
+        _lastQueueSlowErrorCounter++;
+        if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+          _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+          _lastQueueSlowErrorCounter = 0;
+          _out.printInfo("Info: Processing of IPC method response took " + std::to_string(BaseLib::HelperFunctions::getTime() - queueEntry->time) + "ms.");
+        }
+      }
     } else //Node output
     {
+      auto start_time = BaseLib::HelperFunctions::getTime();
       _processingThreadCount3++;
       try {
         if (_processingThreadCount3 == _threadCount) _processingThreadCountMaxReached3 = BaseLib::HelperFunctions::getTime();
@@ -613,6 +638,17 @@ void NodeBlueClient::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::I
       }
       _processingThreadCountMaxReached3 = 0;
       _processingThreadCount3--;
+      auto processing_time = BaseLib::HelperFunctions::getTime() - start_time;
+      if (queueEntry->targetPort + 1 >= queueEntry->nodeInfo->processingTimes.size()) queueEntry->nodeInfo->processingTimes.resize(queueEntry->targetPort + 1);
+      queueEntry->nodeInfo->processingTimes.at(queueEntry->targetPort) = processing_time;
+      if (processing_time > 2000) {
+        _lastQueueSlowErrorCounter++;
+        if (BaseLib::HelperFunctions::getTime() - _lastQueueSlowError > 10000) {
+          _lastQueueSlowError = BaseLib::HelperFunctions::getTime();
+          _lastQueueSlowErrorCounter = 0;
+          _out.printInfo("Info: Processing of node input took " + std::to_string(processing_time) + "ms (node: " + queueEntry->nodeInfo->id + ", input: " + std::to_string(queueEntry->targetPort) + ").");
+        }
+      }
     }
   }
   catch (const std::exception &ex) {
@@ -1406,6 +1442,33 @@ Flows::PVariable NodeBlueClient::lifetick(Flows::PArray &parameters) {
   return Flows::Variable::createError(-32500, "Unknown application error.");
 }
 
+Flows::PVariable NodeBlueClient::getLoad(Flows::PArray &parameters) {
+  try {
+    auto loadStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+    for (int32_t i = 0; i < _queueCount; i++) {
+      auto queueStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+      queueStruct->structValue->emplace("Max load", std::make_shared<Flows::Variable>(maxThreadLoad(i)));
+      queueStruct->structValue->emplace("Max load 1m", std::make_shared<Flows::Variable>(maxThreadLoad1m(i)));
+      queueStruct->structValue->emplace("Max load 10m", std::make_shared<Flows::Variable>(maxThreadLoad10m(i)));
+      queueStruct->structValue->emplace("Max load 1h", std::make_shared<Flows::Variable>(maxThreadLoad1h(i)));
+      queueStruct->structValue->emplace("Max latency", std::make_shared<Flows::Variable>(maxWait(i)));
+      queueStruct->structValue->emplace("Max latency 1m", std::make_shared<Flows::Variable>(maxWait1m(i)));
+      queueStruct->structValue->emplace("Max latency 10m", std::make_shared<Flows::Variable>(maxWait10m(i)));
+      queueStruct->structValue->emplace("Max latency 1h", std::make_shared<Flows::Variable>(maxWait1h(i)));
+
+      loadStruct->structValue->emplace("Queue " + std::to_string(i + 1), queueStruct);
+    }
+
+    return loadStruct;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
 Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
   try {
     if (parameters->size() != 2) return Flows::Variable::createError(-1, "Wrong parameter count.");
@@ -1500,7 +1563,9 @@ Flows::PVariable NodeBlueClient::startFlow(Flows::PArray &parameters) {
         for (auto &wireOut: output) {
           auto nodeIterator = flow->nodes.find(wireOut.id);
           if (nodeIterator == flow->nodes.end()) continue;
-          if (nodeIterator->second->wiresIn.size() <= wireOut.port) nodeIterator->second->wiresIn.resize(wireOut.port + 1);
+          if (nodeIterator->second->wiresIn.size() <= wireOut.port) {
+            nodeIterator->second->wiresIn.resize(wireOut.port + 1);
+          }
           Flows::Wire wire;
           wire.id = node.second->id;
           wire.port = static_cast<uint32_t>(outputIndex);
@@ -2045,6 +2110,46 @@ Flows::PVariable NodeBlueClient::getNodesWithFixedInputs(Flows::PArray &paramete
     }
 
     return nodeStruct;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Flows::Variable::createError(-32500, "Unknown application error.");
+}
+
+Flows::PVariable NodeBlueClient::getNodeProcessingTimes(Flows::PArray &parameters) {
+  try {
+    std::multimap<uint32_t, const Flows::PNodeInfo> resultMap;
+
+    {
+      std::lock_guard<std::mutex> nodesGuard(_nodesMutex);
+      for (const auto &node: _nodes) {
+        if (!node.second || node.second->processingTimes.empty()) continue;
+        auto maxTime = *std::max_element(node.second->processingTimes.begin(), node.second->processingTimes.end());
+        resultMap.emplace(maxTime, node.second);
+      }
+    }
+
+    auto resultArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+    resultArray->arrayValue->reserve(resultMap.size());
+
+    for (auto &element : resultMap) {
+      auto nodeStruct = std::make_shared<Flows::Variable>(Flows::VariableType::tStruct);
+
+      nodeStruct->structValue->emplace("id", std::make_shared<Flows::Variable>(element.second->id));
+      nodeStruct->structValue->emplace("type", std::make_shared<Flows::Variable>(element.second->type));
+
+      auto processingTimeArray = std::make_shared<Flows::Variable>(Flows::VariableType::tArray);
+      processingTimeArray->arrayValue->reserve(element.second->processingTimes.size());
+      for (auto &time : element.second->processingTimes) {
+        processingTimeArray->arrayValue->emplace_back(std::make_shared<Flows::Variable>(time));
+      }
+      nodeStruct->structValue->emplace("processingTimes", processingTimeArray);
+
+      resultArray->arrayValue->emplace_back(nodeStruct);
+    }
+
+    return resultArray;
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

@@ -43,7 +43,7 @@ class RestServer {
 
   virtual ~RestServer();
 
-  void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void process(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket);
 
  private:
   BaseLib::Output _out;
@@ -59,7 +59,7 @@ class RestServer {
                 std::vector<char> &content,
                 std::vector<std::string> &additionalHeaders);
 
-  void send(std::shared_ptr<BaseLib::TcpSocket> &socket, std::vector<char> &data);
+  void send(std::shared_ptr<C1Net::TcpSocket> &socket, std::vector<char> &data);
 };
 
 }

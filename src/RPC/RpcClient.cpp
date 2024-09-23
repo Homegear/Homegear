@@ -306,27 +306,29 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
     }
 
     try {
-      if (!server->socket->connected()) {
+      if (!server->socket->Connected()) {
         if (server->autoConnect) {
-          server->socket->setHostname(server->hostname);
-          server->socket->setPort(server->address.second);
-          if (server->settings && (!server->settings->caFile.empty() || !server->settings->certFile.empty() || ! server->settings->keyFile.empty())) {
-            std::unordered_map<std::string, BaseLib::TcpSocket::PCertificateInfo> certificates;
-            BaseLib::TcpSocket::PCertificateInfo
-                certificateInfo = std::make_shared<BaseLib::TcpSocket::CertificateInfo>();
-            certificateInfo->caFile = server->settings->caFile;
-            certificateInfo->certFile = server->settings->certFile;
-            certificateInfo->keyFile = server->settings->keyFile;
-            certificates.emplace("*", certificateInfo);
-            server->socket->setCertificates(certificates);
-            server->socket->setVerifyCertificate(server->settings->verifyCertificate);
-          }
-          server->socket->setUseSSL(server->useSSL);
+          C1Net::TcpSocketInfo tcp_socket_info;
           if (server->settings) {
-            server->socket->setReadTimeout(server->settings->timeout);
-            server->socket->setWriteTimeout(server->settings->timeout);
+            tcp_socket_info.read_timeout = server->settings->timeout;
+            tcp_socket_info.write_timeout = server->settings->timeout;
           }
-          server->socket->open();
+
+          C1Net::TcpSocketHostInfo tcp_socket_host_info;
+          tcp_socket_host_info.host = server->hostname;
+          tcp_socket_host_info.port = BaseLib::Math::getUnsignedNumber(server->address.second);
+          tcp_socket_host_info.auto_connect = false;
+          tcp_socket_host_info.tls = server->useSSL;
+
+          if (server->settings && (!server->settings->caFile.empty() || !server->settings->certFile.empty() || !server->settings->keyFile.empty())) {
+            tcp_socket_host_info.ca_file = server->settings->caFile;
+            tcp_socket_host_info.client_cert_file = server->settings->certFile;
+            tcp_socket_host_info.client_key_file = server->settings->keyFile;
+            tcp_socket_host_info.verify_certificate = server->settings->verifyCertificate;
+          }
+
+          server->socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, tcp_socket_host_info);
+          server->socket->Open();
         } else {
           std::cout << BaseLib::Output::getTimeString() << " " << "Connection to server with id "
                     << std::to_string(server->uid) << " closed. Removing server." << std::endl;
@@ -337,7 +339,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
         }
       }
     }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       if (!server->reconnectInfinitely) server->removed = true;
       GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
       std::cout << BaseLib::Output::getTimeString() << " " << ex.what()
@@ -349,7 +351,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
 
     if (server->settings && server->settings->authType != ClientSettings::Settings::AuthType::none) {
       if (server->settings->userName.empty() || server->settings->password.empty()) {
-        server->socket->close();
+        server->socket->Shutdown();
         std::cout << BaseLib::Output::getTimeString() << " "
                   << "Error: No user name or password specified in config file for RPC server "
                   << server->hostname << ". Closing connection." << std::endl;
@@ -399,17 +401,11 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
       else _out.printDebug("Debug: Sending packet: " + std::string(data.data(), data.size()));
     }
     try {
-      server->socket->proofwrite(data);
+      server->socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      server->socket->close();
-      std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-      std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-      return;
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       retry = true;
-      server->socket->close();
+      server->socket->Shutdown();
       std::cout << BaseLib::Output::getTimeString() << " " << "Info: Could not send data to XML RPC server "
                 << server->hostname << ": " + std::string(ex.what()) << "." << std::endl;
       return;
@@ -440,33 +436,34 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
     BaseLib::Rpc::BinaryRpc binaryRpc(GD::bl.get());
     BaseLib::Http http;
     BaseLib::WebSocket webSocket;
+    bool more_data = false;
 
     while (!binaryRpc.isFinished() && !http.isFinished()
         && !webSocket.isFinished()) //This is equal to while(true) for binary packets
     {
       try {
-        receivedBytes = server->socket->proofread(buffer, bufferMax);
+        receivedBytes = server->socket->Read((uint8_t *)buffer, bufferMax, more_data);
         //Some clients send only one byte in the first packet
         if (receivedBytes == 1 && !binaryRpc.processingStarted() && !http.headerIsFinished()
             && !webSocket.dataProcessingStarted())
-          receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
+          receivedBytes += server->socket->Read((uint8_t *)buffer + 1, bufferMax - 1, more_data);
       }
-      catch (const BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         _out.printInfo("Info: Reading from RPC server timed out. Server: " + server->hostname);
         retry = true;
-        if (!server->keepAlive) server->socket->close();
+        if (!server->keepAlive) server->socket->Shutdown();
         return;
       }
-      catch (const BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         retry = true;
-        if (!server->keepAlive) server->socket->close();
+        if (!server->keepAlive) server->socket->Shutdown();
         std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
         std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
         return;
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         retry = true;
-        if (!server->keepAlive) server->socket->close();
+        if (!server->keepAlive) server->socket->Shutdown();
         std::cout << BaseLib::Output::getTimeString() << " " << "Error: " << ex.what() << std::endl;
         std::cerr << BaseLib::Output::getTimeString() << " " << "Error: " << ex.what() << std::endl;
         return;
@@ -494,7 +491,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
           }
         }
         catch (BaseLib::Rpc::BinaryRpcException &ex) {
-          if (!server->keepAlive) server->socket->close();
+          if (!server->keepAlive) server->socket->Shutdown();
           std::cout << BaseLib::Output::getTimeString() << " " << "Error processing packet: " << ex.what()
                     << std::endl;
           std::cerr << BaseLib::Output::getTimeString() << " " << "Error processing packet: " << ex.what()
@@ -507,7 +504,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
                             receivedBytes); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
         }
         catch (BaseLib::WebSocketException &ex) {
-          if (!server->keepAlive) server->socket->close();
+          if (!server->keepAlive) server->socket->Shutdown();
           std::cout << BaseLib::Output::getTimeString() << " "
                     << "RPC Client: Could not process WebSocket packet: " << ex.what() << " Buffer: "
                     << std::string(buffer, receivedBytes) << std::endl;
@@ -517,7 +514,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
           return;
         }
         if (http.getContentSize() > 10485760 || http.getHeader().contentLength > 10485760) {
-          if (!server->keepAlive) server->socket->close();
+          if (!server->keepAlive) server->socket->Shutdown();
           std::cout << BaseLib::Output::getTimeString() << " "
                     << "Error: Packet with data larger than 100 MiB received." << std::endl;
           std::cerr << BaseLib::Output::getTimeString() << " "
@@ -529,17 +526,11 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
           std::vector<char> pong;
           webSocket.encode(webSocket.getContent(), BaseLib::WebSocket::Header::Opcode::pong, pong);
           try {
-            server->socket->proofwrite(pong);
+            server->socket->Send((uint8_t *)pong.data(), pong.size());
           }
-          catch (BaseLib::SocketDataLimitException &ex) {
-            server->socket->close();
-            std::cout << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-            std::cerr << BaseLib::Output::getTimeString() << " " << "Warning: " << ex.what() << std::endl;
-            return;
-          }
-          catch (const BaseLib::SocketOperationException &ex) {
+          catch (const C1Net::Exception &ex) {
             retry = true;
-            server->socket->close();
+            server->socket->Shutdown();
             std::cout << BaseLib::Output::getTimeString() << " "
                       << "Info: Could not send data to XML RPC server " << server->hostname << ": "
                       << ex.what() << "." << std::endl;
@@ -552,7 +543,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
           if (!strncmp(buffer, "401", 3)
               || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
           {
-            if (!server->keepAlive) server->socket->close();
+            if (!server->keepAlive) server->socket->Shutdown();
             std::cout << BaseLib::Output::getTimeString() << " " << "Error: Authentication failed. Server "
                       << server->hostname << ". Check user name and password in rpcclients.conf."
                       << std::endl;
@@ -570,7 +561,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
                        server->json); //Check for chunked packets (HomeMatic Manager, ioBroker). Necessary, because HTTP header does not contain transfer-encoding.
         }
         catch (BaseLib::HttpException &ex) {
-          if (!server->keepAlive) server->socket->close();
+          if (!server->keepAlive) server->socket->Shutdown();
           std::cout << BaseLib::Output::getTimeString() << " "
                     << "XML RPC Client: Could not process HTTP packet: " << ex.what() << " Buffer: "
                     << std::string(buffer, receivedBytes) << std::endl;
@@ -580,7 +571,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
           return;
         }
         if (http.getContentSize() > 10485760 || http.getHeader().contentLength > 10485760) {
-          if (!server->keepAlive) server->socket->close();
+          if (!server->keepAlive) server->socket->Shutdown();
           std::cout << BaseLib::Output::getTimeString() << " "
                     << "Error: Packet with data larger than 100 MiB received." << std::endl;
           std::cerr << BaseLib::Output::getTimeString() << " "
@@ -589,7 +580,7 @@ void RpcClient::sendRequest(RemoteRpcServer *server,
         }
       }
     }
-    if (!server->keepAlive) server->socket->close();
+    if (!server->keepAlive) server->socket->Shutdown();
     if (GD::bl->debugLevel >= 5) {
       if (server->binary)
         _out.printDebug("Debug: Received packet from server " + server->hostname + ": "

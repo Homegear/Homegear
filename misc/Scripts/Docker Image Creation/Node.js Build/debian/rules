@@ -8,11 +8,12 @@ override_dh_auto_build:
 	sed -i 's/libnode/libnodejs-homegear/g' $(CURDIR)/node.gyp
 	sed -i 's/libnode/libnodejs-homegear/g' $(CURDIR)/deps/npm/node_modules/node-gyp/lib/configure.js
 	# This only copies the built library. Without this change the script looks for libnode.so.<version>
-	sed -i "s/output_file = 'node'/output_file = 'nodejs-homegear'/g" $(CURDIR)/tools/install.py
+	sed -i "s/libnode/libnodejs-homegear/g" $(CURDIR)/tools/install.py
 	#}}}
 	mkdir -p $(CURDIR)/build
 	./configure --shared --prefix $(CURDIR)/build
 	make install
+	rm -f $(CURDIR)/build/bin/node
 
 override_dh_auto_install:
 	dh_testdir

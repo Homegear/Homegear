@@ -675,7 +675,7 @@ BaseLib::PVariable VariableProfileManager::updateVariableProfile(uint64_t profil
             if (!profileValue->value) continue;
             profileValue->wait = (waitIterator != valueEntry->structValue->end() && waitIterator->second->booleanValue && profileValue->value->type == BaseLib::VariableType::tBoolean);
             if (ignoreValueFromDeviceIterator != valueEntry->structValue->end()) profileValue->ignoreValueFromDevice = ignoreValueFromDeviceIterator->second->booleanValue;
-            if (deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = ignoreValueFromDeviceIterator->second->integerValue;
+            if (deviceRefractoryPeriodIterator != valueEntry->structValue->end()) profileValue->deviceRefractoryPeriod = deviceRefractoryPeriodIterator->second->integerValue;
             variableProfile->values.emplace_back(std::move(profileValue));
           }
         }

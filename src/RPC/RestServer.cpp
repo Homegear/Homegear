@@ -70,7 +70,7 @@ void RestServer::getError(int32_t code,
 
 void RestServer::process(BaseLib::PRpcClientInfo clientInfo,
                          BaseLib::Http &http,
-                         std::shared_ptr<BaseLib::TcpSocket> socket) {
+                         std::shared_ptr<C1Net::TcpSocket> socket) {
   std::vector<char> content;
   try {
     if (!socket) {
@@ -387,19 +387,16 @@ void RestServer::process(BaseLib::PRpcClientInfo clientInfo,
   }
 }
 
-void RestServer::send(std::shared_ptr<BaseLib::TcpSocket> &socket, std::vector<char> &data) {
+void RestServer::send(std::shared_ptr<C1Net::TcpSocket> &socket, std::vector<char> &data) {
   try {
     if (data.empty()) return;
     try {
-      socket->proofwrite(data);
+      socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      _out.printWarning(std::string("Warning: ") + ex.what());
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       _out.printInfo(std::string("Info: ") + ex.what());
     }
-    socket->close();
+    socket->Shutdown();
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

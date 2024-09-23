@@ -42,10 +42,9 @@ class NodepinkWebsocket {
  private:
   struct ClientData {
     int32_t id = 0;
-    BaseLib::PTcpSocket socket;
-    BaseLib::PFileDescriptor fileDescriptor;
+    C1Net::PTcpSocket socket;
     std::vector<uint8_t> buffer;
-    BaseLib::PTcpSocket clientSocket;
+    C1Net::PTcpSocket clientSocket;
 
     ClientData() {
       buffer.resize(1024);
@@ -74,7 +73,7 @@ class NodepinkWebsocket {
 
   void start();
   void stop();
-  void handoverClient(const BaseLib::PTcpSocket &socket, const BaseLib::PFileDescriptor &fileDescriptor, const BaseLib::Http &initialPacket);
+  void handoverClient(const C1Net::PTcpSocket &socket, const BaseLib::Http &initialPacket);
 };
 
 }

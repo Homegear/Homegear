@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+    <supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <device id="VirtualEmergencyLight">
+            <description>VirtualEmergencyLight</description>
+            <typeNumber>0xF020</typeNumber>
+        </device>
+    </supportedDevices>
+    <properties/>
+    <functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+            <properties>
+                <internal>true</internal>
+            </properties>
+            <configParameters>config</configParameters>
+            <variables>maint_ch0_values</variables>
+        </function>
+        <function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="VirtualEmergencyLight">
+            <variables>custom_ch1_values</variables>
+        </function>
+    </functions>
+    <parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+        <configParameters id="config"/>
+        <variables id="maint_ch0_values">
+            <parameter id="LOWBAT">
+                <properties>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean>
+                    <defaultValue>false</defaultValue>
+                </logicalBoolean>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="RSSI_PEER">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <casts>
+                        <rpcBinary/>
+                    </casts>
+                </properties>
+                <logicalInteger>
+                    <defaultValue>0</defaultValue>
+                </logicalInteger>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="UNREACH">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalBoolean>
+                    <operationType>internal</operationType>
+                </physicalBoolean>
+            </parameter>
+            <parameter id="STICKY_UNREACH">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                    <sticky>true</sticky>
+                </properties>
+                <logicalBoolean/>
+                <physicalBoolean>
+                    <operationType>internal</operationType>
+                </physicalBoolean>
+            </parameter>
+        </variables>
+        <variables id="custom_ch1_values">
+            <parameter id="ACTIVE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="FAULT">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="COLLECTIVE_FAULT">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="COLLECTIVE_ALARM">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="ALARM">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="BATTERY_OPERATION">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="EMERGENCY_OPERATION">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="CHARGER_FAULT">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                    <service>true</service>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="MAIN_POWER_WATCHDOG_OK">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+            <parameter id="VENTILATOR_ACTIVE">
+                <properties>
+                    <readable>true</readable>
+                    <writeable>true</writeable>
+                </properties>
+                <logicalBoolean/>
+                <physicalNone>
+                    <operationType>store</operationType>
+                </physicalNone>
+            </parameter>
+        </variables>
+    </parameterGroups>
+</homegearDevice>

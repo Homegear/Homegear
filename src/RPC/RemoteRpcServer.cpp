@@ -43,9 +43,9 @@ RemoteRpcServer::RemoteRpcServer(BaseLib::PRpcClientInfo &serverClientInfo) {
     _jsonEncoder = std::make_shared<BaseLib::Rpc::JsonEncoder>(GD::bl.get());
     _xmlRpcEncoder = std::make_shared<BaseLib::Rpc::XmlrpcEncoder>(GD::bl.get());
   } else {
-    socket = std::shared_ptr<BaseLib::TcpSocket>(new BaseLib::TcpSocket(GD::bl.get()));
-    socket->setReadTimeout(15000000);
-    socket->setWriteTimeout(15000000);
+    C1Net::TcpSocketInfo tcp_socket_info;
+    auto dummy_socket = std::make_shared<C1Net::Socket>(-1);
+    socket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, dummy_socket);
     knownDevices.reset(new std::set<uint64_t>());
     fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
     path = "/RPC2";
@@ -196,7 +196,7 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string &methodName,
             "Debug: Calling RPC method \"" + methodName + "\" on client " + _serverClientInfo->address + " (client ID "
                 + std::to_string(_serverClientInfo->id) + ").");
         GD::out.printDebug("Parameters:");
-        for (auto &parameter : *parameters) {
+        for (auto &parameter: *parameters) {
           parameter->print(true, false);
         }
       }
@@ -220,7 +220,7 @@ BaseLib::PVariable RemoteRpcServer::invokeClientMethod(std::string &methodName,
       encodedPacket.insert(encodedPacket.begin(), header.begin(), header.end());
     }
 
-    _serverClientInfo->socket->proofwrite(encodedPacket);
+    _serverClientInfo->socket->Send((uint8_t *)encodedPacket.data(), encodedPacket.size());
 
     auto startTime = BaseLib::HelperFunctions::getTime();
     while (!_serverClientInfo->requestConditionVariable.wait_for(requestLock, std::chrono::milliseconds(1000), [&] {

@@ -43,13 +43,13 @@ class WebServer : public BaseLib::IEventsEx {
 
   virtual ~WebServer();
 
-  void get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime = 0);
+  void get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket, int32_t cacheTime = 0);
 
-  void post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket);
 
-  void put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket);
 
-  void delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket);
+  void delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket);
 
   void getError(int32_t code, std::string codeDescription, std::string longDescription, std::vector<char> &content);
 
@@ -66,7 +66,7 @@ class WebServer : public BaseLib::IEventsEx {
   std::mutex _sendHeaderHookMutex;
   std::map<std::string, std::function<void(BaseLib::Http &http, BaseLib::PVariable &headers)>> _sendHeaderHooks;
 
-  void send(std::shared_ptr<BaseLib::TcpSocket> &socket, std::vector<char> &data);
+  void send(std::shared_ptr<C1Net::TcpSocket> &socket, std::vector<char> &data);
 
   void sendHeaders(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, BaseLib::PVariable &headers);
 

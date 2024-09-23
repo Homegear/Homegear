@@ -5288,6 +5288,12 @@ bool DatabaseController::peerExists(uint64_t id) {
   return !result->empty();
 }
 
+bool DatabaseController::peerExists(const std::string &serial_number) {
+  BaseLib::Database::DataRow data({std::make_shared<BaseLib::Database::DataColumn>(serial_number)});
+  std::shared_ptr<BaseLib::Database::DataTable> result = _db.executeCommand("SELECT 1 FROM peers WHERE serialNumber=?", data, false);
+  return !result->empty();
+}
+
 bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID) {
   try {
     if (oldPeerID > BaseLib::Systems::Peer::kMaximumPeerId ||
@@ -5317,6 +5323,29 @@ bool DatabaseController::setPeerID(uint64_t oldPeerID, uint64_t newPeerID) {
     data.push_back(std::make_shared<BaseLib::Database::DataColumn>(std::to_string(oldPeerID)));
     entry = std::make_shared<QueueEntry>("UPDATE metadata SET objectID=? WHERE objectID=?", data);
     enqueue(0, entry);
+    return true;
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return false;
+}
+
+bool DatabaseController::setPeerSerialNumber(uint64_t peer_id, const std::string &serial_number) {
+  try {
+    if (peer_id > BaseLib::Systems::Peer::kMaximumPeerId) {
+      return false;
+    }
+
+    BaseLib::Database::DataRow data;
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(serial_number));
+    data.push_back(std::make_shared<BaseLib::Database::DataColumn>(peer_id));
+    std::shared_ptr<BaseLib::IQueueEntry> entry = std::make_shared<QueueEntry>("UPDATE peers SET serialNumber=? WHERE peerID=?", data);
+    enqueue(0, entry);
+
     return true;
   }
   catch (const std::exception &ex) {

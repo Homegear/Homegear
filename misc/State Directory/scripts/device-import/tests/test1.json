@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "devices": [
+    {
+      "family": "misc",
+      "id": "VIRT000001",
+      "role": 900200,
+      "name": "Energiezähler Elektro Gesamt",
+      "equipmentId": "AMW44_01_00_92_ELM01",
+      "section": "Primary facilities",
+      "location": "60:18301.1",
+      "roles": {
+        "800002": {},
+        "900201": {}
+      }
+    },
+    {
+      "name": "Wasserzähler Frischwasser Gesamt",
+      "equipmentId": "AMW44_01_00_91_SWM01",
+      "family": "mbus",
+      "secondaryAddress": "27057902",
+      "tags": ["cold-water"],
+      "section": "Primary facilities",
+      "location": "60:18301.1",
+      "roles": {
+        "800002": {},
+        "900101": {}
+      }
+    },
+    {
+      "name": "Energiezähler Warmwasser",
+      "equipmentId": "AMW44_01_00_91_BWM01",
+      "family": "mbus",
+      "secondaryAddress": "26595731",
+      "tags": ["hot-water"],
+      "section": "Primary facilities",
+      "roles": {
+        "800002": {},
+        "900101": {},
+        "900401": {}
+      }
+    },
+    {
+      "name": "Energiezähler Heizung",
+      "equipmentId": "AMW44_01_00_91_HEM01",
+      "family": "mbus",
+      "secondaryAddress": "26657925",
+      "tags": [],
+      "section": "Primary facilities",
+      "roles": {
+        "800002": {},
+        "900401": {}
+      }
+    },
+    {
+      "name": "Energiezähler Elektro Allgemein",
+      "equipmentId": "AMW44_01_00_92_ELM01",
+      "family": "mbus",
+      "secondaryAddress": "21450217",
+      "tags": [],
+      "section": "Primary facilities",
+      "meterGroup": {
+        "virtualMeterId": "VIRT000001"
+      },
+      "roles": {
+        "800002": {},
+        "900201": {}
+      }
+    },
+    {
+      "name": "Energiezähler Elektro Wärmepumpe",
+      "equipmentId": "AMW44_01_00_92_ELM01",
+      "family": "mbus",
+      "secondaryAddress": "21450216",
+      "section": "Primary facilities",
+      "meterGroup": {
+        "virtualMeterId": "VIRT000001"
+      },
+      "roles": {
+        "800002": {},
+        "900201": {}
+      }
+    }
+  ]
+}

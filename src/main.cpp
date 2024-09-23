@@ -93,7 +93,6 @@ void loadSettings(bool hideOutput = false) {
 }
 
 void bindRPCServers() {
-  BaseLib::TcpSocket tcpSocket(GD::bl.get());
   // Bind all RPC servers listening on ports <= 1024
   for (int32_t i = 0; i < GD::serverInfo.count(); i++) {
     BaseLib::Rpc::PServerInfo settings = GD::serverInfo.get(i);
@@ -105,7 +104,7 @@ void bindRPCServers() {
     info += "...";
     GD::out.printInfo(info);
     int32_t listenPort = -1;
-    settings->socketDescriptor = tcpSocket.bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), 100, settings->address, listenPort);
+    settings->socketDescriptor = Rpc::RpcServer::bindAndReturnSocket(GD::bl->fileDescriptorManager, settings->interface, std::to_string(settings->port), 100, settings->address, listenPort);
     if (settings->socketDescriptor) GD::out.printInfo("Info: Server successfully bound.");
   }
 }
@@ -440,6 +439,13 @@ void setLimits() {
   getrlimit(RLIMIT_RTPRIO, &limits);
   GD::out.printInfo("Maximum thread priority now is \"" + std::to_string(limits.rlim_cur) + "\".");
 #endif
+
+  getrlimit(RLIMIT_STACK, &limits);
+  limits.rlim_cur = GD::bl->settings.stackSize();
+  GD::out.printInfo("Setting stack size to \"" + std::to_string(limits.rlim_cur) + "\" for user with id " + std::to_string(getuid()) + " and group with id " + std::to_string(getgid()) + '.');
+  setrlimit(RLIMIT_STACK, &limits);
+  getrlimit(RLIMIT_STACK, &limits);
+  GD::out.printInfo("Stack size now is \"" + std::to_string(limits.rlim_cur) + "\".");
 }
 
 void printHelp() {
@@ -699,7 +705,7 @@ void startUp() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         continue;
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         GD::out.printError("Error binding RPC servers (2): " + std::string(ex.what()) + " Retrying in 5 seconds...");
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         continue;
@@ -933,7 +939,8 @@ void startUp() {
 
     while (!_stopHomegear) {
       std::unique_lock<std::mutex> stopHomegearGuard(_stopHomegearMutex);
-      _stopHomegearConditionVariable.wait(stopHomegearGuard);
+      _stopHomegearConditionVariable.wait_for(stopHomegearGuard, std::chrono::seconds(60));
+      malloc_trim(0); //Clean up unused free memory - on some systems it is not cleaned up automatically - see https://www.algolia.com/blog/engineering/when-allocators-are-hoarding-your-precious-memory/
     }
 
     terminateHomegear(_signalNumber);
@@ -966,6 +973,11 @@ int main(int argc, char *argv[]) {
     if (std::string(GD::ipcLibVersion) != Ipc::IIpcClient::version()) {
       GD::out.printCritical(std::string("IPC library has wrong version. Expected version ") + GD::ipcLibVersion + " but got version " + Ipc::IIpcClient::version());
       exit(1);
+    }
+
+    //Limit the number of memory arenas to the 32 bit default
+    if (mallopt(M_ARENA_MAX, (int)std::thread::hardware_concurrency() * 2) == 0) {
+      GD::out.printError("Error: Cannot limit number of memory arenas.");
     }
 
     for (int32_t i = 1; i < argc; i++) {
@@ -1183,7 +1195,7 @@ int main(int argc, char *argv[]) {
           std::vector<std::string> subdirs = GD::bl->io.getDirectories(currentPath, true);
           for (std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j) {
             std::string subdir = currentPath + *j;
-            if (subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.nodeBluePath() && subdir != GD::bl->settings.adminUiPath() && subdir != GD::bl->settings.uiPath() && subdir != GD::bl->settings.nodeBlueDataPath()
+            if (subdir != GD::bl->settings.scriptPath() && subdir != GD::bl->settings.nodeBluePath() && subdir != GD::bl->settings.adminUiPath() && subdir != GD::bl->settings.uiPath() && subdir != GD::bl->settings.webSshPath() && subdir != GD::bl->settings.nodeBlueDataPath()
                 && subdir != GD::bl->settings.socketPath() && subdir != GD::bl->settings.modulePath() && subdir != GD::bl->settings.logfilePath()) {
               if (chown(subdir.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set owner on " << subdir << std::endl;
             }
@@ -1195,7 +1207,7 @@ int main(int argc, char *argv[]) {
           }
           for (std::vector<std::string>::iterator j = subdirs.begin(); j != subdirs.end(); ++j) {
             std::string subdir = currentPath + *j;
-            if (subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.nodeBluePath() || subdir == GD::bl->settings.adminUiPath() || subdir == GD::bl->settings.uiPath() || subdir == GD::bl->settings.nodeBlueDataPath()
+            if (subdir == GD::bl->settings.scriptPath() || subdir == GD::bl->settings.nodeBluePath() || subdir == GD::bl->settings.adminUiPath() || subdir == GD::bl->settings.uiPath() || subdir == GD::bl->settings.webSshPath() || subdir == GD::bl->settings.nodeBlueDataPath()
                 || subdir == GD::bl->settings.socketPath() || subdir == GD::bl->settings.modulePath() || subdir == GD::bl->settings.logfilePath())
               continue;
             if (chmod(subdir.c_str(), GD::bl->settings.dataPathPermissions()) == -1) std::cerr << "Could not set permissions on " << subdir << std::endl;
@@ -1272,6 +1284,17 @@ int main(int argc, char *argv[]) {
         }
         if (chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
         if (chmod(currentPath.c_str(), GD::bl->settings.uiPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+
+        currentPath = GD::bl->settings.webSshPath();
+        if (!BaseLib::Io::directoryExists(currentPath)) BaseLib::Io::createDirectory(currentPath, S_IRWXU | S_IRWXG);
+        localUserId = GD::bl->hf.userId(GD::bl->settings.webSshPathUser());
+        localGroupId = GD::bl->hf.groupId(GD::bl->settings.webSshPathGroup());
+        if (((int32_t)localUserId) == -1 || ((int32_t)localGroupId) == -1) {
+          localUserId = userId;
+          localGroupId = groupId;
+        }
+        if (chown(currentPath.c_str(), localUserId, localGroupId) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
+        if (chmod(currentPath.c_str(), GD::bl->settings.webSshPathPermissions()) == -1) std::cerr << "Could not set permissions on " << currentPath << std::endl;
 
         if (GD::bl->settings.socketPath() != GD::bl->settings.dataPath() && GD::bl->settings.socketPath() != GD::executablePath) {
           currentPath = GD::bl->settings.socketPath();

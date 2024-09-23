@@ -54,9 +54,7 @@
 #include <poll.h>
 #include <signal.h>
 
-namespace Homegear {
-
-namespace Rpc {
+namespace Homegear::Rpc {
 
 class RpcClient {
  public:
@@ -92,8 +90,6 @@ class RpcClient {
                    bool insertHeader,
                    bool &retry);
 };
-
-}
 
 }
 

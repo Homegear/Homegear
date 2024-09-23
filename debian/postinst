@@ -87,30 +87,6 @@ case $1 in
 				rm /etc/homegear/homegear.csr
 				chown homegear:homegear /etc/homegear/homegear.key
 				chmod 400 /etc/homegear/homegear.key
-				if [[ $DIALOG_OUTPUT ]]; then
-					platform=$(dpkg --print-architecture)
-					if [[ $platform == "armhf" ]] || [[ $platform == "arm64" ]]; then
-						echo "The generation can take up to 30 minutes."
-					fi
-					openssl dhparam -check -text -5 -out /etc/homegear/dh1024.pem 1024 > /dev/null 2>&1 &
-					opensslPid=$!
-					exitcode=0
-					counter=0
-					while [[ $exitcode -eq 0 ]]; do
-						kill -0 $opensslPid > /dev/null 2>&1
-						exitcode=$?
-						counter=$((counter+1))
-						if [[ $counter -eq 30 ]]; then
-							counter=0
-							echo "Please wait..."
-						fi
-						sleep 1
-					done
-				else
-					openssl dhparam -check -text -5 -out /etc/homegear/dh1024.pem 1024
-				fi
-				chown homegear:homegear /etc/homegear/dh1024.pem
-				chmod 400 /etc/homegear/dh1024.pem
 			fi
 		fi
 
